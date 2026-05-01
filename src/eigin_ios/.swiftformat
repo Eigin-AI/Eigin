@@ -1,0 +1,15 @@
+# SwiftFormat configuration for Eigin
+--swiftversion 6.0
+--indent 4
+--maxwidth 100
+--commas always
+--importgrouping alpha
+--organizetypes class,struct,enum,extension
+--organizationmode type
+--wraparguments before-first
+--wrapcollections before-first
+--ifdef outdent
+--stripunusedargs closure-only
+--patternlet inline
+--exclude .build,Frameworks
+--disable preferKeyPath

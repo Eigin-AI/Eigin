@@ -1,0 +1,14 @@
+{
+  "project_name": "Eigin",
+  "languages": {
+    "Swift": {
+      "formatter": {
+        "external": {
+          "command": "swiftformat",
+          "arguments": ["--stdinpath", "{buffer_path}"],
+        },
+      },
+      "format_on_save": "on",
+    },
+  },
+}

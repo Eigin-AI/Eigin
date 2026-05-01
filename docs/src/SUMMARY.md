@@ -1,0 +1,50 @@
+# Summary
+
+[Introduction](./introduction.md)
+[Philosophy](./philosophy.md)
+[FAQ](./faq.md)
+
+# Platform
+
+- [Overview](./system-context.md)
+- [Inference providers](./providers.md)
+- [Eigin Relay](./relay.md)
+- [Privacy and security](./privacy.md)
+
+# The Agent
+
+- [Overview](./agents/README.md)
+- [Core](./agents/core.md)
+- [Experience](./agents/experience.md)
+- [Knowledge](./agents/knowledge.md)
+- [Intents](./agents/intents.md)
+- [Skills](./agents/skills.md)
+- [Initiative](./agents/initiative.md)
+
+# Conversation
+
+- [Overview](./conversation/README.md)
+- [The agentic loop](./conversation/agentic-loop.md)
+- [The gatekeeper](./conversation/context.md)
+- [Compaction](./conversation/compaction.md)
+- [Spaces](./conversation/spaces.md)
+
+# Tools
+
+- [Overview](./tools/README.md)
+- [Permissions](./tools/permissions.md)
+- [MCP servers](./tools/mcp.md)
+
+# Voice
+
+- [Overview](./voice/README.md)
+- [Live call](./voice/live-call.md)
+
+# iOS Implementation
+
+- [Architecture](./ios/README.md)
+- [Services and dependency injection](./ios/services.md)
+- [Knowledge](./ios/knowledge.md)
+- [Skills](./ios/skills.md)
+- [Intents](./ios/intents.md)
+- [Live call](./ios/live-call.md)

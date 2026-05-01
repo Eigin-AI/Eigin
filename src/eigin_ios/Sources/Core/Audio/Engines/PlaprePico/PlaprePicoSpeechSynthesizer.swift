@@ -1,0 +1,400 @@
+#if !targetEnvironment(simulator)
+@preconcurrency import AVFoundation
+
+/// Speech synthesizer backed by Plapre Pico CoreML.
+///
+/// Structurally a copy of `PocketTTSSpeechSynthesizer`: drives a `PlaprePicoSession`,
+/// reads audio frames from `session.frames`, schedules them on an `AVAudioPlayerNode`
+/// at 48 kHz, and fires `onWillSpeak`/`onFinish` via silent marker buffers.
+///
+/// Sessions in Plapre do **not** amortise voice prefill across utterances (each
+/// utterance gets a fresh decoder state), but the session abstraction still gives
+/// us a single async stream the synthesizer can consume identically to PocketTTS.
+@MainActor
+final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable {
+    var onFinish: ((_ text: String) -> Void)?
+    var onCancel: ((_ text: String) -> Void)?
+    var onWillSpeak: ((_ range: NSRange, _ text: String) -> Void)?
+
+    private let modelManager: PlaprePicoModelManager
+    private let voiceName: String
+
+    private var audioEngine: AVAudioEngine?
+    private var playerNode: AVAudioPlayerNode?
+
+    private var session: PlaprePicoSession?
+    private var utteranceTexts: [Int: String] = [:]
+    private var nextUtteranceIndex: Int = 0
+
+    private var pendingTexts: [String] = []
+    private var generationTask: Task<Void, Never>?
+    private var sessionCancelTask: Task<Void, Never>?
+    private var finishWhenReady = false
+    private var isGenerationActive = false
+    private var generationID: Int = 0
+
+    private var scheduledUtterances: [String] = []
+
+    private nonisolated static let outputSampleRate: Double = 48000
+    private nonisolated static let modelSampleRate: Double = PlaprePicoConfig.sampleRate
+    private var converter: AVAudioConverter?
+
+    init(
+        modelManager: PlaprePicoModelManager,
+        voiceName: String = PlaprePicoConfig.defaultSpeaker
+    ) {
+        self.modelManager = modelManager
+        self.voiceName = voiceName
+    }
+
+    // MARK: - SpeechSynthesizing
+
+    func speak(_ text: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            onFinish?(text)
+            return
+        }
+
+        pendingTexts.append(text)
+
+        if let session {
+            utteranceTexts[nextUtteranceIndex] = text
+            nextUtteranceIndex += 1
+            session.enqueue(text)
+        } else if !isGenerationActive {
+            startGenerating()
+        }
+    }
+
+    func finishSpeaking() {
+        if let session {
+            session.finish()
+        } else {
+            finishWhenReady = true
+        }
+    }
+
+    func stopSpeaking() {
+        generationID += 1
+        isGenerationActive = false
+        generationTask?.cancel()
+
+        session?.finish()
+        let sessionToCancel = session
+        sessionCancelTask = Task { await sessionToCancel?.cancel() }
+        session = nil
+        utteranceTexts.removeAll()
+        nextUtteranceIndex = 0
+
+        pendingTexts.removeAll()
+        scheduledUtterances.removeAll()
+        finishWhenReady = false
+        if let player = playerNode {
+            player.stop()
+            player.reset()
+        }
+        tearDownAudio()
+        modelManager.scheduleUnload()
+    }
+
+    // MARK: - Audio Engine
+
+    private func ensureEngineRunning() {
+        guard audioEngine == nil else { return }
+        do {
+            let engine = AVAudioEngine()
+            let player = AVAudioPlayerNode()
+            engine.attach(player)
+
+            let outputFormat = AVAudioFormat(
+                standardFormatWithSampleRate: Self.outputSampleRate,
+                channels: 1
+            )!
+            engine.connect(player, to: engine.mainMixerNode, format: outputFormat)
+            try engine.start()
+            player.play()
+
+            let inputFormat = AVAudioFormat(
+                standardFormatWithSampleRate: Self.modelSampleRate,
+                channels: 1
+            )!
+            converter = AVAudioConverter(from: inputFormat, to: outputFormat)
+
+            audioEngine = engine
+            playerNode = player
+        } catch {
+            // Generation will fail gracefully.
+        }
+    }
+
+    private func tearDownAudio() {
+        playerNode?.stop()
+        audioEngine?.stop()
+        audioEngine = nil
+        playerNode = nil
+        converter = nil
+    }
+
+    // MARK: - Generation pipeline
+
+    private func startGenerating() {
+        let previousTask = generationTask
+        let previousCancelTask = sessionCancelTask
+        let myID = generationID
+        isGenerationActive = true
+
+        generationTask = Task(priority: .userInitiated) { [weak self] in
+            defer { Task { @MainActor in self?.isGenerationActive = false } }
+
+            await previousCancelTask?.value
+            await previousTask?.value
+
+            guard let self else { return }
+
+            await MainActor.run {
+                self.ensureEngineRunning()
+            }
+
+            let converter: AVAudioConverter? = await MainActor.run { self.converter }
+
+            do {
+                try await modelManager.load()
+            } catch {
+                return
+            }
+
+            guard let manager = await MainActor.run(body: { self.modelManager.manager })
+            else { return }
+            let session: PlaprePicoSession
+            do {
+                session = try manager.makeSession(voice: voiceName)
+            } catch {
+                return
+            }
+
+            await MainActor.run {
+                self.session = session
+            }
+
+            await MainActor.run {
+                for text in self.pendingTexts {
+                    self.utteranceTexts[self.nextUtteranceIndex] = text
+                    self.nextUtteranceIndex += 1
+                    session.enqueue(text)
+                }
+                if self.finishWhenReady {
+                    self.finishWhenReady = false
+                    session.finish()
+                }
+            }
+
+            var previousUtteranceIndex: Int = -1
+            var willSpeakFired: Set<Int> = []
+
+            do {
+                for try await frame in session.frames {
+                    try Task.checkCancellation()
+                    guard await MainActor.run(body: { self.generationID == myID }) else { break }
+
+                    let uttIdx = frame.utteranceIndex ?? previousUtteranceIndex
+
+                    if uttIdx != previousUtteranceIndex {
+                        if previousUtteranceIndex >= 0 {
+                            let prevText = await MainActor
+                                .run { self.utteranceTexts[previousUtteranceIndex] }
+                            if let prevText {
+                                await MainActor.run {
+                                    self.scheduleFinishMarker(for: prevText)
+                                    self.scheduleInterUtteranceSilence()
+                                }
+                            }
+                        }
+                        previousUtteranceIndex = uttIdx
+                    }
+
+                    // Schedule the text marker BEFORE the first audio buffer of
+                    // each utterance. `AVAudioPlayerNode` fires completion
+                    // callbacks when a buffer *finishes* — if we scheduled the
+                    // marker after the audio, its callback would fire several
+                    // seconds after the utterance's audio already started
+                    // playing. By scheduling the 1-sample marker first, its
+                    // completion fires immediately before the audio begins, so
+                    // the text appears on screen in sync with the voice.
+                    if !willSpeakFired.contains(uttIdx) {
+                        willSpeakFired.insert(uttIdx)
+                        let text = await MainActor.run { self.utteranceTexts[uttIdx] }
+                        if let text {
+                            await MainActor.run {
+                                self.scheduleTextMarker(text: text, charCount: text.count)
+                            }
+                        }
+                    }
+
+                    let samples = frame.samples
+                    if !samples.isEmpty, let converter {
+                        if let resampled = Self.resample(samples, using: converter) {
+                            if let buffer = Self.createBuffer(from: resampled) {
+                                await MainActor.run {
+                                    self.playerNode?.scheduleBuffer(buffer)
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard await MainActor.run(body: { self.generationID == myID }) else { return }
+            }
+
+            guard await MainActor.run(body: { self.generationID == myID }) else { return }
+            if previousUtteranceIndex >= 0 {
+                let lastText = await MainActor.run { self.utteranceTexts[previousUtteranceIndex] }
+                if let lastText {
+                    await MainActor.run {
+                        self.scheduleFinishMarker(for: lastText)
+                    }
+                }
+            }
+            await MainActor.run {
+                self.session = nil
+                self.utteranceTexts.removeAll()
+                self.nextUtteranceIndex = 0
+            }
+        }
+    }
+
+    // MARK: - Audio processing (nonisolated)
+
+    private nonisolated static func createBuffer(from samples: [Float]) -> AVAudioPCMBuffer? {
+        guard !samples.isEmpty else { return nil }
+        let format = AVAudioFormat(standardFormatWithSampleRate: outputSampleRate, channels: 1)!
+        let frameCount = AVAudioFrameCount(samples.count)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)
+        else { return nil }
+        buffer.frameLength = frameCount
+        samples.withUnsafeBufferPointer { src in
+            buffer.floatChannelData![0].update(from: src.baseAddress!, count: samples.count)
+        }
+        return buffer
+    }
+
+    private nonisolated static func resample(
+        _ samples: [Float],
+        using converter: AVAudioConverter
+    ) -> [Float]? {
+        let inputFormat = converter.inputFormat
+        let outputFormat = converter.outputFormat
+        let ratio = outputFormat.sampleRate / inputFormat.sampleRate
+
+        let inputFrameCount = AVAudioFrameCount(samples.count)
+        guard let inputBuffer = AVAudioPCMBuffer(
+            pcmFormat: inputFormat,
+            frameCapacity: inputFrameCount
+        )
+        else { return nil }
+        inputBuffer.frameLength = inputFrameCount
+        samples.withUnsafeBufferPointer { src in
+            inputBuffer.floatChannelData![0].update(from: src.baseAddress!, count: samples.count)
+        }
+
+        let outputFrameCount = AVAudioFrameCount(Double(samples.count) * ratio + 1)
+        guard let outputBuffer = AVAudioPCMBuffer(
+            pcmFormat: outputFormat,
+            frameCapacity: outputFrameCount
+        )
+        else { return nil }
+
+        var error: NSError?
+        nonisolated(unsafe) var consumed = false
+        nonisolated(unsafe) let input = inputBuffer
+        converter.convert(to: outputBuffer, error: &error) { _, outStatus in
+            if consumed {
+                outStatus.pointee = .noDataNow
+                return nil
+            }
+            consumed = true
+            outStatus.pointee = .haveData
+            return input
+        }
+
+        guard error == nil, outputBuffer.frameLength > 0 else { return nil }
+        let ptr = outputBuffer.floatChannelData![0]
+        return Array(UnsafeBufferPointer(start: ptr, count: Int(outputBuffer.frameLength)))
+    }
+
+    /// Schedules a short silent buffer between utterances. The duration is
+    /// small enough to avoid feeling laggy but large enough to restore natural
+    /// sentence pacing and mask any residual chunk-boundary glitch.
+    private func scheduleInterUtteranceSilence() {
+        guard let player = playerNode else { return }
+        let format = AVAudioFormat(
+            standardFormatWithSampleRate: Self.outputSampleRate,
+            channels: 1
+        )!
+        let frameCount = AVAudioFrameCount(PlaprePicoConfig.interUtteranceSilence * Self
+            .outputSampleRate)
+        guard frameCount > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)
+        else { return }
+        buffer.frameLength = frameCount
+        if let data = buffer.floatChannelData {
+            memset(data[0], 0, Int(frameCount) * MemoryLayout<Float>.size)
+        }
+        player.scheduleBuffer(buffer)
+    }
+
+    private func scheduleTextMarker(text: String, charCount: Int) {
+        guard let player = playerNode else { return }
+        let myID = generationID
+        let format = AVAudioFormat(
+            standardFormatWithSampleRate: Self.outputSampleRate,
+            channels: 1
+        )!
+        let marker = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1)!
+        marker.frameLength = 1
+        marker.floatChannelData![0][0] = 0
+
+        player.scheduleBuffer(marker) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, generationID == myID else { return }
+                onWillSpeak?(NSRange(location: 0, length: charCount), text)
+            }
+        }
+    }
+
+    private func scheduleFinishMarker(for text: String) {
+        guard let player = playerNode else {
+            onFinish?(text)
+            return
+        }
+
+        scheduledUtterances.append(text)
+
+        let myID = generationID
+        let format = AVAudioFormat(
+            standardFormatWithSampleRate: Self.outputSampleRate,
+            channels: 1
+        )!
+        let marker = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1)!
+        marker.frameLength = 1
+        marker.floatChannelData![0][0] = 0
+
+        player.scheduleBuffer(marker) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, generationID == myID else { return }
+                if let idx = scheduledUtterances.firstIndex(of: text) {
+                    scheduledUtterances.remove(at: idx)
+                }
+                if let idx = pendingTexts.firstIndex(of: text) {
+                    pendingTexts.remove(at: idx)
+                }
+                if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
+                    modelManager.scheduleUnload()
+                }
+                onFinish?(text)
+            }
+        }
+    }
+}
+#endif
