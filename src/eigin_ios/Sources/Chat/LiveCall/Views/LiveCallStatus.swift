@@ -81,17 +81,25 @@ struct LiveCallStatus: View {
     private var streamingContent: some View {
         switch service.phase {
         case .listening:
-            DictationStreamView(
-                text: service.transcription,
-                placeholder: Localized.Voice.listening,
-                textStyle: colors.textPrimary
-            )
+            if service.transcription.isEmpty {
+                phaseLabel(Localized.Voice.listening)
+            } else {
+                DictationStreamView(
+                    text: service.transcription,
+                    state: service.dictationState,
+                    textStyle: colors.textPrimary
+                )
+            }
         case .speaking:
-            DictationStreamView(
-                text: service.speakingText,
-                placeholder: Localized.Voice.speaking,
-                textStyle: colors.textPrimary
-            )
+            if service.speakingText.isEmpty {
+                phaseLabel(Localized.Voice.speaking)
+            } else {
+                DictationStreamView(
+                    text: service.speakingText,
+                    state: .idle,
+                    textStyle: colors.textPrimary
+                )
+            }
         default:
             EmptyView()
         }

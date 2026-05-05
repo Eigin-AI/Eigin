@@ -106,7 +106,7 @@ struct ChatInputBar: View {
             retainedBrowsing = browsingRequest
         }
         .overlay {
-            if isDictating, dictationService.isRecording {
+            if isDictating, dictationService.state.isActive {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(colors.accent)
                     .modifier(RecordingGlowModifier())
@@ -190,10 +190,10 @@ struct ChatInputBar: View {
     private var normalContent: some View {
         VStack(spacing: Spacing.sm) {
             // Text area
-            if isDictating {
+            if isDictating, dictationService.state.isActive {
                 DictationStreamView(
                     text: dictationService.transcription,
-                    error: dictationService.error,
+                    state: dictationService.state,
                     textStyle: colors.textSecondary
                 )
             } else {
@@ -332,18 +332,32 @@ struct ChatInputBar: View {
             Spacer()
 
             Button { isDictating ? stopDictation() : startDictation() } label: {
-                Image(systemName: isDictating ? "mic.fill" : "mic")
-                    .font(.system(size: 20))
-                    .foregroundStyle(isDictating ? colors.accent : colors.textSecondary)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        isDictating
-                            ? colors.accent.opacity(0.15)
-                            : colors.textSecondary.opacity(0.15)
-                    )
-                    .clipShape(Circle())
+                Group {
+                    switch dictationService.state {
+                    case .idle:
+                        Image(systemName: "mic")
+                            .foregroundStyle(colors.textSecondary)
+                    case .preparing:
+                        Image(systemName: "mic")
+                            .foregroundStyle(colors.accent)
+                    case .listening, .transcribing:
+                        Image(systemName: "mic.fill")
+                            .foregroundStyle(colors.accent)
+                    case .error:
+                        Image(systemName: "mic")
+                            .foregroundStyle(.red)
+                    }
+                }
+                .font(.system(size: 20))
+                .frame(width: 40, height: 40)
+                .background(
+                    dictationService.state.isActive
+                        ? colors.accent.opacity(0.15)
+                        : colors.textSecondary.opacity(0.15)
+                )
+                .clipShape(Circle())
             }
-            .modifier(SubtlePulseModifier(isActive: isDictating && dictationService.isRecording))
+            .modifier(SubtlePulseModifier(isActive: dictationService.state.isActive))
             .disabled(!isDictating && isDisabled)
 
             if showStopButton {

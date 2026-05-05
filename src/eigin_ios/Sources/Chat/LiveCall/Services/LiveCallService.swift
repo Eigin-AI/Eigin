@@ -58,6 +58,10 @@ final class LiveCallService: @unchecked Sendable {
         speech.speakingText
     }
 
+    var dictationState: AppDictationState {
+        dictation.state
+    }
+
     /// Display name of the currently executing or awaiting-permission tool, if any.
     var activeToolDisplayName: String? {
         let active = chatLoop.toolEvents.last(where: {
@@ -276,7 +280,6 @@ final class LiveCallService: @unchecked Sendable {
 
     private func startListeningPhase() {
         Haptics.light()
-        phase = .listening
         transcription = ""
 
         lastTranscription = ""
@@ -295,7 +298,23 @@ final class LiveCallService: @unchecked Sendable {
             dictation.start()
         }
         startSilenceDetection()
+
+        if dictation.state == .listening {
+            phase = .listening
+        } else {
+            Task { @MainActor in
+                while dictation.state != .listening, dictation.state != .idle {
+                    try? await Task
+                        .sleep(for: .milliseconds(Int(Self.dictationReadyPollInterval * 1000)))
+                }
+                if case .listening = dictation.state {
+                    phase = .listening
+                }
+            }
+        }
     }
+
+    private static let dictationReadyPollInterval: TimeInterval = 0.05
 
     private func startProcessingPhase() {
         silenceTask?.cancel()
@@ -365,11 +384,11 @@ final class LiveCallService: @unchecked Sendable {
             recoveringStartedAt = nil
         }
 
-        if dictation.error != nil {
+        if case .error(let message) = dictation.state {
             if dictationRetries < maxDictationRetries {
                 dictationRetries += 1
                 AppLogger.warning(
-                    "Dictation error, retry \(public: dictationRetries)/\(public: maxDictationRetries): \(private: dictation.error ?? "unknown")",
+                    "Dictation error, retry \(public: dictationRetries)/\(public: maxDictationRetries): \(private: message)",
                     category: .livecall
                 )
                 dictation.stop()
@@ -381,10 +400,10 @@ final class LiveCallService: @unchecked Sendable {
                 }
             } else {
                 AppLogger.error(
-                    "Dictation failed after \(public: maxDictationRetries) retries: \(private: dictation.error ?? "unknown")",
+                    "Dictation failed after \(public: maxDictationRetries) retries: \(private: message)",
                     category: .livecall
                 )
-                error = dictation.error
+                error = message
                 stop()
             }
             return

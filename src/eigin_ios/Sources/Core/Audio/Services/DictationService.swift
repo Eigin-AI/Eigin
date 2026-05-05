@@ -5,14 +5,29 @@ import UIKit
 
 /// On-device speech recognition service for dictating messages.
 protocol DictationService {
-    var isRecording: Bool { get }
-    /// Live transcription text, updated with partial results.
+    var state: AppDictationState { get }
     var transcription: String { get }
     var error: String? { get }
     func start()
     func stop()
     func setLocale(_ locale: Locale)
     func setContextualStrings(_ strings: [String])
+}
+
+/// The current state of the dictation pipeline.
+enum AppDictationState: Equatable {
+    case idle
+    case preparing
+    case listening
+    case transcribing
+    case error(String)
+
+    var isActive: Bool {
+        switch self {
+        case .listening, .transcribing: true
+        default: false
+        }
+    }
 }
 
 /// Both result types share `text` + `isFinal` but `text` is not on the
@@ -30,7 +45,7 @@ extension DictationTranscriber.Result: TranscriberResult {}
 /// falls back to ``DictationTranscriber`` on older hardware.
 @Observable
 final class DefaultDictationService: NSObject, DictationService, @unchecked Sendable {
-    private(set) var isRecording = false
+    private(set) var state: AppDictationState = .idle
     private(set) var transcription = ""
     private(set) var error: String?
     /// When true, `stop()` keeps the audio session active (used by live call mode).
@@ -51,11 +66,9 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
     private var locale: Locale = .current
     /// Incremented on each start()/stop() cycle so stale callbacks are ignored.
     private var generation = 0
-    /// True while background audio setup is in flight. Prevents re-entry.
-    private var isStarting = false
     /// True while recovering from an audio route change. Callers (e.g.
     /// LiveCallService) can check this to avoid premature silence detection.
-    private(set) var isRecovering = false
+    private var hasReceivedTranscription = false
 
     override init() {
         super.init()
@@ -72,13 +85,22 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         contextualStrings = strings
     }
 
+    var isRecovering: Bool {
+        state == .preparing
+    }
+
+    var isRecording: Bool {
+        state.isActive
+    }
+
     func start() {
-        guard !isStarting, !isRecording else { return }
+        guard case .idle = state else { return }
         generation += 1
         error = nil
         transcription = ""
         committedTranscription = ""
-        isStarting = true
+        hasReceivedTranscription = false
+        state = .preparing
 
         let gen = generation
         Task { [weak self] in
@@ -88,11 +110,10 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
 
     func stop() {
         generation += 1
-        isStarting = false
-        guard isRecording else { return }
+        guard state != .idle else { return }
 
         tearDownAudio()
-        isRecording = false
+        state = .idle
 
         if keepSessionActive { return }
 
@@ -144,9 +165,8 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             } catch {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    isStarting = false
                     guard gen == generation else { return }
-                    self.error = "Could not configure audio session."
+                    state = .error("Could not configure audio session.")
                 }
                 return
             }
@@ -236,9 +256,8 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         ) else {
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                isStarting = false
                 guard gen == generation else { return }
-                error = "No compatible audio format available."
+                state = .error("No compatible audio format available.")
             }
             return
         }
@@ -333,18 +352,13 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             if attempt < maxRetries {
                 let delay = min(1.0, 0.3 + Double(attempt) * 0.2)
                 try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-                guard gen == generation else {
-                    await MainActor.run { [weak self] in self?.isStarting = false }
-                    return
-                }
+                guard gen == generation else { return }
                 await beginRecording(generation: gen, attempt: attempt + 1)
             } else {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    isStarting = false
-                    isRecovering = false
                     guard gen == generation else { return }
-                    self.error = "Could not start audio engine."
+                    state = .error("Could not start audio engine.")
                 }
             }
             return
@@ -369,18 +383,13 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             if attempt < maxRetries {
                 let delay = min(1.0, 0.3 + Double(attempt) * 0.2)
                 try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-                guard gen == generation else {
-                    await MainActor.run { [weak self] in self?.isStarting = false }
-                    return
-                }
+                guard gen == generation else { return }
                 await beginRecording(generation: gen, attempt: attempt + 1)
             } else {
                 await MainActor.run { [weak self] in
                     guard let self else { return }
-                    isStarting = false
-                    isRecovering = false
                     guard gen == generation else { return }
-                    self.error = "Could not start audio engine."
+                    state = .error("Could not start audio engine.")
                 }
             }
             return
@@ -399,16 +408,13 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             resultTask = nil
             analyzerTask?.cancel()
             analyzerTask = nil
-            await MainActor.run { [weak self] in self?.isStarting = false }
             return
         }
 
         await MainActor.run { [weak self] in
             guard let self else { return }
-            isStarting = false
-            isRecovering = false
             guard gen == generation else { return }
-            isRecording = true
+            state = .listening
             UIApplication.shared.isIdleTimerDisabled = true
             startObservingAudioNotifications()
         }
@@ -429,6 +435,10 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
                     guard let self, gen == generation else { return }
                     let committed = committedTranscription
                     transcription = committed.isEmpty ? text : committed + " " + text
+                    if !hasReceivedTranscription, !text.isEmpty {
+                        hasReceivedTranscription = true
+                        state = .transcribing
+                    }
                     if isFinal {
                         committedTranscription = transcription
                     }
@@ -439,7 +449,7 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             await MainActor.run { [weak self] in
                 guard let self, gen == generation else { return }
                 if transcription.isEmpty {
-                    self.error = "Speech recognition failed."
+                    state = .error("Speech recognition failed.")
                     stop()
                 }
             }
@@ -480,7 +490,7 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         tearDownAudio()
         generation += 1
         committedTranscription = transcription
-        isRecovering = true
+        state = .preparing
         let gen = generation
         Task { [weak self] in
             await self?.beginRecording(generation: gen)
@@ -500,7 +510,7 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             tearDownAudio()
             generation += 1
             committedTranscription = transcription
-            isRecovering = true
+            state = .preparing
 
         case .ended:
             guard isRecovering else { return }
@@ -590,8 +600,8 @@ private final class BufferConverter: @unchecked Sendable {
 
 /// Preview stub — all no-ops.
 struct PreviewDictationService: DictationService {
-    var isRecording: Bool {
-        false
+    var state: AppDictationState {
+        .idle
     }
 
     var transcription: String {

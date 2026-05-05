@@ -7,27 +7,37 @@ import SwiftUI
 /// Used in both `ChatInputBar` and `LiveCallView`.
 struct DictationStreamView: View {
     let text: String
+    var state: AppDictationState = .idle
     var placeholder: String = Localized.Voice.listening
-    var error: String?
     var textStyle: Color = .secondary
     var errorStyle: Color = .red
 
+    private var displayText: String? {
+        switch state {
+        case .idle:
+            text.isEmpty ? nil : text
+        case .preparing:
+            nil
+        case .listening:
+            text.isEmpty ? placeholder : text
+        case .transcribing:
+            text.isEmpty ? placeholder : text
+        case .error(let message):
+            message
+        }
+    }
+
+    private var isError: Bool {
+        if case .error = state { return true }
+        return false
+    }
+
     var body: some View {
         Group {
-            if let error {
-                Text(error)
+            if let displayText, !displayText.isEmpty {
+                Text(displayText)
                     .font(.body)
-                    .foregroundStyle(errorStyle)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else if text.isEmpty {
-                Text(placeholder)
-                    .font(.body)
-                    .foregroundStyle(textStyle.opacity(0.6))
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                Text(text)
-                    .font(.body)
-                    .foregroundStyle(textStyle)
+                    .foregroundStyle(isError ? errorStyle : textStyle)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -43,7 +53,7 @@ struct DictationStreamView: View {
                         }
                     }
                     .contentTransition(.interpolate)
-                    .animation(Animations.snap, value: text)
+                    .animation(Animations.snap, value: displayText)
             }
         }
         .frame(minHeight: 22)
