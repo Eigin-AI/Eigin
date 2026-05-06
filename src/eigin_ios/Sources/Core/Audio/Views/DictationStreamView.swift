@@ -17,7 +17,7 @@ struct DictationStreamView: View {
         case .idle:
             text.isEmpty ? nil : text
         case .preparing:
-            nil
+            "Preparing..."
         case .listening:
             text.isEmpty ? placeholder : text
         case .transcribing:

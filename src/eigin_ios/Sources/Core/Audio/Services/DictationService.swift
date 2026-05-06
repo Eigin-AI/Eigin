@@ -24,7 +24,7 @@ enum AppDictationState: Equatable {
 
     var isActive: Bool {
         switch self {
-        case .listening, .transcribing: true
+        case .preparing, .listening, .transcribing: true
         default: false
         }
     }
