@@ -39,6 +39,7 @@ make relay-run    # Run relay locally
 
 make format       # Format all code (Swift + Rust)
 make lint         # Lint without modifying
+make hooks        # Install git hooks
 make test         # Run all tests
 ```
 

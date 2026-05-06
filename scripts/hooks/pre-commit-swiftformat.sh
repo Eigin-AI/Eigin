@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Pre-commit hook: lint staged Swift files with SwiftFormat.
-# Install: ln -sf ../../scripts/pre-commit-format.sh .git/hooks/pre-commit
 
 staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.swift')
 [ -z "$staged" ] && exit 0

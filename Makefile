@@ -19,7 +19,7 @@ LOG_WRAPPER = scripts/log-wrapper.sh
 
 .PHONY: generate ios-build ios-test ios-clean ios-open \
 	relay-build relay-test relay-run relay-deploy relay-docker \
-	format lint test docs docs-serve
+	format lint test docs docs-serve hooks
 
 # --- Cross-cutting ---
 generate:
@@ -36,6 +36,11 @@ lint:
 	swiftformat --lint $(IOS_DIR)/Sources $(IOS_DIR)/Tests $(IOS_DIR)/Scripts
 	cargo fmt --manifest-path $(RELAY_DIR)/Cargo.toml --check
 	cd $(IOS_DIR) && swift Scripts/ValidateLocalized.swift Sources Sources/Core/Localized.swift
+
+hooks:
+	@ln -sf ../../scripts/hooks/pre-commit-swiftformat.sh .git/hooks/pre-commit
+	@ln -sf ../../scripts/hooks/commit-msg-conventional.sh .git/hooks/commit-msg
+	@echo "Hooks installed."
 
 test: ios-test relay-test
 
