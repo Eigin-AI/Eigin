@@ -14,9 +14,13 @@
 | tracing-subscriber | https://github.com/tokio-rs/tracing | 0.3 | MIT OR Apache-2.0 |
 | urlencoding | https://github.com/kornelski/rust_urlencoding | 2 | MIT |
 | async-trait | https://github.com/dtolnay/async-trait | 0.1 | MIT OR Apache-2.0 |
+| futures | https://github.com/rust-lang/futures-rs | 0.3 | MIT OR Apache-2.0 |
+| bytes | https://github.com/tokio-rs/bytes | 1 | MIT |
+| http | https://github.com/hyperium/http | 1 | MIT OR Apache-2.0 |
+| minio | https://github.com/minio/minio-rs | 0.4 | Apache-2.0 |
 
 ## Notes
 
-- License types listed are as of the date this file was last updated (2026-04-07).
+- License types listed are as of the date this file was last updated (2026-05-07).
 - Verify against each repository when upgrading to a new version.
 - All crates use permissive licenses suitable for commercial use.

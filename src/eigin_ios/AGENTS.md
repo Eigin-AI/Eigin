@@ -25,6 +25,17 @@ Top-level folders are **domain verticals**. Each domain owns its models, service
 - XcodeGen (`brew install xcodegen`)
 - SwiftFormat (`brew install swiftformat`)
 
+## Environments
+
+Two build targets, each hardwired to a relay environment:
+
+| Target / scheme | Relay | Bundle ID |
+|---|---|---|
+| `Eigin` | `relay.eigin.ai` (production) | `${BUNDLE_ID}` |
+| `EiginDev` | `staging.relay.eigin.ai` (staging) | `${BUNDLE_ID}.dev` |
+
+Both apps can be installed on the same device simultaneously. The relay URL and key come from `.env` via `_STAGING` / `_PRODUCTION` suffix labels (e.g. `EIGIN_RELAY_URL_STAGING`, `EIGIN_RELAY_KEY_PRODUCTION`). Build with `make ios-build` for production or `make ios-build SCHEME=EiginDev` for staging.
+
 ## Project generation
 
 The Xcode project is generated from `project.yml` — never edit `.xcodeproj` directly. To add files, dependencies, or build settings, edit `project.yml` then regenerate:

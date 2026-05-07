@@ -1,24 +1,32 @@
 -include .env
+# .env uses `export VAR=value` syntax so all variables propagate to child
+# processes (including xcodegen). For direct terraform use, see scripts/tf-env.sh.
 
 VERBOSE ?= 0
 
 # --- iOS ---
 IOS_DIR = src/eigin_ios
 SIMULATOR = iPhone 17 Pro
-SCHEME = Eigin
+SCHEME ?= Eigin
 DESTINATION = platform=iOS Simulator,name=$(SIMULATOR)
 
 # --- Relay ---
 RELAY_DIR = src/eigin_relay
-RELAY_REGION = $(or $(GCP_REGION),europe-west1)
-RELAY_IMAGE = $(RELAY_REGION)-docker.pkg.dev/$(GCP_PROJECT_ID)/eigin/relay
+
+# --- Infra ---
+INFRA_DIR = infra/scaleway
+ENV ?= staging
+# scripts/tf-env.sh resolves per-env TF_VAR_* exports from .env.
+# Run `eval "$(scripts/tf-env.sh staging)"` to load them for direct terraform use.
+TF_ENV = eval "$$(scripts/tf-env.sh $(ENV))"
 
 # --- Logging ---
 LOG_DIR = logs
 LOG_WRAPPER = scripts/log-wrapper.sh
 
 .PHONY: generate ios-build ios-test ios-clean ios-open \
-	relay-build relay-test relay-run relay-deploy relay-docker \
+	relay-build relay-test relay-run \
+	infra-init infra-plan infra-deploy \
 	format lint test docs docs-serve hooks
 
 # --- Cross-cutting ---
@@ -111,22 +119,20 @@ relay-test:
 relay-run:
 	cd $(RELAY_DIR) && cargo run
 
-relay-docker:
-	docker build -t eigin-relay $(RELAY_DIR)
+infra-init:
+	$(TF_ENV) && cd $(INFRA_DIR) && \
+		terraform workspace select -or-create $(ENV) && terraform init
 
-relay-deploy:
-ifndef GCP_PROJECT_ID
-	$(error GCP_PROJECT_ID is not set)
-endif
-	docker build --platform linux/amd64 -t $(RELAY_IMAGE):latest $(RELAY_DIR)
-	docker push $(RELAY_IMAGE):latest
-	gcloud run deploy eigin-relay \
-		--project $(GCP_PROJECT_ID) \
-		--image $(RELAY_IMAGE):latest \
-		--region $(RELAY_REGION) \
-		--set-env-vars MOJEEK_API_KEY=$${MOJEEK_API_KEY},EIGIN_RELAY_KEY=$${EIGIN_RELAY_KEY},POOL_FILE_PATH=/tmp/pool.json \
-		--allow-unauthenticated \
-		--port 8080 \
-		--memory 128Mi \
-		--min-instances 0 \
-		--max-instances 1
+infra-plan:
+	$(TF_ENV) && cd $(INFRA_DIR) && \
+		terraform workspace select -or-create $(ENV) && \
+		terraform plan -var-file=environments/$(ENV).tfvars
+
+infra-deploy:
+	@docker info > /dev/null 2>&1 || (echo "Docker daemon is not running. Start Docker Desktop and try again."; exit 1)
+	@if [ "$(ENV)" = "production" ]; then \
+		read -p "Deploy to production? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1; \
+	fi
+	$(TF_ENV) && cd $(INFRA_DIR) && \
+		terraform workspace select -or-create $(ENV) && \
+		terraform apply -var-file=environments/$(ENV).tfvars

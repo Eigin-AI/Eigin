@@ -96,8 +96,8 @@ targets:
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to provide insights into your nutrition and activity."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves nutritional data to Apple Health when you log meals."
-        EIGIN_RELAY_URL: ${EIGIN_RELAY_URL}
-        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY}
+        EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
+        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_PRODUCTION}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements
 
@@ -165,7 +165,7 @@ targets:
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to provide insights into your nutrition and activity."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves nutritional data to Apple Health when you log meals."
-        EIGIN_RELAY_URL: ${EIGIN_RELAY_URL}
-        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY}
+        EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
+        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_STAGING}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements
