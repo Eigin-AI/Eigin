@@ -19,6 +19,7 @@ struct ChatMessageView: View {
     @State private var isCollapsed: Bool
 
     private static let collapseThreshold = 200
+    private static let collapsedHeight: CGFloat = 110
 
     init(
         role: String,
@@ -76,8 +77,10 @@ struct ChatMessageView: View {
                 .font(Typography.body)
                 .foregroundStyle(colors.textPrimary)
                 .textSelection(.enabled)
-                .lineLimit(isCollapsed ? 5 : nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: isLongMessage ? .infinity : nil, alignment: .leading)
+                .frame(maxHeight: isCollapsed ? Self.collapsedHeight : .infinity, alignment: .top)
+                .clipped()
                 .mask(alignment: .top) {
                     if isLongMessage, isCollapsed {
                         VStack(spacing: 0) {
