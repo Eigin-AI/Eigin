@@ -14,5 +14,5 @@ pub use auth::require_eigin_key;
 pub use error::AppError;
 pub use health::handler as health;
 pub use rate_limit::RateLimiter;
-pub use search::{Pool, SearchClient, create_client};
+pub use search::{Pool, PoolConfig, SearchClient, create_client};
 pub use state::AppState;

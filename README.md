@@ -25,6 +25,8 @@ No premium tier, no tracking, no hidden incentives.
 
 **Relay:** Rust and Cargo via [rustup](https://rustup.rs)
 
+**Relay deployment:** [Terraform](https://developer.hashicorp.com/terraform/install) (`brew install terraform`), [Scaleway CLI](https://github.com/scaleway/scaleway-cli) (`brew install scw`). Run `scw init` to authenticate — the Terraform provider reads your credentials from the scw config automatically.
+
 ```
 make generate     # Regenerate .xcodeproj from project.yml
 
@@ -36,6 +38,10 @@ make ios-clean    # Clean iOS build artifacts
 make relay-build  # Build relay (cargo build --release)
 make relay-test   # Run relay tests
 make relay-run    # Run relay locally
+
+make infra-init   # First-time Terraform setup (downloads providers)
+make infra-plan   # Preview infrastructure changes
+make infra-deploy # Apply infrastructure changes (builds + pushes image)
 
 make format       # Format all code (Swift + Rust)
 make lint         # Lint without modifying

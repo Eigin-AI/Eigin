@@ -83,6 +83,14 @@ src/eigin_relay/target/
 ## Build logs
 logs/
 
+## Terraform
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.backup
+infra/**/.terraform.lock.hcl
+infra/**/terraform.tfstate.d/*
+infra/**/backend.tf
+
 ## Claude
 .claude
 **/.DS_Store

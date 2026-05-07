@@ -1,6 +1,5 @@
 use std::env;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -10,7 +9,9 @@ use axum::routing::get;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
-use eigin_relay::{AppState, Pool, RateLimiter, create_client, health, require_eigin_key, search};
+use eigin_relay::{
+    AppState, Pool, PoolConfig, RateLimiter, create_client, health, require_eigin_key, search,
+};
 
 #[tokio::main]
 async fn main() {
@@ -36,7 +37,6 @@ async fn main() {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(5000);
-    let pool_path = env::var("POOL_FILE_PATH").unwrap_or_else(|_| "/data/pool.json".into());
     let port: u16 = env::var("PORT")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -44,11 +44,14 @@ async fn main() {
 
     let search_client = create_client(reqwest::Client::new(), &search_api_url);
 
+    let pool_config = PoolConfig::from_env().expect("failed to load pool configuration");
+    let pool = Pool::load(pool_size, pool_config).await;
+
     let state = Arc::new(AppState {
         search_client,
         mojeek_api_key,
         eigin_relay_key,
-        pool: Pool::load(PathBuf::from(pool_path), pool_size),
+        pool,
         rate_limiter: RateLimiter::new(
             rate_limit_requests,
             Duration::from_secs(rate_limit_window_secs),

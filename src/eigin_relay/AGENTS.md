@@ -17,6 +17,11 @@ src/
   health.rs       — health check handler
   error.rs        — AppError type
   search/         — search proxy (client, handler, pool, connection pool)
+    pool/
+      backend.rs  — PoolBackend trait, PoolState, BackendError
+      file.rs     — local file backend (dev / single-instance)
+      s3.rs       — S3-compatible backend with SigV4 signing + ETag optimistic locking
+      state.rs    — Pool, PoolConfig, PoolConfig::from_env()
 tests/
   integration.rs  — integration tests using httpmock
 ```
@@ -37,8 +42,15 @@ All configuration is via environment variables:
 | `RATE_LIMIT_REQUESTS` | `10` | Max requests per window per IP |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window duration |
 | `MONTHLY_POOL_SIZE` | `5000` | Monthly quota cap |
-| `POOL_FILE_PATH` | `/data/pool.json` | Where the quota pool is persisted |
+| `POOL_FILE_PATH` | — | Path to a local JSON file for pool state (single-instance only) |
+| `POOL_BUCKET` | — | S3 bucket name for pool state (takes precedence over `POOL_FILE_PATH`) |
+| `POOL_OBJECT_KEY` | `pool.json` | Object key within the S3 bucket |
+| `S3_ENDPOINT` | required if `POOL_BUCKET` set | S3-compatible endpoint URL |
+| `S3_ACCESS_KEY` | required if `POOL_BUCKET` set | S3 access key |
+| `S3_SECRET_KEY` | required if `POOL_BUCKET` set | S3 secret key |
 | `PORT` | `8080` | Listen port |
+
+If neither `POOL_BUCKET` nor `POOL_FILE_PATH` is set, the pool runs in-memory (resets on restart).
 
 ## Design principles
 
@@ -47,10 +59,34 @@ All configuration is via environment variables:
 ## Key patterns
 
 - **Shared state**: `AppState` is wrapped in `Arc` and passed to all handlers via Axum's `.with_state()`
-- **Quota pool**: The monthly search quota is tracked in `Pool` and persisted as JSON to `POOL_FILE_PATH` — not a database
+- **Quota pool**: The monthly search quota is tracked in `Pool` and persisted via a `PoolBackend`. In production this is S3 with ETag-based optimistic locking; locally it can be a file or in-memory.
 - **Auth**: All routes except `/health` require the `EIGIN_RELAY_KEY` header, enforced via Tower middleware
-- **Tests**: Integration tests mock the upstream search API with `httpmock`
+- **Tests**: Integration tests mock the upstream search API with `httpmock`; pool tests use `PoolConfig::LocalFile(tempdir)` directly — no env var mutation
 
 ## Deployment
 
-A `Dockerfile` is included. Run `make relay-build` to build, `make relay-test` to test.
+Deployed to Scaleway Serverless Containers via Terraform. From the repo root:
+
+```
+make infra-init              # First-time: terraform init (downloads providers)
+make infra-plan              # Preview staging changes
+make infra-plan ENV=production
+make infra-deploy            # Deploy to staging
+make infra-deploy ENV=production
+```
+
+`ENV` defaults to `staging`. The correct per-env relay key and Mojeek key are resolved automatically from `.env` via `scripts/tf-env.sh` — no manual TF_VAR edits required. See `infra/scaleway/` for the Terraform configuration.
+
+### Custom domain (one-time setup)
+
+The custom domain binding is not managed by Terraform because Scaleway's TLS provisioning requires the DNS record to be fully propagated before the binding is created — which can't be guaranteed in a single apply.
+
+After the first deploy:
+
+1. Add a CNAME record at your DNS provider pointing to the container's default URL (shown in `terraform output service_url`):
+   - staging: `staging.relay.eigin.ai` → `<container-domain>`
+   - production: `relay.eigin.ai` → `<container-domain>`
+2. Wait for the record to propagate: `dig staging.relay.eigin.ai` should return the container domain.
+3. In the Scaleway console, go to the container → **Endpoints** → **Add endpoint** and enter the custom hostname.
+
+Subsequent `make infra-deploy` runs do not touch the domain binding.

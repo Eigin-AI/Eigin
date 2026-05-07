@@ -54,8 +54,7 @@ mod mock_client {
 
 use mock_client::MockClient;
 
-fn test_state(
-    pool_path: std::path::PathBuf,
+async fn test_state(
     pool_max: u64,
     client: impl eigin_relay::SearchClient + 'static,
 ) -> Arc<eigin_relay::AppState> {
@@ -63,7 +62,7 @@ fn test_state(
         search_client: Arc::new(client),
         mojeek_api_key: "test-api-key".to_string(),
         eigin_relay_key: "test-relay-key".to_string(),
-        pool: eigin_relay::Pool::load(pool_path, pool_max),
+        pool: eigin_relay::Pool::load(pool_max, eigin_relay::PoolConfig::InMemory).await,
         rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
     })
 }
@@ -104,8 +103,7 @@ async fn call(app: &axum::Router, uri: &str, key: Option<&str>) -> axum::respons
 #[tokio::test]
 async fn health_returns_ok() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/health", None).await;
@@ -118,8 +116,7 @@ async fn health_returns_ok() {
 #[tokio::test]
 async fn search_without_key_returns_401() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search?q=test", None).await;
@@ -133,8 +130,7 @@ async fn search_without_key_returns_401() {
 #[tokio::test]
 async fn search_with_wrong_key_returns_401() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search?q=test", Some("wrong-key")).await;
@@ -145,8 +141,7 @@ async fn search_with_wrong_key_returns_401() {
 #[tokio::test]
 async fn search_without_query_returns_400() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search", Some("test-relay-key")).await;
@@ -160,8 +155,7 @@ async fn search_without_query_returns_400() {
 #[tokio::test]
 async fn search_with_empty_query_returns_400() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search?q=%20", Some("test-relay-key")).await;
@@ -182,8 +176,7 @@ async fn search_proxies_upstream_response() {
     });
 
     let mock = MockClient::new(mock_response.to_string().into_bytes());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search?q=rust", Some("test-relay-key")).await;
@@ -197,8 +190,7 @@ async fn search_proxies_upstream_response() {
 #[tokio::test]
 async fn search_upstream_error_returns_502() {
     let mock = MockClient::with_error("connection refused");
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     let response = call(&app, "/search?q=test", Some("test-relay-key")).await;
@@ -212,8 +204,7 @@ async fn search_upstream_error_returns_502() {
 #[tokio::test]
 async fn search_rate_limited_after_10_requests() {
     let mock = MockClient::new(b"{}".to_vec());
-    let tmp = tempfile::tempdir().unwrap();
-    let state = test_state(tmp.path().to_path_buf(), 1000, mock);
+    let state = test_state(1000, mock).await;
     let app = router(state);
 
     for i in 0..11 {
@@ -231,4 +222,17 @@ async fn search_rate_limited_after_10_requests() {
             assert_eq!(json["error"], "rate limited — try again shortly");
         }
     }
+}
+
+#[tokio::test]
+async fn search_with_file_backend_pool() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let path = tmp.path().join("pool.json");
+    let pool = eigin_relay::Pool::load(100, eigin_relay::PoolConfig::LocalFile(path.clone())).await;
+    assert_eq!(pool.remaining(), 100);
+
+    for _ in 0..5 {
+        pool.try_consume().await.unwrap();
+    }
+    assert_eq!(pool.remaining(), 95);
 }

@@ -2,8 +2,8 @@
 
 mod client;
 mod handler;
-mod pool;
+pub mod pool;
 
 pub use client::{SearchClient, create_client};
 pub use handler::handle;
-pub use pool::Pool;
+pub use pool::{Pool, PoolConfig};
