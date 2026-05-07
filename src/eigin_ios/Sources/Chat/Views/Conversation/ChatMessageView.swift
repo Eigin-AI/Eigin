@@ -16,6 +16,30 @@ struct ChatMessageView: View {
     @State private var showCopied = false
     @State private var footerRevealed = false
     @State private var downloadItem: AssetItem?
+    @State private var isCollapsed: Bool
+
+    private static let collapseThreshold = 200
+
+    init(
+        role: String,
+        content: String,
+        messageID: String = "",
+        showFooter: Bool = false,
+        animateFooter: Bool = false
+    ) {
+        self.role = role
+        self.content = content
+        self.messageID = messageID
+        self.showFooter = showFooter
+        self.animateFooter = animateFooter
+
+        let isUser = role == "user"
+        _isCollapsed = State(initialValue: isUser && content.count > Self.collapseThreshold)
+    }
+
+    private var isLongMessage: Bool {
+        content.count > Self.collapseThreshold
+    }
 
     private var isUser: Bool {
         role == "user"
@@ -52,9 +76,34 @@ struct ChatMessageView: View {
                 .font(Typography.body)
                 .foregroundStyle(colors.textPrimary)
                 .textSelection(.enabled)
+                .lineLimit(isCollapsed ? 5 : nil)
+                .frame(maxWidth: isLongMessage ? .infinity : nil, alignment: .leading)
+                .mask(alignment: .top) {
+                    if isLongMessage, isCollapsed {
+                        VStack(spacing: 0) {
+                            Color.black
+                            LinearGradient(
+                                colors: [.black, .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 28)
+                        }
+                    } else {
+                        Color.black
+                    }
+                }
                 .padding(10)
                 .background(colors.accent.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 18))
+                .onTapGesture {
+                    guard isLongMessage else { return }
+                    Haptics.light()
+                    withAnimation(Animations.gentle) {
+                        isCollapsed.toggle()
+                    }
+                }
+                .animation(Animations.gentle, value: isCollapsed)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
         .containerRelativeFrame(.horizontal, alignment: .trailing) { width, _ in
