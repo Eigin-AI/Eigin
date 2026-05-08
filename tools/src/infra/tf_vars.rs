@@ -1,0 +1,94 @@
+use anyhow::{Context, Result};
+use std::collections::HashMap;
+use std::fs;
+use std::process::Command;
+
+/// Print Terraform TF_VAR_* exports for the given environment.
+///
+/// Reads the repo-root .env file, resolves per-environment variables
+/// (e.g. EIGIN_RELAY_KEY_STAGING), fetches the Scaleway secret key via
+/// the scw CLI, and prints four export lines to stdout suitable for eval.
+#[derive(clap::Args)]
+pub struct TfVarsArgs {
+    /// Environment name (e.g. staging, production).
+    pub env: String,
+}
+
+pub fn run(args: TfVarsArgs) -> Result<()> {
+    let env_upper = args.env.to_uppercase();
+
+    let repo_root = repo_root()?;
+    let dot_env = parse_dot_env(&format!("{repo_root}/.env"));
+
+    let relay_key = dot_env
+        .get(&format!("EIGIN_RELAY_KEY_{env_upper}"))
+        .map(String::as_str)
+        .unwrap_or("");
+
+    let mojeek_key = dot_env
+        .get(&format!("MOJEEK_API_KEY_{env_upper}"))
+        .map(String::as_str)
+        .unwrap_or("");
+
+    let scw_secret = scw_secret_key().unwrap_or_default();
+    let image_tag = git_short_head().unwrap_or_default();
+
+    println!("export TF_VAR_eigin_relay_key=\"{relay_key}\"");
+    println!("export TF_VAR_mojeek_api_key=\"{mojeek_key}\"");
+    println!("export TF_VAR_scw_secret_key=\"{scw_secret}\"");
+    println!("export TF_VAR_image_tag=\"{image_tag}\"");
+
+    Ok(())
+}
+
+fn repo_root() -> Result<String> {
+    let out = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .context("running git rev-parse --show-toplevel")?;
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Parse a `.env` file into a map. Silently returns an empty map if the file doesn't exist.
+pub fn parse_dot_env(path: &str) -> HashMap<String, String> {
+    let Ok(content) = fs::read_to_string(path) else {
+        return HashMap::new();
+    };
+    content
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                return None;
+            }
+            let line = line.strip_prefix("export ").unwrap_or(line);
+            let (key, value) = line.split_once('=')?;
+            let value = value.trim_matches('"').trim_matches('\'').to_string();
+            Some((key.to_string(), value))
+        })
+        .collect()
+}
+
+fn scw_secret_key() -> Option<String> {
+    let out = Command::new("scw")
+        .args(["config", "get", "secret-key"])
+        .output()
+        .ok()?;
+    if out.status.success() {
+        Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    } else {
+        None
+    }
+}
+
+fn git_short_head() -> Option<String> {
+    let out = Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()?;
+    if out.status.success() {
+        Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    } else {
+        None
+    }
+}

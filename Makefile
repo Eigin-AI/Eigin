@@ -16,13 +16,13 @@ RELAY_DIR = src/eigin_relay
 # --- Infra ---
 INFRA_DIR = infra/scaleway
 ENV ?= staging
-# scripts/tf-env.sh resolves per-env TF_VAR_* exports from .env.
-# Run `eval "$(scripts/tf-env.sh staging)"` to load them for direct terraform use.
-TF_ENV = eval "$$(scripts/tf-env.sh $(ENV))"
+# eigin-tools infra tf-vars resolves per-env TF_VAR_* exports from .env.
+# Run `eval "$(eigin-tools infra tf-vars staging)"` to load them for direct terraform use.
+TF_ENV = eval "$$($(TOOLS) infra tf-vars $(ENV))"
 
 # --- Logging ---
 LOG_DIR = logs
-LOG_WRAPPER = scripts/log-wrapper.sh
+TOOLS = cargo run --quiet --manifest-path tools/Cargo.toml --
 
 .PHONY: generate ios-build ios-test ios-clean ios-open \
 	relay-build relay-test relay-run \
@@ -31,24 +31,16 @@ LOG_WRAPPER = scripts/log-wrapper.sh
 
 # --- Cross-cutting ---
 generate:
-	cd $(IOS_DIR) && xcodegen generate
-	xcode-build-server config -project $(IOS_DIR)/Eigin-iOS.xcodeproj -scheme $(SCHEME)
-	cd $(IOS_DIR) && swift Scripts/GenerateLocalized.swift Sources/Localizable.xcstrings Sources/Core/Localized.swift
-	swiftformat $(IOS_DIR)/Sources/Core/Localized.swift
+	$(TOOLS) generate
 
 format:
-	swiftformat $(IOS_DIR)/Sources $(IOS_DIR)/Tests $(IOS_DIR)/Scripts
-	cargo fmt --manifest-path $(RELAY_DIR)/Cargo.toml
+	$(TOOLS) format
 
 lint:
-	swiftformat --lint $(IOS_DIR)/Sources $(IOS_DIR)/Tests $(IOS_DIR)/Scripts
-	cargo fmt --manifest-path $(RELAY_DIR)/Cargo.toml --check
-	cd $(IOS_DIR) && swift Scripts/ValidateLocalized.swift Sources Sources/Core/Localized.swift
+	$(TOOLS) lint
 
 hooks:
-	@ln -sf ../../scripts/hooks/pre-commit-swiftformat.sh .git/hooks/pre-commit
-	@ln -sf ../../scripts/hooks/commit-msg-conventional.sh .git/hooks/commit-msg
-	@echo "Hooks installed."
+	$(TOOLS) hooks install
 
 test: ios-test relay-test
 
@@ -66,7 +58,7 @@ ios-build: generate
 			-destination '$(DESTINATION)' \
 			build; \
 	else \
-		"$(LOG_WRAPPER)" "$(LOG_DIR)/ios-build.log" "Building Eigin for iOS" \
+		$(TOOLS) run --log "$(LOG_DIR)/ios-build.log" --label "Building Eigin for iOS" -- \
 			xcodebuild -project "$(IOS_DIR)/Eigin-iOS.xcodeproj" \
 				-scheme "$(SCHEME)" \
 				-destination '$(DESTINATION)' \
@@ -81,7 +73,7 @@ ios-test: generate
 			-skip-testing:EiginTests/ProviderIntegrationTests \
 			test; \
 	else \
-		"$(LOG_WRAPPER)" "$(LOG_DIR)/ios-test.log" "Running iOS tests" \
+		$(TOOLS) run --log "$(LOG_DIR)/ios-test.log" --label "Running iOS tests" -- \
 			xcodebuild -project "$(IOS_DIR)/Eigin-iOS.xcodeproj" \
 				-scheme "$(SCHEME)" \
 				-destination '$(DESTINATION)' \
@@ -104,7 +96,7 @@ relay-build:
 	@if [ "$(VERBOSE)" = "1" ]; then \
 		cd $(RELAY_DIR) && cargo build --release; \
 	else \
-		"$(LOG_WRAPPER)" "$(LOG_DIR)/relay-build.log" "Building Eigin relay" \
+		$(TOOLS) run --log "$(LOG_DIR)/relay-build.log" --label "Building Eigin relay" -- \
 			sh -c 'cd $(RELAY_DIR) && cargo build --release'; \
 	fi
 
@@ -112,7 +104,7 @@ relay-test:
 	@if [ "$(VERBOSE)" = "1" ]; then \
 		cd $(RELAY_DIR) && cargo test; \
 	else \
-		"$(LOG_WRAPPER)" "$(LOG_DIR)/relay-test.log" "Running relay tests" \
+		$(TOOLS) run --log "$(LOG_DIR)/relay-test.log" --label "Running relay tests" -- \
 			sh -c 'cd $(RELAY_DIR) && cargo test'; \
 	fi
 

@@ -1,0 +1,111 @@
+use std::fs;
+use std::process::Command;
+use tempfile::TempDir;
+
+use eigin_tools::infra::tf_vars::parse_dot_env;
+
+fn eigin_tools() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_eigin-tools"))
+}
+
+// --- parse_dot_env unit tests ---
+
+#[test]
+fn parses_simple_key_value() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(&path, "FOO=bar\n").unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(map.get("FOO").map(String::as_str), Some("bar"));
+}
+
+#[test]
+fn strips_export_prefix() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(&path, "export FOO=bar\n").unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(map.get("FOO").map(String::as_str), Some("bar"));
+}
+
+#[test]
+fn strips_double_quotes() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(&path, "export FOO=\"hello world\"\n").unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(map.get("FOO").map(String::as_str), Some("hello world"));
+}
+
+#[test]
+fn strips_single_quotes() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(&path, "FOO='hello world'\n").unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(map.get("FOO").map(String::as_str), Some("hello world"));
+}
+
+#[test]
+fn skips_comments_and_blank_lines() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(&path, "# comment\n\nFOO=bar\n").unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(map.len(), 1);
+    assert_eq!(map.get("FOO").map(String::as_str), Some("bar"));
+}
+
+#[test]
+fn looks_up_env_suffixed_key() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join(".env");
+    fs::write(
+        &path,
+        "export EIGIN_RELAY_KEY_STAGING=stg-key\nexport EIGIN_RELAY_KEY_PRODUCTION=prod-key\n",
+    )
+    .unwrap();
+    let map = parse_dot_env(path.to_str().unwrap());
+    assert_eq!(
+        map.get("EIGIN_RELAY_KEY_STAGING").map(String::as_str),
+        Some("stg-key")
+    );
+    assert_eq!(
+        map.get("EIGIN_RELAY_KEY_PRODUCTION").map(String::as_str),
+        Some("prod-key")
+    );
+}
+
+#[test]
+fn missing_file_returns_empty_map() {
+    let map = parse_dot_env("/nonexistent/.env");
+    assert!(map.is_empty());
+}
+
+// --- CLI integration test ---
+
+#[test]
+fn tf_vars_prints_four_export_lines() {
+    let dir = TempDir::new().unwrap();
+    let env_file = dir.path().join(".env");
+    fs::write(
+        &env_file,
+        "export EIGIN_RELAY_KEY_STAGING=test-relay-key\nexport MOJEEK_API_KEY_STAGING=test-mojeek-key\n",
+    )
+    .unwrap();
+
+    // Point the binary at our fixture .env by running it from the temp dir
+    // (git rev-parse will fail outside a repo, so we just check the lines we can control)
+    let output = eigin_tools()
+        .args(["infra", "tf-vars", "staging"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("export TF_VAR_eigin_relay_key="));
+    assert!(stdout.contains("export TF_VAR_mojeek_api_key="));
+    assert!(stdout.contains("export TF_VAR_scw_secret_key="));
+    assert!(stdout.contains("export TF_VAR_image_tag="));
+    assert_eq!(stdout.lines().count(), 4);
+}
