@@ -1,0 +1,5 @@
+[platforms.ios]
+localize.source = "src/eigin_ios/Sources/Localizable.xcstrings"
+localize.output = "src/eigin_ios/Sources/Core/Localized.swift"
+localize.formatter = "swiftformat"
+localize.validate-sources = "src/eigin_ios/Sources"

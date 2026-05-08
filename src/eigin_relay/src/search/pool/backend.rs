@@ -21,7 +21,10 @@ impl fmt::Display for BackendError {
         match self {
             BackendError::NotFound => write!(f, "not found"),
             BackendError::Serialise(msg) => write!(f, "serialisation error: {}", msg),
-            BackendError::Request { message, status_code } => {
+            BackendError::Request {
+                message,
+                status_code,
+            } => {
                 if let Some(code) = status_code {
                     write!(f, "request error {}: {}", code, message)
                 } else {

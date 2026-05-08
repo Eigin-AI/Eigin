@@ -79,6 +79,7 @@ docs/book
 
 ## Rust
 src/eigin_relay/target/
+tools/target/
 
 ## Build logs
 logs/
