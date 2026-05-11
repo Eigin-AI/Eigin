@@ -263,19 +263,29 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
     // MARK: - Private Helpers
 
     private func fetchAuthServerMetadata(issuer: URL) async throws -> AuthorizationServerMetadata {
+        // Upgrade to HTTPS — issuers from authorization_servers may advertise http://
+        var httpsIssuer = issuer
+        if issuer.scheme == "http", var components = URLComponents(
+            url: issuer,
+            resolvingAgainstBaseURL: false
+        ) {
+            components.scheme = "https"
+            httpsIssuer = components.url ?? issuer
+        }
+
         // Try RFC 8414 first
-        let rfc8414URL = authServerMetadataURL(for: issuer)
+        let rfc8414URL = authServerMetadataURL(for: httpsIssuer)
         if let meta = try? await fetchAndDecode(
             AuthorizationServerMetadata.self,
             from: rfc8414URL
         ) {
-            return meta
+            return meta.upgradingHTTP()
         }
 
         // Fallback: OpenID Configuration (per MCP spec)
-        let openIDURL = issuer.appendingPathComponent(".well-known/openid-configuration")
+        let openIDURL = httpsIssuer.appendingPathComponent(".well-known/openid-configuration")
         if let meta = try? await fetchAndDecode(AuthorizationServerMetadata.self, from: openIDURL) {
-            return meta
+            return meta.upgradingHTTP()
         }
 
         throw MCPOAuthError.metadataDiscoveryFailed("Could not fetch authorization server metadata")

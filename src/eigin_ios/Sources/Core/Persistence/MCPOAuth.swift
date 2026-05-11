@@ -3,11 +3,9 @@ import Foundation
 // MARK: - Discovery Metadata
 
 struct ProtectedResourceMetadata: Codable {
-    let resource: String?
     let authorizationServers: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case resource
         case authorizationServers = "authorization_servers"
     }
 }
@@ -27,6 +25,25 @@ struct AuthorizationServerMetadata: Codable {
         case registrationEndpoint = "registration_endpoint"
         case scopesSupported = "scopes_supported"
         case codeChallengeMethodsSupported = "code_challenge_methods_supported"
+    }
+}
+
+extension AuthorizationServerMetadata {
+    /// Returns a copy with all endpoint URLs upgraded from http:// to https://.
+    /// Guards against misconfigured servers that advertise HTTP despite only serving HTTPS.
+    func upgradingHTTP() -> AuthorizationServerMetadata {
+        AuthorizationServerMetadata(
+            issuer: issuer.map(upgradeScheme),
+            authorizationEndpoint: upgradeScheme(issuer: authorizationEndpoint),
+            tokenEndpoint: upgradeScheme(issuer: tokenEndpoint),
+            registrationEndpoint: registrationEndpoint.map(upgradeScheme),
+            scopesSupported: scopesSupported,
+            codeChallengeMethodsSupported: codeChallengeMethodsSupported
+        )
+    }
+
+    private func upgradeScheme(issuer: String) -> String {
+        issuer.hasPrefix("http://") ? "https://" + issuer.dropFirst("http://".count) : issuer
     }
 }
 
