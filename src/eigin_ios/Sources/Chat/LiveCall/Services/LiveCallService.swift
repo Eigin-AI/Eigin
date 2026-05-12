@@ -153,7 +153,7 @@ final class LiveCallService: @unchecked Sendable {
         messages = context.messages
         speech = Container.shared.speechService()
         speech.onComplete = { [weak self] in
-            guard let self, phase == .speaking else { return }
+            guard let self, phase == .speaking || phase == .processing else { return }
             startListeningPhase()
         }
         speech.onAudioStarted = { [weak self] in
@@ -285,6 +285,7 @@ final class LiveCallService: @unchecked Sendable {
         lastTranscription = ""
         lastTranscriptionUpdate = .now
         dictationRetries = 0
+        soundManager.stop(.waiting)
         soundManager.play(.dictationStarted)
 
         dictation.stop()
