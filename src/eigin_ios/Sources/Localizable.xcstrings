@@ -7300,13 +7300,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld chats"
+            "value" : "%@ chats"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld chats"
+            "value" : "%@ chats"
           }
         }
       }
