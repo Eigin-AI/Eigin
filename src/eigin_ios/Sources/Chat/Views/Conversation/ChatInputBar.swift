@@ -198,6 +198,7 @@ struct ChatInputBar: View {
                 )
             } else {
                 TextField(Localized.Chat.Input.messagePlaceholder, text: $text, axis: .vertical)
+                    .typography(Typography.body)
                     .focused(isFocused)
                     .lineLimit(1 ... 10)
                     .disabled(isDisabled)
@@ -241,7 +242,7 @@ struct ChatInputBar: View {
             if let request = retainedPermission ?? permissionRequest {
                 let actor = agentName.isEmpty || agentName.count > 20 ? "Agent" : agentName
                 Text(Localized.Permission.wantsToUseFormat(actor, request.toolDisplayName))
-                    .font(Typography.callout)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
 
                 Button {
@@ -249,7 +250,7 @@ struct ChatInputBar: View {
                     onPermissionResponse?(.allowOnce)
                 } label: {
                     Text(Localized.Permission.allowOnce)
-                        .font(Typography.body.weight(.medium))
+                        .font(Typography.body.font.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -261,7 +262,7 @@ struct ChatInputBar: View {
                     onPermissionResponse?(.allowForChat)
                 } label: {
                     Text(Localized.Permission.allowForChat)
-                        .font(Typography.body.weight(.medium))
+                        .font(Typography.body.font.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -273,7 +274,7 @@ struct ChatInputBar: View {
                     onPermissionResponse?(.deny)
                 } label: {
                     Text(Localized.Permission.deny)
-                        .font(Typography.body.weight(.medium))
+                        .font(Typography.body.font.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -441,7 +442,7 @@ private struct ActionPill: View {
             action()
         } label: {
             Label(label, systemImage: icon)
-                .font(Typography.callout)
+                .typography(Typography.label)
                 .foregroundStyle(colors.textSecondary)
                 .padding(.horizontal, Spacing.md)
                 .frame(height: 40)

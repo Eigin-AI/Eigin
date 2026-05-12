@@ -48,7 +48,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: service.responseSpeed.iconName,
                 label: Localized.Settings.turnDelay,
-                background: .white.opacity(0.1)
+                background: colors.textSecondary.opacity(0.1)
             ) {
                 // Handled by menu
             }
@@ -71,7 +71,8 @@ struct LiveCallControls: View {
             callButton(
                 icon: "phone.down.fill",
                 label: Localized.Ui.end,
-                background: .red.gradient
+                background: colors.destructive,
+                iconColor: .white
             ) {
                 Haptics.medium()
                 onEnd()
@@ -80,7 +81,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: "hand.raised.fill",
                 label: Localized.Chat.myTurn,
-                background: .white.opacity(0.1)
+                background: colors.textSecondary.opacity(0.1)
             ) {
                 service.interrupt()
             }
@@ -93,31 +94,29 @@ struct LiveCallControls: View {
 
     private var permissionButtons: some View {
         HStack {
-            // Deny (left — subtle)
             callButton(
                 icon: "xmark",
                 label: Localized.Permission.deny,
-                background: .white.opacity(0.1)
+                background: colors.textSecondary.opacity(0.1)
             ) {
                 Haptics.light()
                 service.chatLoop.resolvePermission(.deny)
             }
 
-            // Allow Once (center — primary, accent-filled)
             callButton(
                 icon: "checkmark",
                 label: Localized.Permission.allowOnce,
-                background: AnyShapeStyle(colors.accent)
+                background: colors.accent,
+                iconColor: .white
             ) {
                 Haptics.light()
                 service.chatLoop.resolvePermission(.allowOnce)
             }
 
-            // Allow for Chat (right — subtle)
             callButton(
                 icon: "checkmark.circle",
                 label: Localized.Permission.allowForChat,
-                background: .white.opacity(0.1)
+                background: colors.textSecondary.opacity(0.1)
             ) {
                 Haptics.light()
                 service.chatLoop.resolvePermission(.allowForChat)
@@ -131,20 +130,21 @@ struct LiveCallControls: View {
         icon: String,
         label: String,
         background: some ShapeStyle,
+        iconColor: Color? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             VStack(spacing: Spacing.xs) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(iconColor ?? colors.textSecondary)
                     .frame(width: 44, height: 44)
                     .background(background)
                     .clipShape(Circle())
 
                 Text(label)
-                    .font(Typography.caption)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .typography(Typography.caption)
+                    .foregroundStyle(colors.textSecondary)
             }
         }
         .frame(maxWidth: .infinity)

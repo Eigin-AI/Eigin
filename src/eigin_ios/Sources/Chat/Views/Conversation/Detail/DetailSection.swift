@@ -10,7 +10,7 @@ struct DetailSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(title)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
             content
         }

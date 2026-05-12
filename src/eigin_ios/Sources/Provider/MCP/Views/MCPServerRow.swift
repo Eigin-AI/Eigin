@@ -8,15 +8,15 @@ struct MCPServerRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(server.name)
-                .font(Typography.body)
+                .typography(Typography.body)
 
             if !server.cachedToolNames.isEmpty {
                 Text(verbatim: "\(server.cachedToolNames.count) \(Localized.Mcp.tools)")
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             } else {
                 Text(server.url)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
                     .lineLimit(1)
             }

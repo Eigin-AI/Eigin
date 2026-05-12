@@ -21,7 +21,7 @@ struct KnowledgeContainer: View {
             case .graph:
                 if let vm = graphViewModel {
                     KnowledgeGraph(viewModel: vm, agentID: agentID)
-                        .navigationTitle("Knowledge")
+                        .navigationTitle("Knowledge", style: Typography.largeTitle)
                         .navigationBarTitleDisplayMode(.inline)
                 } else {
                     ProgressView()

@@ -82,7 +82,7 @@ struct AddMCPServer: View {
                         } else {
                             ForEach(discoveredToolNames, id: \.self) { toolName in
                                 Label(toolName, systemImage: "wrench")
-                                    .font(Typography.body)
+                                    .typography(Typography.body)
                             }
                         }
                     }
@@ -90,7 +90,7 @@ struct AddMCPServer: View {
             }
             .scrollContentBackground(.hidden)
             .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Settings.Action.addMcpServer)
+            .navigationTitle(Localized.Settings.Action.addMcpServer, style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -162,9 +162,9 @@ struct AddMCPServer: View {
                         systemImage: "exclamationmark.triangle"
                     )
                     .foregroundStyle(colors.destructive)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     Text(message)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                 }
             }

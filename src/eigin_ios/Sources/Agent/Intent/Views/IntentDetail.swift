@@ -14,7 +14,7 @@ struct IntentDetail: View {
         List {
             Section {
                 Text(intent.content)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textPrimary)
             }
 
@@ -23,28 +23,28 @@ struct IntentDetail: View {
                     HStack(spacing: Spacing.sm) {
                         strengthIndicator(intent.effectiveStrength)
                         Text(String(format: "%.0f%%", intent.effectiveStrength * 100))
-                            .font(Typography.callout)
+                            .typography(Typography.callout)
                     }
                 }
                 LabeledContent(Localized.Ui.reinforced) {
                     Text(Localized.Ui.timesCountStr(String(intent.reinforcedCount)))
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                 }
                 LabeledContent(Localized.Ui.created) {
                     Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                 }
                 LabeledContent(Localized.Tools.Last.updated) {
                     Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                 }
             }
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Ui.intent)
+        .navigationTitle(Localized.Ui.intent, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .destructiveAction) {

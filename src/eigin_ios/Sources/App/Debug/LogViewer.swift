@@ -18,7 +18,7 @@ struct LogViewer: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if logText.isEmpty {
                     Text(Localized.Settings.Log.empty)
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                         .padding()
                 } else {
@@ -35,7 +35,7 @@ struct LogViewer: View {
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
         .searchable(text: $searchText, prompt: "Filter log")
-        .navigationTitle("App Log")
+        .navigationTitle("App Log", style: Typography.largeTitle)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {

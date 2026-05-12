@@ -23,7 +23,7 @@ struct ModelStorageView: View {
                         VStack(alignment: .leading, spacing: Spacing.xs) {
                             HStack {
                                 Text(entry.name)
-                                    .font(Typography.body)
+                                    .typography(Typography.body)
                                 Spacer()
                                 Text(entry.formattedSize)
                                     .font(.caption.monospaced())
@@ -54,7 +54,7 @@ struct ModelStorageView: View {
             Section {
                 HStack {
                     Text(Localized.Ui.total)
-                        .font(Typography.body)
+                        .typography(Typography.body)
                     Spacer()
                     Text(ModelStorageView.formatBytes(totalBytes))
                         .font(.caption.monospaced())
@@ -75,7 +75,7 @@ struct ModelStorageView: View {
                 )
             }
         }
-        .navigationTitle("Model Storage")
+        .navigationTitle("Model Storage", style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { refresh() }
         .refreshable { refresh() }

@@ -56,7 +56,7 @@ struct TranscriptDetail: View {
                 .padding()
             }
             .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Debug.transcriptTitle)
+            .navigationTitle(Localized.Debug.transcriptTitle, style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -70,22 +70,22 @@ struct TranscriptDetail: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
                 Text(transcript.signal.hasPrefix("notify") ? "Notify" : "Silent")
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(transcript.signal.hasPrefix("notify") ? .green : .orange)
                 Spacer()
                 Text(Localized.Agent.roundsCount(String(transcript.rounds)))
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
             Text(transcript.reason)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
             Text(transcript.timestamp, style: .date)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
             Text(verbatim: " ")
             Text(transcript.timestamp, style: .time)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         }
         .padding()
@@ -96,7 +96,7 @@ struct TranscriptDetail: View {
     private var timelineSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(Localized.Ui.timeline(String(timeline.count)))
-                .font(Typography.headline)
+                .typography(Typography.headline)
 
             ForEach(timeline) { item in
                 switch item.type {
@@ -113,10 +113,10 @@ struct TranscriptDetail: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(verbatim: "[\(index)]")
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textTertiary)
                 Text(verbatim: "→ \(toolCall.function.name)")
-                    .font(Typography.caption.bold())
+                    .font(Typography.caption.font.bold())
                     .foregroundStyle(.purple)
             }
 
@@ -150,10 +150,10 @@ struct TranscriptDetail: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(verbatim: "[\(index)]")
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textTertiary)
                 Text(message.role)
-                    .font(Typography.caption.bold())
+                    .font(Typography.caption.font.bold())
                     .foregroundStyle(roleColor(message.role))
             }
 
@@ -179,7 +179,7 @@ struct TranscriptDetail: View {
                     }
                 } else {
                     Text(content)
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                         .textSelection(.enabled)
                 }

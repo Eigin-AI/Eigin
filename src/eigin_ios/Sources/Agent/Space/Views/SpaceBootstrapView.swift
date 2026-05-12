@@ -63,7 +63,7 @@ struct SpaceBootstrapView: View {
                     finishSetup()
                 } label: {
                     Text(Localized.Space.Bootstrap.finishSetup)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -75,7 +75,7 @@ struct SpaceBootstrapView: View {
             }
         }
         .animation(.spring(duration: 0.35, bounce: 0), value: showFinishButton)
-        .navigationTitle(Localized.Space.Bootstrap.title)
+        .navigationTitle(Localized.Space.Bootstrap.title, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             guard !didAppear else { return }

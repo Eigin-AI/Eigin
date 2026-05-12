@@ -36,7 +36,7 @@ struct CompactionDivider: View {
                 ))
                     ?? AttributedString(cleaned)
                 Text(rendered)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, Spacing.sm)
@@ -77,12 +77,12 @@ struct CompactionDivider: View {
 
             HStack(spacing: Spacing.xs) {
                 Text(isCompacting ? "Compacting…" : "Conversation summarized")
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
 
                 if hasSummary {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                 }
             }

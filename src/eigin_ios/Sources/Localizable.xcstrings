@@ -7022,6 +7022,40 @@
         }
       }
     },
+    "skills.instruction" : {
+      "comment" : "Section header for a skill's instruction text",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instruktion"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instruction"
+          }
+        }
+      }
+    },
+    "skills.tools" : {
+      "comment" : "Section header for the tools a skill provides",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Værktøjer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tools"
+          }
+        }
+      }
+    },
     "skills.title" : {
       "comment" : "Navigation title for skills list",
       "localizations" : {

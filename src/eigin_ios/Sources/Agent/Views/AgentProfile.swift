@@ -93,103 +93,111 @@ struct AgentProfile: View {
 
     private var presentationSection: some View {
         Section {
-            HStack(alignment: .center, spacing: Spacing.sm) {
-                Button {
-                    showEmojiPicker = true
-                } label: {
-                    Text(agent.emoji)
-                        .font(.system(size: 40))
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showEmojiPicker) {
-                    EmojiGrid(
-                        selectedEmoji: $agent.emoji,
-                        isPresented: $showEmojiPicker,
-                        colors: colors
-                    )
-                }
-
-                if isEditingName {
-                    TextField(Localized.Common.Fields.agentName, text: $editingNameText)
-                        .font(Typography.title)
-                        .focused($isNameFocused)
-                        .onSubmit { commitNameEdit() }
-                        .onChange(of: isNameFocused) { _, focused in
-                            if !focused { commitNameEdit() }
-                        }
-                        .onAppear {
-                            editingNameText = agent.name
-                            isNameFocused = true
-                        }
-                } else {
-                    Text(agent.name)
-                        .font(Typography.title)
-                        .foregroundStyle(colors.textPrimary)
-                        .onTapGesture {
-                            editingNameText = agent.name
-                            withAnimation(Animations.snap) {
-                                isEditingName = true
-                            }
-                        }
-                }
-
-                Spacer()
-            }
-
-            DisclosureGroup(isExpanded: $showVoicePicker) {
-                voiceRow(
-                    label: Localized.Chat.systemDefault,
-                    voice: nil
-                )
-
-                let voices = availableVoices
-                ForEach(voices) { voice in
-                    voiceRow(label: voice.displayName, subtitle: voice.dialect, voice: voice)
-                }
-
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    SettingsIcon(systemName: "waveform", color: .purple)
-                    Text(Localized.Agent.Profile.voice)
-                    Spacer()
-                    Text(currentVoiceName)
-                        .foregroundStyle(colors.textSecondary)
-                        .font(Typography.callout)
-                }
-            }
-
-            if let asset = upgradeAsset {
-                if case .downloading(let progress) = asset.state {
-                    HStack(spacing: Spacing.sm) {
-                        CircularProgressView(progress: progress)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(asset.displayName)
-                                .foregroundStyle(colors.textPrimary)
-                            Text(Localized.Status.downloading)
-                                .font(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
-                        }
-                    }
-                } else {
+            Group {
+                HStack(alignment: .center, spacing: Spacing.sm) {
                     Button {
-                        showDownloadPrompt = true
+                        showEmojiPicker = true
                     } label: {
+                        Text(agent.emoji)
+                            .font(.system(size: 40))
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showEmojiPicker) {
+                        EmojiGrid(
+                            selectedEmoji: $agent.emoji,
+                            isPresented: $showEmojiPicker,
+                            colors: colors
+                        )
+                    }
+
+                    if isEditingName {
+                        TextField(Localized.Common.Fields.agentName, text: $editingNameText)
+                            .typography(Typography.title)
+                            .focused($isNameFocused)
+                            .onSubmit { commitNameEdit() }
+                            .onChange(of: isNameFocused) { _, focused in
+                                if !focused { commitNameEdit() }
+                            }
+                            .onAppear {
+                                editingNameText = agent.name
+                                isNameFocused = true
+                            }
+                    } else {
+                        Text(agent.name)
+                            .typography(Typography.title)
+                            .foregroundStyle(colors.textPrimary)
+                            .onTapGesture {
+                                editingNameText = agent.name
+                                withAnimation(Animations.snap) {
+                                    isEditingName = true
+                                }
+                            }
+                    }
+
+                    Spacer()
+                }
+
+                DisclosureGroup(isExpanded: $showVoicePicker) {
+                    voiceRow(
+                        label: Localized.Chat.systemDefault,
+                        voice: nil
+                    )
+
+                    let voices = availableVoices
+                    ForEach(voices) { voice in
+                        voiceRow(label: voice.displayName, subtitle: voice.dialect, voice: voice)
+                    }
+
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        SettingsIcon(systemName: "waveform", color: .purple)
+                        Text(Localized.Agent.Profile.voice)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
+                        Spacer()
+                        Text(currentVoiceName)
+                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.callout)
+                    }
+                }
+
+                if let asset = upgradeAsset {
+                    if case .downloading(let progress) = asset.state {
                         HStack(spacing: Spacing.sm) {
-                            Image(systemName: "arrow.down.circle")
-                                .foregroundStyle(colors.accent)
+                            CircularProgressView(progress: progress)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(asset.displayName)
+                                    .typography(Typography.subheadline)
                                     .foregroundStyle(colors.textPrimary)
-                                Text(asset.downloadDescription)
-                                    .font(Typography.caption)
+                                Text(Localized.Status.downloading)
+                                    .typography(Typography.caption)
                                     .foregroundStyle(colors.textSecondary)
                             }
                         }
+                    } else {
+                        Button {
+                            showDownloadPrompt = true
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "arrow.down.circle")
+                                    .foregroundStyle(colors.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(asset.displayName)
+                                        .typography(Typography.subheadline)
+                                        .foregroundStyle(colors.textPrimary)
+                                    Text(asset.downloadDescription)
+                                        .typography(Typography.caption)
+                                        .foregroundStyle(colors.textSecondary)
+                                }
+                            }
+                        }
                     }
                 }
             }
+            .listRowBackground(colors.surface)
         } header: {
             Text(Localized.Agent.Profile.Section.presentation)
+                .typography(Typography.label)
         } footer: {
             if showVoicePicker {
                 if !voiceService.isUsingEnhancedEngine(for: languageManager.currentLanguage) {
@@ -202,83 +210,105 @@ struct AgentProfile: View {
     // MARK: - Provider
 
     private var providerSection: some View {
-        Section(Localized.Provider.modelLabel) {
-            HStack(spacing: Spacing.sm) {
-                SettingsIcon(systemName: "server.rack", color: .blue)
-                Picker(Localized.Ui.provider, selection: providerBinding) {
-                    ForEach(providers) { provider in
-                        Text(provider.name).tag(provider.id)
+        Section {
+            Group {
+                HStack(spacing: Spacing.sm) {
+                    SettingsIcon(systemName: "server.rack", color: .blue)
+                    Picker(Localized.Ui.provider, selection: providerBinding) {
+                        ForEach(providers) { provider in
+                            Text(provider.name)
+                                .typography(Typography.body)
+                                .tag(provider.id)
+                        }
+                    }
+                }
+                NavigationLink {
+                    ModelPicker(
+                        providerName: currentProvider?.name ?? "",
+                        availableModels: availableModels,
+                        selectedModel: $agent.model
+                    )
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        SettingsIcon(systemName: "cpu", color: .teal)
+                        Text(Localized.Provider.modelLabel)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
+                        Spacer()
+                        Text(modelDisplayName(agent.model))
+                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.callout)
                     }
                 }
             }
-            NavigationLink {
-                ModelPicker(
-                    providerName: currentProvider?.name ?? "",
-                    availableModels: availableModels,
-                    selectedModel: $agent.model
-                )
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    SettingsIcon(systemName: "cpu", color: .teal)
-                    Text(Localized.Provider.modelLabel)
-                    Spacer()
-                    Text(modelDisplayName(agent.model))
-                        .foregroundStyle(colors.textSecondary)
-                        .font(Typography.callout)
-                }
-            }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Provider.modelLabel)
+                .typography(Typography.label)
         }
     }
 
     // MARK: - Core
 
     private var coreSection: some View {
-        Section(Localized.Agent.Profile.Section.core) {
-            coreDocumentRow(
-                title: Localized.Agent.identityLabel,
-                icon: "person.text.rectangle",
-                color: .orange,
-                text: $agent.identityCore
-            )
-            coreDocumentRow(
-                title: Localized.Agent.userLabel,
-                icon: "person.fill",
-                color: .green,
-                text: $agent.userCore
-            )
-            coreDocumentRow(
-                title: Localized.Agent.soul,
-                icon: "sparkles",
-                color: .indigo,
-                text: $agent.soulCore
-            )
+        Section {
+            Group {
+                coreDocumentRow(
+                    title: Localized.Agent.identityLabel,
+                    icon: "person.text.rectangle",
+                    color: .orange,
+                    text: $agent.identityCore
+                )
+                coreDocumentRow(
+                    title: Localized.Agent.userLabel,
+                    icon: "person.fill",
+                    color: .green,
+                    text: $agent.userCore
+                )
+                coreDocumentRow(
+                    title: Localized.Agent.soul,
+                    icon: "sparkles",
+                    color: .indigo,
+                    text: $agent.soulCore
+                )
 
-            NavigationLink {
-                KnowledgeContainer(agentID: agent.id)
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    SettingsIcon(systemName: "book.closed", color: .cyan)
-                    Text(Localized.Knowledge.sectionTitle)
+                NavigationLink {
+                    KnowledgeContainer(agentID: agent.id)
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        SettingsIcon(systemName: "book.closed", color: .cyan)
+                        Text(Localized.Knowledge.sectionTitle)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
+                    }
+                }
+
+                NavigationLink {
+                    IntentsList(agentID: agent.id)
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        SettingsIcon(systemName: "arrow.triangle.branch", color: .orange)
+                        Text(Localized.Agent.intents)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
+                    }
+                }
+
+                NavigationLink {
+                    SkillsList()
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        SettingsIcon(systemName: "sparkles.rectangle.stack", color: .purple)
+                        Text(Localized.Agent.skills)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
+                    }
                 }
             }
-
-            NavigationLink {
-                IntentsList(agentID: agent.id)
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    SettingsIcon(systemName: "arrow.triangle.branch", color: .orange)
-                    Text(Localized.Agent.intents)
-                }
-            }
-
-            NavigationLink {
-                SkillsList()
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    SettingsIcon(systemName: "sparkles.rectangle.stack", color: .purple)
-                    Text(Localized.Agent.skills)
-                }
-            }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Agent.Profile.Section.core)
+                .typography(Typography.label)
         }
     }
 
@@ -294,12 +324,14 @@ struct AgentProfile: View {
             HStack(spacing: Spacing.sm) {
                 SettingsIcon(systemName: icon, color: color)
                 Text(title)
+                    .typography(Typography.subheadline)
+                    .foregroundStyle(colors.textPrimary)
                 Spacer()
                 Text(text.wrappedValue
                     .isEmpty ? Localized.Common.Placeholder
                     .notSet : String(text.wrappedValue.prefix(30)) + "...")
                     .foregroundStyle(colors.textSecondary)
-                    .font(Typography.caption)
+                    .typography(Typography.callout)
                     .lineLimit(1)
             }
         }
@@ -309,24 +341,28 @@ struct AgentProfile: View {
 
     private var proactivitySection: some View {
         Section {
-            Picker("Proactivity", selection: $agent.proactivity) {
-                ForEach(ProactivityLevel.allCases, id: \.self) { level in
-                    Label(level.displayName, systemImage: level.systemImage)
-                        .tag(level)
+            Group {
+                Picker("Proactivity", selection: $agent.proactivity) {
+                    ForEach(ProactivityLevel.allCases, id: \.self) { level in
+                        Label(level.displayName, systemImage: level.systemImage)
+                            .tag(level)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: agent.proactivity.systemImage)
+                        .foregroundStyle(colors.accent)
+                        .frame(width: 20)
+                    Text(agent.proactivity.description)
+                        .typography(Typography.caption)
+                        .foregroundStyle(colors.textSecondary)
                 }
             }
-            .pickerStyle(.segmented)
-
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: agent.proactivity.systemImage)
-                    .foregroundStyle(colors.accent)
-                    .frame(width: 20)
-                Text(agent.proactivity.description)
-                    .font(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
-            }
+            .listRowBackground(colors.surface)
         } header: {
             Text(Localized.Agent.Profile.Section.initiative)
+                .typography(Typography.label)
         }
         .onChange(of: agent.proactivity) { _, newValue in
             agent.updatedAt = .now
@@ -383,11 +419,12 @@ struct AgentProfile: View {
         } label: {
             HStack {
                 Text(label)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textPrimary)
                 if let subtitle {
                     Spacer()
                     Text(subtitle)
-                        .font(Typography.caption)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                 }
                 Spacer()

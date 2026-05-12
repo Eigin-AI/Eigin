@@ -48,10 +48,10 @@ struct ProviderPicker: View {
                             Image(systemName: "plus.circle")
                                 .font(.title3)
                             Text(Localized.Provider.Picker.customProvider)
-                                .font(Typography.body)
+                                .typography(Typography.subheadline)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                         }
                         .padding(Spacing.md)
@@ -75,7 +75,7 @@ struct ProviderPicker: View {
                 }
             }
             .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Settings.Action.addProvider)
+            .navigationTitle(Localized.Settings.Action.addProvider, style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: Localized.Provider.Picker.searchPrompt)
             .navigationDestination(for: ProviderPreset.self) { preset in
@@ -107,21 +107,21 @@ private struct LocalProviderTile: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(spacing: Spacing.sm) {
                     Text(preset.name)
-                        .font(Typography.body)
+                        .typography(Typography.subheadline)
                     Text(Localized.Provider.Picker.experimental)
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, 2)
                         .background(colors.surfaceSecondary, in: Capsule())
                 }
                 Text(preset.helpText)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         }
         .padding(Spacing.md)
@@ -148,13 +148,13 @@ private struct ProviderTile: View {
                     .frame(width: 40, height: 40)
             } else {
                 Text(String(preset.name.prefix(1)))
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textSecondary)
                     .frame(width: 40, height: 40)
             }
 
             Text(preset.name)
-                .font(Typography.callout)
+                .typography(Typography.subheadline)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)

@@ -8,11 +8,11 @@ struct DocumentEditor: View {
 
     var body: some View {
         TextEditor(text: $text)
-            .font(Typography.body)
+            .typography(Typography.body)
             .padding(.horizontal, Spacing.sm)
             .scrollContentBackground(.hidden)
             .background(colors.background.ignoresSafeArea())
-            .navigationTitle(title)
+            .navigationTitle(title, style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
     }
 }

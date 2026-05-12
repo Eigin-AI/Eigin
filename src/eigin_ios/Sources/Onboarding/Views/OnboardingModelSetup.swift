@@ -100,9 +100,9 @@ struct OnboardingModelSetup: View {
 
                 VStack(spacing: Spacing.xs) {
                     Text(Localized.Onboarding.ModelSetup.intro)
-                        .font(Typography.title)
+                        .typography(Typography.title)
                     Text(cyclingWords[currentWordIndex])
-                        .font(Typography.largeTitle)
+                        .typography(Typography.largeTitle)
                         .foregroundStyle(colors.accent)
                         .contentTransition(.numericText())
                 }
@@ -114,7 +114,7 @@ struct OnboardingModelSetup: View {
 
             VStack(spacing: Spacing.lg) {
                 Text(Localized.Onboarding.LocalModel.description)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center)
 
@@ -122,7 +122,7 @@ struct OnboardingModelSetup: View {
                     Task { await gemmaManager.download() }
                 } label: {
                     Text(Localized.Onboarding.ModelSetup.downloadAction)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -158,7 +158,7 @@ struct OnboardingModelSetup: View {
 
                 VStack(spacing: 4) {
                     Text(verbatim: "\(Int(progress * 100))%")
-                        .font(Typography.title)
+                        .typography(Typography.title)
                         .foregroundStyle(colors.textPrimary)
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -169,7 +169,7 @@ struct OnboardingModelSetup: View {
                 Text(
                     Localized.Onboarding.ModelSetup.downloadStatus
                 )
-                .font(Typography.body)
+                .typography(Typography.body)
                 .foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center)
 
@@ -178,7 +178,7 @@ struct OnboardingModelSetup: View {
                         ? Localized.Onboarding.ModelSetup.notifyConfirmation
                         : Localized.Onboarding.ModelSetup.notifyOffer
                 )
-                .font(Typography.body)
+                .typography(Typography.body)
                 .foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center)
 
@@ -195,7 +195,7 @@ struct OnboardingModelSetup: View {
                         Image(systemName: "arrow.right")
                             .font(.system(size: 12))
                     }
-                    .font(Typography.callout)
+                    .typography(Typography.subheadline)
                 }
                 .foregroundStyle(colors.accent)
                 .opacity(gemmaManager.notifyOnDownloadComplete ? 0 : 1)
@@ -209,7 +209,7 @@ struct OnboardingModelSetup: View {
                     gemmaManager.cancel()
                 } label: {
                     Text(Localized.Common.Actions.cancel)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -233,7 +233,7 @@ struct OnboardingModelSetup: View {
                 Text(
                     Localized.Status.preparingDevice
                 )
-                .font(Typography.body)
+                .typography(Typography.body)
                 .foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center)
             }
@@ -265,7 +265,7 @@ struct OnboardingModelSetup: View {
                     .foregroundStyle(colors.accent)
 
                 Text(Localized.Onboarding.ModelSetup.readyStatus)
-                    .font(Typography.title)
+                    .typography(Typography.title)
                     .foregroundStyle(colors.textPrimary)
             }
 
@@ -276,7 +276,7 @@ struct OnboardingModelSetup: View {
                     onReady()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -301,7 +301,7 @@ struct OnboardingModelSetup: View {
 
                 VStack(spacing: Spacing.sm) {
                     Text(Localized.Onboarding.ModelSetup.errorTitle)
-                        .font(Typography.title)
+                        .typography(Typography.title)
                         .foregroundStyle(colors.textPrimary)
                 }
             }
@@ -311,7 +311,7 @@ struct OnboardingModelSetup: View {
                     Task { await gemmaManager.download() }
                 } label: {
                     Text(Localized.Common.Actions.retry)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -332,7 +332,7 @@ struct OnboardingModelSetup: View {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 12))
             }
-            .font(Typography.callout)
+            .typography(Typography.subheadline)
         }
         .foregroundStyle(colors.textSecondary)
     }

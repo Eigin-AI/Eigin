@@ -4,6 +4,10 @@
 [Philosophy](./philosophy.md)
 [FAQ](./faq.md)
 
+# Design
+
+- [Design system](./design.md)
+
 # Platform
 
 - [Overview](./system-context.md)

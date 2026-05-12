@@ -148,7 +148,7 @@ targets:
         MARKETING_VERSION: "0.12.0"
         CURRENT_PROJECT_VERSION: "1"
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Dev
-        INFOPLIST_KEY_ASSETCATALOG_COMPILER_APPICON_NAME: AppIconDev
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIconDev
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown

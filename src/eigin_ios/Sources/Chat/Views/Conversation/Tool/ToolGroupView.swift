@@ -48,7 +48,7 @@ struct ToolGroupView: View {
 
                     if isExpanded {
                         Text(Localized.Tool.Group.toolsUsed(String(tools.count)))
-                            .font(Typography.body.weight(.medium))
+                            .font(Typography.body.font.weight(.medium))
                             .foregroundStyle(colors.textSecondary.opacity(0.4))
                             .padding(.vertical, Spacing.xs)
                             .alignmentGuide(.toolText) { $0[.leading] }
@@ -59,7 +59,7 @@ struct ToolGroupView: View {
                             .alignmentGuide(.toolText) { $0[.leading] }
                         if isGrouped {
                             Text(verbatim: "(\(tools.count))")
-                                .font(Typography.body.weight(.medium))
+                                .font(Typography.body.font.weight(.medium))
                                 .foregroundStyle(colors.textSecondary.opacity(0.4))
                                 .padding(.leading, Spacing.xs)
                                 .transition(.opacity)

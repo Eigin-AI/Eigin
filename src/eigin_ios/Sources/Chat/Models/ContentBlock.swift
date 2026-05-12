@@ -4,6 +4,7 @@ struct ContentBlock: Identifiable, Equatable {
     let id: String
     let kind: BlockKind
     var text: String
+    var language: String?
 }
 
 enum BlockKind: Equatable {
@@ -26,6 +27,7 @@ extension ContentBlock {
 
         var inCodeFence = false
         var codeFenceContent = ""
+        var codeFenceLanguage: String? = nil
         var inMathBlock = false
         var mathContent = ""
         var inTable = false
@@ -45,9 +47,15 @@ extension ContentBlock {
         func flushCode() {
             guard !codeFenceContent.isEmpty else { return }
             let id = "\(messageID)-block-\(blockIndex)"
-            blocks.append(ContentBlock(id: id, kind: .code, text: codeFenceContent))
+            blocks.append(ContentBlock(
+                id: id,
+                kind: .code,
+                text: codeFenceContent,
+                language: codeFenceLanguage
+            ))
             blockIndex += 1
             codeFenceContent = ""
+            codeFenceLanguage = nil
             inCodeFence = false
         }
 
@@ -166,6 +174,8 @@ extension ContentBlock {
                 flushParagraph()
                 inCodeFence = true
                 codeFenceContent = ""
+                let lang = trimmed.dropFirst(3).trimmingCharacters(in: .whitespaces)
+                codeFenceLanguage = lang.isEmpty ? nil : lang
             } else if trimmed == "$$" {
                 flushParagraph()
                 inMathBlock = true

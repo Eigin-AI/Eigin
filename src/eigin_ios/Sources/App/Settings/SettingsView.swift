@@ -27,7 +27,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Ui.settings)
+            .navigationTitle(Localized.Ui.settings, style: Typography.largeTitle)
             .sheet(isPresented: $showingAddProvider) {
                 ProviderPicker()
             }
@@ -47,9 +47,15 @@ struct SettingsView: View {
     // MARK: - Sections
 
     private var appearanceSection: some View {
-        Section(Localized.Settings.appearance) {
-            themePicker
-            languagePicker
+        Section {
+            Group {
+                themePicker
+                languagePicker
+            }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Settings.appearance)
+                .typography(Typography.label)
         }
     }
 
@@ -88,86 +94,116 @@ struct SettingsView: View {
     @ViewBuilder
     private var securitySection: some View {
         if let agent = agents.first {
-            Section(Localized.Ui.security) {
+            Section {
                 NavigationLink {
                     ToolPermissions(agent: agent)
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         SettingsIcon(systemName: "lock.fill", color: .cyan)
                         Text(Localized.Settings.Label.permissions)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
                     }
                 }
+                .listRowBackground(colors.surface)
+            } header: {
+                Text(Localized.Ui.security)
+                    .typography(Typography.label)
             }
         }
     }
 
     private var providersSection: some View {
-        Section(Localized.Ui.providers) {
+        Section {
             ForEach(providers) { provider in
                 NavigationLink(value: provider.persistentModelID) {
                     providerRow(provider)
                 }
             }
             .onDelete(perform: deleteProviders)
+            .listRowBackground(colors.surface)
 
             Button(Localized.Settings.Action.addProvider) {
                 showingAddProvider = true
             }
+            .typography(Typography.subheadline)
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Ui.providers)
+                .typography(Typography.label)
         }
     }
 
     private func providerRow(_ provider: Provider) -> some View {
         VStack(alignment: .leading) {
             Text(provider.name)
-                .font(Typography.body)
+                .typography(Typography.subheadline)
             let count = provider.availableModels
                 .count(where: { KnownModelCatalog.lookup($0) != nil })
             Text(Localized.Settings.Info.modelsAvailable("\(count)"))
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         }
     }
 
     private var mcpServersSection: some View {
-        Section(Localized.Ui.mcpServers) {
+        Section {
             ForEach(mcpServers) { server in
                 NavigationLink(value: server.persistentModelID) {
                     MCPServerRow(server: server)
                 }
             }
             .onDelete(perform: deleteMCPServers)
+            .listRowBackground(colors.surface)
 
             Button(Localized.Settings.Action.addMcpServer) {
                 showingAddMCPServer = true
             }
+            .typography(Typography.subheadline)
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Ui.mcpServers)
+                .typography(Typography.label)
         }
     }
 
     private var advancedSection: some View {
-        Section(Localized.Settings.Section.advanced) {
+        Section {
             NavigationLink {
                 AdvancedSettings()
             } label: {
                 HStack(spacing: Spacing.sm) {
                     SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
                     Text(Localized.Settings.Section.advanced)
+                        .typography(Typography.subheadline)
+                        .foregroundStyle(colors.textPrimary)
                 }
             }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Settings.Section.advanced)
+                .typography(Typography.label)
         }
     }
 
     @ViewBuilder
     private var developmentSection: some View {
 #if DEBUG
-        Section(Localized.Settings.Section.development) {
+        Section {
             NavigationLink {
                 DevelopmentMenu()
             } label: {
                 HStack(spacing: Spacing.sm) {
                     SettingsIcon(systemName: "hammer.fill", color: .orange)
                     Text(Localized.Settings.Section.development)
+                        .typography(Typography.subheadline)
+                        .foregroundStyle(colors.textPrimary)
                 }
             }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Settings.Section.development)
+                .typography(Typography.label)
         }
 #endif
     }

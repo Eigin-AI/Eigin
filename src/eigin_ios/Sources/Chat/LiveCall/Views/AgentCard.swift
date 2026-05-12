@@ -5,6 +5,8 @@ struct AgentCard: View {
     let agent: Agent
     let service: LiveCallService
 
+    @Environment(\.colors) private var colors
+
     var body: some View {
         VStack(spacing: Spacing.md) {
             ZStack {
@@ -16,8 +18,8 @@ struct AgentCard: View {
             }
 
             Text(agent.name)
-                .font(Typography.title)
-                .foregroundStyle(.white)
+                .typography(Typography.title)
+                .foregroundStyle(colors.textPrimary)
         }
     }
 }

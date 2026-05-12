@@ -26,11 +26,14 @@ struct MCPServerDetail: View {
     var body: some View {
         List {
             Section {
-                LabeledContent(Localized.Mcp.Label.url, value: server.url)
-                LabeledContent(
-                    Localized.Mcp.authentication,
-                    value: server.authType.displayName
-                )
+                Group {
+                    LabeledContent(Localized.Mcp.Label.url, value: server.url)
+                    LabeledContent(
+                        Localized.Mcp.authentication,
+                        value: server.authType.displayName
+                    )
+                }
+                .listRowBackground(colors.surface)
             }
 
             Section {
@@ -40,29 +43,38 @@ struct MCPServerDetail: View {
                     HStack(spacing: Spacing.sm) {
                         statusIndicator
                         Text(status.label)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
                     }
                 }
+                .listRowBackground(colors.surface)
             } header: {
                 Text(Localized.Mcp.Section.status)
+                    .typography(Typography.label)
             }
 
             Section {
-                if server.cachedToolNames.isEmpty {
-                    Text(Localized.Mcp.noToolsDiscovered)
-                        .foregroundStyle(colors.textSecondary)
-                } else {
-                    ForEach(server.cachedToolNames, id: \.self) { toolName in
-                        Label(toolName.titleCased, systemImage: "wrench")
-                            .font(Typography.body)
+                Group {
+                    if server.cachedToolNames.isEmpty {
+                        Text(Localized.Mcp.noToolsDiscovered)
+                            .foregroundStyle(colors.textSecondary)
+                    } else {
+                        ForEach(server.cachedToolNames, id: \.self) { toolName in
+                            Label(toolName.titleCased, systemImage: "wrench")
+                                .typography(Typography.subheadline)
+                                .foregroundStyle(colors.textPrimary)
+                        }
                     }
                 }
+                .listRowBackground(colors.surface)
             } header: {
                 Text(Localized.Mcp.tools)
+                    .typography(Typography.label)
             }
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(server.name)
+        .navigationTitle(server.name, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -91,16 +103,16 @@ struct MCPServerDetail: View {
         switch status {
         case .idle:
             Text(Localized.Mcp.autoConnectHint)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         case .connected:
             Text(Localized.Mcp.Status.connectionActive)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         case .error(let message):
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(message)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.destructive)
 
                 if server.authType == .oauth {
@@ -117,14 +129,14 @@ struct MCPServerDetail: View {
 
                     if let reauthorizeError {
                         Text(reauthorizeError)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(colors.destructive)
                     }
                 }
             }
         case .disabled:
             Text(Localized.Mcp.Status.disabledHint)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         }
     }

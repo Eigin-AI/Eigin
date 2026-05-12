@@ -1,10 +1,7 @@
 import Factory
 import SwiftUI
 
-/// Full-screen voice mode overlaid on the chat with a translucent material backdrop.
-///
-/// The bottom box shows a live text stream: dictation while listening,
-/// a status label while thinking, and the agent's words as they're spoken.
+/// Full-screen voice mode overlaid on the chat.
 struct LiveCallView: View {
     let agent: Agent
     let provider: Provider
@@ -20,15 +17,14 @@ struct LiveCallView: View {
     var onChatGrant: (([ToolCapability]) -> Void)?
 
     @Injected(\.dictationService) private var dictationService
-    @Environment(\.themeManager) private var themeManager
+    @Environment(\.colors) private var colors
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var service = LiveCallService()
 
     var body: some View {
         ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
+            colors.background
                 .ignoresSafeArea()
 
             VStack {
@@ -38,9 +34,6 @@ struct LiveCallView: View {
                 LiveCallFooter(service: service, onEnd: endCall)
             }
         }
-        .environment(\.colorScheme, .dark)
-        .environment(\.colors, colors)
-        .presentationBackground(.clear)
         .onAppear {
             dictationService.stop()
             service.start(context: LiveCallContext(
@@ -58,7 +51,6 @@ struct LiveCallView: View {
         }
         .statusBarHidden()
         .onChange(of: service.phase) { oldPhase, newPhase in
-            // Auto-dismiss when stopped externally (e.g. CallKit end, real call)
             if oldPhase != .idle, newPhase == .idle {
                 messages = service.messages
                 isPresented = false
@@ -72,15 +64,8 @@ struct LiveCallView: View {
         }
     }
 
-    private var colors: ResolvedColors {
-        themeManager.colors(for: .dark)
-    }
-
-    // MARK: - Actions
-
     private func endCall() {
         service.stop()
-        // onChange(of: service.phase) handles message sync and dismiss
     }
 }
 

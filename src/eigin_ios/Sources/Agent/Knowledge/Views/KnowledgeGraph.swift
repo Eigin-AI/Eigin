@@ -179,7 +179,7 @@ struct KnowledgeGraph: View {
             let displayName = node.displayName.count > maxLabelLen
                 ? String(node.displayName.prefix(maxLabelLen - 2)) + "..."
                 : node.displayName
-            let labelFont: Font = node.hop <= 1 ? Typography.caption : .system(.caption2)
+            let labelFont: Font = node.hop <= 1 ? Typography.caption.font : .system(.caption2)
             let labelColor: Color = node.hop == 0 ? colors.textPrimary :
                 (node.hop == 1 ? colors.textSecondary : colors.textTertiary)
             let label = context.resolve(
@@ -222,7 +222,7 @@ struct KnowledgeGraph: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(colors.textSecondary)
             TextField("Search knowledge...", text: $searchText)
-                .font(Typography.body)
+                .typography(Typography.body)
                 .textFieldStyle(.plain)
                 .autocorrectionDisabled()
             if !searchText.isEmpty {
@@ -265,12 +265,12 @@ struct KnowledgeGraph: View {
                             .foregroundStyle(colors.accent)
                             .frame(width: 24)
                         Text(node.displayName)
-                            .font(Typography.body)
+                            .typography(Typography.body)
                             .foregroundStyle(colors.textPrimary)
                             .lineLimit(1)
                         Spacer()
                         Text(node.entityType)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(colors.textSecondary)
                     }
                     .padding(.horizontal, Spacing.md)

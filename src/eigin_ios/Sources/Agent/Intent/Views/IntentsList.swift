@@ -42,18 +42,18 @@ struct IntentsList: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(intentPreview(intent.content))
-                                    .font(Typography.headline)
+                                    .typography(Typography.headline)
                                     .foregroundStyle(colors.textPrimary)
                                     .lineLimit(2)
                                 HStack(spacing: Spacing.sm) {
                                     strengthIndicator(intent.effectiveStrength)
                                     Text(RelativeTimestamp.string(for: intent.updatedAt))
-                                        .font(Typography.caption)
+                                        .typography(Typography.caption)
                                         .foregroundStyle(colors.textSecondary)
                                     if intent.reinforcedCount > 0 {
                                         Text(Localized.Agent
                                             .reinforcedCount(String(intent.reinforcedCount)))
-                                            .font(Typography.caption)
+                                            .typography(Typography.caption)
                                             .foregroundStyle(colors.textTertiary)
                                     }
                                 }
@@ -75,7 +75,7 @@ struct IntentsList: View {
             }
         }
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Intents.title)
+        .navigationTitle(Localized.Intents.title, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}

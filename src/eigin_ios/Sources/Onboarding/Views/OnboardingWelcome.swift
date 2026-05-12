@@ -30,7 +30,7 @@ struct OnboardingWelcome: View {
                 // Phase 1: "Hello 👋"
                 HStack(spacing: Spacing.sm) {
                     Text(Localized.Onboarding.Welcome.greeting)
-                        .font(Typography.largeTitle)
+                        .typography(Typography.largeTitle)
                     Text(Localized.Onboarding.Welcome.emoji)
                         .font(.system(size: 36))
                 }
@@ -40,7 +40,7 @@ struct OnboardingWelcome: View {
 
                 // Phase 2+: "Meet Eigin" + tagline
                 Text(meetEiginText)
-                    .font(Typography.largeTitle)
+                    .typography(Typography.largeTitle)
                     .foregroundStyle(colors.textPrimary)
                     .opacity(phase >= 2 ? 1 : 0)
             }
@@ -50,7 +50,7 @@ struct OnboardingWelcome: View {
             // Values
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 Text(Localized.Onboarding.Welcome.subtitle)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textSecondary)
 
                 valueRow(icon: "sparkles", title: {
@@ -88,7 +88,7 @@ struct OnboardingWelcome: View {
                 onGetStarted()
             } label: {
                 Text(Localized.Onboarding.Welcome.primaryAction)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
@@ -155,12 +155,12 @@ struct OnboardingWelcome: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 title()
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(subtitle)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
                     .lineLimit(1)
             }

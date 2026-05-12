@@ -22,7 +22,7 @@ struct LocalProviderView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(preset.name)
+        .navigationTitle(preset.name, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -64,9 +64,9 @@ struct LocalProviderView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(Localized.Model.appleFoundationModel)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                 Text(appleStatusText)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
 
@@ -103,9 +103,9 @@ struct LocalProviderView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(Localized.Model.gemma4e2b)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                 Text(gemmaStatusText)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
 

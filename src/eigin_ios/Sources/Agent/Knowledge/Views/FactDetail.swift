@@ -24,7 +24,7 @@ struct FactDetail: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(primaryName)
+        .navigationTitle(primaryName, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !isBundled {
@@ -63,20 +63,20 @@ struct FactDetail: View {
         Section {
             LabeledContent(Localized.Fact.Detail.Label.type) {
                 Text(localizedTypeName(entity.entityType))
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .padding(.horizontal, Spacing.sm)
                     .padding(.vertical, Spacing.xs)
                     .background(colors.surfaceSecondary, in: Capsule())
             }
             LabeledContent(Localized.Fact.Detail.Label.id) {
                 Text(entity.id)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
             }
             if isBundled {
                 LabeledContent(Localized.Fact.Detail.Label.source) {
                     Text(Localized.Model.bundled)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textTertiary)
                 }
             }
@@ -99,7 +99,7 @@ struct FactDetail: View {
                 FlowLayout(spacing: Spacing.xs) {
                     ForEach(tags, id: \.self) { tag in
                         Text(tag)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .padding(.horizontal, Spacing.sm)
                             .padding(.vertical, Spacing.xs)
                             .background(colors.surfaceSecondary, in: Capsule())
@@ -133,9 +133,9 @@ struct FactDetail: View {
                                     .foregroundStyle(colors.accent)
                                 VStack(alignment: .leading) {
                                     Text(relatedPrimaryName(related))
-                                        .font(Typography.headline)
+                                        .typography(Typography.headline)
                                     Text(localizedTypeName(related.entityType))
-                                        .font(Typography.caption)
+                                        .typography(Typography.caption)
                                         .foregroundStyle(colors.textSecondary)
                                 }
                             }
@@ -156,9 +156,9 @@ struct FactDetail: View {
                                     .foregroundStyle(colors.textSecondary)
                                 VStack(alignment: .leading) {
                                     Text(relatedPrimaryName(related))
-                                        .font(Typography.headline)
+                                        .typography(Typography.headline)
                                     Text(localizedTypeName(related.entityType))
-                                        .font(Typography.caption)
+                                        .typography(Typography.caption)
                                         .foregroundStyle(colors.textSecondary)
                                 }
                             }
@@ -180,10 +180,10 @@ struct FactDetail: View {
     private func fieldRow(_ field: FirmField) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(field.name.replacingOccurrences(of: "_", with: " ").capitalized)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
             Text(fieldValueString(field.value))
-                .font(Typography.body)
+                .typography(Typography.body)
                 .foregroundStyle(colors.textPrimary)
         }
         .padding(.vertical, Spacing.xs)

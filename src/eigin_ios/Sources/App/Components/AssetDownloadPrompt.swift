@@ -61,34 +61,34 @@ struct AssetDownloadPrompt: View {
     private var text: some View {
         VStack(spacing: Spacing.sm) {
             Text(asset.displayName)
-                .font(Typography.largeTitle)
+                .typography(Typography.largeTitle)
                 .foregroundStyle(colors.textPrimary)
 
             switch asset.state {
             case .notDownloaded:
                 Text(asset.downloadDescription)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center)
             case .downloading(let progress):
                 ProgressView(value: progress)
                     .padding(.horizontal, Spacing.md)
                 Text(Localized.Status.downloading)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             case .downloaded, .compiling:
                 ProgressView()
                     .controlSize(.small)
                 Text(Localized.Status.preparing)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             case .ready:
                 Text(Localized.Status.ready)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
             case .failed(let message):
                 Text(message)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
@@ -103,7 +103,7 @@ struct AssetDownloadPrompt: View {
                     Task { await asset.download() }
                 } label: {
                     Text(Localized.Common.Actions.download)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -115,7 +115,7 @@ struct AssetDownloadPrompt: View {
                     onDecline()
                 } label: {
                     Text(Localized.Common.Actions.notNow)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                 }
             case .downloading, .downloaded, .compiling:
@@ -125,7 +125,7 @@ struct AssetDownloadPrompt: View {
                     onAccept()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }

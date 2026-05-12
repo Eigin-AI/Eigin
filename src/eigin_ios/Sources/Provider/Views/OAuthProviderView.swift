@@ -39,7 +39,7 @@ struct OAuthProviderView: View {
             if isAuthenticating {
                 ProgressView()
                 Text(Localized.Onboarding.Provider.signingIn(preset.name))
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
             } else if isAuthenticated {
                 if let connectionError {
@@ -49,9 +49,9 @@ struct OAuthProviderView: View {
 
                     VStack(spacing: Spacing.sm) {
                         Text(connectionError.title)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                         Text(connectionError.suggestion)
-                            .font(Typography.callout)
+                            .typography(Typography.callout)
                             .foregroundStyle(colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -65,12 +65,12 @@ struct OAuthProviderView: View {
 
                     VStack(spacing: Spacing.sm) {
                         Text(Localized.Onboarding.Provider.connectedTo(preset.name))
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
 
                         Text(
                             Localized.Provider.creditsWarning(preset.name)
                         )
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                         .multilineTextAlignment(.center)
                     }
@@ -82,16 +82,16 @@ struct OAuthProviderView: View {
                             Localized.Onboarding.Provider.addCreditsLabel(preset.name),
                             systemImage: "arrow.up.right"
                         )
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                     }
                 }
 
             } else if wasCancelled {
                 VStack(spacing: Spacing.sm) {
                     Text(Localized.Provider.signInDismissed)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                     Text(Localized.Provider.signInDismissedHint)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
@@ -101,7 +101,7 @@ struct OAuthProviderView: View {
                         .buttonStyle(.borderedProminent)
 
                     Button("Add API Key Manually") { showManualFallback = true }
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                 }
             } else if let connectionError {
                 Image(systemName: "exclamationmark.triangle")
@@ -110,9 +110,9 @@ struct OAuthProviderView: View {
 
                 VStack(spacing: Spacing.sm) {
                     Text(connectionError.title)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                     Text(connectionError.suggestion)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
@@ -122,7 +122,7 @@ struct OAuthProviderView: View {
                         .buttonStyle(.borderedProminent)
 
                     Button("Add API Key Manually") { showManualFallback = true }
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                 }
             }
 
@@ -131,7 +131,7 @@ struct OAuthProviderView: View {
         .padding(.horizontal, Spacing.lg)
         .frame(maxWidth: .infinity)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(preset.name)
+        .navigationTitle(preset.name, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

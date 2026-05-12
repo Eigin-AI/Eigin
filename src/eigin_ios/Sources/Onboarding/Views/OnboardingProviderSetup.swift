@@ -36,10 +36,10 @@ struct OnboardingProviderSetup: View {
                 VStack(spacing: Spacing.xl) {
                     VStack(spacing: Spacing.sm) {
                         Text(Localized.Provider.typeLabel)
-                            .font(Typography.largeTitle)
+                            .typography(Typography.largeTitle)
 
                         Text(Localized.Onboarding.Provider.cloudExplanation)
-                            .font(Typography.body)
+                            .typography(Typography.body)
                             .foregroundStyle(colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -54,13 +54,13 @@ struct OnboardingProviderSetup: View {
                                 providerIcon(for: preset)
 
                                 Text(Localized.Provider.Setup.oauthConnect(preset.name))
-                                    .font(Typography.headline)
+                                    .typography(Typography.headline)
                                     .foregroundStyle(colors.textPrimary)
 
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
-                                    .font(Typography.caption)
+                                    .typography(Typography.caption)
                                     .foregroundStyle(colors.textSecondary)
                             }
                             .padding(Spacing.md)
@@ -73,13 +73,13 @@ struct OnboardingProviderSetup: View {
                     VStack(spacing: Spacing.md) {
                         HStack {
                             Text(Localized.Provider.Setup.apiKeyAlternative)
-                                .font(Typography.callout)
+                                .typography(Typography.subheadline)
                                 .foregroundStyle(colors.textSecondary)
 
                             Spacer()
 
                             Image(systemName: "chevron.right")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                                 .rotationEffect(showAPIKeyOptions ? .degrees(90) : .zero)
                         }
@@ -113,7 +113,7 @@ struct OnboardingProviderSetup: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(colors.accent)
                             Text(provider.name)
-                                .font(Typography.body)
+                                .typography(Typography.subheadline)
                                 .foregroundStyle(colors.textPrimary)
                             Spacer()
                         }
@@ -126,7 +126,7 @@ struct OnboardingProviderSetup: View {
                     onContinue?()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -162,7 +162,7 @@ struct OnboardingProviderSetup: View {
             providerIcon(for: preset)
 
             Text(preset.name)
-                .font(Typography.callout)
+                .typography(Typography.subheadline)
                 .foregroundStyle(colors.textPrimary)
                 .lineLimit(1)
         }

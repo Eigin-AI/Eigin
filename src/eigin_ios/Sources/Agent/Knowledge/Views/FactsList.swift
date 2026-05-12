@@ -51,7 +51,7 @@ struct FactsList: View {
                                     )
                                 } label: {
                                     Text(Localized.Ui.showAll("\(section.facts.count)"))
-                                        .font(Typography.callout)
+                                        .typography(Typography.callout)
                                         .foregroundStyle(colors.accent)
                                 }
                             }
@@ -62,7 +62,7 @@ struct FactsList: View {
             }
         }
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Knowledge.sectionTitle)
+        .navigationTitle(Localized.Knowledge.sectionTitle, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadFacts() }
         .refreshable { await loadFacts() }
@@ -115,7 +115,7 @@ struct FactsList: View {
 
     private func factRow(_ entity: FirmEntity) -> some View {
         Text(primaryField(for: entity))
-            .font(Typography.headline)
+            .typography(Typography.headline)
             .foregroundStyle(colors.textPrimary)
             .lineLimit(2)
     }
@@ -211,7 +211,7 @@ private struct FactTypeList: View {
                     )
                 } label: {
                     Text(primaryField(for: entity))
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                         .foregroundStyle(colors.textPrimary)
                         .lineLimit(2)
                 }
@@ -231,7 +231,7 @@ private struct FactTypeList: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(header)
+        .navigationTitle(header, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Common.Alert.deleteFactTitle, isPresented: $showDeleteConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}

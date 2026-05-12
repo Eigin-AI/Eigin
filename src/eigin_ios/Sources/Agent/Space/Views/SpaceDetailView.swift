@@ -25,7 +25,10 @@ struct SpaceDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
+        .navigationTitle(
+            space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name,
+            style: Typography.largeTitle
+        )
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
@@ -60,7 +63,7 @@ struct SpaceDetailView: View {
 
                 if isEditingName {
                     TextField(Localized.Common.Fields.spaceName, text: $editingNameText)
-                        .font(Typography.title)
+                        .typography(Typography.title)
                         .focused($isNameFocused)
                         .onSubmit { commitNameEdit() }
                         .onChange(of: isNameFocused) { _, focused in
@@ -72,7 +75,7 @@ struct SpaceDetailView: View {
                         }
                 } else {
                     Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
-                        .font(Typography.title)
+                        .typography(Typography.title)
                         .foregroundStyle(colors.textPrimary)
                         .onTapGesture {
                             editingNameText = space.name
@@ -84,13 +87,14 @@ struct SpaceDetailView: View {
 
                 Spacer()
             }
+            .listRowBackground(colors.surface)
         }
     }
 
     // MARK: - Instructions
 
     private var instructionsSection: some View {
-        Section(Localized.Space.Section.instructions) {
+        Section {
             NavigationLink {
                 DocumentEditor(
                     title: Localized.Space.Section.instructions,
@@ -100,16 +104,22 @@ struct SpaceDetailView: View {
                 HStack(spacing: Spacing.sm) {
                     SettingsIcon(systemName: "text.alignleft", color: .blue)
                     Text(Localized.Space.Section.instructions)
+                        .typography(Typography.subheadline)
+                        .foregroundStyle(colors.textPrimary)
                     Spacer()
                     Text(space.instructions
                         .isEmpty ? Localized.Fact.Detail
                         .notSet : String(space.instructions.prefix(30)) +
                         "...")
                         .foregroundStyle(colors.textSecondary)
-                        .font(Typography.caption)
+                        .typography(Typography.callout)
                         .lineLimit(1)
                 }
             }
+            .listRowBackground(colors.surface)
+        } header: {
+            Text(Localized.Space.Section.instructions)
+                .typography(Typography.label)
         }
     }
 
@@ -122,12 +132,15 @@ struct SpaceDetailView: View {
                     SettingsIcon(systemName: "eye.slash", color: .purple)
                     VStack(alignment: .leading) {
                         Text(Localized.Space.Detail.Label.private)
+                            .typography(Typography.subheadline)
+                            .foregroundStyle(colors.textPrimary)
                         Text(Localized.Space.Detail.Hint.private)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(colors.textSecondary)
                     }
                 }
             }
+            .listRowBackground(colors.surface)
         }
     }
 
@@ -138,6 +151,8 @@ struct SpaceDetailView: View {
             Button(Localized.Space.Detail.Action.deleteSpace, role: .destructive) {
                 showDeleteConfirmation = true
             }
+            .typography(Typography.subheadline)
+            .listRowBackground(colors.surface)
         }
     }
 

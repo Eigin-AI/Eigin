@@ -48,9 +48,9 @@ struct EditProvider: View {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Label(connectionError.title, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(colors.destructive)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                         Text(connectionError.suggestion)
-                            .font(Typography.callout)
+                            .typography(Typography.callout)
                             .foregroundStyle(colors.textSecondary)
                     }
                 }
@@ -58,7 +58,7 @@ struct EditProvider: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Provider.Edit.title(provider.name))
+        .navigationTitle(Localized.Provider.Edit.title(provider.name), style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
