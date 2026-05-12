@@ -4,23 +4,37 @@ import SwiftUI
 struct SkillDetail: View {
     let skill: Skill
 
+    @Environment(\.colors) private var colors
+
     var body: some View {
         List {
-            Section("Instruction") {
+            Section {
                 Text(skill.instruction)
-                    .font(Typography.body)
+                    .typography(Typography.body)
+                    .listRowBackground(colors.surface)
+            } header: {
+                Text(Localized.Skills.instruction)
+                    .typography(Typography.label)
             }
 
-            Section("Tools") {
+            Section {
                 ForEach(
                     skill.requiredTools.sorted(by: { $0.displayName < $1.displayName }),
                     id: \.key
                 ) { tool in
                     Label(tool.displayName, systemImage: "wrench")
+                        .typography(Typography.subheadline)
+                        .foregroundStyle(colors.textPrimary)
                 }
+                .listRowBackground(colors.surface)
+            } header: {
+                Text(Localized.Skills.tools)
+                    .typography(Typography.label)
             }
         }
-        .navigationTitle(skill.displayName)
+        .scrollContentBackground(.hidden)
+        .background(colors.background.ignoresSafeArea())
+        .navigationTitle(skill.displayName, style: Typography.largeTitle)
     }
 }
 

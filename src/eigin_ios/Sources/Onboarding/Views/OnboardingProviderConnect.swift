@@ -68,7 +68,7 @@ struct OnboardingProviderConnect: View {
             if isAuthenticating {
                 ProgressView()
                 Text(Localized.Onboarding.Provider.signingIn(preset.name))
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
             } else if let connectionError {
                 errorContent(connectionError) {
@@ -81,10 +81,10 @@ struct OnboardingProviderConnect: View {
 
                 VStack(spacing: Spacing.sm) {
                     Text(Localized.Onboarding.Provider.connectedTo(preset.name))
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
 
                     Text(Localized.Onboarding.Provider.creditsWarning)
-                        .font(Typography.callout)
+                        .typography(Typography.callout)
                         .foregroundStyle(colors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
@@ -96,7 +96,7 @@ struct OnboardingProviderConnect: View {
                         Localized.Onboarding.Provider.addCreditsLabel(preset.name),
                         systemImage: "arrow.up.right"
                     )
-                    .font(Typography.callout)
+                    .typography(Typography.subheadline)
                 }
             } else {
                 ProgressView()
@@ -108,7 +108,7 @@ struct OnboardingProviderConnect: View {
                 VStack(spacing: Spacing.md) {
                     Button { createProviderAndContinue() } label: {
                         Text(Localized.Common.Actions.continue)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -117,14 +117,14 @@ struct OnboardingProviderConnect: View {
 
                     if let onBack {
                         Button("Change Provider") { onBack() }
-                            .font(Typography.callout)
+                            .typography(Typography.subheadline)
                             .foregroundStyle(colors.textSecondary)
                     }
                 }
                 .padding(.bottom, Spacing.xl)
             } else if let onBack, !isAuthenticating {
                 Button("Change Provider") { onBack() }
-                    .font(Typography.callout)
+                    .typography(Typography.subheadline)
                     .foregroundStyle(colors.textSecondary)
                     .padding(.bottom, Spacing.xl)
             }
@@ -173,10 +173,10 @@ struct OnboardingProviderConnect: View {
 
             VStack(spacing: Spacing.sm) {
                 Text(preset.name)
-                    .font(Typography.largeTitle)
+                    .typography(Typography.largeTitle)
 
                 Text(preset.helpText)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center)
 
@@ -184,7 +184,7 @@ struct OnboardingProviderConnect: View {
                    let url = URL(string: urlString)
                 {
                     Link("Get API Key", destination: url)
-                        .font(Typography.callout)
+                        .typography(Typography.subheadline)
                 }
             }
 
@@ -205,7 +205,7 @@ struct OnboardingProviderConnect: View {
 
             if let onBack {
                 Button("Change Provider") { onBack() }
-                    .font(Typography.callout)
+                    .typography(Typography.subheadline)
                     .foregroundStyle(colors.textSecondary)
                     .padding(.bottom, Spacing.xl)
             }
@@ -263,9 +263,9 @@ struct OnboardingProviderConnect: View {
                 .foregroundStyle(colors.destructive)
 
             Text(error.title)
-                .font(Typography.headline)
+                .typography(Typography.headline)
             Text(error.suggestion)
-                .font(Typography.callout)
+                .typography(Typography.callout)
                 .foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center)
 

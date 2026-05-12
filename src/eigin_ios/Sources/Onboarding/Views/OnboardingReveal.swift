@@ -64,7 +64,7 @@ struct OnboardingReveal: View {
 
             // Name line — springs in
             Text(nameLine)
-                .font(Typography.largeTitle)
+                .typography(Typography.largeTitle)
                 .foregroundStyle(colors.textPrimary)
                 .opacity(phase >= 1 ? 1 : 0)
                 .scaleEffect(phase >= 1 ? 1 : 0.8)
@@ -72,7 +72,7 @@ struct OnboardingReveal: View {
 
             // Hero paragraph — curtain reveal from top with gradient mask
             Text(heroText)
-                .font(Typography.headline)
+                .typography(Typography.headline)
                 .foregroundStyle(colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.lg)
@@ -87,11 +87,11 @@ struct OnboardingReveal: View {
             // Pitch block — left-aligned like OnboardingWelcome values
             VStack(alignment: .leading, spacing: Spacing.md) {
                 Text(subHeader)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textPrimary)
 
                 Text(bodyText)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -107,7 +107,7 @@ struct OnboardingReveal: View {
                         onConnectCloud()
                     } label: {
                         Text(Localized.Onboarding.Provider.connectAction)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -118,7 +118,7 @@ struct OnboardingReveal: View {
                         onStayLocal()
                     } label: {
                         Text(Localized.Onboarding.Provider.localAction)
-                            .font(Typography.callout)
+                            .typography(Typography.callout)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(colors.textSecondary)
@@ -127,7 +127,7 @@ struct OnboardingReveal: View {
                         onStayLocal()
                     } label: {
                         Text(Localized.Onboarding.Welcome.primaryAction)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }

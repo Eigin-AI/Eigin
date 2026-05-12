@@ -61,7 +61,7 @@ struct DevelopmentMenu: View {
                     HStack(spacing: Spacing.sm) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
                         Text(error)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(.red)
                     }
                 }
@@ -93,7 +93,7 @@ struct DevelopmentMenu: View {
             Section("Transcripts") {
                 if transcripts.isEmpty {
                     Text(Localized.Development.noTranscripts)
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                 } else {
                     ForEach(transcripts, id: \.timestamp) { transcript in
@@ -104,16 +104,16 @@ struct DevelopmentMenu: View {
                                 HStack {
                                     Text(transcript.signal
                                         .hasPrefix("notify") ? "Notify" : "Silent")
-                                        .font(Typography.caption.bold())
+                                        .font(Typography.caption.font.bold())
                                         .foregroundStyle(transcript.signal
                                             .hasPrefix("notify") ? .green : .orange)
                                     Spacer()
                                     Text(RelativeTimestamp.string(for: transcript.timestamp))
-                                        .font(Typography.caption)
+                                        .typography(Typography.caption)
                                         .foregroundStyle(colors.textSecondary)
                                 }
                                 Text(transcript.reason)
-                                    .font(Typography.caption)
+                                    .typography(Typography.caption)
                                     .foregroundStyle(colors.textSecondary)
                                     .lineLimit(2)
                             }
@@ -166,7 +166,7 @@ struct DevelopmentMenu: View {
 
                 if let firmResult {
                     Text(firmResult)
-                        .font(Typography.caption.monospaced())
+                        .font(Typography.caption.font.monospaced())
                         .foregroundStyle(colors.textSecondary)
                         .textSelection(.enabled)
                 }
@@ -217,7 +217,7 @@ struct DevelopmentMenu: View {
                     HStack(spacing: Spacing.sm) {
                         SettingsIcon(systemName: "checkmark.circle", color: .green)
                         Text(Localized.Development.importSuccessful)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(.green)
                     }
                 }
@@ -226,7 +226,7 @@ struct DevelopmentMenu: View {
                     HStack(spacing: Spacing.sm) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
                         Text(importExportError)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(.red)
                     }
                 }
@@ -285,7 +285,7 @@ struct DevelopmentMenu: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Section.development)
+        .navigationTitle(Localized.Settings.Section.development, style: Typography.largeTitle)
         .onAppear {
             transcripts = BackgroundPromptDebug.getTranscripts()
         }
@@ -333,21 +333,21 @@ struct DevelopmentMenu: View {
                 HStack(spacing: Spacing.sm) {
                     SettingsIcon(systemName: "bell.fill", color: .green)
                     Text(Localized.Development.agentChoseToNotify)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
                 }
                 if let title = result.notificationTitle {
                     Text(Localized.Ui.titleLabel(title))
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                 }
                 if let body = result.notificationBody {
                     Text(body)
-                        .font(Typography.caption)
+                        .typography(Typography.caption)
                         .foregroundStyle(colors.textSecondary)
                         .lineLimit(5)
                 }
                 Text(Localized.Development.chatWillBeCreated)
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
                     .italic()
             }
@@ -355,7 +355,7 @@ struct DevelopmentMenu: View {
             HStack(spacing: Spacing.sm) {
                 SettingsIcon(systemName: "moon.zzz", color: .gray)
                 Text(Localized.Development.agentChoseToStaySilent)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
             }
         }

@@ -12,9 +12,16 @@ struct ContentBlockView: View {
             Divider()
                 .background(colors.textSecondary.opacity(0.3))
                 .padding(.vertical, Spacing.xs)
+        case .code:
+            DetailCodeBlock(code: block.text, language: block.language)
         default:
             StructuredText(markdown: block.text, syntaxExtensions: [])
+                .font(Typography.body.font)
                 .foregroundStyle(colors.textPrimary)
+                .tint(colors.accent)
+                .textual.inlineStyle(.eigin(colors: colors))
+                .textual.headingStyle(EiginHeadingStyle())
+                .textual.highlighterTheme(.default)
                 .textual.textSelection(.enabled)
         }
     }

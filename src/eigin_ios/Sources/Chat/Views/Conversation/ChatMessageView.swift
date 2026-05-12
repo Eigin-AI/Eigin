@@ -74,7 +74,7 @@ struct ChatMessageView: View {
         HStack {
             Spacer(minLength: 0)
             Text(content)
-                .font(Typography.body)
+                .typography(Typography.body)
                 .foregroundStyle(colors.textPrimary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
@@ -97,7 +97,7 @@ struct ChatMessageView: View {
                     }
                 }
                 .padding(10)
-                .background(colors.accent.opacity(0.2))
+                .background(colors.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .onTapGesture {
                     guard isLongMessage else { return }

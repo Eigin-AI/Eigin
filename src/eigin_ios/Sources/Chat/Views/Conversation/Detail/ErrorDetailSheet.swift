@@ -15,27 +15,27 @@ struct ErrorDetailSheet: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(colors.destructive)
                         Text(error.title)
-                            .font(Typography.body.weight(.medium))
+                            .font(Typography.body.font.weight(.medium))
                             .foregroundStyle(colors.destructive)
                     }
 
                     DetailSection(title: "Suggestion") {
                         Text(error.suggestion)
-                            .font(Typography.body)
+                            .typography(Typography.body)
                             .foregroundStyle(colors.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     if let raw = error.rawDescription {
                         DetailSection(title: "Raw Error") {
-                            DetailCodeBlock(markdown: "```\n\(raw)\n```")
+                            DetailCodeBlock(code: raw)
                         }
                     }
                 }
                 .padding()
             }
             .background(colors.background)
-            .navigationTitle("Error Details")
+            .navigationTitle("Error Details", style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

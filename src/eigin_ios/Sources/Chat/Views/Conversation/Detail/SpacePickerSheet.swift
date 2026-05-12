@@ -20,6 +20,7 @@ struct SpacePickerSheet: View {
                         } label: {
                             HStack {
                                 Text(verbatim: "\(space.emoji) \(space.name)")
+                                    .typography(Typography.subheadline)
                                     .foregroundStyle(colors.textPrimary)
                                 Spacer()
                                 if currentSpaceID == space.id {
@@ -29,6 +30,7 @@ struct SpacePickerSheet: View {
                             }
                         }
                     }
+                    .listRowBackground(colors.surface)
                 }
                 if currentSpaceID != nil {
                     Section {
@@ -37,11 +39,15 @@ struct SpacePickerSheet: View {
                             dismiss()
                         } label: {
                             Text(Localized.Space.removeFromSpace)
+                                .typography(Typography.subheadline)
                         }
+                        .listRowBackground(colors.surface)
                     }
                 }
             }
-            .navigationTitle(Localized.Debug.moveToSpaceTitle)
+            .scrollContentBackground(.hidden)
+            .background(colors.background.ignoresSafeArea())
+            .navigationTitle(Localized.Debug.moveToSpaceTitle, style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -6,7 +6,6 @@ import SwiftUI
 final class ThemeManager: @unchecked Sendable {
     static let availableThemes: [any Theme] = [
         DefaultTheme(),
-        WarmTheme(),
         SystemTheme(),
     ]
 

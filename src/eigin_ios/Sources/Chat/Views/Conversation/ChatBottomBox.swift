@@ -15,7 +15,7 @@ struct ChatBottomBox<Content: View>: View {
             .frame(maxWidth: .infinity, minHeight: minContentHeight)
             .padding(Spacing.md)
             .background(
-                .ultraThinMaterial,
+                colors.surface,
                 in: RoundedRectangle(cornerRadius: 16)
             )
             .overlay(

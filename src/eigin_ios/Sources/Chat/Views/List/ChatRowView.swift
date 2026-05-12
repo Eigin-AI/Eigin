@@ -13,13 +13,13 @@ struct ChatRowView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(chat.title.isEmpty ? Localized.Tools.New.chat : chat.title)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(chat.lastVisibleMessage
                     .map { ChatTags.stripAll(from: $0.content) } ?? "No messages yet")
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
                     .lineLimit(2, reservesSpace: true)
             }
@@ -36,7 +36,7 @@ struct ChatRowView: View {
                let space = spaces.first(where: { $0.id == spaceID })
             {
                 Text(space.emoji)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
             } else {
                 Image(systemName: "bubble.fill")
                     .font(.system(size: 16))

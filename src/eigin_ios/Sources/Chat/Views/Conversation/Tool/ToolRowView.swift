@@ -22,7 +22,7 @@ struct ToolRowView: View {
         let isExecuting = tool.status == .executing
 
         Text(suffix != nil ? "\(name) \(suffix!)" : name)
-            .font(Typography.body.weight(.medium))
+            .font(Typography.body.font.weight(.medium))
             .foregroundStyle(color)
             .breathe(isActive: isExecuting)
             .padding(.vertical, Spacing.xs)

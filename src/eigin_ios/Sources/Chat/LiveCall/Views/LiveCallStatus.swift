@@ -49,7 +49,7 @@ struct LiveCallStatus: View {
         Group {
             if let error = service.error {
                 Text(error)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .center)
             } else if isStreaming {
@@ -131,7 +131,7 @@ struct LiveCallStatus: View {
 
     private func phaseLabel(_ label: String) -> some View {
         Text(label)
-            .font(Typography.body)
+            .typography(Typography.body)
             .foregroundStyle(colors.textSecondary)
             .frame(maxWidth: .infinity, alignment: .center)
     }

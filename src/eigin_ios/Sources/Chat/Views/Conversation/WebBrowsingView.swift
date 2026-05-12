@@ -41,7 +41,7 @@ struct WebBrowsingView: View {
                         Text(Localized.Agent.Status.readingPage(actor))
                     }
                 }
-                .font(Typography.callout)
+                .typography(Typography.callout)
                 .foregroundStyle(colors.textSecondary)
                 .contentTransition(.interpolate)
                 .animation(Animations.smooth, value: pageReady)

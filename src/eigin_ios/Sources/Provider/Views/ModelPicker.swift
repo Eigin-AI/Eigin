@@ -74,20 +74,20 @@ struct ModelPicker: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(displayName(for: auto))
-                                    .font(Typography.headline)
+                                    .typography(Typography.headline)
                                     .foregroundStyle(colors.textPrimary)
 
                                 HStack(spacing: Spacing.xs) {
                                     Text(Localized.Provider.recommendedForYou)
-                                        .font(Typography.caption)
+                                        .typography(Typography.caption)
                                         .foregroundStyle(colors.accent)
 
                                     if let sub = subtitle(for: auto) {
                                         Text(verbatim: "·")
-                                            .font(Typography.caption)
+                                            .typography(Typography.caption)
                                             .foregroundStyle(colors.textSecondary)
                                         Text(sub)
-                                            .font(Typography.caption)
+                                            .typography(Typography.caption)
                                             .foregroundStyle(colors.textSecondary)
                                     }
                                 }
@@ -107,10 +107,13 @@ struct ModelPicker: View {
             }
 
             if !rankedModels.isEmpty {
-                Section("Other Recommended") {
+                Section {
                     ForEach(rankedModels, id: \.self) { modelID in
                         modelRow(modelID)
                     }
+                } header: {
+                    Text(Localized.Model.Picker.otherRecommended)
+                        .typography(Typography.label)
                 }
             }
 
@@ -127,11 +130,11 @@ struct ModelPicker: View {
                     } label: {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: isOtherCollapsed ? "chevron.right" : "chevron.down")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                             Text(Localized.Model.Picker.allModels)
                             Text(verbatim: "\(unknownModels.count)")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                         }
                         .contentShape(Rectangle())
@@ -145,9 +148,9 @@ struct ModelPicker: View {
                     HStack(alignment: .top, spacing: Spacing.sm) {
                         Image(systemName: "info.circle")
                             .foregroundStyle(colors.textSecondary)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                         Text(Localized.Model.Picker.noSearchResults)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(colors.textSecondary)
                     }
                     .padding(.vertical, Spacing.xs)
@@ -159,7 +162,7 @@ struct ModelPicker: View {
         .animation(.easeIn(duration: 0.25), value: isLoaded)
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle("Choose Model")
+        .navigationTitle("Choose Model", style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             let enriched = await modelMetadataService.enrich(
@@ -184,12 +187,12 @@ struct ModelPicker: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayName(for: modelID))
-                        .font(Typography.body)
+                        .typography(Typography.body)
                         .foregroundStyle(colors.textPrimary)
 
                     if let subtitle = subtitle(for: modelID) {
                         Text(subtitle)
-                            .font(Typography.caption)
+                            .typography(Typography.caption)
                             .foregroundStyle(colors.textSecondary)
                     }
                 }

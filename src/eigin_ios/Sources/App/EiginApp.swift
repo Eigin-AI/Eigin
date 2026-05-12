@@ -9,6 +9,9 @@ struct EiginApp: App {
     @State private var themeManager = ThemeManager()
 
     init() {
+        FontRegistration.register()
+        FontRegistration.configureNavigationBar()
+
         // Eagerly initialize the shared CallManager so its CXProvider is
         // registered with the telephony system before the first call.
         _ = CallManager.shared

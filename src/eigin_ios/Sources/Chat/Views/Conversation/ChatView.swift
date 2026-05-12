@@ -235,7 +235,7 @@ struct ChatView: View {
         VStack(spacing: 2) {
             if isEditingTitle {
                 TextField("Chat name", text: $editingTitleText)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .multilineTextAlignment(.center)
                     .focused($isTitleFocused)
                     .onSubmit { commitTitleEdit() }
@@ -249,7 +249,7 @@ struct ChatView: View {
             } else {
                 Text(viewModel.chat?.title.isEmpty == false ? viewModel.chat!.title : Localized
                     .Tools.New.chat)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textPrimary)
                     .onTapGesture {
                         editingTitleText = viewModel.chat?.title ?? ""

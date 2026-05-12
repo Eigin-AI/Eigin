@@ -59,7 +59,7 @@ struct SpaceListView: View {
             }
         }
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Space.title)
+        .navigationTitle(Localized.Space.title, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -95,17 +95,17 @@ struct SpaceListView: View {
                 .font(.system(size: 24))
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
-                    .font(Typography.headline)
+                    .typography(Typography.headline)
                     .foregroundStyle(colors.textPrimary)
                 let count = chatCount(for: space)
                 Text(Localized.Space.List.chatsCount("\(count)"))
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
             Spacer()
             if space.isPrivate {
                 Image(systemName: "eye.slash")
-                    .font(Typography.caption)
+                    .typography(Typography.caption)
                     .foregroundStyle(colors.textSecondary)
             }
         }

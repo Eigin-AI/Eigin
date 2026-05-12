@@ -15,7 +15,10 @@ struct ToolDetailSheet: View {
 
                     if let arguments = tool.arguments, !arguments.isEmpty {
                         DetailSection(title: "Input") {
-                            DetailCodeBlock(markdown: jsonMarkdownBlock(arguments))
+                            DetailCodeBlock(
+                                code: jsonCode(arguments),
+                                language: jsonLanguage(arguments)
+                            )
                         }
                     }
 
@@ -24,7 +27,7 @@ struct ToolDetailSheet: View {
                 .padding()
             }
             .background(colors.background)
-            .navigationTitle(ToolRegistry.displayName(for: tool.name))
+            .navigationTitle(ToolRegistry.displayName(for: tool.name), style: Typography.largeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -42,31 +45,31 @@ struct ToolDetailSheet: View {
             case .executing:
                 ProgressView().controlSize(.small)
                 Text(Localized.Status.executing)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
                     .foregroundStyle(colors.textSecondary)
             case .awaitingPermission:
                 Image(systemName: "lock.fill")
                     .foregroundStyle(colors.accent)
                 Text(Localized.Permission.awaiting)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
                     .foregroundStyle(colors.accent)
             case .completed:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                 Text(Localized.Status.completed)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
                     .foregroundStyle(colors.textSecondary)
             case .denied:
                 Image(systemName: "slash.circle.fill")
                     .foregroundStyle(colors.destructive)
                 Text(Localized.Permission.denied)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
                     .foregroundStyle(colors.destructive)
             case .error:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(colors.destructive)
                 Text(Localized.Status.error)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
                     .foregroundStyle(colors.destructive)
             }
         }
@@ -80,31 +83,31 @@ struct ToolDetailSheet: View {
                 HStack(spacing: Spacing.sm) {
                     ProgressView().controlSize(.small)
                     Text(Localized.Status.executingProgress)
-                        .font(Typography.body)
+                        .typography(Typography.body)
                         .foregroundStyle(colors.textSecondary)
                 }
             }
         case .awaitingPermission:
             DetailSection(title: "Output") {
                 Text(Localized.Permission.waitingForUser)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
             }
         case .completed:
             if let result = tool.result, !result.isEmpty {
                 DetailSection(title: "Output") {
-                    DetailCodeBlock(markdown: jsonMarkdownBlock(result))
+                    DetailCodeBlock(code: jsonCode(result), language: jsonLanguage(result))
                 }
             }
         case .denied:
             DetailSection(title: "Output") {
                 Text(Localized.Permission.toolDeniedByPolicy)
-                    .font(Typography.body)
+                    .typography(Typography.body)
                     .foregroundStyle(colors.textSecondary)
             }
         case .error(let message):
             DetailSection(title: "Output") {
-                DetailCodeBlock(markdown: "```\n\(message)\n```")
+                DetailCodeBlock(code: message)
                     .foregroundStyle(colors.destructive)
             }
         }
@@ -113,26 +116,28 @@ struct ToolDetailSheet: View {
     /// Maximum characters to render in a code block before truncating.
     private let codeBlockCharacterLimit = 3000
 
-    private func jsonMarkdownBlock(_ raw: String) -> String {
-        var content: String = if let data = raw.data(using: .utf8),
-                                 let object = try? JSONSerialization.jsonObject(with: data),
-                                 let pretty = try? JSONSerialization.data(
-                                     withJSONObject: object,
-                                     options: [.prettyPrinted, .sortedKeys]
-                                 ),
-                                 let string = String(data: pretty, encoding: .utf8)
-        {
-            string
-        } else {
-            raw
-        }
+    private func prettyJSON(_ raw: String) -> String? {
+        guard let data = raw.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(
+                  withJSONObject: object,
+                  options: [.prettyPrinted, .sortedKeys]
+              ),
+              let string = String(data: pretty, encoding: .utf8)
+        else { return nil }
+        return string
+    }
 
+    private func jsonCode(_ raw: String) -> String {
+        var content = prettyJSON(raw) ?? raw
         if content.count > codeBlockCharacterLimit {
             content = String(content.prefix(codeBlockCharacterLimit)) + "\n\n… (truncated)"
         }
+        return content
+    }
 
-        let lang = content == raw ? "" : "json"
-        return "```\(lang)\n\(content)\n```"
+    private func jsonLanguage(_ raw: String) -> String? {
+        prettyJSON(raw) != nil ? "json" : nil
     }
 }
 

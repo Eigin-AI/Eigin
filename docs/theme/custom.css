@@ -1,78 +1,72 @@
-/* 42futures.com inspired styling for Eigin documentation */
-
 :root {
-    /* Color scheme matching 42futures.com */
-    --bg-primary: #161618;
-    --bg-secondary: #1f1f22;
-    --accent-purple: #c566ff;
-    --accent-green: #02a82b;
-    --accent-orange: #ff7744;
-    --text-primary: #ffffff;
-    --text-secondary: #a0a0a0;
-    --text-tertiary: #6a6a6a;
+    /* Design token palette — dark mode */
+    --bg-primary: #2E2D2B;      /* grey.950 — background */
+    --bg-secondary: #3E3D39;    /* brown.850 — surface */
+    --bg-tertiary: #5A4C3D;     /* brown.800 — surfaceSecondary */
+    --accent: #B29779;          /* brown.400 — accent */
+    --text-primary: #F9F9F9;    /* grey.10 — textPrimary */
+    --text-secondary: #D9CBBC;  /* brown.300 — textSecondary */
+    --text-tertiary: #C0A88F;   /* brown.500 — textTertiary */
+    --border: #4C4C4A;          /* grey.800 — border */
 
-    /* Typography */
     --font-family:
         -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
         "Roboto", "Inter", sans-serif;
     --font-mono: "Menlo", "Monaco", "Courier New", monospace;
-    --font-weight-heavy: 800;
 }
 
-/* Override mdBook coal theme colors */
+/* Override mdBook coal theme */
 .coal {
     --bg: var(--bg-primary);
     --fg: var(--text-primary);
     --sidebar-bg: var(--bg-secondary);
     --sidebar-fg: var(--text-secondary);
     --sidebar-non-existant: var(--text-tertiary);
-    --sidebar-active: var(--accent-purple);
+    --sidebar-active: var(--accent);
     --sidebar-spacer: var(--bg-primary);
-    --scrollbar: var(--text-tertiary);
+    --scrollbar: var(--border);
     --icons: var(--text-secondary);
-    --icons-hover: var(--accent-purple);
-    --links: var(--accent-purple);
-    --inline-code-color: var(--accent-green);
+    --icons-hover: var(--accent);
+    --links: var(--accent);
+    --inline-code-color: var(--text-secondary);
     --theme-popup-bg: var(--bg-secondary);
-    --theme-popup-border: var(--text-tertiary);
+    --theme-popup-border: var(--border);
     --theme-hover: var(--bg-primary);
     --quote-bg: var(--bg-secondary);
-    --quote-border: var(--accent-purple);
-    --table-border-color: var(--text-tertiary);
+    --quote-border: var(--accent);
+    --table-border-color: var(--border);
     --table-header-bg: var(--bg-secondary);
     --table-alternate-bg: var(--bg-secondary);
-    --searchbar-border-color: var(--text-tertiary);
+    --searchbar-border-color: var(--border);
     --searchbar-bg: var(--bg-secondary);
     --searchbar-fg: var(--text-primary);
-    --search-mark-bg: var(--accent-orange);
+    --search-mark-bg: var(--accent);
 }
 
-/* Typography overrides */
 body {
     font-family: var(--font-family);
     background-color: var(--bg-primary);
     color: var(--text-primary);
 }
 
-/* Heavy weight headings like 42futures */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-    font-weight: var(--font-weight-heavy);
+    font-weight: 700;
     color: var(--text-primary);
 }
 
 h1 {
-    color: var(--accent-purple);
-    border-bottom: 2px solid var(--accent-purple);
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
     margin-top: 0;
+    padding-bottom: 0.4em;
 }
 
 h2 {
-    color: var(--text-primary);
     margin-top: 1.5em;
 }
 
@@ -80,18 +74,17 @@ h3 {
     margin-top: 1.2em;
 }
 
-/* Code blocks */
 code {
     font-family: var(--font-mono);
     background-color: var(--bg-secondary);
-    color: var(--accent-green);
+    color: var(--text-secondary);
     padding: 0.1em 0.3em;
     border-radius: 3px;
 }
 
 pre {
     background-color: var(--bg-secondary);
-    border: 1px solid var(--text-tertiary);
+    border: 1px solid var(--border);
     border-radius: 4px;
 }
 
@@ -99,9 +92,8 @@ pre code {
     color: var(--text-primary);
 }
 
-/* Links */
 a {
-    color: var(--accent-purple);
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -109,7 +101,6 @@ a:hover {
     text-decoration: underline;
 }
 
-/* Sidebar styling */
 .sidebar {
     background-color: var(--bg-secondary);
 }
@@ -123,7 +114,7 @@ a:hover {
 }
 
 .chapter.active {
-    color: var(--accent-purple);
+    color: var(--accent);
     font-weight: 600;
 }
 
@@ -131,13 +122,11 @@ a:hover {
     color: var(--text-primary);
 }
 
-/* Content area */
 .content {
     max-width: 70ch;
     color: var(--text-primary);
 }
 
-/* Generous spacing like 42futures */
 .content p {
     line-height: 1.7;
     margin-bottom: 1.2em;
@@ -149,15 +138,14 @@ a:hover {
     margin-bottom: 1.2em;
 }
 
-/* Blockquotes */
 blockquote {
-    border-left: 4px solid var(--accent-purple);
+    border-left: 3px solid var(--accent);
     background-color: var(--bg-secondary);
     padding: 1em;
     margin: 1.5em 0;
+    color: var(--text-secondary);
 }
 
-/* Tables */
 table {
     border-collapse: collapse;
     width: 100%;
@@ -170,57 +158,50 @@ table thead {
 
 table th,
 table td {
-    border: 1px solid var(--text-tertiary);
+    border: 1px solid var(--border);
     padding: 0.5em 1em;
 }
 
-/* Search bar */
 #searchbar {
     background-color: var(--bg-secondary);
-    border: 1px solid var(--text-tertiary);
+    border: 1px solid var(--border);
     color: var(--text-primary);
 }
 
-/* Navigation buttons */
 .nav-chapters {
     color: var(--text-secondary);
 }
 
 .nav-chapters:hover {
-    color: var(--accent-purple);
+    color: var(--accent);
     text-decoration: none;
 }
 
-/* Menu bar */
 .menu-bar {
     background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--text-tertiary);
+    border-bottom: 1px solid var(--border);
 }
 
-/* Buttons */
 button {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
-    border: 1px solid var(--text-tertiary);
+    border: 1px solid var(--border);
 }
 
 button:hover {
     background-color: var(--bg-primary);
-    border-color: var(--accent-purple);
+    border-color: var(--accent);
 }
 
-/* Improve contrast for better readability */
 .content main {
     padding-top: 2em;
     padding-bottom: 3em;
 }
 
-/* Hide theme selector */
 #theme-toggle {
     display: none;
 }
 
-/* Remove double box around code blocks */
 .content pre {
     margin: 0;
 }

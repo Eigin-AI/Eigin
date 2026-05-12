@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Lists all bundled skills the agent can use.
 struct SkillsList: View {
+    @Environment(\.colors) private var colors
+
     var body: some View {
         List(BundledSkill.all) { skill in
             NavigationLink {
@@ -9,14 +11,18 @@ struct SkillsList: View {
             } label: {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(skill.displayName)
-                        .font(Typography.headline)
+                        .typography(Typography.headline)
+                        .foregroundStyle(colors.textPrimary)
                     Text(skill.description)
-                        .font(Typography.caption)
-                        .foregroundStyle(.secondary)
+                        .typography(Typography.caption)
+                        .foregroundStyle(colors.textSecondary)
                 }
             }
+            .listRowBackground(colors.surface)
         }
-        .navigationTitle(Localized.Agent.skills)
+        .scrollContentBackground(.hidden)
+        .background(colors.background.ignoresSafeArea())
+        .navigationTitle(Localized.Agent.skills, style: Typography.largeTitle)
     }
 }
 
@@ -24,4 +30,5 @@ struct SkillsList: View {
     NavigationStack {
         SkillsList()
     }
+    .previewEnvironment()
 }

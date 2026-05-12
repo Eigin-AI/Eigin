@@ -1,15 +1,26 @@
 import SwiftUI
 import Textual
 
-/// Renders markdown as a code block with styling consistent with chat messages.
+/// Renders a code block with syntax highlighting and horizontal scrolling.
 struct DetailCodeBlock: View {
-    let markdown: String
+    let code: String
+    var language: String?
 
     @Environment(\.colors) private var colors
 
+    private var markdown: String {
+        let fence = language ?? ""
+        return "```\(fence)\n\(code)\n```"
+    }
+
     var body: some View {
         StructuredText(markdown: markdown)
+            .font(Typography.body.font)
             .foregroundStyle(colors.textPrimary)
+            .tint(colors.accent)
+            .textual.inlineStyle(.eigin(colors: colors))
+            .textual.headingStyle(EiginHeadingStyle())
+            .textual.highlighterTheme(.default)
             .textual.textSelection(.enabled)
     }
 }

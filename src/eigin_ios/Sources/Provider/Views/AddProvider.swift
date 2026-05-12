@@ -93,9 +93,9 @@ struct AddProvider: View {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Label(connectionError.title, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(colors.destructive)
-                            .font(Typography.headline)
+                            .typography(Typography.headline)
                         Text(connectionError.suggestion)
-                            .font(Typography.callout)
+                            .typography(Typography.callout)
                             .foregroundStyle(colors.textSecondary)
                     }
                 }
@@ -103,7 +103,10 @@ struct AddProvider: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(preset?.name ?? Localized.Provider.Picker.customProvider)
+        .navigationTitle(
+            preset?.name ?? Localized.Provider.Picker.customProvider,
+            style: Typography.largeTitle
+        )
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

@@ -2367,9 +2367,19 @@ enum Localized {
     }
 
     enum Skills {
+        /// Section header for a skill's instruction text
+        static var instruction: String {
+            Localized.get("skills.instruction")
+        }
+
         /// Navigation title for skills list
         static var title: String {
             Localized.get("skills.title")
+        }
+
+        /// Section header for the tools a skill provides
+        static var tools: String {
+            Localized.get("skills.tools")
         }
     }
 

@@ -13,53 +13,65 @@ struct AdvancedSettings: View {
         List {
             let assets = voiceService.engineAssets(for: languageManager.currentLanguage)
             if !assets.isEmpty {
-                Section(Localized.Settings.speechEngine) {
+                Section {
                     ForEach(assets, id: \.id) { asset in
                         EngineAssetRow(asset: asset)
                     }
+                    .listRowBackground(colors.surface)
+                } header: {
+                    Text(Localized.Settings.speechEngine)
+                        .typography(Typography.label)
                 }
             }
 
             Section {
-                Toggle(Localized.Settings.Logging.logToFile, isOn: $logSinkToFile)
-                Text(Localized.Settings.Logging.description)
-                    .font(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                Group {
+                    Toggle(Localized.Settings.Logging.logToFile, isOn: $logSinkToFile)
 
-                if logSinkToFile {
-                    Picker("Minimum Level", selection: $logFileLevel) {
-                        ForEach(AppLogger.LogLevel.allCases) { level in
-                            Text(level.displayName).tag(level.rawValue)
-                        }
-                    }
-                }
+                    Text(Localized.Settings.Logging.description)
+                        .typography(Typography.caption)
+                        .foregroundStyle(colors.textSecondary)
 
-                if logSinkToFile {
-                    if let url = logFileURL {
-                        ShareLink(item: url) {
-                            HStack(spacing: Spacing.sm) {
-                                SettingsIcon(systemName: "square.and.arrow.up", color: .blue)
-                                Text(Localized.Settings.Logging.exportLog)
+                    if logSinkToFile {
+                        Picker("Minimum Level", selection: $logFileLevel) {
+                            ForEach(AppLogger.LogLevel.allCases) { level in
+                                Text(level.displayName).tag(level.rawValue)
                             }
                         }
                     }
-                    Button(role: .destructive) {
-                        AppLogger.clearLog()
-                        logFileURL = nil
-                    } label: {
-                        HStack(spacing: Spacing.sm) {
-                            SettingsIcon(systemName: "trash", color: .red)
-                            Text(Localized.Settings.Logging.clearLog)
+
+                    if logSinkToFile {
+                        if let url = logFileURL {
+                            ShareLink(item: url) {
+                                HStack(spacing: Spacing.sm) {
+                                    SettingsIcon(systemName: "square.and.arrow.up", color: .blue)
+                                    Text(Localized.Settings.Logging.exportLog)
+                                        .typography(Typography.subheadline)
+                                        .foregroundStyle(colors.textPrimary)
+                                }
+                            }
+                        }
+                        Button(role: .destructive) {
+                            AppLogger.clearLog()
+                            logFileURL = nil
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                SettingsIcon(systemName: "trash", color: .red)
+                                Text(Localized.Settings.Logging.clearLog)
+                                    .typography(Typography.subheadline)
+                            }
                         }
                     }
                 }
+                .listRowBackground(colors.surface)
             } header: {
                 Text(Localized.Settings.logging)
+                    .typography(Typography.label)
             }
         }
         .scrollContentBackground(.hidden)
         .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Section.advanced)
+        .navigationTitle(Localized.Settings.Section.advanced, style: Typography.largeTitle)
         .onAppear { logFileURL = AppLogger.exportLog() }
     }
 }
@@ -77,7 +89,8 @@ struct EngineAssetRow: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(asset.displayName)
-                    .font(Typography.body)
+                    .typography(Typography.subheadline)
+                    .foregroundStyle(colors.textPrimary)
             }
             Spacer()
             engineBadge
@@ -108,17 +121,17 @@ struct EngineAssetRow: View {
         switch asset.state {
         case .ready:
             Text(Localized.Model.Status.installed)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(.green)
         case .downloading(let progress):
             CircularProgressView(progress: progress)
         case .downloaded, .compiling:
             Text(Localized.Status.preparing)
-                .font(Typography.caption)
+                .typography(Typography.caption)
                 .foregroundStyle(colors.textSecondary)
         case .notDownloaded, .failed:
             Button(Localized.Common.Actions.download) { showDownloadPrompt = true }
-                .font(Typography.caption)
+                .typography(Typography.caption)
         }
     }
 }

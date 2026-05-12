@@ -99,7 +99,7 @@ struct ChatFeed: View {
                             pagination.onLoadMore?()
                         } label: {
                             Label("Load older messages", systemImage: "chevron.up")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, Spacing.sm)
@@ -146,7 +146,7 @@ struct ChatFeed: View {
                             pagination.onLoadNewer?()
                         } label: {
                             Label("Load newer messages", systemImage: "chevron.down")
-                                .font(Typography.caption)
+                                .typography(Typography.caption)
                                 .foregroundStyle(colors.textSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, Spacing.sm)
@@ -308,7 +308,7 @@ struct ChatFeed: View {
             HStack(spacing: Spacing.sm) {
                 ProgressView()
                 Text(text)
-                    .font(Typography.callout)
+                    .typography(Typography.callout)
                     .foregroundStyle(colors.textSecondary)
             }
             .padding(.horizontal)
@@ -318,7 +318,7 @@ struct ChatFeed: View {
             } label: {
                 Label(error.title, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(colors.destructive)
-                    .font(Typography.body.weight(.medium))
+                    .font(Typography.body.font.weight(.medium))
             }
             .buttonStyle(.plain)
         case .toolGroup(_, let tools):

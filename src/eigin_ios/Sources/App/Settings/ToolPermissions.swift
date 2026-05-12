@@ -27,8 +27,10 @@ struct ToolPermissions: View {
                             }
                         }
                     }
+                    .listRowBackground(colors.surface)
                 } header: {
                     Label(category.displayName, systemImage: category.systemImage)
+                        .typography(Typography.label)
                 }
             }
 
@@ -54,14 +56,19 @@ struct ToolPermissions: View {
                             .onAppear { loadGrants() }
                         } label: {
                             Label(server.name, systemImage: "server.rack")
+                                .typography(Typography.subheadline)
                         }
                     }
+                    .listRowBackground(colors.surface)
                 } header: {
                     Label(Localized.Settings.Permissions.mcpServers, systemImage: "server.rack")
+                        .typography(Typography.label)
                 }
             }
         }
-        .navigationTitle(Localized.Settings.Permissions.title)
+        .scrollContentBackground(.hidden)
+        .background(colors.background.ignoresSafeArea())
+        .navigationTitle(Localized.Settings.Permissions.title, style: Typography.largeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadGrants() }
     }
