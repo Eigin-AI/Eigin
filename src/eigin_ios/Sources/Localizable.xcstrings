@@ -709,7 +709,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ chat%2$@"
           }
         }
@@ -5248,7 +5248,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ wants to use %2$@"
           }
         }
@@ -5622,7 +5622,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld/%lld models enabled"
           }
         }
@@ -5639,7 +5639,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@/%2$@ models enabled"
           }
         }
@@ -9600,7 +9600,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@/%2$@"
           }
         }
@@ -10620,7 +10620,7 @@
         },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld tools"
           }
         }
