@@ -74,21 +74,21 @@ struct ModelPicker: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(displayName(for: auto))
-                                    .typography(Typography.headline)
-                                    .foregroundStyle(colors.textPrimary)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
 
-                                HStack(spacing: Spacing.xs) {
+                                HStack(spacing: Spacing.n4) {
                                     Text(Localized.Provider.recommendedForYou)
-                                        .typography(Typography.caption)
+                                        .typography(Typography.miniLabel)
                                         .foregroundStyle(colors.accent)
 
                                     if let sub = subtitle(for: auto) {
                                         Text(verbatim: "·")
-                                            .typography(Typography.caption)
-                                            .foregroundStyle(colors.textSecondary)
+                                            .typography(Typography.miniLabel)
+                                            .foregroundStyle(colors.text.standard.muted)
                                         Text(sub)
-                                            .typography(Typography.caption)
-                                            .foregroundStyle(colors.textSecondary)
+                                            .typography(Typography.miniLabel)
+                                            .foregroundStyle(colors.text.standard.muted)
                                     }
                                 }
                             }
@@ -113,7 +113,7 @@ struct ModelPicker: View {
                     }
                 } header: {
                     Text(Localized.Model.Picker.otherRecommended)
-                        .typography(Typography.label)
+                        .typography(Typography.miniLabel)
                 }
             }
 
@@ -128,14 +128,14 @@ struct ModelPicker: View {
                     Button {
                         withAnimation { isOtherCollapsed.toggle() }
                     } label: {
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             Image(systemName: isOtherCollapsed ? "chevron.right" : "chevron.down")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                             Text(Localized.Model.Picker.allModels)
                             Text(verbatim: "\(unknownModels.count)")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                         }
                         .contentShape(Rectangle())
                     }
@@ -145,15 +145,15 @@ struct ModelPicker: View {
 
             if rankedModels.isEmpty, unknownModels.isEmpty, autoSelectedModel == nil {
                 Section {
-                    HStack(alignment: .top, spacing: Spacing.sm) {
+                    HStack(alignment: .top, spacing: Spacing.n8) {
                         Image(systemName: "info.circle")
-                            .foregroundStyle(colors.textSecondary)
-                            .typography(Typography.caption)
+                            .foregroundStyle(colors.text.standard.muted)
+                            .typography(Typography.miniLabel)
                         Text(Localized.Model.Picker.noSearchResults)
-                            .typography(Typography.caption)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
-                    .padding(.vertical, Spacing.xs)
+                    .padding(.vertical, Spacing.n4)
                 }
             }
         }
@@ -161,8 +161,8 @@ struct ModelPicker: View {
         .opacity(isLoaded ? 1 : 0)
         .animation(.easeIn(duration: 0.25), value: isLoaded)
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle("Choose Model", style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle("Choose Model", style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             let enriched = await modelMetadataService.enrich(
@@ -188,12 +188,12 @@ struct ModelPicker: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayName(for: modelID))
                         .typography(Typography.body)
-                        .foregroundStyle(colors.textPrimary)
+                        .foregroundStyle(colors.text.standard.base)
 
                     if let subtitle = subtitle(for: modelID) {
                         Text(subtitle)
-                            .typography(Typography.caption)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
                 }
 

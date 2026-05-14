@@ -14,18 +14,18 @@ struct ToolRowView: View {
         case .error: "failed"
         }
         let color: Color = switch tool.status {
-        case .executing: colors.textSecondary
-        case .completed: colors.textSecondary.opacity(0.6)
+        case .executing: colors.text.standard.muted
+        case .completed: colors.text.standard.muted.opacity(0.6)
         case .awaitingPermission: colors.accent
-        case .denied, .error: colors.destructive
+        case .denied, .error: colors.text.standard.error
         }
         let isExecuting = tool.status == .executing
 
         Text(suffix != nil ? "\(name) \(suffix!)" : name)
-            .font(Typography.body.font.weight(.medium))
+            .typography(Typography.chatMessage)
             .foregroundStyle(color)
             .breathe(isActive: isExecuting)
-            .padding(.vertical, Spacing.xs)
+            .padding(.vertical, Spacing.n4)
             .animation(Animations.smooth, value: tool.status)
     }
 

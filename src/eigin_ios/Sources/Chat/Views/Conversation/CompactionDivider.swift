@@ -36,14 +36,14 @@ struct CompactionDivider: View {
                 ))
                     ?? AttributedString(cleaned)
                 Text(rendered)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, Spacing.sm)
-                    .padding(.horizontal, Spacing.sm)
+                    .padding(.top, Spacing.n8)
+                    .padding(.horizontal, Spacing.n8)
             }
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, Spacing.n4)
         .contentShape(Rectangle())
         .onTapGesture {
             guard hasSummary else { return }
@@ -58,7 +58,7 @@ struct CompactionDivider: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Rectangle()
-                        .fill(colors.border)
+                        .fill(colors.border.standard.base)
                         .frame(height: 1)
 
                     if let progress {
@@ -75,19 +75,19 @@ struct CompactionDivider: View {
             }
             .frame(height: 2)
 
-            HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.n4) {
                 Text(isCompacting ? "Compacting…" : "Conversation summarized")
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
 
                 if hasSummary {
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
-            .padding(.horizontal, Spacing.sm)
-            .background(colors.background)
+            .padding(.horizontal, Spacing.n8)
+            .background(colors.surface.standard.base)
         }
     }
 }

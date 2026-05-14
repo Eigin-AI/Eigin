@@ -41,8 +41,8 @@ struct WebBrowsingView: View {
                         Text(Localized.Agent.Status.readingPage(actor))
                     }
                 }
-                .typography(Typography.callout)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.note)
+                .foregroundStyle(colors.text.standard.muted)
                 .contentTransition(.interpolate)
                 .animation(Animations.smooth, value: pageReady)
 
@@ -63,7 +63,7 @@ struct WebBrowsingView: View {
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .padding(.bottom, Spacing.sm)
+            .padding(.bottom, Spacing.n8)
 
             // Web view — breaks out of ChatBottomBox padding to feel full-width
             BrowsingWebView(
@@ -76,8 +76,8 @@ struct WebBrowsingView: View {
             .opacity(pageReady ? 1 : 0)
             .animation(.easeIn(duration: 0.6), value: pageReady)
             // Bleed into the ChatBottomBox padding on sides and bottom
-            .padding(.horizontal, -Spacing.md)
-            .padding(.bottom, -Spacing.md)
+            .padding(.horizontal, -Spacing.n16)
+            .padding(.bottom, -Spacing.n16)
         }
         .onAppear {
             startDisplayTimeout()

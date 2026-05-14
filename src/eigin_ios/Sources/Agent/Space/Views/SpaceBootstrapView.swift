@@ -57,25 +57,25 @@ struct SpaceBootstrapView: View {
             onStop: stopHandler,
             lastStreamedItemID: chatLoop.lastStreamedItemID
         )
-        .safeAreaInset(edge: .bottom, spacing: Spacing.sm) {
+        .safeAreaInset(edge: .bottom, spacing: Spacing.n8) {
             if showFinishButton {
                 Button {
                     finishSetup()
                 } label: {
                     Text(Localized.Space.Bootstrap.finishSetup)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(colors.accent)
                 .padding(.horizontal)
-                .padding(.bottom, Spacing.sm)
+                .padding(.bottom, Spacing.n8)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(duration: 0.35, bounce: 0), value: showFinishButton)
-        .navigationTitle(Localized.Space.Bootstrap.title, style: Typography.largeTitle)
+        .navigationTitle(Localized.Space.Bootstrap.title, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             guard !didAppear else { return }

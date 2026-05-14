@@ -23,8 +23,8 @@ struct FactDetail: View {
             relationshipsSection
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(primaryName, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(primaryName, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !isBundled {
@@ -63,21 +63,21 @@ struct FactDetail: View {
         Section {
             LabeledContent(Localized.Fact.Detail.Label.type) {
                 Text(localizedTypeName(entity.entityType))
-                    .typography(Typography.callout)
-                    .padding(.horizontal, Spacing.sm)
-                    .padding(.vertical, Spacing.xs)
-                    .background(colors.surfaceSecondary, in: Capsule())
+                    .typography(Typography.note)
+                    .padding(.horizontal, Spacing.n8)
+                    .padding(.vertical, Spacing.n4)
+                    .background(colors.surface.standard.base, in: Capsule())
             }
             LabeledContent(Localized.Fact.Detail.Label.id) {
                 Text(entity.id)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             if isBundled {
                 LabeledContent(Localized.Fact.Detail.Label.source) {
                     Text(Localized.Model.bundled)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textTertiary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.disabled)
                 }
             }
         }
@@ -96,20 +96,20 @@ struct FactDetail: View {
         let tags = extractTags()
         if !tags.isEmpty {
             Section(Localized.Fact.Detail.Section.tags) {
-                FlowLayout(spacing: Spacing.xs) {
+                FlowLayout(spacing: Spacing.n4) {
                     ForEach(tags, id: \.self) { tag in
                         Text(tag)
-                            .typography(Typography.caption)
-                            .padding(.horizontal, Spacing.sm)
-                            .padding(.vertical, Spacing.xs)
-                            .background(colors.surfaceSecondary, in: Capsule())
+                            .typography(Typography.miniLabel)
+                            .padding(.horizontal, Spacing.n8)
+                            .padding(.vertical, Spacing.n4)
+                            .background(colors.surface.standard.base, in: Capsule())
                     }
                 }
                 .listRowInsets(EdgeInsets(
-                    top: Spacing.sm,
-                    leading: Spacing.md,
-                    bottom: Spacing.sm,
-                    trailing: Spacing.md
+                    top: Spacing.n8,
+                    leading: Spacing.n16,
+                    bottom: Spacing.n8,
+                    trailing: Spacing.n16
                 ))
             }
         }
@@ -128,15 +128,15 @@ struct FactDetail: View {
                                 agentID: agentID
                             )
                         } label: {
-                            HStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.n8) {
                                 Image(systemName: "arrow.right.circle")
                                     .foregroundStyle(colors.accent)
                                 VStack(alignment: .leading) {
                                     Text(relatedPrimaryName(related))
-                                        .typography(Typography.headline)
+                                        .typography(Typography.titleXS)
                                     Text(localizedTypeName(related.entityType))
-                                        .typography(Typography.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
                                 }
                             }
                         }
@@ -151,15 +151,15 @@ struct FactDetail: View {
                                 agentID: agentID
                             )
                         } label: {
-                            HStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.n8) {
                                 Image(systemName: "arrow.left.circle")
-                                    .foregroundStyle(colors.textSecondary)
+                                    .foregroundStyle(colors.text.standard.muted)
                                 VStack(alignment: .leading) {
                                     Text(relatedPrimaryName(related))
-                                        .typography(Typography.headline)
+                                        .typography(Typography.titleXS)
                                     Text(localizedTypeName(related.entityType))
-                                        .typography(Typography.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
                                 }
                             }
                         }
@@ -178,15 +178,15 @@ struct FactDetail: View {
     }
 
     private func fieldRow(_ field: FirmField) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.n4) {
             Text(field.name.replacingOccurrences(of: "_", with: " ").capitalized)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
             Text(fieldValueString(field.value))
                 .typography(Typography.body)
-                .foregroundStyle(colors.textPrimary)
+                .foregroundStyle(colors.text.standard.base)
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, Spacing.n4)
     }
 
     private func fieldValueString(_ value: FirmFieldValue) -> String {

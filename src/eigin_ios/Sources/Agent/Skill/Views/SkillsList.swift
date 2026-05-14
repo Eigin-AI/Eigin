@@ -9,20 +9,20 @@ struct SkillsList: View {
             NavigationLink {
                 SkillDetail(skill: skill)
             } label: {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
+                VStack(alignment: .leading, spacing: Spacing.n4) {
                     Text(skill.displayName)
-                        .typography(Typography.headline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(colors.text.standard.base)
                     Text(skill.description)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Agent.skills, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Agent.skills, style: Typography.titleXl)
     }
 }
 

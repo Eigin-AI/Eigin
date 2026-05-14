@@ -26,8 +26,8 @@ struct ReactiveRing: View {
 
     private var strokeColor: Color {
         switch phase {
-        case .idle: colors.textTertiary
-        case .listening: fastPulse ? accent : colors.textSecondary
+        case .idle: colors.text.standard.disabled
+        case .listening: fastPulse ? accent : colors.text.standard.muted
         case .processing: accent
         case .speaking: accent
         }
@@ -73,7 +73,7 @@ struct ReactiveRing: View {
         ZStack {
             // Base ring — always visible
             Circle()
-                .stroke(colors.border, lineWidth: 2)
+                .stroke(colors.border.standard.base, lineWidth: 2)
 
             // Gradient ring — fades in during processing
             Circle()

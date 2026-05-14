@@ -59,23 +59,23 @@ struct OnboardingReveal: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             // Name line — springs in
             Text(nameLine)
-                .typography(Typography.largeTitle)
-                .foregroundStyle(colors.textPrimary)
+                .typography(Typography.titleXl)
+                .foregroundStyle(colors.text.standard.base)
                 .opacity(phase >= 1 ? 1 : 0)
                 .scaleEffect(phase >= 1 ? 1 : 0.8)
                 .animation(.spring(duration: 0.7, bounce: 0.15), value: phase >= 1)
 
             // Hero paragraph — curtain reveal from top with gradient mask
             Text(heroText)
-                .typography(Typography.headline)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.titleXS)
+                .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.lg)
+                .padding(.horizontal, Spacing.n24)
                 .frame(maxWidth: 500)
                 .mask(
                     GradientCurtainMask(progress: curtainProgress)
@@ -85,29 +85,29 @@ struct OnboardingReveal: View {
             Spacer()
 
             // Pitch block — left-aligned like OnboardingWelcome values
-            VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.n16) {
                 Text(subHeader)
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
 
                 Text(bodyText)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.lg)
+            .padding(.horizontal, Spacing.n24)
             .opacity(showUpgradePitch && phase >= 3 ? 1 : 0)
             .offset(y: showUpgradePitch && phase >= 3 ? 0 : 12)
             .animation(.easeOut(duration: 0.6), value: phase >= 3)
 
             // Action buttons
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.n16) {
                 if showUpgradePitch {
                     Button {
                         onConnectCloud()
                     } label: {
                         Text(Localized.Onboarding.Provider.connectAction)
-                            .typography(Typography.headline)
+                            .typography(Typography.titleXS)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -118,16 +118,16 @@ struct OnboardingReveal: View {
                         onStayLocal()
                     } label: {
                         Text(Localized.Onboarding.Provider.localAction)
-                            .typography(Typography.callout)
+                            .typography(Typography.note)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
                 } else {
                     Button {
                         onStayLocal()
                     } label: {
                         Text(Localized.Onboarding.Welcome.primaryAction)
-                            .typography(Typography.headline)
+                            .typography(Typography.titleXS)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -138,11 +138,11 @@ struct OnboardingReveal: View {
             .opacity(phase >= 4 ? 1 : 0)
             .offset(y: phase >= 4 ? 0 : 12)
             .animation(.easeOut(duration: 0.6), value: phase >= 4)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.xl)
+            .padding(.horizontal, Spacing.n24)
+            .padding(.bottom, Spacing.n32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .task {
             await runAnimation()
         }

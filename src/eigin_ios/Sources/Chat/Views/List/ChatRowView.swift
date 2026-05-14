@@ -8,19 +8,19 @@ struct ChatRowView: View {
     @Environment(\.colors) private var colors
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.n16) {
             chatAvatar
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
                 Text(chat.title.isEmpty ? Localized.Tools.New.chat : chat.title)
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
                     .lineLimit(1)
 
                 Text(chat.lastVisibleMessage
                     .map { ChatTags.stripAll(from: $0.content) } ?? "No messages yet")
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.muted)
                     .lineLimit(2, reservesSpace: true)
             }
         }
@@ -29,14 +29,14 @@ struct ChatRowView: View {
     private var chatAvatar: some View {
         ZStack {
             Circle()
-                .fill(colors.surface)
+                .fill(colors.surface.standard.alternative)
                 .frame(width: 36, height: 36)
 
             if let spaceID = chat.spaceID,
                let space = spaces.first(where: { $0.id == spaceID })
             {
                 Text(space.emoji)
-                    .typography(Typography.callout)
+                    .typography(Typography.note)
             } else {
                 Image(systemName: "bubble.fill")
                     .font(.system(size: 16))

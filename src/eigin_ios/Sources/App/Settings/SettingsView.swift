@@ -26,8 +26,8 @@ struct SettingsView: View {
                 developmentSection
             }
             .scrollContentBackground(.hidden)
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Ui.settings, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(Localized.Ui.settings, style: Typography.titleXl)
             .sheet(isPresented: $showingAddProvider) {
                 ProviderPicker()
             }
@@ -52,10 +52,10 @@ struct SettingsView: View {
                 themePicker
                 languagePicker
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Settings.appearance)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -98,17 +98,17 @@ struct SettingsView: View {
                 NavigationLink {
                     ToolPermissions(agent: agent)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "lock.fill", color: .cyan)
                         Text(Localized.Settings.Label.permissions)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                     }
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Ui.security)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
         }
     }
@@ -121,28 +121,28 @@ struct SettingsView: View {
                 }
             }
             .onDelete(perform: deleteProviders)
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
 
             Button(Localized.Settings.Action.addProvider) {
                 showingAddProvider = true
             }
-            .typography(Typography.subheadline)
-            .listRowBackground(colors.surface)
+            .typography(Typography.navTab)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Ui.providers)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
     private func providerRow(_ provider: Provider) -> some View {
         VStack(alignment: .leading) {
             Text(provider.name)
-                .typography(Typography.subheadline)
+                .typography(Typography.navTab)
             let count = provider.availableModels
                 .count(where: { KnownModelCatalog.lookup($0) != nil })
             Text(Localized.Settings.Info.modelsAvailable("\(count)"))
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
     }
 
@@ -154,16 +154,16 @@ struct SettingsView: View {
                 }
             }
             .onDelete(perform: deleteMCPServers)
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
 
             Button(Localized.Settings.Action.addMcpServer) {
                 showingAddMCPServer = true
             }
-            .typography(Typography.subheadline)
-            .listRowBackground(colors.surface)
+            .typography(Typography.navTab)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Ui.mcpServers)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -172,17 +172,17 @@ struct SettingsView: View {
             NavigationLink {
                 AdvancedSettings()
             } label: {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
                     Text(Localized.Settings.Section.advanced)
-                        .typography(Typography.subheadline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.navTab)
+                        .foregroundStyle(colors.text.standard.base)
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Settings.Section.advanced)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -193,17 +193,17 @@ struct SettingsView: View {
             NavigationLink {
                 DevelopmentMenu()
             } label: {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "hammer.fill", color: .orange)
                     Text(Localized.Settings.Section.development)
-                        .typography(Typography.subheadline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.navTab)
+                        .foregroundStyle(colors.text.standard.base)
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Settings.Section.development)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
 #endif
     }

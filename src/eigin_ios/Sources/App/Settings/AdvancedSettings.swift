@@ -17,10 +17,10 @@ struct AdvancedSettings: View {
                     ForEach(assets, id: \.id) { asset in
                         EngineAssetRow(asset: asset)
                     }
-                    .listRowBackground(colors.surface)
+                    .listRowBackground(colors.surface.standard.alternative)
                 } header: {
                     Text(Localized.Settings.speechEngine)
-                        .typography(Typography.label)
+                        .typography(Typography.miniLabel)
                 }
             }
 
@@ -29,8 +29,8 @@ struct AdvancedSettings: View {
                     Toggle(Localized.Settings.Logging.logToFile, isOn: $logSinkToFile)
 
                     Text(Localized.Settings.Logging.description)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
 
                     if logSinkToFile {
                         Picker("Minimum Level", selection: $logFileLevel) {
@@ -43,11 +43,11 @@ struct AdvancedSettings: View {
                     if logSinkToFile {
                         if let url = logFileURL {
                             ShareLink(item: url) {
-                                HStack(spacing: Spacing.sm) {
+                                HStack(spacing: Spacing.n8) {
                                     SettingsIcon(systemName: "square.and.arrow.up", color: .blue)
                                     Text(Localized.Settings.Logging.exportLog)
-                                        .typography(Typography.subheadline)
-                                        .foregroundStyle(colors.textPrimary)
+                                        .typography(Typography.navTab)
+                                        .foregroundStyle(colors.text.standard.base)
                                 }
                             }
                         }
@@ -55,23 +55,23 @@ struct AdvancedSettings: View {
                             AppLogger.clearLog()
                             logFileURL = nil
                         } label: {
-                            HStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.n8) {
                                 SettingsIcon(systemName: "trash", color: .red)
                                 Text(Localized.Settings.Logging.clearLog)
-                                    .typography(Typography.subheadline)
+                                    .typography(Typography.navTab)
                             }
                         }
                     }
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Settings.logging)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Section.advanced, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Settings.Section.advanced, style: Typography.titleXl)
         .onAppear { logFileURL = AppLogger.exportLog() }
     }
 }
@@ -89,8 +89,8 @@ struct EngineAssetRow: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(asset.displayName)
-                    .typography(Typography.subheadline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.navTab)
+                    .foregroundStyle(colors.text.standard.base)
             }
             Spacer()
             engineBadge
@@ -121,17 +121,17 @@ struct EngineAssetRow: View {
         switch asset.state {
         case .ready:
             Text(Localized.Model.Status.installed)
-                .typography(Typography.caption)
+                .typography(Typography.miniLabel)
                 .foregroundStyle(.green)
         case .downloading(let progress):
             CircularProgressView(progress: progress)
         case .downloaded, .compiling:
             Text(Localized.Status.preparing)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         case .notDownloaded, .failed:
             Button(Localized.Common.Actions.download) { showDownloadPrompt = true }
-                .typography(Typography.caption)
+                .typography(Typography.miniLabel)
         }
     }
 }

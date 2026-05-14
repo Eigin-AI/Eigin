@@ -9,10 +9,10 @@ struct DocumentEditor: View {
     var body: some View {
         TextEditor(text: $text)
             .typography(Typography.body)
-            .padding(.horizontal, Spacing.sm)
+            .padding(.horizontal, Spacing.n8)
             .scrollContentBackground(.hidden)
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(title, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(title, style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
     }
 }

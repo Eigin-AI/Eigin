@@ -13,7 +13,7 @@ struct AssetDownloadPrompt: View {
     @Environment(\.colors) private var colors
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             icon
@@ -23,8 +23,8 @@ struct AssetDownloadPrompt: View {
 
             actions
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.bottom, Spacing.xl)
+        .padding(.horizontal, Spacing.n24)
+        .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .ignoresSafeArea()
@@ -59,36 +59,36 @@ struct AssetDownloadPrompt: View {
     }
 
     private var text: some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             Text(asset.displayName)
-                .typography(Typography.largeTitle)
-                .foregroundStyle(colors.textPrimary)
+                .typography(Typography.titleXl)
+                .foregroundStyle(colors.text.standard.base)
 
             switch asset.state {
             case .notDownloaded:
                 Text(asset.downloadDescription)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
                     .multilineTextAlignment(.center)
             case .downloading(let progress):
                 ProgressView(value: progress)
-                    .padding(.horizontal, Spacing.md)
+                    .padding(.horizontal, Spacing.n16)
                 Text(Localized.Status.downloading)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             case .downloaded, .compiling:
                 ProgressView()
                     .controlSize(.small)
                 Text(Localized.Status.preparing)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             case .ready:
                 Text(Localized.Status.ready)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
             case .failed(let message):
                 Text(message)
-                    .typography(Typography.caption)
+                    .typography(Typography.miniLabel)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
@@ -96,14 +96,14 @@ struct AssetDownloadPrompt: View {
     }
 
     private var actions: some View {
-        VStack(spacing: Spacing.md) {
+        VStack(spacing: Spacing.n16) {
             switch asset.state {
             case .notDownloaded, .failed:
                 Button {
                     Task { await asset.download() }
                 } label: {
                     Text(Localized.Common.Actions.download)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -115,8 +115,8 @@ struct AssetDownloadPrompt: View {
                     onDecline()
                 } label: {
                     Text(Localized.Common.Actions.notNow)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             case .downloading, .downloaded, .compiling:
                 EmptyView()
@@ -125,7 +125,7 @@ struct AssetDownloadPrompt: View {
                     onAccept()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }

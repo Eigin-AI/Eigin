@@ -24,10 +24,10 @@ struct SpaceDetailView: View {
             deleteSection
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationTitle(
             space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name,
-            style: Typography.largeTitle
+            style: Typography.titleXl
         )
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {
@@ -45,7 +45,7 @@ struct SpaceDetailView: View {
 
     private var presentationSection: some View {
         Section {
-            HStack(alignment: .center, spacing: Spacing.sm) {
+            HStack(alignment: .center, spacing: Spacing.n8) {
                 Button {
                     showEmojiPicker = true
                 } label: {
@@ -63,7 +63,7 @@ struct SpaceDetailView: View {
 
                 if isEditingName {
                     TextField(Localized.Common.Fields.spaceName, text: $editingNameText)
-                        .typography(Typography.title)
+                        .typography(Typography.titleM)
                         .focused($isNameFocused)
                         .onSubmit { commitNameEdit() }
                         .onChange(of: isNameFocused) { _, focused in
@@ -75,8 +75,8 @@ struct SpaceDetailView: View {
                         }
                 } else {
                     Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
-                        .typography(Typography.title)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.titleM)
+                        .foregroundStyle(colors.text.standard.base)
                         .onTapGesture {
                             editingNameText = space.name
                             withAnimation(Animations.snap) {
@@ -87,7 +87,7 @@ struct SpaceDetailView: View {
 
                 Spacer()
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         }
     }
 
@@ -101,25 +101,25 @@ struct SpaceDetailView: View {
                     text: $space.instructions
                 )
             } label: {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "text.alignleft", color: .blue)
                     Text(Localized.Space.Section.instructions)
-                        .typography(Typography.subheadline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.navTab)
+                        .foregroundStyle(colors.text.standard.base)
                     Spacer()
                     Text(space.instructions
                         .isEmpty ? Localized.Fact.Detail
                         .notSet : String(space.instructions.prefix(30)) +
                         "...")
-                        .foregroundStyle(colors.textSecondary)
-                        .typography(Typography.callout)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .typography(Typography.note)
                         .lineLimit(1)
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Space.Section.instructions)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -128,19 +128,19 @@ struct SpaceDetailView: View {
     private var privacySection: some View {
         Section {
             Toggle(isOn: $space.isPrivate) {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "eye.slash", color: .purple)
                     VStack(alignment: .leading) {
                         Text(Localized.Space.Detail.Label.private)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                         Text(Localized.Space.Detail.Hint.private)
-                            .typography(Typography.caption)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         }
     }
 
@@ -151,8 +151,8 @@ struct SpaceDetailView: View {
             Button(Localized.Space.Detail.Action.deleteSpace, role: .destructive) {
                 showDeleteConfirmation = true
             }
-            .typography(Typography.subheadline)
-            .listRowBackground(colors.surface)
+            .typography(Typography.navTab)
+            .listRowBackground(colors.surface.standard.alternative)
         }
     }
 

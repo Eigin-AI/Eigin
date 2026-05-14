@@ -5,28 +5,22 @@ use std::fs;
 use walkdir::WalkDir;
 
 pub struct InstalledFonts {
-    pub sans_serif: HashMap<String, String>,
-    pub sans_serif_scale: f64,
-    pub serif: HashMap<String, String>,
-    pub serif_scale: f64,
+    /// PostScript name maps keyed by fontFamily name, then weight name.
+    families: HashMap<String, HashMap<String, String>>,
+    scales: HashMap<String, f64>,
     pub file_names: Vec<String>,
 }
 
 impl InstalledFonts {
     pub fn postscript_name(&self, family: &str, weight: &str) -> Option<&str> {
-        match family {
-            "sansSerif" => self.sans_serif.get(weight).map(String::as_str),
-            "serif" => self.serif.get(weight).map(String::as_str),
-            _ => None,
-        }
+        self.families
+            .get(family)
+            .and_then(|m| m.get(weight))
+            .map(String::as_str)
     }
 
     pub fn scale(&self, family: &str) -> f64 {
-        match family {
-            "sansSerif" => self.sans_serif_scale,
-            "serif" => self.serif_scale,
-            _ => 1.0,
-        }
+        self.scales.get(family).copied().unwrap_or(1.0)
     }
 }
 
@@ -68,39 +62,42 @@ pub fn install(repo_root: &str, tokens: &Value) -> Result<Option<InstalledFonts>
 
     let family_group = tokens
         .get("fontFamily")
-        .context("tokens.json: missing 'fontFamily' group")?;
+        .context("tokens.json: missing 'fontFamily' group")?
+        .as_object()
+        .context("tokens.json: 'fontFamily' must be an object")?;
 
-    let sans_serif = parse_weight_map(family_group, "sansSerif")?;
-    let sans_serif_scale = parse_scale(family_group, "sansSerif")?;
-    let serif = parse_weight_map(family_group, "serif")?;
-    let serif_scale = parse_scale(family_group, "serif")?;
+    let mut families = HashMap::new();
+    let mut scales = HashMap::new();
+
+    for (family_name, family_value) in family_group {
+        families.insert(
+            family_name.clone(),
+            parse_weight_map(family_value, family_name)?,
+        );
+        scales.insert(family_name.clone(), parse_scale(family_value));
+    }
 
     Ok(Some(InstalledFonts {
-        sans_serif,
-        sans_serif_scale,
-        serif,
-        serif_scale,
+        families,
+        scales,
         file_names,
     }))
 }
 
-fn parse_weight_map(family_group: &Value, role: &str) -> Result<HashMap<String, String>> {
-    let role_obj = family_group
-        .get(role)
-        .with_context(|| format!("fontFamily: missing '{role}'"))?
+fn parse_weight_map(family_value: &Value, family_name: &str) -> Result<HashMap<String, String>> {
+    let obj = family_value
         .as_object()
-        .with_context(|| format!("fontFamily.{role}: expected object"))?;
+        .with_context(|| format!("fontFamily.{family_name}: expected object"))?;
 
-    Ok(role_obj
+    Ok(obj
         .iter()
         .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
         .collect())
 }
 
-fn parse_scale(family_group: &Value, role: &str) -> Result<f64> {
-    Ok(family_group
-        .get(role)
-        .and_then(|r| r.get("scale"))
+fn parse_scale(family_value: &Value) -> f64 {
+    family_value
+        .get("scale")
         .and_then(Value::as_f64)
-        .unwrap_or(1.0))
+        .unwrap_or(1.0)
 }

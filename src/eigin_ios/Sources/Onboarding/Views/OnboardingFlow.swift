@@ -101,7 +101,7 @@ struct OnboardingFlow: View {
         }
         .transition(.opacity)
         .animation(Animations.gentle, value: stepRaw)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .task {
             validateStep()
         }

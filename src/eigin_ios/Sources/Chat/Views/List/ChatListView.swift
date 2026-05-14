@@ -60,8 +60,8 @@ struct ChatListView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(navigationTitle, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(navigationTitle, style: Typography.titleXl)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     SpaceFilterMenu(
@@ -187,19 +187,19 @@ struct ChatListView: View {
     private var chatList: some View {
         List {
             ForEach(groupedChats, id: \.0) { title, sectionChats in
-                Section(header: Text(title).typography(Typography.label)) {
+                Section(header: Text(title).typography(Typography.miniLabel)) {
                     ForEach(Array(sectionChats.enumerated()), id: \.element.id) { index, chat in
                         NavigationLink(value: chat.id) {
                             VStack(alignment: .leading, spacing: 0) {
                                 if index > 0 {
                                     Divider()
-                                        .padding(.leading, 36 + Spacing.md)
+                                        .padding(.leading, 36 + Spacing.n16)
                                 }
                                 ChatRowView(
                                     chat: chat,
                                     spaces: spaces
                                 )
-                                .padding(.vertical, Spacing.sm)
+                                .padding(.vertical, Spacing.n8)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }

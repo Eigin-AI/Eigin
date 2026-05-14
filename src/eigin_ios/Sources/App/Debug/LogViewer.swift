@@ -18,24 +18,24 @@ struct LogViewer: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if logText.isEmpty {
                     Text(Localized.Settings.Log.empty)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                         .padding()
                 } else {
                     ForEach(Array(filteredLines.enumerated()), id: \.offset) { _, line in
                         Text(line)
                             .font(.system(.caption2, design: .monospaced))
                             .textSelection(.enabled)
-                            .padding(.horizontal, Spacing.md)
+                            .padding(.horizontal, Spacing.n16)
                             .padding(.vertical, 1)
                     }
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .searchable(text: $searchText, prompt: "Filter log")
-        .navigationTitle("App Log", style: Typography.largeTitle)
+        .navigationTitle("App Log", style: Typography.titleXl)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {

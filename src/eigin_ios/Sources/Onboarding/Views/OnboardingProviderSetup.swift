@@ -26,61 +26,64 @@ struct OnboardingProviderSetup: View {
     }
 
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.md),
-        GridItem(.flexible(), spacing: Spacing.md),
+        GridItem(.flexible(), spacing: Spacing.n16),
+        GridItem(.flexible(), spacing: Spacing.n16),
     ]
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: Spacing.xl) {
-                    VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n32) {
+                    VStack(spacing: Spacing.n8) {
                         Text(Localized.Provider.typeLabel)
-                            .typography(Typography.largeTitle)
+                            .typography(Typography.titleXl)
 
                         Text(Localized.Onboarding.Provider.cloudExplanation)
                             .typography(Typography.body)
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, Spacing.xl)
+                    .padding(.top, Spacing.n32)
 
                     // OAuth providers — featured options
                     ForEach(oauthPresets) { preset in
                         Button {
                             onSelect(preset)
                         } label: {
-                            HStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.n8) {
                                 providerIcon(for: preset)
 
                                 Text(Localized.Provider.Setup.oauthConnect(preset.name))
-                                    .typography(Typography.headline)
-                                    .foregroundStyle(colors.textPrimary)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
 
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
-                                    .typography(Typography.caption)
-                                    .foregroundStyle(colors.textSecondary)
+                                    .typography(Typography.miniLabel)
+                                    .foregroundStyle(colors.text.standard.muted)
                             }
-                            .padding(Spacing.md)
-                            .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
+                            .padding(Spacing.n16)
+                            .background(
+                                colors.surface.standard.alternative,
+                                in: RoundedRectangle(cornerRadius: 12)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
 
                     // API key — collapsible
-                    VStack(spacing: Spacing.md) {
+                    VStack(spacing: Spacing.n16) {
                         HStack {
                             Text(Localized.Provider.Setup.apiKeyAlternative)
-                                .typography(Typography.subheadline)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.muted)
 
                             Spacer()
 
                             Image(systemName: "chevron.right")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                                 .rotationEffect(showAPIKeyOptions ? .degrees(90) : .zero)
                         }
                         .contentShape(Rectangle())
@@ -91,7 +94,7 @@ struct OnboardingProviderSetup: View {
                         }
 
                         if showAPIKeyOptions {
-                            LazyVGrid(columns: columns, spacing: Spacing.md) {
+                            LazyVGrid(columns: columns, spacing: Spacing.n16) {
                                 ForEach(apiKeyPresets) { preset in
                                     Button { onSelect(preset) } label: {
                                         presetTile(preset)
@@ -102,42 +105,42 @@ struct OnboardingProviderSetup: View {
                         }
                     }
                 }
-                .padding(.horizontal, Spacing.lg)
+                .padding(.horizontal, Spacing.n24)
             }
 
             // Connected providers
             if !cloudProviders.isEmpty {
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     ForEach(cloudProviders) { provider in
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(colors.accent)
                             Text(provider.name)
-                                .typography(Typography.subheadline)
-                                .foregroundStyle(colors.textPrimary)
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.base)
                             Spacer()
                         }
                     }
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.md)
+                .padding(.horizontal, Spacing.n24)
+                .padding(.top, Spacing.n16)
 
                 Button {
                     onContinue?()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(colors.accent)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.lg)
+                .padding(.horizontal, Spacing.n24)
+                .padding(.vertical, Spacing.n24)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
     }
 
     // MARK: - Subviews
@@ -152,24 +155,24 @@ struct OnboardingProviderSetup: View {
         } else if let systemImage = preset.systemImage {
             Image(systemName: systemImage)
                 .font(.system(size: 24))
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .frame(width: 36, height: 36)
         }
     }
 
     private func presetTile(_ preset: ProviderPreset) -> some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             providerIcon(for: preset)
 
             Text(preset.name)
-                .typography(Typography.subheadline)
-                .foregroundStyle(colors.textPrimary)
+                .typography(Typography.navTab)
+                .foregroundStyle(colors.text.standard.base)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.lg)
-        .padding(.horizontal, Spacing.sm)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, Spacing.n24)
+        .padding(.horizontal, Spacing.n8)
+        .background(colors.surface.standard.alternative, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 

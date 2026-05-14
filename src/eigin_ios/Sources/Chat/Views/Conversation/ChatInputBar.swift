@@ -110,14 +110,14 @@ struct ChatInputBar: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(colors.accent)
                     .modifier(RecordingGlowModifier())
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.bottom, Spacing.n4)
                     .allowsHitTesting(false)
             } else if displayedBrowsing {
                 BrowsingScanOverlay()
                     .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.xs)
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.bottom, Spacing.n4)
                     .allowsHitTesting(false)
             }
         }
@@ -188,17 +188,17 @@ struct ChatInputBar: View {
     // MARK: - Normal Content
 
     private var normalContent: some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             // Text area
             if isDictating, dictationService.state.isActive {
                 DictationStreamView(
                     text: dictationService.transcription,
                     state: dictationService.state,
-                    textStyle: colors.textSecondary
+                    textStyle: colors.text.standard.muted
                 )
             } else {
                 TextField(Localized.Chat.Input.messagePlaceholder, text: $text, axis: .vertical)
-                    .typography(Typography.body)
+                    .typography(Typography.chatMessageUser)
                     .focused(isFocused)
                     .lineLimit(1 ... 10)
                     .disabled(isDisabled)
@@ -206,7 +206,7 @@ struct ChatInputBar: View {
             }
 
             // Bottom row — plus button + either pills or mic/send
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 if hasActions {
                     Button {
                         Haptics.light()
@@ -214,10 +214,10 @@ struct ChatInputBar: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 20))
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                             .rotationEffect(.degrees(isExpanded ? 45 : 0))
                             .frame(width: 40, height: 40)
-                            .background(colors.textSecondary.opacity(0.15))
+                            .background(colors.text.standard.muted.opacity(0.15))
                             .clipShape(Circle())
                     }
                 }
@@ -238,19 +238,19 @@ struct ChatInputBar: View {
     // MARK: - Permission Content
 
     private var permissionContent: some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             if let request = retainedPermission ?? permissionRequest {
                 let actor = agentName.isEmpty || agentName.count > 20 ? "Agent" : agentName
                 Text(Localized.Permission.wantsToUseFormat(actor, request.toolDisplayName))
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.description)
+                    .foregroundStyle(colors.text.standard.muted)
 
                 Button {
                     Haptics.light()
                     onPermissionResponse?(.allowOnce)
                 } label: {
                     Text(Localized.Permission.allowOnce)
-                        .font(Typography.body.font.weight(.medium))
+                        .typography(Typography.button)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -262,7 +262,7 @@ struct ChatInputBar: View {
                     onPermissionResponse?(.allowForChat)
                 } label: {
                     Text(Localized.Permission.allowForChat)
-                        .font(Typography.body.font.weight(.medium))
+                        .typography(Typography.button)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -274,12 +274,12 @@ struct ChatInputBar: View {
                     onPermissionResponse?(.deny)
                 } label: {
                     Text(Localized.Permission.deny)
-                        .font(Typography.body.font.weight(.medium))
+                        .typography(Typography.button)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
                 .buttonStyle(.bordered)
-                .tint(colors.destructive)
+                .tint(colors.text.standard.error)
             }
         }
     }
@@ -306,14 +306,14 @@ struct ChatInputBar: View {
 
     private var actionPills: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 if onMoveToSpace != nil, !spaces.isEmpty || currentSpaceID != nil {
                     ActionPill(icon: "square.grid.2x2", label: Localized.Ui.space) {
                         showSpacePicker = true
                     }
                 }
             }
-            .padding(.horizontal, Spacing.sm)
+            .padding(.horizontal, Spacing.n8)
         }
         .mask(
             HStack(spacing: 0) {
@@ -337,7 +337,7 @@ struct ChatInputBar: View {
                     switch dictationService.state {
                     case .idle:
                         Image(systemName: "mic")
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                     case .preparing:
                         Image(systemName: "mic")
                             .foregroundStyle(colors.accent)
@@ -354,7 +354,7 @@ struct ChatInputBar: View {
                 .background(
                     dictationService.state.isActive
                         ? colors.accent.opacity(0.15)
-                        : colors.textSecondary.opacity(0.15)
+                        : colors.text.standard.muted.opacity(0.15)
                 )
                 .clipShape(Circle())
             }
@@ -442,11 +442,11 @@ private struct ActionPill: View {
             action()
         } label: {
             Label(label, systemImage: icon)
-                .typography(Typography.label)
-                .foregroundStyle(colors.textSecondary)
-                .padding(.horizontal, Spacing.md)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
+                .padding(.horizontal, Spacing.n16)
                 .frame(height: 40)
-                .background(colors.textSecondary.opacity(0.1), in: Capsule())
+                .background(colors.text.standard.muted.opacity(0.1), in: Capsule())
         }
     }
 }

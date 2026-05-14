@@ -27,10 +27,10 @@ struct ToolPermissions: View {
                             }
                         }
                     }
-                    .listRowBackground(colors.surface)
+                    .listRowBackground(colors.surface.standard.alternative)
                 } header: {
                     Label(category.displayName, systemImage: category.systemImage)
-                        .typography(Typography.label)
+                        .typography(Typography.miniLabel)
                 }
             }
 
@@ -56,19 +56,19 @@ struct ToolPermissions: View {
                             .onAppear { loadGrants() }
                         } label: {
                             Label(server.name, systemImage: "server.rack")
-                                .typography(Typography.subheadline)
+                                .typography(Typography.navTab)
                         }
                     }
-                    .listRowBackground(colors.surface)
+                    .listRowBackground(colors.surface.standard.alternative)
                 } header: {
                     Label(Localized.Settings.Permissions.mcpServers, systemImage: "server.rack")
-                        .typography(Typography.label)
+                        .typography(Typography.miniLabel)
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Permissions.title, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Settings.Permissions.title, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadGrants() }
     }

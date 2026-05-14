@@ -10,7 +10,7 @@ struct ToolDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: Spacing.n24) {
                     statusRow
 
                     if let arguments = tool.arguments, !arguments.isEmpty {
@@ -26,8 +26,8 @@ struct ToolDetailSheet: View {
                 }
                 .padding()
             }
-            .background(colors.background)
-            .navigationTitle(ToolRegistry.displayName(for: tool.name), style: Typography.largeTitle)
+            .background(colors.surface.standard.base)
+            .navigationTitle(ToolRegistry.displayName(for: tool.name), style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -40,13 +40,13 @@ struct ToolDetailSheet: View {
     }
 
     private var statusRow: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.n8) {
             switch tool.status {
             case .executing:
                 ProgressView().controlSize(.small)
                 Text(Localized.Status.executing)
                     .font(Typography.body.font.weight(.medium))
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             case .awaitingPermission:
                 Image(systemName: "lock.fill")
                     .foregroundStyle(colors.accent)
@@ -58,19 +58,19 @@ struct ToolDetailSheet: View {
                     .foregroundStyle(.green)
                 Text(Localized.Status.completed)
                     .font(Typography.body.font.weight(.medium))
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             case .denied:
                 Image(systemName: "slash.circle.fill")
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
                 Text(Localized.Permission.denied)
                     .font(Typography.body.font.weight(.medium))
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
             case .error:
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
                 Text(Localized.Status.error)
                     .font(Typography.body.font.weight(.medium))
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
             }
         }
     }
@@ -80,18 +80,18 @@ struct ToolDetailSheet: View {
         switch tool.status {
         case .executing:
             DetailSection(title: "Output") {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     ProgressView().controlSize(.small)
                     Text(Localized.Status.executingProgress)
                         .typography(Typography.body)
-                        .foregroundStyle(colors.textSecondary)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         case .awaitingPermission:
             DetailSection(title: "Output") {
                 Text(Localized.Permission.waitingForUser)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         case .completed:
             if let result = tool.result, !result.isEmpty {
@@ -103,12 +103,12 @@ struct ToolDetailSheet: View {
             DetailSection(title: "Output") {
                 Text(Localized.Permission.toolDeniedByPolicy)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         case .error(let message):
             DetailSection(title: "Output") {
                 DetailCodeBlock(code: message)
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
             }
         }
     }

@@ -20,8 +20,8 @@ struct SpacePickerSheet: View {
                         } label: {
                             HStack {
                                 Text(verbatim: "\(space.emoji) \(space.name)")
-                                    .typography(Typography.subheadline)
-                                    .foregroundStyle(colors.textPrimary)
+                                    .typography(Typography.navTab)
+                                    .foregroundStyle(colors.text.standard.base)
                                 Spacer()
                                 if currentSpaceID == space.id {
                                     Image(systemName: "checkmark")
@@ -30,7 +30,7 @@ struct SpacePickerSheet: View {
                             }
                         }
                     }
-                    .listRowBackground(colors.surface)
+                    .listRowBackground(colors.surface.standard.alternative)
                 }
                 if currentSpaceID != nil {
                     Section {
@@ -39,15 +39,15 @@ struct SpacePickerSheet: View {
                             dismiss()
                         } label: {
                             Text(Localized.Space.removeFromSpace)
-                                .typography(Typography.subheadline)
+                                .typography(Typography.navTab)
                         }
-                        .listRowBackground(colors.surface)
+                        .listRowBackground(colors.surface.standard.alternative)
                     }
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Debug.moveToSpaceTitle, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(Localized.Debug.moveToSpaceTitle, style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -24,7 +24,7 @@ struct LiveCallView: View {
 
     var body: some View {
         ZStack {
-            colors.background
+            colors.surface.standard.base
                 .ignoresSafeArea()
 
             VStack {

@@ -16,7 +16,7 @@ struct DetailCodeBlock: View {
     var body: some View {
         StructuredText(markdown: markdown)
             .font(Typography.body.font)
-            .foregroundStyle(colors.textPrimary)
+            .foregroundStyle(colors.text.standard.base)
             .tint(colors.accent)
             .textual.inlineStyle(.eigin(colors: colors))
             .textual.headingStyle(EiginHeadingStyle())

@@ -27,8 +27,8 @@ struct AgentView: View {
                     )
                 }
             }
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle("Agent", style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle("Agent", style: Typography.titleXl)
         }
     }
 }

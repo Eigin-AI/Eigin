@@ -10,19 +10,19 @@ struct ErrorDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    HStack(spacing: Spacing.sm) {
+                VStack(alignment: .leading, spacing: Spacing.n24) {
+                    HStack(spacing: Spacing.n8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(colors.destructive)
+                            .foregroundStyle(colors.text.standard.error)
                         Text(error.title)
                             .font(Typography.body.font.weight(.medium))
-                            .foregroundStyle(colors.destructive)
+                            .foregroundStyle(colors.text.standard.error)
                     }
 
                     DetailSection(title: "Suggestion") {
                         Text(error.suggestion)
                             .typography(Typography.body)
-                            .foregroundStyle(colors.textPrimary)
+                            .foregroundStyle(colors.text.standard.base)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
@@ -34,8 +34,8 @@ struct ErrorDetailSheet: View {
                 }
                 .padding()
             }
-            .background(colors.background)
-            .navigationTitle("Error Details", style: Typography.largeTitle)
+            .background(colors.surface.standard.base)
+            .navigationTitle("Error Details", style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

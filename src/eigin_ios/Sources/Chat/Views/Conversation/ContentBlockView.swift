@@ -10,14 +10,14 @@ struct ContentBlockView: View {
         switch block.kind {
         case .divider:
             Divider()
-                .background(colors.textSecondary.opacity(0.3))
-                .padding(.vertical, Spacing.xs)
+                .background(colors.text.standard.muted.opacity(0.3))
+                .padding(.vertical, Spacing.n4)
         case .code:
             DetailCodeBlock(code: block.text, language: block.language)
         default:
             StructuredText(markdown: block.text, syntaxExtensions: [])
-                .font(Typography.body.font)
-                .foregroundStyle(colors.textPrimary)
+                .font(Typography.chatMessage.font)
+                .foregroundStyle(colors.text.standard.base)
                 .tint(colors.accent)
                 .textual.inlineStyle(.eigin(colors: colors))
                 .textual.headingStyle(EiginHeadingStyle())

@@ -49,14 +49,14 @@ struct TranscriptDetail: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.n16) {
                     headerSection
                     timelineSection
                 }
                 .padding()
             }
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Debug.transcriptTitle, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(Localized.Debug.transcriptTitle, style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -67,36 +67,36 @@ struct TranscriptDetail: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.n4) {
             HStack {
                 Text(transcript.signal.hasPrefix("notify") ? "Notify" : "Silent")
-                    .typography(Typography.headline)
+                    .typography(Typography.titleXS)
                     .foregroundStyle(transcript.signal.hasPrefix("notify") ? .green : .orange)
                 Spacer()
                 Text(Localized.Agent.roundsCount(String(transcript.rounds)))
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             Text(transcript.reason)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
             Text(transcript.timestamp, style: .date)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
             Text(verbatim: " ")
             Text(transcript.timestamp, style: .time)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
         .padding()
-        .background(colors.surfaceSecondary)
+        .background(colors.surface.standard.base)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var timelineSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.n4) {
             Text(Localized.Ui.timeline(String(timeline.count)))
-                .typography(Typography.headline)
+                .typography(Typography.titleXS)
 
             ForEach(timeline) { item in
                 switch item.type {
@@ -113,10 +113,10 @@ struct TranscriptDetail: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(verbatim: "[\(index)]")
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textTertiary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.disabled)
                 Text(verbatim: "→ \(toolCall.function.name)")
-                    .font(Typography.caption.font.bold())
+                    .font(Typography.miniLabel.font.bold())
                     .foregroundStyle(.purple)
             }
 
@@ -131,18 +131,18 @@ struct TranscriptDetail: View {
             {
                 Text(prettyString)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
                     .textSelection(.enabled)
             } else {
                 Text(args)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
                     .textSelection(.enabled)
             }
         }
-        .padding(Spacing.xs)
+        .padding(Spacing.n4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.surfaceSecondary.opacity(0.5))
+        .background(colors.surface.standard.base.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
@@ -150,10 +150,10 @@ struct TranscriptDetail: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(verbatim: "[\(index)]")
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textTertiary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.disabled)
                 Text(message.role)
-                    .font(Typography.caption.font.bold())
+                    .font(Typography.miniLabel.font.bold())
                     .foregroundStyle(roleColor(message.role))
             }
 
@@ -169,25 +169,25 @@ struct TranscriptDetail: View {
                     {
                         Text(prettyString)
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                             .textSelection(.enabled)
                     } else {
                         Text(content)
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                             .textSelection(.enabled)
                     }
                 } else {
                     Text(content)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                         .textSelection(.enabled)
                 }
             }
         }
-        .padding(Spacing.xs)
+        .padding(Spacing.n4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.surfaceSecondary.opacity(0.5))
+        .background(colors.surface.standard.base.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 

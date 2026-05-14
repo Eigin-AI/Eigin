@@ -24,15 +24,15 @@ struct ProviderPicker: View {
 
     private var columns: [GridItem] {
         [
-            GridItem(.flexible(), spacing: Spacing.md),
-            GridItem(.flexible(), spacing: Spacing.md),
+            GridItem(.flexible(), spacing: Spacing.n16),
+            GridItem(.flexible(), spacing: Spacing.n16),
         ]
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: Spacing.md) {
+                LazyVGrid(columns: columns, spacing: Spacing.n16) {
                     ForEach(filteredPresets) { preset in
                         NavigationLink(value: preset) {
                             ProviderTile(preset: preset, colors: colors)
@@ -40,30 +40,33 @@ struct ProviderPicker: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, Spacing.md)
+                .padding(.horizontal, Spacing.n16)
 
                 if searchText.isEmpty {
                     NavigationLink(value: "custom") {
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             Image(systemName: "plus.circle")
                                 .font(.title3)
                             Text(Localized.Provider.Picker.customProvider)
-                                .typography(Typography.subheadline)
+                                .typography(Typography.navTab)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                         }
-                        .padding(Spacing.md)
-                        .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
+                        .padding(Spacing.n16)
+                        .background(
+                            colors.surface.standard.alternative,
+                            in: RoundedRectangle(cornerRadius: 12)
+                        )
                     }
                     .buttonStyle(.plain)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.sm)
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.top, Spacing.n8)
                 }
 
                 if !localPresets.isEmpty {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                    VStack(alignment: .leading, spacing: Spacing.n8) {
                         ForEach(localPresets) { preset in
                             NavigationLink(value: preset) {
                                 LocalProviderTile(preset: preset, colors: colors)
@@ -71,11 +74,11 @@ struct ProviderPicker: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.bottom, Spacing.lg)
+                    .padding(.bottom, Spacing.n24)
                 }
             }
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Settings.Action.addProvider, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(Localized.Settings.Action.addProvider, style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: Localized.Provider.Picker.searchPrompt)
             .navigationDestination(for: ProviderPreset.self) { preset in
@@ -99,34 +102,34 @@ private struct LocalProviderTile: View {
     let colors: ResolvedColors
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.n8) {
             if let systemImage = preset.systemImage {
                 Image(systemName: systemImage)
                     .font(.title3)
             }
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
+                HStack(spacing: Spacing.n8) {
                     Text(preset.name)
-                        .typography(Typography.subheadline)
+                        .typography(Typography.navTab)
                     Text(Localized.Provider.Picker.experimental)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
-                        .padding(.horizontal, Spacing.sm)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .padding(.horizontal, Spacing.n8)
                         .padding(.vertical, 2)
-                        .background(colors.surfaceSecondary, in: Capsule())
+                        .background(colors.surface.standard.base, in: Capsule())
                 }
                 Text(preset.helpText)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
-        .padding(Spacing.md)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, Spacing.md)
+        .padding(Spacing.n16)
+        .background(colors.surface.standard.alternative, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, Spacing.n16)
     }
 }
 
@@ -135,7 +138,7 @@ private struct ProviderTile: View {
     let colors: ResolvedColors
 
     var body: some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             if let logo = preset.logo {
                 Image(uiImage: logo)
                     .resizable()
@@ -144,22 +147,22 @@ private struct ProviderTile: View {
             } else if let systemImage = preset.systemImage {
                 Image(systemName: systemImage)
                     .font(.system(size: 28))
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
                     .frame(width: 40, height: 40)
             } else {
                 Text(String(preset.name.prefix(1)))
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.muted)
                     .frame(width: 40, height: 40)
             }
 
             Text(preset.name)
-                .typography(Typography.subheadline)
+                .typography(Typography.navTab)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.lg)
-        .padding(.horizontal, Spacing.sm)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, Spacing.n24)
+        .padding(.horizontal, Spacing.n8)
+        .background(colors.surface.standard.alternative, in: RoundedRectangle(cornerRadius: 12))
     }
 }

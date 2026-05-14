@@ -8,10 +8,10 @@ struct DetailSection<Content: View>: View {
     @Environment(\.colors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.n8) {
             Text(title)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
             content
         }
     }
