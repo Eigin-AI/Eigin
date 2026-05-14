@@ -71,6 +71,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     emit_spacing(tokens, &output_dir)?;
     emit_radius(tokens, &output_dir)?;
     emit_stroke_weight(tokens, &output_dir)?;
+    emit_container(tokens, &output_dir)?;
     emit_grid(tokens, &output_dir)?;
     emit_typography(tokens, &output_dir, fonts)?;
     emit_font_registration(&output_dir, fonts)?;
@@ -185,6 +186,66 @@ fn emit_stroke_weight(tokens: &Value, output_dir: &str) -> Result<()> {
 
     out.push_str("}\n");
     write_file(output_dir, "StrokeWeight.swift", &out)
+}
+
+// --- Container ---
+
+fn emit_container(tokens: &Value, output_dir: &str) -> Result<()> {
+    let group = tokens
+        .get("sizing")
+        .context("tokens.json: missing 'sizing' group")?;
+
+    let mut out = String::from(GENERATED_HEADER);
+    out.push_str("import SwiftUI\n\n");
+    out.push_str("/// Component sizing dimensions. Generated from design/tokens.json.\n");
+    out.push_str("enum Sizing {\n");
+    write_dimension_group(&mut out, tokens, group, 1)?;
+    out.push_str("}\n");
+
+    write_file(output_dir, "Sizing.swift", &out)
+}
+
+/// Recursively emits nested `enum` blocks for dimension token groups.
+/// Leaf tokens (with `$type: "dimension"`) become `static let` CGFloat constants.
+/// Aliases (`{a.b.c}`) are resolved before parsing.
+fn write_dimension_group(
+    out: &mut String,
+    tokens: &Value,
+    node: &Value,
+    depth: usize,
+) -> Result<()> {
+    let indent = "    ".repeat(depth);
+    let obj = node
+        .as_object()
+        .context("dimension node is not an object")?;
+    for (key, value) in obj {
+        if key.starts_with('$') {
+            continue;
+        }
+        if value.get("$type").and_then(Value::as_str) == Some("dimension") {
+            let raw = value
+                .get("$value")
+                .and_then(Value::as_str)
+                .with_context(|| format!("container token '{key}': missing $value"))?;
+            let resolved = resolve_alias(tokens, raw, "light", 0)
+                .with_context(|| format!("container token '{key}': alias resolution failed"))?;
+            let pts = parse_dimension(resolved).with_context(|| {
+                format!("container token '{key}': invalid dimension '{resolved}'")
+            })?;
+            writeln!(
+                out,
+                "{indent}static let {key}: CGFloat = {}",
+                fmt_cgfloat(pts)
+            )
+            .unwrap();
+        } else {
+            let type_name = swift_type_name(key);
+            writeln!(out, "{indent}enum {type_name} {{").unwrap();
+            write_dimension_group(out, tokens, value, depth + 1)?;
+            writeln!(out, "{indent}}}").unwrap();
+        }
+    }
+    Ok(())
 }
 
 // --- Grid ---
