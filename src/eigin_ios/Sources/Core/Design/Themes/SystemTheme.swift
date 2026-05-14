@@ -31,6 +31,7 @@ struct SystemTheme: Theme {
                     standard: .init(base: Color(.separator))
                 ),
                 button: .init(
+                    destructive: .init(base: .red),
                     impact: .init(
                         primary: Color(.black).opacity(0.5),
                         secondary: Color(.white).opacity(0.5)
@@ -58,12 +59,40 @@ struct SystemTheme: Theme {
                         inactive: Color(.secondarySystemFill)
                     )
                 ),
+                interaction: .init(
+                    active: .init(fill: .green),
+                    border: .init(
+                        error: .red,
+                        focus: Color(.label),
+                        hover: Color(.separator)
+                    ),
+                    dark: .init(
+                        disabled: .white.opacity(0.7),
+                        hover: .black.opacity(0.3),
+                        pressed: .black.opacity(0.5)
+                    ),
+                    disabled: .white.opacity(0.8),
+                    light: .init(
+                        disabled: .white.opacity(0.3),
+                        hover: .black.opacity(0.06),
+                        pressed: .black.opacity(0.12)
+                    ),
+                    open: .init(
+                        hover: .gray.opacity(0.15),
+                        pressed: .gray.opacity(0.25)
+                    ),
+                    tag: .init(
+                        selected: Color(.label),
+                        unselected: Color(.systemFill)
+                    )
+                ),
                 surface: surfaceColors,
                 text: .init(
                     button: .init(
                         disabled: Color(.tertiaryLabel),
                         onPrimary: Color(.label),
-                        onSecondary: Color(.label)
+                        onSecondary: Color(.label),
+                        onSpot: .white
                     ),
                     impact: .init(
                         base: .white,
