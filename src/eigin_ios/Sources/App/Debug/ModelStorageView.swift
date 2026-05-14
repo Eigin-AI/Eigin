@@ -20,7 +20,7 @@ struct ModelStorageView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(entries) { entry in
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                        VStack(alignment: .leading, spacing: Spacing.n4) {
                             HStack {
                                 Text(entry.name)
                                     .typography(Typography.body)
@@ -46,7 +46,7 @@ struct ModelStorageView: View {
                                 .disabled(isDeleting)
                             }
                         }
-                        .padding(.vertical, Spacing.xs)
+                        .padding(.vertical, Spacing.n4)
                     }
                 }
             }
@@ -75,7 +75,7 @@ struct ModelStorageView: View {
                 )
             }
         }
-        .navigationTitle("Model Storage", style: Typography.largeTitle)
+        .navigationTitle("Model Storage", style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .task { refresh() }
         .refreshable { refresh() }

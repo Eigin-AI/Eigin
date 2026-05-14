@@ -13,16 +13,16 @@ struct LocalProviderView: View {
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             modelStatusList
 
             Spacer()
         }
-        .padding(.horizontal, Spacing.lg)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(preset.name, style: Typography.largeTitle)
+        .padding(.horizontal, Spacing.n24)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(preset.name, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -46,28 +46,28 @@ struct LocalProviderView: View {
     // MARK: - Model Status List
 
     private var modelStatusList: some View {
-        VStack(spacing: Spacing.lg) {
+        VStack(spacing: Spacing.n24) {
             appleModelRow
             Divider()
             gemmaModelRow
         }
-        .padding(Spacing.lg)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 16))
+        .padding(Spacing.n24)
+        .background(colors.surface.standard.alternative, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var appleModelRow: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.n16) {
             Image(systemName: "apple.logo")
                 .font(.system(size: 28))
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .frame(width: 44)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
                 Text(Localized.Model.appleFoundationModel)
                     .typography(Typography.body)
                 Text(appleStatusText)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
 
             Spacer()
@@ -80,7 +80,7 @@ struct LocalProviderView: View {
     private var appleStatusIcon: some View {
         if FoundationModelClient.unavailableReason != nil {
             Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(colors.destructive)
+                .foregroundStyle(colors.text.standard.error)
         } else {
             Image(systemName: "checkmark.circle")
                 .foregroundStyle(colors.accent)
@@ -95,18 +95,18 @@ struct LocalProviderView: View {
     }
 
     private var gemmaModelRow: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.n16) {
             Image(systemName: "brain")
                 .font(.system(size: 28))
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .frame(width: 44)
 
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
                 Text(Localized.Model.gemma4e2b)
                     .typography(Typography.body)
                 Text(gemmaStatusText)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
 
             Spacer()
@@ -123,12 +123,12 @@ struct LocalProviderView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(colors.accent)
         case .downloading(let progress):
-            VStack(alignment: .trailing, spacing: Spacing.xs) {
+            VStack(alignment: .trailing, spacing: Spacing.n4) {
                 ProgressView(value: progress)
                     .frame(width: 80)
                 Text(verbatim: "\(Int(progress * 100))%")
                     .font(.caption2)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         case .downloaded, .compiling:
             ProgressView()
@@ -137,12 +137,12 @@ struct LocalProviderView: View {
             Image(systemName: "checkmark.circle")
                 .foregroundStyle(colors.accent)
         case .failed(let message):
-            VStack(alignment: .trailing, spacing: Spacing.xs) {
+            VStack(alignment: .trailing, spacing: Spacing.n4) {
                 Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
                 Text(message)
                     .font(.caption2)
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
             }
         }
     }

@@ -15,36 +15,36 @@ struct IntentDetail: View {
             Section {
                 Text(intent.content)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textPrimary)
+                    .foregroundStyle(colors.text.standard.base)
             }
 
             Section(Localized.Ui.details) {
                 LabeledContent(Localized.Ui.strength) {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         strengthIndicator(intent.effectiveStrength)
                         Text(String(format: "%.0f%%", intent.effectiveStrength * 100))
-                            .typography(Typography.callout)
+                            .typography(Typography.note)
                     }
                 }
                 LabeledContent(Localized.Ui.reinforced) {
                     Text(Localized.Ui.timesCountStr(String(intent.reinforcedCount)))
-                        .typography(Typography.callout)
+                        .typography(Typography.note)
                 }
                 LabeledContent(Localized.Ui.created) {
                     Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
                 LabeledContent(Localized.Tools.Last.updated) {
                     Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Ui.intent, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Ui.intent, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .destructiveAction) {

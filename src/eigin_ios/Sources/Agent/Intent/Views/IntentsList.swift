@@ -42,19 +42,19 @@ struct IntentsList: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(intentPreview(intent.content))
-                                    .typography(Typography.headline)
-                                    .foregroundStyle(colors.textPrimary)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
                                     .lineLimit(2)
-                                HStack(spacing: Spacing.sm) {
+                                HStack(spacing: Spacing.n8) {
                                     strengthIndicator(intent.effectiveStrength)
                                     Text(RelativeTimestamp.string(for: intent.updatedAt))
-                                        .typography(Typography.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
                                     if intent.reinforcedCount > 0 {
                                         Text(Localized.Agent
                                             .reinforcedCount(String(intent.reinforcedCount)))
-                                            .typography(Typography.caption)
-                                            .foregroundStyle(colors.textTertiary)
+                                            .typography(Typography.miniLabel)
+                                            .foregroundStyle(colors.text.standard.disabled)
                                     }
                                 }
                             }
@@ -74,8 +74,8 @@ struct IntentsList: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Intents.title, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Intents.title, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}

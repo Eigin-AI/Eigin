@@ -7,7 +7,7 @@ struct LiveCallFooter: View {
 
     var body: some View {
         ChatBottomBox {
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.n16) {
                 LiveCallStatus(service: service)
                 LiveCallControls(service: service, onEnd: onEnd)
             }

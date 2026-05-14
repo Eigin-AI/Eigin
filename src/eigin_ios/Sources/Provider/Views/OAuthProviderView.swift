@@ -33,26 +33,26 @@ struct OAuthProviderView: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             if isAuthenticating {
                 ProgressView()
                 Text(Localized.Onboarding.Provider.signingIn(preset.name))
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             } else if isAuthenticated {
                 if let connectionError {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
-                        .foregroundStyle(colors.destructive)
+                        .foregroundStyle(colors.text.standard.error)
 
-                    VStack(spacing: Spacing.sm) {
+                    VStack(spacing: Spacing.n8) {
                         Text(connectionError.title)
-                            .typography(Typography.headline)
+                            .typography(Typography.titleXS)
                         Text(connectionError.suggestion)
-                            .typography(Typography.callout)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.note)
+                            .foregroundStyle(colors.text.standard.muted)
                             .multilineTextAlignment(.center)
                     }
 
@@ -63,15 +63,15 @@ struct OAuthProviderView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(colors.accent)
 
-                    VStack(spacing: Spacing.sm) {
+                    VStack(spacing: Spacing.n8) {
                         Text(Localized.Onboarding.Provider.connectedTo(preset.name))
-                            .typography(Typography.headline)
+                            .typography(Typography.titleXS)
 
                         Text(
                             Localized.Provider.creditsWarning(preset.name)
                         )
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                         .multilineTextAlignment(.center)
                     }
 
@@ -82,56 +82,56 @@ struct OAuthProviderView: View {
                             Localized.Onboarding.Provider.addCreditsLabel(preset.name),
                             systemImage: "arrow.up.right"
                         )
-                        .typography(Typography.callout)
+                        .typography(Typography.note)
                     }
                 }
 
             } else if wasCancelled {
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Text(Localized.Provider.signInDismissed)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                     Text(Localized.Provider.signInDismissedHint)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                         .multilineTextAlignment(.center)
                 }
 
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Button("Try Again") { startOAuth() }
                         .buttonStyle(.borderedProminent)
 
                     Button("Add API Key Manually") { showManualFallback = true }
-                        .typography(Typography.callout)
+                        .typography(Typography.note)
                 }
             } else if let connectionError {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 48))
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
 
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Text(connectionError.title)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                     Text(connectionError.suggestion)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                         .multilineTextAlignment(.center)
                 }
 
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Button("Try Again") { startOAuth() }
                         .buttonStyle(.borderedProminent)
 
                     Button("Add API Key Manually") { showManualFallback = true }
-                        .typography(Typography.callout)
+                        .typography(Typography.note)
                 }
             }
 
             Spacer()
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, Spacing.n24)
         .frame(maxWidth: .infinity)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(preset.name, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(preset.name, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

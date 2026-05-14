@@ -11,10 +11,10 @@ struct SkillDetail: View {
             Section {
                 Text(skill.instruction)
                     .typography(Typography.body)
-                    .listRowBackground(colors.surface)
+                    .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Skills.instruction)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
 
             Section {
@@ -23,18 +23,18 @@ struct SkillDetail: View {
                     id: \.key
                 ) { tool in
                     Label(tool.displayName, systemImage: "wrench")
-                        .typography(Typography.subheadline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.navTab)
+                        .foregroundStyle(colors.text.standard.base)
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Skills.tools)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(skill.displayName, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(skill.displayName, style: Typography.titleXl)
     }
 }
 

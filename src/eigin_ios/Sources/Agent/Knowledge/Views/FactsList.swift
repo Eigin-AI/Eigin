@@ -51,7 +51,7 @@ struct FactsList: View {
                                     )
                                 } label: {
                                     Text(Localized.Ui.showAll("\(section.facts.count)"))
-                                        .typography(Typography.callout)
+                                        .typography(Typography.note)
                                         .foregroundStyle(colors.accent)
                                 }
                             }
@@ -61,8 +61,8 @@ struct FactsList: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Knowledge.sectionTitle, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Knowledge.sectionTitle, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadFacts() }
         .refreshable { await loadFacts() }
@@ -115,8 +115,8 @@ struct FactsList: View {
 
     private func factRow(_ entity: FirmEntity) -> some View {
         Text(primaryField(for: entity))
-            .typography(Typography.headline)
-            .foregroundStyle(colors.textPrimary)
+            .typography(Typography.titleXS)
+            .foregroundStyle(colors.text.standard.base)
             .lineLimit(2)
     }
 
@@ -211,8 +211,8 @@ private struct FactTypeList: View {
                     )
                 } label: {
                     Text(primaryField(for: entity))
-                        .typography(Typography.headline)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(colors.text.standard.base)
                         .lineLimit(2)
                 }
                 .swipeActions(edge: .trailing) {
@@ -230,8 +230,8 @@ private struct FactTypeList: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(header, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(header, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .alert(Localized.Common.Alert.deleteFactTitle, isPresented: $showDeleteConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}

@@ -28,7 +28,7 @@ struct DevelopmentMenu: View {
                 Button {
                     runBackgroundPrompt(mode: .initiative)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "play.fill", color: .green)
                         Text(Localized.Development.triggerInitiativeRun)
                         Spacer()
@@ -42,7 +42,7 @@ struct DevelopmentMenu: View {
                 Button {
                     runBackgroundPrompt(mode: .maintenance)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "wrench.fill", color: .orange)
                         Text(Localized.Development.triggerMaintenanceRun)
                         Spacer()
@@ -58,10 +58,10 @@ struct DevelopmentMenu: View {
                 }
 
                 if let error = lastError {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
                         Text(error)
-                            .typography(Typography.caption)
+                            .typography(Typography.miniLabel)
                             .foregroundStyle(.red)
                     }
                 }
@@ -71,7 +71,7 @@ struct DevelopmentMenu: View {
                 Button {
                     sendTestNotification()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "bell.badge", color: .orange)
                         Text(Localized.Development.testNotification)
                     }
@@ -83,7 +83,7 @@ struct DevelopmentMenu: View {
                         lastError = granted ? nil : "Notification permission denied"
                     }
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "bell", color: .blue)
                         Text(Localized.Development.requestNotificationPermission)
                     }
@@ -93,8 +93,8 @@ struct DevelopmentMenu: View {
             Section("Transcripts") {
                 if transcripts.isEmpty {
                     Text(Localized.Development.noTranscripts)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                 } else {
                     ForEach(transcripts, id: \.timestamp) { transcript in
                         Button {
@@ -104,17 +104,17 @@ struct DevelopmentMenu: View {
                                 HStack {
                                     Text(transcript.signal
                                         .hasPrefix("notify") ? "Notify" : "Silent")
-                                        .font(Typography.caption.font.bold())
+                                        .font(Typography.miniLabel.font.bold())
                                         .foregroundStyle(transcript.signal
                                             .hasPrefix("notify") ? .green : .orange)
                                     Spacer()
                                     Text(RelativeTimestamp.string(for: transcript.timestamp))
-                                        .typography(Typography.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
                                 }
                                 Text(transcript.reason)
-                                    .typography(Typography.caption)
-                                    .foregroundStyle(colors.textSecondary)
+                                    .typography(Typography.miniLabel)
+                                    .foregroundStyle(colors.text.standard.muted)
                                     .lineLimit(2)
                             }
                         }
@@ -124,7 +124,7 @@ struct DevelopmentMenu: View {
                         BackgroundPromptDebug.clear()
                         transcripts = []
                     } label: {
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             SettingsIcon(systemName: "trash", color: .red)
                             Text(Localized.Development.clearTranscripts)
                         }
@@ -137,7 +137,7 @@ struct DevelopmentMenu: View {
                 NavigationLink {
                     LogViewer()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "doc.text", color: .blue)
                         Text(Localized.Development.viewAppLog)
                     }
@@ -147,7 +147,7 @@ struct DevelopmentMenu: View {
                     get: { UserDefaults.standard.bool(forKey: StorageKey.logDebugMode) },
                     set: { UserDefaults.standard.set($0, forKey: StorageKey.logDebugMode) }
                 )) {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "eye", color: .purple)
                         Text(Localized.Development.debugMode)
                     }
@@ -158,7 +158,7 @@ struct DevelopmentMenu: View {
                 Button {
                     firmResult = runFirmSanityCheck()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "cylinder.split.1x2", color: .teal)
                         Text(Localized.Development.firmSanityCheck)
                     }
@@ -166,8 +166,8 @@ struct DevelopmentMenu: View {
 
                 if let firmResult {
                     Text(firmResult)
-                        .font(Typography.caption.font.monospaced())
-                        .foregroundStyle(colors.textSecondary)
+                        .font(Typography.miniLabel.font.monospaced())
+                        .foregroundStyle(colors.text.standard.muted)
                         .textSelection(.enabled)
                 }
             }
@@ -183,7 +183,7 @@ struct DevelopmentMenu: View {
                     }
                     isExporting = false
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "square.and.arrow.up", color: .blue)
                         Text(Localized.Development.exportAllData)
                         Spacer()
@@ -195,7 +195,7 @@ struct DevelopmentMenu: View {
 
                 if let exportURL {
                     ShareLink(item: exportURL) {
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             SettingsIcon(systemName: "doc.fill", color: .green)
                             Text(Localized.Development.shareExportFile)
                         }
@@ -207,26 +207,26 @@ struct DevelopmentMenu: View {
                     importExportError = nil
                     importSuccess = false
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "square.and.arrow.down", color: .orange)
                         Text(Localized.Development.importData)
                     }
                 }
 
                 if importSuccess {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "checkmark.circle", color: .green)
                         Text(Localized.Development.importSuccessful)
-                            .typography(Typography.caption)
+                            .typography(Typography.miniLabel)
                             .foregroundStyle(.green)
                     }
                 }
 
                 if let importExportError {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
                         Text(importExportError)
-                            .typography(Typography.caption)
+                            .typography(Typography.miniLabel)
                             .foregroundStyle(.red)
                     }
                 }
@@ -236,7 +236,7 @@ struct DevelopmentMenu: View {
                 Button {
                     retriggerOnboarding()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "arrow.counterclockwise", color: .purple)
                         Text(Localized.Settings.reTriggerOnboarding)
                     }
@@ -247,7 +247,7 @@ struct DevelopmentMenu: View {
                 NavigationLink {
                     ModelStorageView()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "internaldrive", color: .gray)
                         Text(Localized.Development.modelStorage)
                     }
@@ -258,7 +258,7 @@ struct DevelopmentMenu: View {
                 Button {
                     BackgroundPromptScheduler.reschedule(for: .balanced)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "clock.arrow.circlepath", color: .purple)
                         Text(Localized.Development.scheduleBalanced)
                     }
@@ -267,7 +267,7 @@ struct DevelopmentMenu: View {
                 Button {
                     BackgroundPromptScheduler.reschedule(for: .proactive)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "clock.arrow.circlepath", color: .indigo)
                         Text(Localized.Development.scheduleProactive)
                     }
@@ -276,7 +276,7 @@ struct DevelopmentMenu: View {
                 Button(role: .destructive) {
                     BackgroundPromptScheduler.reschedule(for: .reactive)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
                         Text(Localized.Development.cancelScheduledTask)
                     }
@@ -284,8 +284,8 @@ struct DevelopmentMenu: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Section.development, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Settings.Section.development, style: Typography.titleXl)
         .onAppear {
             transcripts = BackgroundPromptDebug.getTranscripts()
         }
@@ -329,34 +329,34 @@ struct DevelopmentMenu: View {
     @ViewBuilder
     private func resultView(_ result: BackgroundPromptService.Result) -> some View {
         if result.didNotify {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "bell.fill", color: .green)
                     Text(Localized.Development.agentChoseToNotify)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                 }
                 if let title = result.notificationTitle {
                     Text(Localized.Ui.titleLabel(title))
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
                 if let body = result.notificationBody {
                     Text(body)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                         .lineLimit(5)
                 }
                 Text(Localized.Development.chatWillBeCreated)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
                     .italic()
             }
         } else {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 SettingsIcon(systemName: "moon.zzz", color: .gray)
                 Text(Localized.Development.agentChoseToStaySilent)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         }
     }

@@ -23,7 +23,7 @@ struct KnowledgeGraph: View {
 
     var body: some View {
         ZStack {
-            colors.background.ignoresSafeArea()
+            colors.surface.standard.base.ignoresSafeArea()
 
             if viewModel.isLoading {
                 ProgressView()
@@ -94,7 +94,7 @@ struct KnowledgeGraph: View {
                     path.addLine(to: to)
                     context.stroke(
                         path,
-                        with: .color(colors.border.opacity(edgeOpacity)),
+                        with: .color(colors.border.standard.base.opacity(edgeOpacity)),
                         lineWidth: lineWidth
                     )
                 }
@@ -179,9 +179,9 @@ struct KnowledgeGraph: View {
             let displayName = node.displayName.count > maxLabelLen
                 ? String(node.displayName.prefix(maxLabelLen - 2)) + "..."
                 : node.displayName
-            let labelFont: Font = node.hop <= 1 ? Typography.caption.font : .system(.caption2)
-            let labelColor: Color = node.hop == 0 ? colors.textPrimary :
-                (node.hop == 1 ? colors.textSecondary : colors.textTertiary)
+            let labelFont: Font = node.hop <= 1 ? Typography.miniLabel.font : .system(.caption2)
+            let labelColor: Color = node.hop == 0 ? colors.text.standard.base :
+                (node.hop == 1 ? colors.text.standard.muted : colors.text.standard.disabled)
             let label = context.resolve(
                 Text(displayName).font(labelFont)
                     .foregroundStyle(labelColor.opacity(labelVisibility))
@@ -218,9 +218,9 @@ struct KnowledgeGraph: View {
     // MARK: - Search
 
     private var searchBar: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.n8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
             TextField("Search knowledge...", text: $searchText)
                 .typography(Typography.body)
                 .textFieldStyle(.plain)
@@ -231,15 +231,15 @@ struct KnowledgeGraph: View {
                     viewModel.clearSearch()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(colors.textTertiary)
+                        .foregroundStyle(colors.text.standard.disabled)
                 }
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, Spacing.n16)
+        .padding(.vertical, Spacing.n8)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.sm)
+        .padding(.horizontal, Spacing.n16)
+        .padding(.top, Spacing.n8)
         .onChange(of: searchText) {
             Task { await viewModel.search(query: searchText) }
         }
@@ -260,26 +260,26 @@ struct KnowledgeGraph: View {
                     Task { await viewModel.focusOn(entityID: node.id) }
                     resetViewport()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         Image(systemName: nodeIcon(for: node.entityType))
                             .foregroundStyle(colors.accent)
                             .frame(width: 24)
                         Text(node.displayName)
                             .typography(Typography.body)
-                            .foregroundStyle(colors.textPrimary)
+                            .foregroundStyle(colors.text.standard.base)
                             .lineLimit(1)
                         Spacer()
                         Text(node.entityType)
-                            .typography(Typography.caption)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.vertical, Spacing.n8)
                 }
             }
         }
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, Spacing.n16)
     }
 
     // MARK: - Gestures

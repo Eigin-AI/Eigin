@@ -36,7 +36,7 @@ struct OnboardingProviderConnect: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .sheet(isPresented: $showCreditsURL) {
             if let urlString = preset.apiKeyURL, let url = URL(string: urlString) {
                 SafariView(url: url)
@@ -62,14 +62,14 @@ struct OnboardingProviderConnect: View {
     }
 
     private var oauthFlow: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             if isAuthenticating {
                 ProgressView()
                 Text(Localized.Onboarding.Provider.signingIn(preset.name))
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
             } else if let connectionError {
                 errorContent(connectionError) {
                     startOAuth()
@@ -79,13 +79,13 @@ struct OnboardingProviderConnect: View {
                     .font(.system(size: 48))
                     .foregroundStyle(colors.accent)
 
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Text(Localized.Onboarding.Provider.connectedTo(preset.name))
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
 
                     Text(Localized.Onboarding.Provider.creditsWarning)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                         .multilineTextAlignment(.center)
                 }
 
@@ -96,7 +96,7 @@ struct OnboardingProviderConnect: View {
                         Localized.Onboarding.Provider.addCreditsLabel(preset.name),
                         systemImage: "arrow.up.right"
                     )
-                    .typography(Typography.subheadline)
+                    .typography(Typography.navTab)
                 }
             } else {
                 ProgressView()
@@ -105,10 +105,10 @@ struct OnboardingProviderConnect: View {
             Spacer()
 
             if isOAuthDone, connectionError == nil {
-                VStack(spacing: Spacing.md) {
+                VStack(spacing: Spacing.n16) {
                     Button { createProviderAndContinue() } label: {
                         Text(Localized.Common.Actions.continue)
-                            .typography(Typography.headline)
+                            .typography(Typography.titleXS)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -117,19 +117,19 @@ struct OnboardingProviderConnect: View {
 
                     if let onBack {
                         Button("Change Provider") { onBack() }
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
                 }
-                .padding(.bottom, Spacing.xl)
+                .padding(.bottom, Spacing.n32)
             } else if let onBack, !isAuthenticating {
                 Button("Change Provider") { onBack() }
-                    .typography(Typography.subheadline)
-                    .foregroundStyle(colors.textSecondary)
-                    .padding(.bottom, Spacing.xl)
+                    .typography(Typography.navTab)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .padding(.bottom, Spacing.n32)
             }
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, Spacing.n24)
     }
 
     private func startOAuth() {
@@ -168,31 +168,34 @@ struct OnboardingProviderConnect: View {
     }
 
     private var apiKeyFlow: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.n8) {
                 Text(preset.name)
-                    .typography(Typography.largeTitle)
+                    .typography(Typography.titleXl)
 
                 Text(preset.helpText)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
                     .multilineTextAlignment(.center)
 
                 if let urlString = preset.apiKeyURL,
                    let url = URL(string: urlString)
                 {
                     Link("Get API Key", destination: url)
-                        .typography(Typography.subheadline)
+                        .typography(Typography.navTab)
                 }
             }
 
             SecureField(Localized.Common.Fields.apiKey, text: $apiKey)
                 .textContentType(.password)
                 .autocorrectionDisabled()
-                .padding(Spacing.md)
-                .background(colors.surface, in: RoundedRectangle(cornerRadius: 12))
+                .padding(Spacing.n16)
+                .background(
+                    colors.surface.standard.alternative,
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
 
             Button(Localized.Ui.connect) {
                 createProviderAndContinue(apiToken: apiKey.trimmingCharacters(in: .whitespaces))
@@ -205,12 +208,12 @@ struct OnboardingProviderConnect: View {
 
             if let onBack {
                 Button("Change Provider") { onBack() }
-                    .typography(Typography.subheadline)
-                    .foregroundStyle(colors.textSecondary)
-                    .padding(.bottom, Spacing.xl)
+                    .typography(Typography.navTab)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .padding(.bottom, Spacing.n32)
             }
         }
-        .padding(.horizontal, Spacing.lg)
+        .padding(.horizontal, Spacing.n24)
     }
 
     // MARK: - Create Provider
@@ -257,16 +260,16 @@ struct OnboardingProviderConnect: View {
         _ error: ConnectionError,
         retryAction: @escaping () -> Void
     ) -> some View {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n8) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48))
-                .foregroundStyle(colors.destructive)
+                .foregroundStyle(colors.text.standard.error)
 
             Text(error.title)
-                .typography(Typography.headline)
+                .typography(Typography.titleXS)
             Text(error.suggestion)
-                .typography(Typography.callout)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.note)
+                .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
 
             Button(Localized.Provider.tryAgain) { retryAction() }

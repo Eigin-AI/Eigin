@@ -49,11 +49,11 @@ struct AddMCPServer: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 } footer: {
-                    HStack(alignment: .top, spacing: Spacing.sm) {
+                    HStack(alignment: .top, spacing: Spacing.n8) {
                         Image(systemName: "info.circle")
                         Text(Localized.Mcp.Setup.requirement)
                     }
-                    .padding(.top, Spacing.sm)
+                    .padding(.top, Spacing.n8)
                 }
 
                 statusSection
@@ -70,7 +70,7 @@ struct AddMCPServer: View {
                         Text(Localized.Mcp.Setup.clientCredentials)
                     } footer: {
                         Text(Localized.Mcp.Setup.manualCredentialsHint)
-                            .padding(.top, Spacing.sm)
+                            .padding(.top, Spacing.n8)
                     }
                 }
 
@@ -78,7 +78,7 @@ struct AddMCPServer: View {
                     Section(Localized.Mcp.tools) {
                         if discoveredToolNames.isEmpty {
                             Text(Localized.Mcp.noToolsDiscovered)
-                                .foregroundStyle(colors.textSecondary)
+                                .foregroundStyle(colors.text.standard.muted)
                         } else {
                             ForEach(discoveredToolNames, id: \.self) { toolName in
                                 Label(toolName, systemImage: "wrench")
@@ -89,8 +89,8 @@ struct AddMCPServer: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(colors.background.ignoresSafeArea())
-            .navigationTitle(Localized.Settings.Action.addMcpServer, style: Typography.largeTitle)
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .navigationTitle(Localized.Settings.Action.addMcpServer, style: Typography.titleXl)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -130,42 +130,42 @@ struct AddMCPServer: View {
             EmptyView()
         case .probing:
             Section {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Mcp.Status.checking)
-                        .foregroundStyle(colors.textSecondary)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         case .oauthAuthorizing:
             Section {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Auth.waiting)
-                        .foregroundStyle(colors.textSecondary)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         case .connecting:
             Section {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Network.connecting)
-                        .foregroundStyle(colors.textSecondary)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         case .done:
             EmptyView()
         case .error(let message):
             Section {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
+                VStack(alignment: .leading, spacing: Spacing.n8) {
                     Label(
                         Localized.Errors.Connection.title,
                         systemImage: "exclamationmark.triangle"
                     )
-                    .foregroundStyle(colors.destructive)
-                    .typography(Typography.headline)
+                    .foregroundStyle(colors.text.standard.error)
+                    .typography(Typography.titleXS)
                     Text(message)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
         }

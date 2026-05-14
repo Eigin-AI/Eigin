@@ -6,18 +6,18 @@ struct MCPServerRow: View {
     @Environment(\.colors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.n4) {
             Text(server.name)
                 .typography(Typography.body)
 
             if !server.cachedToolNames.isEmpty {
                 Text(verbatim: "\(server.cachedToolNames.count) \(Localized.Mcp.tools)")
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             } else {
                 Text(server.url)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
                     .lineLimit(1)
             }
         }

@@ -58,8 +58,8 @@ struct SpaceListView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Space.title, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Space.title, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -90,23 +90,23 @@ struct SpaceListView: View {
     }
 
     private func spaceRow(for space: Space) -> some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(spacing: Spacing.n8) {
             Text(space.emoji)
                 .font(.system(size: 24))
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
                 let count = chatCount(for: space)
                 Text(Localized.Space.List.chatsCount("\(count)"))
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             Spacer()
             if space.isPrivate {
                 Image(systemName: "eye.slash")
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         }
     }

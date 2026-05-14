@@ -41,16 +41,16 @@ struct ToolGroupView: View {
                     if isGrouped {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(colors.textSecondary.opacity(0.4))
-                            .padding(.trailing, Spacing.sm)
+                            .foregroundStyle(colors.text.standard.muted.opacity(0.4))
+                            .padding(.trailing, Spacing.n8)
                             .transition(.opacity.combined(with: .scale(scale: 0.5)))
                     }
 
                     if isExpanded {
                         Text(Localized.Tool.Group.toolsUsed(String(tools.count)))
-                            .font(Typography.body.font.weight(.medium))
-                            .foregroundStyle(colors.textSecondary.opacity(0.4))
-                            .padding(.vertical, Spacing.xs)
+                            .typography(Typography.chatMessage)
+                            .foregroundStyle(colors.text.standard.muted.opacity(0.4))
+                            .padding(.vertical, Spacing.n4)
                             .alignmentGuide(.toolText) { $0[.leading] }
                     } else if let last = tools.last {
                         ToolRowView(tool: last)
@@ -59,9 +59,9 @@ struct ToolGroupView: View {
                             .alignmentGuide(.toolText) { $0[.leading] }
                         if isGrouped {
                             Text(verbatim: "(\(tools.count))")
-                                .font(Typography.body.font.weight(.medium))
-                                .foregroundStyle(colors.textSecondary.opacity(0.4))
-                                .padding(.leading, Spacing.xs)
+                                .typography(Typography.chatMessage)
+                                .foregroundStyle(colors.text.standard.muted.opacity(0.4))
+                                .padding(.leading, Spacing.n4)
                                 .transition(.opacity)
                                 .contentTransition(.numericText())
                         }

@@ -87,7 +87,7 @@ struct LiveCallStatus: View {
                 DictationStreamView(
                     text: service.transcription,
                     state: service.dictationState,
-                    textStyle: colors.textPrimary
+                    textStyle: colors.text.standard.base
                 )
             }
         case .speaking:
@@ -97,7 +97,7 @@ struct LiveCallStatus: View {
                 DictationStreamView(
                     text: service.speakingText,
                     state: .idle,
-                    textStyle: colors.textPrimary
+                    textStyle: colors.text.standard.base
                 )
             }
         default:
@@ -132,7 +132,7 @@ struct LiveCallStatus: View {
     private func phaseLabel(_ label: String) -> some View {
         Text(label)
             .typography(Typography.body)
-            .foregroundStyle(colors.textSecondary)
+            .foregroundStyle(colors.text.standard.muted)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 }

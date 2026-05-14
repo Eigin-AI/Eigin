@@ -35,30 +35,30 @@ struct EditProvider: View {
                         .textContentType(.password)
                         .autocorrectionDisabled()
                 } footer: {
-                    HStack(alignment: .top, spacing: Spacing.sm) {
+                    HStack(alignment: .top, spacing: Spacing.n8) {
                         Image(systemName: "info.circle")
                         Text(Localized.Provider.Edit.updateHintSave)
                     }
-                    .padding(.top, Spacing.sm)
+                    .padding(.top, Spacing.n8)
                 }
             }
 
             if let connectionError {
                 Section {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                    VStack(alignment: .leading, spacing: Spacing.n8) {
                         Label(connectionError.title, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(colors.destructive)
-                            .typography(Typography.headline)
+                            .foregroundStyle(colors.text.standard.error)
+                            .typography(Typography.titleXS)
                         Text(connectionError.suggestion)
-                            .typography(Typography.callout)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.note)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(Localized.Provider.Edit.title(provider.name), style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(Localized.Provider.Edit.title(provider.name), style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

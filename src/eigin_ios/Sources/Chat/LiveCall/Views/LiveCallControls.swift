@@ -48,7 +48,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: service.responseSpeed.iconName,
                 label: Localized.Settings.turnDelay,
-                background: colors.textSecondary.opacity(0.1)
+                background: colors.text.standard.muted.opacity(0.1)
             ) {
                 // Handled by menu
             }
@@ -71,7 +71,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: "phone.down.fill",
                 label: Localized.Ui.end,
-                background: colors.destructive,
+                background: Color(hex: "#FF0004"),
                 iconColor: .white
             ) {
                 Haptics.medium()
@@ -81,7 +81,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: "hand.raised.fill",
                 label: Localized.Chat.myTurn,
-                background: colors.textSecondary.opacity(0.1)
+                background: colors.text.standard.muted.opacity(0.1)
             ) {
                 service.interrupt()
             }
@@ -97,7 +97,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: "xmark",
                 label: Localized.Permission.deny,
-                background: colors.textSecondary.opacity(0.1)
+                background: colors.text.standard.muted.opacity(0.1)
             ) {
                 Haptics.light()
                 service.chatLoop.resolvePermission(.deny)
@@ -116,7 +116,7 @@ struct LiveCallControls: View {
             callButton(
                 icon: "checkmark.circle",
                 label: Localized.Permission.allowForChat,
-                background: colors.textSecondary.opacity(0.1)
+                background: colors.text.standard.muted.opacity(0.1)
             ) {
                 Haptics.light()
                 service.chatLoop.resolvePermission(.allowForChat)
@@ -134,17 +134,17 @@ struct LiveCallControls: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: Spacing.xs) {
+            VStack(spacing: Spacing.n4) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundStyle(iconColor ?? colors.textSecondary)
+                    .foregroundStyle(iconColor ?? colors.text.standard.muted)
                     .frame(width: 44, height: 44)
                     .background(background)
                     .clipShape(Circle())
 
                 Text(label)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
             }
         }
         .frame(maxWidth: .infinity)

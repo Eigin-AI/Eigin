@@ -94,7 +94,7 @@ struct AgentProfile: View {
     private var presentationSection: some View {
         Section {
             Group {
-                HStack(alignment: .center, spacing: Spacing.sm) {
+                HStack(alignment: .center, spacing: Spacing.n8) {
                     Button {
                         showEmojiPicker = true
                     } label: {
@@ -112,7 +112,7 @@ struct AgentProfile: View {
 
                     if isEditingName {
                         TextField(Localized.Common.Fields.agentName, text: $editingNameText)
-                            .typography(Typography.title)
+                            .typography(Typography.titleM)
                             .focused($isNameFocused)
                             .onSubmit { commitNameEdit() }
                             .onChange(of: isNameFocused) { _, focused in
@@ -124,8 +124,8 @@ struct AgentProfile: View {
                             }
                     } else {
                         Text(agent.name)
-                            .typography(Typography.title)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.titleM)
+                            .foregroundStyle(colors.text.standard.base)
                             .onTapGesture {
                                 editingNameText = agent.name
                                 withAnimation(Animations.snap) {
@@ -149,55 +149,55 @@ struct AgentProfile: View {
                     }
 
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "waveform", color: .purple)
                         Text(Localized.Agent.Profile.voice)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                         Spacer()
                         Text(currentVoiceName)
-                            .foregroundStyle(colors.textSecondary)
-                            .typography(Typography.callout)
+                            .foregroundStyle(colors.text.standard.muted)
+                            .typography(Typography.body)
                     }
                 }
 
                 if let asset = upgradeAsset {
                     if case .downloading(let progress) = asset.state {
-                        HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.n8) {
                             CircularProgressView(progress: progress)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(asset.displayName)
-                                    .typography(Typography.subheadline)
-                                    .foregroundStyle(colors.textPrimary)
+                                    .typography(Typography.navTab)
+                                    .foregroundStyle(colors.text.standard.base)
                                 Text(Localized.Status.downloading)
-                                    .typography(Typography.caption)
-                                    .foregroundStyle(colors.textSecondary)
+                                    .typography(Typography.miniLabel)
+                                    .foregroundStyle(colors.text.standard.muted)
                             }
                         }
                     } else {
                         Button {
                             showDownloadPrompt = true
                         } label: {
-                            HStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.n8) {
                                 Image(systemName: "arrow.down.circle")
                                     .foregroundStyle(colors.accent)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(asset.displayName)
-                                        .typography(Typography.subheadline)
-                                        .foregroundStyle(colors.textPrimary)
+                                        .typography(Typography.navTab)
+                                        .foregroundStyle(colors.text.standard.base)
                                     Text(asset.downloadDescription)
-                                        .typography(Typography.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
                                 }
                             }
                         }
                     }
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Agent.Profile.Section.presentation)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         } footer: {
             if showVoicePicker {
                 if !voiceService.isUsingEnhancedEngine(for: languageManager.currentLanguage) {
@@ -212,7 +212,7 @@ struct AgentProfile: View {
     private var providerSection: some View {
         Section {
             Group {
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "server.rack", color: .blue)
                     Picker(Localized.Ui.provider, selection: providerBinding) {
                         ForEach(providers) { provider in
@@ -229,22 +229,22 @@ struct AgentProfile: View {
                         selectedModel: $agent.model
                     )
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "cpu", color: .teal)
                         Text(Localized.Provider.modelLabel)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                         Spacer()
                         Text(modelDisplayName(agent.model))
-                            .foregroundStyle(colors.textSecondary)
-                            .typography(Typography.callout)
+                            .foregroundStyle(colors.text.standard.muted)
+                            .typography(Typography.body)
                     }
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Provider.modelLabel)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -275,40 +275,40 @@ struct AgentProfile: View {
                 NavigationLink {
                     KnowledgeContainer(agentID: agent.id)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "book.closed", color: .cyan)
                         Text(Localized.Knowledge.sectionTitle)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                     }
                 }
 
                 NavigationLink {
                     IntentsList(agentID: agent.id)
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "arrow.triangle.branch", color: .orange)
                         Text(Localized.Agent.intents)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                     }
                 }
 
                 NavigationLink {
                     SkillsList()
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "sparkles.rectangle.stack", color: .purple)
                         Text(Localized.Agent.skills)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                     }
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Agent.Profile.Section.core)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
     }
 
@@ -321,17 +321,17 @@ struct AgentProfile: View {
         NavigationLink {
             DocumentEditor(title: title, text: text)
         } label: {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 SettingsIcon(systemName: icon, color: color)
                 Text(title)
-                    .typography(Typography.subheadline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.navTab)
+                    .foregroundStyle(colors.text.standard.base)
                 Spacer()
                 Text(text.wrappedValue
                     .isEmpty ? Localized.Common.Placeholder
                     .notSet : String(text.wrappedValue.prefix(30)) + "...")
-                    .foregroundStyle(colors.textSecondary)
-                    .typography(Typography.callout)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .typography(Typography.note)
                     .lineLimit(1)
             }
         }
@@ -350,19 +350,19 @@ struct AgentProfile: View {
                 }
                 .pickerStyle(.segmented)
 
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     Image(systemName: agent.proactivity.systemImage)
                         .foregroundStyle(colors.accent)
                         .frame(width: 20)
                     Text(agent.proactivity.description)
-                        .typography(Typography.caption)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.tag)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
-            .listRowBackground(colors.surface)
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Agent.Profile.Section.initiative)
-                .typography(Typography.label)
+                .typography(Typography.miniLabel)
         }
         .onChange(of: agent.proactivity) { _, newValue in
             agent.updatedAt = .now
@@ -420,12 +420,12 @@ struct AgentProfile: View {
             HStack {
                 Text(label)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textPrimary)
+                    .foregroundStyle(colors.text.standard.base)
                 if let subtitle {
                     Spacer()
                     Text(subtitle)
-                        .typography(Typography.callout)
-                        .foregroundStyle(colors.textSecondary)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
                 Spacer()
                 if (agent.voiceIdentifier ?? "") == (voice?.identifier ?? "") {

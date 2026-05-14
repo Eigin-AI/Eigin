@@ -24,15 +24,15 @@ struct OnboardingModelSetup: View {
     ]
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             stateContent
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.bottom, Spacing.xl)
+        .padding(.horizontal, Spacing.n24)
+        .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .sheet(isPresented: $showCloudSetup) {
             CloudProviderSetupSheet(
                 onComplete: { provider in
@@ -90,39 +90,39 @@ struct OnboardingModelSetup: View {
     // MARK: - Not Downloaded
 
     private var notDownloadedView: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
-            VStack(spacing: Spacing.xl) {
+            VStack(spacing: Spacing.n32) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(colors.accent)
 
-                VStack(spacing: Spacing.xs) {
+                VStack(spacing: Spacing.n4) {
                     Text(Localized.Onboarding.ModelSetup.intro)
-                        .typography(Typography.title)
+                        .typography(Typography.titleM)
                     Text(cyclingWords[currentWordIndex])
-                        .typography(Typography.largeTitle)
+                        .typography(Typography.titleXl)
                         .foregroundStyle(colors.accent)
                         .contentTransition(.numericText())
                 }
-                .foregroundStyle(colors.textPrimary)
+                .foregroundStyle(colors.text.standard.base)
                 .multilineTextAlignment(.center)
             }
 
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
+            VStack(spacing: Spacing.n24) {
                 Text(Localized.Onboarding.LocalModel.description)
                     .typography(Typography.body)
-                    .foregroundStyle(colors.textSecondary)
+                    .foregroundStyle(colors.text.standard.muted)
                     .multilineTextAlignment(.center)
 
                 Button {
                     Task { await gemmaManager.download() }
                 } label: {
                     Text(Localized.Onboarding.ModelSetup.downloadAction)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -145,7 +145,7 @@ struct OnboardingModelSetup: View {
     // MARK: - Downloading
 
     private func downloadingView(progress: Double) -> some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             ZStack {
@@ -158,19 +158,19 @@ struct OnboardingModelSetup: View {
 
                 VStack(spacing: 4) {
                     Text(verbatim: "\(Int(progress * 100))%")
-                        .typography(Typography.title)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.titleM)
+                        .foregroundStyle(colors.text.standard.base)
                         .monospacedDigit()
                         .contentTransition(.numericText())
                 }
             }
 
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.n16) {
                 Text(
                     Localized.Onboarding.ModelSetup.downloadStatus
                 )
                 .typography(Typography.body)
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
 
                 Text(
@@ -179,7 +179,7 @@ struct OnboardingModelSetup: View {
                         : Localized.Onboarding.ModelSetup.notifyOffer
                 )
                 .typography(Typography.body)
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
 
                 Button {
@@ -190,12 +190,12 @@ struct OnboardingModelSetup: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: Spacing.xs) {
+                    HStack(spacing: Spacing.n4) {
                         Text(Localized.Onboarding.ModelSetup.notifyAction)
                         Image(systemName: "arrow.right")
                             .font(.system(size: 12))
                     }
-                    .typography(Typography.subheadline)
+                    .typography(Typography.navTab)
                 }
                 .foregroundStyle(colors.accent)
                 .opacity(gemmaManager.notifyOnDownloadComplete ? 0 : 1)
@@ -204,17 +204,17 @@ struct OnboardingModelSetup: View {
 
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
+            VStack(spacing: Spacing.n24) {
                 Button {
                     gemmaManager.cancel()
                 } label: {
                     Text(Localized.Common.Actions.cancel)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
                 .buttonStyle(.bordered)
-                .tint(colors.textSecondary)
+                .tint(colors.text.standard.muted)
 
                 cloudLink
             }
@@ -224,23 +224,23 @@ struct OnboardingModelSetup: View {
     // MARK: - Compiling
 
     private func compilingView(progress: Double) -> some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             compilingAnimation
 
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.n16) {
                 Text(
                     Localized.Status.preparingDevice
                 )
                 .typography(Typography.body)
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
             }
 
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
+            VStack(spacing: Spacing.n24) {
                 cloudLink
             }
         }
@@ -259,24 +259,24 @@ struct OnboardingModelSetup: View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: Spacing.xl) {
+            VStack(spacing: Spacing.n32) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(colors.accent)
 
                 Text(Localized.Onboarding.ModelSetup.readyStatus)
-                    .typography(Typography.title)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleM)
+                    .foregroundStyle(colors.text.standard.base)
             }
 
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
+            VStack(spacing: Spacing.n24) {
                 Button {
                     onReady()
                 } label: {
                     Text(Localized.Common.Actions.continue)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -294,24 +294,24 @@ struct OnboardingModelSetup: View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: Spacing.xl) {
+            VStack(spacing: Spacing.n32) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
 
-                VStack(spacing: Spacing.sm) {
+                VStack(spacing: Spacing.n8) {
                     Text(Localized.Onboarding.ModelSetup.errorTitle)
-                        .typography(Typography.title)
-                        .foregroundStyle(colors.textPrimary)
+                        .typography(Typography.titleM)
+                        .foregroundStyle(colors.text.standard.base)
                 }
             }
 
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: Spacing.n16) {
                 Button {
                     Task { await gemmaManager.download() }
                 } label: {
                     Text(Localized.Common.Actions.retry)
-                        .typography(Typography.headline)
+                        .typography(Typography.titleXS)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -327,14 +327,14 @@ struct OnboardingModelSetup: View {
         Button {
             showCloudSetup = true
         } label: {
-            HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.n4) {
                 Text(Localized.Onboarding.ModelSetup.fallbackAction)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 12))
             }
-            .typography(Typography.subheadline)
+            .typography(Typography.navTab)
         }
-        .foregroundStyle(colors.textSecondary)
+        .foregroundStyle(colors.text.standard.muted)
     }
 }
 

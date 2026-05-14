@@ -119,7 +119,7 @@ struct ChatView: View {
                 )
             }
         }
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -235,7 +235,7 @@ struct ChatView: View {
         VStack(spacing: 2) {
             if isEditingTitle {
                 TextField("Chat name", text: $editingTitleText)
-                    .typography(Typography.headline)
+                    .typography(Typography.titleXS)
                     .multilineTextAlignment(.center)
                     .focused($isTitleFocused)
                     .onSubmit { commitTitleEdit() }
@@ -249,8 +249,8 @@ struct ChatView: View {
             } else {
                 Text(viewModel.chat?.title.isEmpty == false ? viewModel.chat!.title : Localized
                     .Tools.New.chat)
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
                     .onTapGesture {
                         editingTitleText = viewModel.chat?.title ?? ""
                         withAnimation(Animations.snap) {

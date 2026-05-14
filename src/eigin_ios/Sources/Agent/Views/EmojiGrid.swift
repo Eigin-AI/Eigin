@@ -15,11 +15,11 @@ struct EmojiGrid: View {
         "🎨", "🎵", "📚", "🧩", "🍀",
     ]
 
-    private let columns = Array(repeating: GridItem(.fixed(44), spacing: Spacing.sm), count: 6)
+    private let columns = Array(repeating: GridItem(.fixed(44), spacing: Spacing.n8), count: 6)
 
     var body: some View {
-        VStack(spacing: Spacing.md) {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
+        VStack(spacing: Spacing.n16) {
+            LazyVGrid(columns: columns, spacing: Spacing.n8) {
                 ForEach(Self.emojis, id: \.self) { emoji in
                     Button {
                         Haptics.light()
@@ -36,7 +36,7 @@ struct EmojiGrid: View {
 
             Divider()
 
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 TextField("Custom", text: $customEmoji)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
@@ -56,7 +56,7 @@ struct EmojiGrid: View {
                 .disabled(customEmoji.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(Spacing.md)
+        .padding(Spacing.n16)
         .presentationCompactAdaptation(.popover)
     }
 }

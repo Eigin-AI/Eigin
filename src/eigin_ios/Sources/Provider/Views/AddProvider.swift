@@ -54,7 +54,7 @@ struct AddProvider: View {
 
             if isLocal {
                 Section {
-                    HStack(alignment: .top, spacing: Spacing.sm) {
+                    HStack(alignment: .top, spacing: Spacing.n8) {
                         Image(systemName: "info.circle")
                         Text(preset?.helpText ?? "")
                     }
@@ -66,9 +66,9 @@ struct AddProvider: View {
                         .autocorrectionDisabled()
                 } footer: {
                     if let preset {
-                        HStack(alignment: .top, spacing: Spacing.sm) {
+                        HStack(alignment: .top, spacing: Spacing.n8) {
                             Image(systemName: "info.circle")
-                            VStack(alignment: .leading, spacing: Spacing.xs) {
+                            VStack(alignment: .leading, spacing: Spacing.n4) {
                                 Text(preset.helpText)
                                 if let urlString = preset.apiKeyURL,
                                    let url = URL(string: urlString)
@@ -77,35 +77,35 @@ struct AddProvider: View {
                                 }
                             }
                         }
-                        .padding(.top, Spacing.sm)
+                        .padding(.top, Spacing.n8)
                     } else {
-                        HStack(alignment: .top, spacing: Spacing.sm) {
+                        HStack(alignment: .top, spacing: Spacing.n8) {
                             Image(systemName: "info.circle")
                             Text(Localized.Provider.Setup.Custom.apiRequirement)
                         }
-                        .padding(.top, Spacing.sm)
+                        .padding(.top, Spacing.n8)
                     }
                 }
             }
 
             if let connectionError {
                 Section {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                    VStack(alignment: .leading, spacing: Spacing.n8) {
                         Label(connectionError.title, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(colors.destructive)
-                            .typography(Typography.headline)
+                            .foregroundStyle(colors.text.standard.error)
+                            .typography(Typography.titleXS)
                         Text(connectionError.suggestion)
-                            .typography(Typography.callout)
-                            .foregroundStyle(colors.textSecondary)
+                            .typography(Typography.note)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationTitle(
             preset?.name ?? Localized.Provider.Picker.customProvider,
-            style: Typography.largeTitle
+            style: Typography.titleXl
         )
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

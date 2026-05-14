@@ -99,10 +99,10 @@ struct ChatFeed: View {
                             pagination.onLoadMore?()
                         } label: {
                             Label("Load older messages", systemImage: "chevron.up")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, Spacing.sm)
+                                .padding(.vertical, Spacing.n8)
                         }
                     }
 
@@ -146,10 +146,10 @@ struct ChatFeed: View {
                             pagination.onLoadNewer?()
                         } label: {
                             Label("Load newer messages", systemImage: "chevron.down")
-                                .typography(Typography.caption)
-                                .foregroundStyle(colors.textSecondary)
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.text.standard.muted)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, Spacing.sm)
+                                .padding(.vertical, Spacing.n8)
                         }
                     }
                 }
@@ -184,20 +184,20 @@ struct ChatFeed: View {
                     } label: {
                         Image(systemName: "arrow.down")
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                             .frame(width: 36, height: 36)
                             .background(.ultraThinMaterial, in: Circle())
                             .overlay(
                                 Circle()
-                                    .stroke(colors.textSecondary.opacity(0.2), lineWidth: 0.5)
+                                    .stroke(colors.text.standard.muted.opacity(0.2), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, Spacing.sm)
+                    .padding(.bottom, Spacing.n8)
                     .transition(.scale.combined(with: .opacity))
                 }
             }
             .animation(Animations.smooth, value: isAtBottom)
-            .safeAreaInset(edge: .bottom, spacing: Spacing.md) {
+            .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
                 ChatInputBar(
                     text: $messageText,
                     isDisabled: isInputDisabled,
@@ -272,7 +272,7 @@ struct ChatFeed: View {
                 ErrorDetailSheet(error: error)
             }
         }
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .tabBar)
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
@@ -305,11 +305,11 @@ struct ChatFeed: View {
         case .typing:
             TypingIndicator()
         case .status(_, let text):
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 ProgressView()
                 Text(text)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
             }
             .padding(.horizontal)
         case .error(_, let error):
@@ -317,7 +317,7 @@ struct ChatFeed: View {
                 selectedError = error
             } label: {
                 Label(error.title, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(colors.destructive)
+                    .foregroundStyle(colors.text.standard.error)
                     .font(Typography.body.font.weight(.medium))
             }
             .buttonStyle(.plain)
@@ -363,7 +363,7 @@ private struct StreamingContentView: View {
         // Show all blocks - the last one is the active one being streamed
         if (phase == .streaming || phase == .done) && !blocks.isEmpty {
             ElasticContainer(isActive: phase == .streaming) {
-                VStack(alignment: .leading, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.n16) {
                     ForEach(blocks) { block in
                         ContentBlockView(block: block)
                     }

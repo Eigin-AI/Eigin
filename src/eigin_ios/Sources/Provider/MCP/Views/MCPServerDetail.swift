@@ -33,48 +33,48 @@ struct MCPServerDetail: View {
                         value: server.authType.displayName
                     )
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             }
 
             Section {
                 DisclosureGroup(isExpanded: $statusExpanded) {
                     statusDetail
                 } label: {
-                    HStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.n8) {
                         statusIndicator
                         Text(status.label)
-                            .typography(Typography.subheadline)
-                            .foregroundStyle(colors.textPrimary)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
                     }
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Mcp.Section.status)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
 
             Section {
                 Group {
                     if server.cachedToolNames.isEmpty {
                         Text(Localized.Mcp.noToolsDiscovered)
-                            .foregroundStyle(colors.textSecondary)
+                            .foregroundStyle(colors.text.standard.muted)
                     } else {
                         ForEach(server.cachedToolNames, id: \.self) { toolName in
                             Label(toolName.titleCased, systemImage: "wrench")
-                                .typography(Typography.subheadline)
-                                .foregroundStyle(colors.textPrimary)
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.base)
                         }
                     }
                 }
-                .listRowBackground(colors.surface)
+                .listRowBackground(colors.surface.standard.alternative)
             } header: {
                 Text(Localized.Mcp.tools)
-                    .typography(Typography.label)
+                    .typography(Typography.miniLabel)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle(server.name, style: Typography.largeTitle)
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .navigationTitle(server.name, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -85,7 +85,7 @@ struct MCPServerDetail: View {
         switch status {
         case .idle, .disabled:
             Image(systemName: "circle")
-                .foregroundStyle(colors.textSecondary)
+                .foregroundStyle(colors.text.standard.muted)
                 .font(.caption2)
         case .connected:
             Image(systemName: "circle.fill")
@@ -93,7 +93,7 @@ struct MCPServerDetail: View {
                 .font(.caption2)
         case .error:
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(colors.destructive)
+                .foregroundStyle(colors.text.standard.error)
                 .font(.caption2)
         }
     }
@@ -103,17 +103,17 @@ struct MCPServerDetail: View {
         switch status {
         case .idle:
             Text(Localized.Mcp.autoConnectHint)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         case .connected:
             Text(Localized.Mcp.Status.connectionActive)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         case .error(let message):
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: Spacing.n8) {
                 Text(message)
-                    .typography(Typography.caption)
-                    .foregroundStyle(colors.destructive)
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.error)
 
                 if server.authType == .oauth {
                     Button {
@@ -129,15 +129,15 @@ struct MCPServerDetail: View {
 
                     if let reauthorizeError {
                         Text(reauthorizeError)
-                            .typography(Typography.caption)
-                            .foregroundStyle(colors.destructive)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.error)
                     }
                 }
             }
         case .disabled:
             Text(Localized.Mcp.Status.disabledHint)
-                .typography(Typography.caption)
-                .foregroundStyle(colors.textSecondary)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
     }
 

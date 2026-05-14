@@ -74,8 +74,8 @@ struct ChatMessageView: View {
         HStack {
             Spacer(minLength: 0)
             Text(content)
-                .typography(Typography.body)
-                .foregroundStyle(colors.textPrimary)
+                .typography(Typography.chatMessageUser)
+                .foregroundStyle(colors.text.standard.base)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: isLongMessage ? .infinity : nil, alignment: .leading)
@@ -97,7 +97,7 @@ struct ChatMessageView: View {
                     }
                 }
                 .padding(10)
-                .background(colors.surface)
+                .background(colors.surface.standard.alternative)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .onTapGesture {
                     guard isLongMessage else { return }
@@ -116,7 +116,7 @@ struct ChatMessageView: View {
     }
 
     private var assistantMessageView: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
+        VStack(alignment: .leading, spacing: Spacing.n16) {
             ForEach(blocks) { block in
                 ContentBlockView(block: block)
             }
@@ -141,7 +141,7 @@ struct ChatMessageView: View {
     }
 
     private var footerView: some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
+        HStack(alignment: .center, spacing: Spacing.n16) {
             if showFooter {
                 Button {
                     Haptics.light()
@@ -157,7 +157,7 @@ struct ChatMessageView: View {
                 } label: {
                     Image(systemName: showCopied ? "checkmark" : "doc.on.doc.fill")
                         .font(.system(size: 12))
-                        .foregroundStyle(colors.textSecondary.opacity(0.4))
+                        .foregroundStyle(colors.text.standard.muted.opacity(0.4))
                         .contentTransition(.symbolEffect(.replace))
                         .contentShape(Rectangle())
                 }
@@ -183,7 +183,7 @@ struct ChatMessageView: View {
                             ? "rays" : (isPlayingThis ? "stop.fill" : "play.fill")
                     )
                     .font(.system(size: 16))
-                    .foregroundStyle(colors.textSecondary.opacity(0.4))
+                    .foregroundStyle(colors.text.standard.muted.opacity(0.4))
                     .contentTransition(.symbolEffect(.replace))
                     .symbolEffect(.rotate, options: .repeating, isActive: isLoadingForThis)
                     .contentShape(Rectangle())

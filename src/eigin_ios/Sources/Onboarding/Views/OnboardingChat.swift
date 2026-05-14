@@ -84,7 +84,7 @@ struct OnboardingChat: View {
             }
         }
         .animation(.spring(duration: 0.35, bounce: 0), value: orchestrator.options != nil)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .task {
             guard !didAppear else { return }
             didAppear = true
@@ -113,7 +113,7 @@ struct OnboardingChat: View {
 
     private func optionsRow(_ options: [String]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.n8) {
                 ForEach(options, id: \.self) { option in
                     Button(option) {
                         handleSelect(option)
@@ -122,10 +122,10 @@ struct OnboardingChat: View {
                     .tint(colors.accent)
                 }
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.n16)
         }
-        .padding(.vertical, Spacing.sm)
-        .background(colors.background)
+        .padding(.vertical, Spacing.n8)
+        .background(colors.surface.standard.base)
     }
 
     // MARK: - Actions

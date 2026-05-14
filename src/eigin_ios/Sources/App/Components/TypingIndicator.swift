@@ -7,7 +7,7 @@ struct TypingIndicator: View {
         Image(systemName: "ellipsis")
             .symbolEffect(.variableColor.cumulative, options: .repeating)
             .font(.title2)
-            .foregroundStyle(colors.textSecondary)
+            .foregroundStyle(colors.text.standard.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

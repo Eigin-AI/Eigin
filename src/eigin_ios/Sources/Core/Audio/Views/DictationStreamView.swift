@@ -36,7 +36,7 @@ struct DictationStreamView: View {
         Group {
             if let displayText, !displayText.isEmpty {
                 Text(displayText)
-                    .typography(Typography.body)
+                    .typography(Typography.chatMessageUser)
                     .foregroundStyle(isError ? errorStyle : textStyle)
                     .lineLimit(1)
                     .truncationMode(.head)

@@ -8,7 +8,7 @@ struct AgentCard: View {
     @Environment(\.colors) private var colors
 
     var body: some View {
-        VStack(spacing: Spacing.md) {
+        VStack(spacing: Spacing.n16) {
             ZStack {
                 ReactiveRing(phase: service.phase)
                     .frame(width: 140, height: 140)
@@ -18,8 +18,8 @@ struct AgentCard: View {
             }
 
             Text(agent.name)
-                .typography(Typography.title)
-                .foregroundStyle(colors.textPrimary)
+                .typography(Typography.titleM)
+                .foregroundStyle(colors.text.standard.base)
         }
     }
 }

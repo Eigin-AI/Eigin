@@ -22,36 +22,36 @@ struct OnboardingWelcome: View {
     ]
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.n32) {
             Spacer()
 
             // Hero area — hello fades out, meet eigin fades in
             ZStack {
                 // Phase 1: "Hello 👋"
-                HStack(spacing: Spacing.sm) {
+                HStack(spacing: Spacing.n8) {
                     Text(Localized.Onboarding.Welcome.greeting)
-                        .typography(Typography.largeTitle)
+                        .typography(Typography.titleXl)
                     Text(Localized.Onboarding.Welcome.emoji)
                         .font(.system(size: 36))
                 }
-                .foregroundStyle(colors.textPrimary)
+                .foregroundStyle(colors.text.standard.base)
                 .opacity(phase == 1 ? 1 : 0)
                 .scaleEffect(phase >= 1 ? 1 : 0.8)
 
                 // Phase 2+: "Meet Eigin" + tagline
                 Text(meetEiginText)
-                    .typography(Typography.largeTitle)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXl)
+                    .foregroundStyle(colors.text.standard.base)
                     .opacity(phase >= 2 ? 1 : 0)
             }
 
             Spacer()
 
             // Values
-            VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.n24) {
                 Text(Localized.Onboarding.Welcome.subtitle)
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.muted)
 
                 valueRow(icon: "sparkles", title: {
                     HStack(spacing: 0) {
@@ -88,7 +88,7 @@ struct OnboardingWelcome: View {
                 onGetStarted()
             } label: {
                 Text(Localized.Onboarding.Welcome.primaryAction)
-                    .typography(Typography.headline)
+                    .typography(Typography.titleXS)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
@@ -96,10 +96,10 @@ struct OnboardingWelcome: View {
             .tint(colors.accent)
             .opacity(phase >= 3 ? 1 : 0)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.bottom, Spacing.xl)
+        .padding(.horizontal, Spacing.n24)
+        .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.surface.standard.base.ignoresSafeArea())
         .task {
             await runEntrance()
         }
@@ -147,7 +147,7 @@ struct OnboardingWelcome: View {
         @ViewBuilder title: () -> some View,
         subtitle: String
     ) -> some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.n16) {
             Image(systemName: icon)
                 .font(.system(size: 24))
                 .foregroundStyle(colors.accent)
@@ -155,13 +155,13 @@ struct OnboardingWelcome: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 title()
-                    .typography(Typography.headline)
-                    .foregroundStyle(colors.textPrimary)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
                     .lineLimit(1)
 
                 Text(subtitle)
-                    .typography(Typography.callout)
-                    .foregroundStyle(colors.textSecondary)
+                    .typography(Typography.note)
+                    .foregroundStyle(colors.text.standard.muted)
                     .lineLimit(1)
             }
         }
