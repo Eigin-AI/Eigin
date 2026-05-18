@@ -77,11 +77,13 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
         state = .downloading(fractionCompleted: 0)
         do {
             // Phase 1: download files with progress
-            _ = try await PocketTtsResourceDownloader.ensureModels { [weak self] progress in
-                Task { @MainActor [weak self] in
-                    self?.state = .downloading(fractionCompleted: progress.fractionCompleted)
+            // TODO: PocketTTS now supports more languages, we can use this when adding German/Spanish/Italian etc. support
+            _ = try await PocketTtsResourceDownloader
+                .ensureModels(language: .english) { [weak self] progress in
+                    Task { @MainActor [weak self] in
+                        self?.state = .downloading(fractionCompleted: progress.fractionCompleted)
+                    }
                 }
-            }
             // Phase 2: initialize from cache (fast — files already on disk)
             let mgr = PocketTtsManager()
             try await mgr.initialize()

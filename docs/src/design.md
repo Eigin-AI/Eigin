@@ -32,9 +32,21 @@ When adding a token to any group that has a corresponding `*_FIELDS` constant in
 
 Font files (OTF/TTF) placed in `design/assets/fonts/` are picked up at generation time, registered with the app via CoreText, and copied into `Resources/Fonts/`. If the folder is empty, the app falls back to platform system fonts. Proprietary fonts are not committed to the repository; add them locally to activate them.
 
+### Icons
+
+SVG files placed in `design/assets/icons/` are picked up at generation time and mirrored into the iOS asset catalogue (`Assets.xcassets/Icons/`). The folder structure is preserved, so subfolders create nested namespace groups. Each SVG becomes a vector-preserving image set, available in SwiftUI via the generated `Iconography` enum.
+
+| Source | Generated accessor | Example |
+|---|---|---|
+| `icons/brand/avatar.svg` | `Iconography.Brand.avatar` | `Image("Icons/brand/avatar")` |
+| `icons/provider/openai.svg` | `Iconography.Provider.openai` | `Image("Icons/provider/openai")` |
+| `icons/functional/send.svg` | `Iconography.Functional.send` | `Image("Icons/functional/send")` |
+
+Provider logos, brand marks, and functional icons all live in the same source tree. Adding or replacing an SVG and running `make generate` updates the asset catalogue and typed accessor automatically.
+
 ### App icon
 
-The source icon lives in `design/assets/icon/`. Generation copies it into the iOS asset catalogue. For development builds, a `dev_overlay.png` is composited on top so dev and production installs are visually distinct. The current icon is a placeholder.
+The source icon lives in `design/assets/app_icon/`. Generation copies it into the iOS asset catalogue. For development builds, a `dev_overlay.png` is composited on top so dev and production installs are visually distinct. The current icon is a placeholder.
 
 ## Code generation
 
@@ -51,6 +63,7 @@ Running `make generate` reads the token file and assets, then produces platform-
 | `Grid.swift` | Layout grid breakpoints as `Grid.Breakpoint` values |
 | `FontRegistration.swift` | Registers custom fonts with CoreText at launch |
 | `Color+Hex.swift` | `Color(hex:)` initialiser used by the theme |
+| `Iconography.swift` | Typed `Image` accessors for icons in `design/assets/icons/` |
 
 ## Usage in SwiftUI
 

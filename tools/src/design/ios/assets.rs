@@ -19,8 +19,8 @@ const CONTENTS_JSON: &str = r#"{
 "#;
 
 pub fn generate(repo_root: &str) -> Result<()> {
-    let base_path = format!("{repo_root}/design/assets/icon/eigin_icon_light.png");
-    let overlay_path = format!("{repo_root}/design/assets/icon/dev_overlay.png");
+    let base_path = format!("{repo_root}/design/assets/app_icon/eigin_icon_light.png");
+    let overlay_path = format!("{repo_root}/design/assets/app_icon/dev_overlay.png");
     let prod_dir =
         format!("{repo_root}/src/eigin_ios/Resources/Assets.xcassets/AppIcon.appiconset");
     let dev_dir =

@@ -89,7 +89,7 @@ struct AppActionButton: View {
         case .spot, .destructive:
             isEnabled ? colors.icon.impact.base : colors.icon.impact.disabled
         case .open:
-            isEnabled ? colors.button.spot.base : colors.icon.standard.disabled
+            isEnabled ? colors.icon.standard.base : colors.icon.standard.disabled
         }
     }
 }

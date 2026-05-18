@@ -12,6 +12,9 @@ buildServer.json
 ## User settings
 xcuserdata/
 
+## Generated asset catalog icon sets (source of truth is design/assets/icons/)
+src/eigin_ios/Resources/Assets.xcassets/Icons
+
 ## Obj-C/Swift specific
 *.hmap
 
@@ -94,4 +97,9 @@ infra/**/backend.tf
 
 ## Claude
 .claude
+
+## Opencode
+.opencode
+
+## MacOS
 **/.DS_Store

@@ -49,7 +49,7 @@ struct ProviderPreset: Identifiable, Hashable {
 
     /// Bundled logo from the asset catalog, falling back to nil if not found.
     var logo: UIImage? {
-        UIImage(named: "ProviderLogos/\(id)")
+        UIImage(named: "Icons/Provider/\(id)")
     }
 
     /// Whether this provider runs on-device (no API key, no network).
