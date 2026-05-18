@@ -252,16 +252,12 @@ fn write_dimension_group(
 
 /// Breakpoint name in tokens.json → generated Swift name + doc comment.
 const GRID_BREAKPOINTS: &[(&str, &str, &str)] = &[
-    (
-        "mobile",
-        "compact",
-        "Compact width — iPhone (Figma: mobile).",
-    ),
-    ("tablet", "regular", "Regular width — iPad (Figma: tablet)."),
+    ("mobile", "mobile", "Mobile width — iPhone (Figma: mobile)."),
+    ("tablet", "tablet", "Tablet width — iPad (Figma: tablet)."),
     (
         "desktop",
-        "wide",
-        "Wide — large iPad / desktop (Figma: desktop).",
+        "desktop",
+        "Desktop width — large iPad / desktop (Figma: desktop).",
     ),
 ];
 
