@@ -1,0 +1,11 @@
+{{ header }}import SwiftUI
+
+/// Stroke / border width scale. Generated from design/tokens.json.
+enum StrokeWeight {
+{% for entry in scale.entries %}
+{% if entry.description %}
+    /// {{ entry.description }}
+{% endif %}
+    static let {{ entry.name }}: CGFloat = {{ entry.pts | fmt_cgfloat }}
+{% endfor %}
+}

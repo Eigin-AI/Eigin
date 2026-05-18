@@ -1,0 +1,32 @@
+{{ header }}import CoreText
+import Foundation
+import UIKit
+
+enum FontRegistration {
+{% if info %}
+    static func register() {
+        let names: [String] = [
+{% for name in info.file_names %}
+            "{{ name }}",
+{% endfor %}
+        ]
+        for name in names {
+            guard let url = Bundle.main.url(forResource: name, withExtension: nil) else { continue }
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
+
+    @MainActor
+    static func configureNavigationBar() {
+        let large = UIFont(name: "{{ info.large_title_ps }}", size: 34) ?? .preferredFont(forTextStyle: .largeTitle)
+        let inline = UIFont(name: "{{ info.inline_title_ps }}", size: 17) ?? .preferredFont(forTextStyle: .headline)
+        UINavigationBar.appearance().largeTitleTextAttributes = [.font: large]
+        UINavigationBar.appearance().titleTextAttributes = [.font: inline]
+    }
+{% else %}
+    static func register() {}
+
+    @MainActor
+    static func configureNavigationBar() {}
+{% endif %}
+}

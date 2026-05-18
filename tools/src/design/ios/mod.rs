@@ -1,7 +1,9 @@
 mod assets;
 mod fonts;
 pub mod icons;
-mod style;
+pub mod model;
+pub mod style;
+pub mod swift_mappings;
 
 /// Generate all iOS design artifacts: Swift design tokens, custom fonts, app icons, and icon assets.
 pub fn generate(repo_root: &str) -> anyhow::Result<()> {

@@ -1,0 +1,8 @@
+{{ header }}import SwiftUI
+
+/// Component sizing dimensions. Generated from design/tokens.json.
+enum Sizing {
+{% for entry in scale.entries %}
+{{ sizing_entry(entry) | indent(4) }}
+{% endfor %}
+}

@@ -1,0 +1,21 @@
+{{ header }}import SwiftUI
+
+/// Resolved color set for a given theme and color scheme. Generated from design/tokens.json.
+struct ResolvedColors {
+{% macro color_struct(node) %}
+{% if node.leaf %}
+    let {{ node.name }}: Color
+{% elif node.children %}
+    struct {{ node.name | pascal_case }} {
+        {{ color_struct_children(node.children) }}
+    }
+    let {{ node.name }}: {{ node.name | pascal_case }}
+{% endif %}
+{% endmacro %}
+{% macro color_struct_children(children) %}
+{% for child in children %}
+{{ color_struct(child) }}
+{% endfor %}
+{% endmacro %}
+{{ color_struct_children(tree.children) }}
+}

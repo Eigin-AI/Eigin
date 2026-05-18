@@ -1,0 +1,10 @@
+{{ header | safe }}enum Localized {
+    /// Always returns the bundle for the currently selected language.
+    /// Computed each time so language changes are reflected immediately.
+    static var bundle: Bundle { .appLanguage }
+
+    private static func get(_ key: String) -> String {
+        bundle.localizedString(forKey: key, value: nil, table: nil)
+    }
+
+{{ body | safe }}}
