@@ -1,0 +1,16 @@
+{{ header }}import SwiftUI
+
+/// App layout grid. Generated from design/tokens.json.
+enum Grid {
+    struct Breakpoint {
+        let columns: Int
+        let outer: CGFloat
+        let inner: CGFloat
+        let gutter: CGFloat
+    }
+
+{% for bp in scale.breakpoints %}
+    /// {{ bp.doc }}
+    static let {{ bp.name }} = Breakpoint(columns: {{ bp.columns }}, outer: {{ bp.outer | fmt_cgfloat }}, inner: {{ bp.inner | fmt_cgfloat }}, gutter: {{ bp.gutter | fmt_cgfloat }})
+{% endfor %}
+}

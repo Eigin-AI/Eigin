@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+mod codegen;
 mod config;
 mod design;
 mod format;

@@ -1,0 +1,34 @@
+{{ header }}import SwiftUI
+
+/// Default Eigin theme. Generated from design/tokens.json.
+struct DefaultTheme: Theme {
+    var name: String { Localized.Ui.defaultLabel }
+    let id = "default"
+
+    func colors(for colorScheme: ColorScheme) -> ResolvedColors {
+        switch colorScheme {
+        case .light:
+            return ResolvedColors(
+                {{ color_init(tree.children, "light") }}
+            )
+        case .dark:
+            return ResolvedColors(
+                {{ color_init(tree.children, "dark") }}
+            )
+        @unknown default:
+            return colors(for: .light)
+        }
+    }
+}
+
+{% macro color_init(children, mode) %}
+{% for child in children %}
+{% if child.leaf %}
+{{ child.name }}: Color(hex: {{ child.leaf[mode ~ "_hex"] | hex_literal }}){% if not loop.last %}, {% endif %}
+{% elif child.children %}
+{{ child.name }}: .init(
+    {{ color_init(child.children, mode) }}
+){% if not loop.last %}, {% endif %}
+{% endif %}
+{% endfor %}
+{% endmacro %}

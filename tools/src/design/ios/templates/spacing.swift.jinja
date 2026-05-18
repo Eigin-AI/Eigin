@@ -1,0 +1,11 @@
+{{ header }}import SwiftUI
+
+/// App-wide spacing scale. Generated from design/tokens.json.
+enum Spacing {
+{% for entry in scale.entries %}
+{% if entry.description %}
+    /// {{ entry.description }}
+{% endif %}
+    static let {{ entry.name }}: CGFloat = {{ entry.pts | fmt_cgfloat }}
+{% endfor %}
+}

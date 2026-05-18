@@ -2,6 +2,7 @@ pub mod format_params;
 pub mod generator;
 pub mod identifiers;
 pub mod parser;
+pub mod scope_tree;
 pub mod validator;
 
 use anyhow::{Context, Result};

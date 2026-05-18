@@ -1,0 +1,11 @@
+{{ header }}import SwiftUI
+
+/// Corner radius scale. Generated from design/tokens.json.
+enum Radius {
+{% for entry in scale.entries %}
+{% if entry.description %}
+    /// {{ entry.description }}
+{% endif %}
+    static let {{ entry.name }}: CGFloat = {{ entry.swift_value }}
+{% endfor %}
+}

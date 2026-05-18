@@ -13,13 +13,6 @@ enum Localized {
     }
 
     enum Agent {
-        enum EmptyState {
-            /// A description text displayed when there is no agent set up in the Agent tab.
-            static var setupHint: String {
-                Localized.get("agent.emptyState.setupHint")
-            }
-        }
-
         /// A heading for the identity section of the agent's core.
         static var identityLabel: String {
             Localized.get("agent.identityLabel")
@@ -60,50 +53,6 @@ enum Localized {
             String(format: Localized.get("agent.privateByDesign"), p1)
         }
 
-        enum Proactivity {
-            /// A label displayed below a notification preview, indicating that the agent chose to
-            /// notify the user.
-            static var choseToNotify: String {
-                Localized.get("agent.proactivity.choseToNotify")
-            }
-
-            /// A description of the notification that the agent chose not to send.
-            static var choseToStaySilent: String {
-                Localized.get("agent.proactivity.choseToStaySilent")
-            }
-        }
-
-        enum Profile {
-            enum Section {
-                /// Section header for agent identity/user/soul documents
-                static var core: String {
-                    Localized.get("agent.profile.section.core")
-                }
-
-                /// Section header for proactivity settings
-                static var initiative: String {
-                    Localized.get("agent.profile.section.initiative")
-                }
-
-                /// Section header in agent profile
-                static var presentation: String {
-                    Localized.get("agent.profile.section.presentation")
-                }
-            }
-
-            /// Section header for voice selection
-            static var voice: String {
-                Localized.get("agent.profile.voice")
-            }
-
-            enum Voice {
-                /// Footer hint for installing more voices
-                static var installHint: String {
-                    Localized.get("agent.profile.voice.installHint")
-                }
-            }
-        }
-
         /// A text label indicating how many times a particular intent has been reinforced.
         static func reinforcedCount(_ p1: String) -> String {
             String(format: Localized.get("agent.reinforcedCount"), p1)
@@ -124,6 +73,67 @@ enum Localized {
             Localized.get("agent.soul")
         }
 
+        /// Status label shown while the agent is processing a response
+        static var thinking: String {
+            Localized.get("agent.thinking")
+        }
+
+        /// A heading for the user section of the agent's core.
+        static var userLabel: String {
+            Localized.get("agent.userLabel")
+        }
+
+        enum EmptyState {
+            /// A description text displayed when there is no agent set up in the Agent tab.
+            static var setupHint: String {
+                Localized.get("agent.emptyState.setupHint")
+            }
+        }
+
+        enum Proactivity {
+            /// A label displayed below a notification preview, indicating that the agent chose to
+            /// notify the user.
+            static var choseToNotify: String {
+                Localized.get("agent.proactivity.choseToNotify")
+            }
+
+            /// A description of the notification that the agent chose not to send.
+            static var choseToStaySilent: String {
+                Localized.get("agent.proactivity.choseToStaySilent")
+            }
+        }
+
+        enum Profile {
+            /// Section header for voice selection
+            static var voice: String {
+                Localized.get("agent.profile.voice")
+            }
+
+            enum Section {
+                /// Section header for agent identity/user/soul documents
+                static var core: String {
+                    Localized.get("agent.profile.section.core")
+                }
+
+                /// Section header for proactivity settings
+                static var initiative: String {
+                    Localized.get("agent.profile.section.initiative")
+                }
+
+                /// Section header in agent profile
+                static var presentation: String {
+                    Localized.get("agent.profile.section.presentation")
+                }
+            }
+
+            enum Voice {
+                /// Footer hint for installing more voices
+                static var installHint: String {
+                    Localized.get("agent.profile.voice.installHint")
+                }
+            }
+        }
+
         enum Status {
             /// A status text indicating that the agent is loading a page. The argument is the
             /// string “Agent”.
@@ -136,16 +146,6 @@ enum Localized {
             static func readingPage(_ p1: String) -> String {
                 String(format: Localized.get("agent.status.readingPage"), p1)
             }
-        }
-
-        /// Status label shown while the agent is processing a response
-        static var thinking: String {
-            Localized.get("agent.thinking")
-        }
-
-        /// A heading for the user section of the agent's core.
-        static var userLabel: String {
-            Localized.get("agent.userLabel")
         }
     }
 
@@ -167,18 +167,6 @@ enum Localized {
     }
 
     enum Chat {
-        enum Alert {
-            /// Alert title for chat deletion confirmation
-            static var deleteTitle: String {
-                Localized.get("chat.alert.deleteTitle")
-            }
-
-            /// Alert title for chat rename dialog
-            static var renameTitle: String {
-                Localized.get("chat.alert.renameTitle")
-            }
-        }
-
         /// A label for a chat list item that is currently selected.
         static var allChats: String {
             Localized.get("chat.allChats")
@@ -192,33 +180,6 @@ enum Localized {
         /// The message displayed in an alert when confirming the deletion of a chat.
         static var deleteWarning: String {
             Localized.get("chat.deleteWarning")
-        }
-
-        enum EmptyState {
-            /// A description text displayed below the "+" button in the toolbar of the chat list
-            /// view, encouraging users to start a new chat.
-            static var hint: String {
-                Localized.get("chat.emptyState.hint")
-            }
-
-            /// Empty state title when there are no chats
-            static var title: String {
-                Localized.get("chat.emptyState.title")
-            }
-        }
-
-        enum Filter {
-            /// Filter option for all chats
-            static var allChats: String {
-                Localized.get("chat.filter.allChats")
-            }
-        }
-
-        enum Input {
-            /// TextField placeholder for chat input
-            static var messagePlaceholder: String {
-                Localized.get("chat.input.messagePlaceholder")
-            }
         }
 
         /// A button label that lets the user interrupt a live call.
@@ -250,6 +211,45 @@ enum Localized {
         /// chats.
         static func titleFormat(_ p1: String, _ p2: String) -> String {
             String(format: Localized.get("chat.titleFormat"), p1, p2)
+        }
+
+        enum Alert {
+            /// Alert title for chat deletion confirmation
+            static var deleteTitle: String {
+                Localized.get("chat.alert.deleteTitle")
+            }
+
+            /// Alert title for chat rename dialog
+            static var renameTitle: String {
+                Localized.get("chat.alert.renameTitle")
+            }
+        }
+
+        enum EmptyState {
+            /// A description text displayed below the "+" button in the toolbar of the chat list
+            /// view, encouraging users to start a new chat.
+            static var hint: String {
+                Localized.get("chat.emptyState.hint")
+            }
+
+            /// Empty state title when there are no chats
+            static var title: String {
+                Localized.get("chat.emptyState.title")
+            }
+        }
+
+        enum Filter {
+            /// Filter option for all chats
+            static var allChats: String {
+                Localized.get("chat.filter.allChats")
+            }
+        }
+
+        enum Input {
+            /// TextField placeholder for chat input
+            static var messagePlaceholder: String {
+                Localized.get("chat.input.messagePlaceholder")
+            }
         }
     }
 
@@ -434,13 +434,6 @@ enum Localized {
             Localized.get("debug.scanning")
         }
 
-        enum Section {
-            /// Section header for model storage
-            static var onDeviceModelStorage: String {
-                Localized.get("debug.section.onDeviceModelStorage")
-            }
-        }
-
         /// Navigation title for tool detail sheet
         static var toolDetailTitle: String {
             Localized.get("debug.toolDetailTitle")
@@ -454,6 +447,13 @@ enum Localized {
         /// Navigation title for transcript detail
         static var transcriptTitle: String {
             Localized.get("debug.transcriptTitle")
+        }
+
+        enum Section {
+            /// Section header for model storage
+            static var onDeviceModelStorage: String {
+                Localized.get("debug.section.onDeviceModelStorage")
+            }
         }
     }
 
@@ -543,23 +543,6 @@ enum Localized {
             Localized.get("development.scheduleProactive")
         }
 
-        enum Section {
-            /// Section header for background scheduler options
-            static var backgroundScheduler: String {
-                Localized.get("development.section.backgroundScheduler")
-            }
-
-            /// Section header for data backup actions
-            static var dataBackup: String {
-                Localized.get("development.section.dataBackup")
-            }
-
-            /// Section header for local model options
-            static var localModel: String {
-                Localized.get("development.section.localModel")
-            }
-        }
-
         /// Share link label for exported data
         static var shareExportFile: String {
             Localized.get("development.shareExportFile")
@@ -584,6 +567,23 @@ enum Localized {
         static var viewAppLog: String {
             Localized.get("development.viewAppLog")
         }
+
+        enum Section {
+            /// Section header for background scheduler options
+            static var backgroundScheduler: String {
+                Localized.get("development.section.backgroundScheduler")
+            }
+
+            /// Section header for data backup actions
+            static var dataBackup: String {
+                Localized.get("development.section.dataBackup")
+            }
+
+            /// Section header for local model options
+            static var localModel: String {
+                Localized.get("development.section.localModel")
+            }
+        }
     }
 
     enum Emoji {
@@ -594,6 +594,11 @@ enum Localized {
     }
 
     enum Errors {
+        /// Short error title when a feature or resource is not available
+        static var notAvailable: String {
+            Localized.get("errors.notAvailable")
+        }
+
         enum Access {
             /// Short error title when the server returns HTTP 403
             static var denied: String {
@@ -670,11 +675,6 @@ enum Localized {
             static var retryHint: String {
                 Localized.get("errors.network.retryHint")
             }
-        }
-
-        /// Short error title when a feature or resource is not available
-        static var notAvailable: String {
-            Localized.get("errors.notAvailable")
         }
 
         enum Oauth {
@@ -806,6 +806,11 @@ enum Localized {
 
     enum Fact {
         enum Detail {
+            /// Placeholder text for unset values
+            static var notSet: String {
+                Localized.get("fact.detail.notSet")
+            }
+
             enum Label {
                 /// Badge text for bundled facts
                 static var bundled: String {
@@ -826,11 +831,6 @@ enum Localized {
                 static var type: String {
                     Localized.get("fact.detail.label.type")
                 }
-            }
-
-            /// Placeholder text for unset values
-            static var notSet: String {
-                Localized.get("fact.detail.notSet")
             }
 
             enum Section {
@@ -962,6 +962,16 @@ enum Localized {
     }
 
     enum Knowledge {
+        /// A label displayed above the user's knowledge.
+        static var sectionTitle: String {
+            Localized.get("knowledge.sectionTitle")
+        }
+
+        /// Navigation title for knowledge container
+        static var title: String {
+            Localized.get("knowledge.title")
+        }
+
         enum EmptyState {
             /// A description text that appears when a user's knowledge list is empty.
             static var hint: String {
@@ -972,16 +982,6 @@ enum Localized {
             static var title: String {
                 Localized.get("knowledge.emptyState.title")
             }
-        }
-
-        /// A label displayed above the user's knowledge.
-        static var sectionTitle: String {
-            Localized.get("knowledge.sectionTitle")
-        }
-
-        /// Navigation title for knowledge container
-        static var title: String {
-            Localized.get("knowledge.title")
         }
     }
 
@@ -1033,16 +1033,31 @@ enum Localized {
             Localized.get("mcp.authentication")
         }
 
+        /// A description of how a server connects automatically when used in a chat.
+        static var autoConnectHint: String {
+            Localized.get("mcp.autoConnectHint")
+        }
+
+        /// Empty state when MCP server has no tools
+        static var noToolsDiscovered: String {
+            Localized.get("mcp.noToolsDiscovered")
+        }
+
+        /// Button to re-authorize MCP server
+        static var reAuthorize: String {
+            Localized.get("mcp.reAuthorize")
+        }
+
+        /// Section header for MCP server tools
+        static var tools: String {
+            Localized.get("mcp.tools")
+        }
+
         enum Authentication {
             /// A heading for the user section of the agent's core.
             static var user: String {
                 Localized.get("mcp.authentication.user")
             }
-        }
-
-        /// A description of how a server connects automatically when used in a chat.
-        static var autoConnectHint: String {
-            Localized.get("mcp.autoConnectHint")
         }
 
         enum Hint {
@@ -1062,16 +1077,6 @@ enum Localized {
             static var url: String {
                 Localized.get("mcp.label.url")
             }
-        }
-
-        /// Empty state when MCP server has no tools
-        static var noToolsDiscovered: String {
-            Localized.get("mcp.noToolsDiscovered")
-        }
-
-        /// Button to re-authorize MCP server
-        static var reAuthorize: String {
-            Localized.get("mcp.reAuthorize")
         }
 
         enum Section {
@@ -1133,11 +1138,6 @@ enum Localized {
                 Localized.get("mcp.status.notConnected")
             }
         }
-
-        /// Section header for MCP server tools
-        static var tools: String {
-            Localized.get("mcp.tools")
-        }
     }
 
     enum Memory {
@@ -1146,16 +1146,16 @@ enum Localized {
             Localized.get("memory.deleteWarning")
         }
 
+        /// A label displayed above the user's memories.
+        static var sectionTitle: String {
+            Localized.get("memory.sectionTitle")
+        }
+
         enum EmptyState {
             /// A description text displayed when there are no memories.
             static var hint: String {
                 Localized.get("memory.emptyState.hint")
             }
-        }
-
-        /// A label displayed above the user's memories.
-        static var sectionTitle: String {
-            Localized.get("memory.sectionTitle")
         }
     }
 
@@ -1185,16 +1185,38 @@ enum Localized {
             Localized.get("model.gemma4e2b")
         }
 
+        /// Status text when Gemma model is downloaded
+        static var gemmaDownloadedReady: String {
+            Localized.get("model.gemmaDownloadedReady")
+        }
+
+        /// Warning message when removing a model
+        static var removeStorageWarning: String {
+            Localized.get("model.removeStorageWarning")
+        }
+
+        /// An alert message that appears when a user deletes a voice engine.
+        static var removeWarning: String {
+            Localized.get("model.removeWarning")
+        }
+
+        /// Storage error message with size argument
+        static func storageNotEnough(_ p1: String) -> String {
+            String(format: Localized.get("model.storageNotEnough"), p1)
+        }
+
+        /// A message in an alert that informs the user that they need at least a certain amount of
+        /// free storage to download a model. The placeholder value is replaced with the actual
+        /// required storage size. The argument is the string “%.1f”.
+        static func storageRequirement(_ p1: String) -> String {
+            String(format: Localized.get("model.storageRequirement"), p1)
+        }
+
         enum Gemma4e2b {
             /// The name of the machine learning model used in the app.
             static var name: String {
                 Localized.get("model.gemma4e2b.name")
             }
-        }
-
-        /// Status text when Gemma model is downloaded
-        static var gemmaDownloadedReady: String {
-            Localized.get("model.gemmaDownloadedReady")
         }
 
         enum Picker {
@@ -1234,33 +1256,11 @@ enum Localized {
             }
         }
 
-        /// Warning message when removing a model
-        static var removeStorageWarning: String {
-            Localized.get("model.removeStorageWarning")
-        }
-
-        /// An alert message that appears when a user deletes a voice engine.
-        static var removeWarning: String {
-            Localized.get("model.removeWarning")
-        }
-
         enum Status {
             /// A label indicating that a voice engine is installed on the device.
             static var installed: String {
                 Localized.get("model.status.installed")
             }
-        }
-
-        /// Storage error message with size argument
-        static func storageNotEnough(_ p1: String) -> String {
-            String(format: Localized.get("model.storageNotEnough"), p1)
-        }
-
-        /// A message in an alert that informs the user that they need at least a certain amount of
-        /// free storage to download a model. The placeholder value is replaced with the actual
-        /// required storage size. The argument is the string “%.1f”.
-        static func storageRequirement(_ p1: String) -> String {
-            String(format: Localized.get("model.storageRequirement"), p1)
         }
     }
 
@@ -1284,6 +1284,11 @@ enum Localized {
     }
 
     enum Onboarding {
+        /// A description text displayed below the unavailable view title.
+        static var completionHint: String {
+            Localized.get("onboarding.completionHint")
+        }
+
         enum Chat {
             /// Recovery opener for the about stage, used when the previous stage failed to extract
             /// a name.
@@ -1356,11 +1361,6 @@ enum Localized {
             static var title: String {
                 Localized.get("onboarding.complete.title")
             }
-        }
-
-        /// A description text displayed below the unavailable view title.
-        static var completionHint: String {
-            Localized.get("onboarding.completionHint")
         }
 
         enum Features {
@@ -1756,23 +1756,6 @@ enum Localized {
     }
 
     enum Provider {
-        enum Add {
-            /// Button to add a new provider
-            static var addButton: String {
-                Localized.get("provider.add.addButton")
-            }
-
-            /// TextField placeholder for provider base URL
-            static var baseUrlField: String {
-                Localized.get("provider.add.baseUrlField")
-            }
-
-            /// TextField placeholder for provider name
-            static var nameField: String {
-                Localized.get("provider.add.nameField")
-            }
-        }
-
         /// Button to switch to manual API key entry
         static var addApiKeyManually: String {
             Localized.get("provider.addApiKeyManually")
@@ -1799,13 +1782,6 @@ enum Localized {
             Localized.get("provider.apiKey")
         }
 
-        enum AppleIntelligence {
-            /// Description shown for the Apple Intelligence provider option
-            static var description: String {
-                Localized.get("provider.appleIntelligence.description")
-            }
-        }
-
         /// Field label for the provider base URL input
         static var baseURL: String {
             Localized.get("provider.baseURL")
@@ -1814,6 +1790,97 @@ enum Localized {
         /// OAuth connected success message
         static func connectedTo(_ p1: String) -> String {
             String(format: Localized.get("provider.connectedTo"), p1)
+        }
+
+        /// Credits warning with provider name
+        static func creditsWarning(_ p1: String) -> String {
+            String(format: Localized.get("provider.creditsWarning"), p1)
+        }
+
+        /// A label describing the model of an agent.
+        static var modelLabel: String {
+            Localized.get("provider.modelLabel")
+        }
+
+        /// Summary label showing how many models are enabled out of total; first %lld is enabled
+        /// count, second is total
+        static func modelsEnabledCount(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("provider.modelsEnabledCount"), p1, p2)
+        }
+
+        /// A text label showing the number of models enabled for a provider, followed by the total
+        /// number of models available. Both numbers are displayed in parentheses.
+        static func modelsEnabledCountStr(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("provider.modelsEnabledCountStr"), p1, p2)
+        }
+
+        /// Generic name for locally run models
+        static var onDevice: String {
+            Localized.get("provider.onDevice")
+        }
+
+        /// A label describing a recommended model for the user.
+        static var recommendedForYou: String {
+            Localized.get("provider.recommendedForYou")
+        }
+
+        /// A label displayed in the picker for selecting a model.
+        static var selectModel: String {
+            Localized.get("provider.selectModel")
+        }
+
+        /// A prompt in the setup form asking the user to select a provider.
+        static var selectProvider: String {
+            Localized.get("provider.selectProvider")
+        }
+
+        /// Error when OAuth sheet is dismissed
+        static var signInDismissed: String {
+            Localized.get("provider.signInDismissed")
+        }
+
+        /// Recovery hint after OAuth dismissal
+        static var signInDismissedHint: String {
+            Localized.get("provider.signInDismissedHint")
+        }
+
+        /// OAuth signing in status
+        static func signingIn(_ p1: String) -> String {
+            String(format: Localized.get("provider.signingIn"), p1)
+        }
+
+        /// Generic retry button label
+        static var tryAgain: String {
+            Localized.get("provider.tryAgain")
+        }
+
+        /// The title of the view that explains the use of cloud AI by Eigin.
+        static var typeLabel: String {
+            Localized.get("provider.typeLabel")
+        }
+
+        enum Add {
+            /// Button to add a new provider
+            static var addButton: String {
+                Localized.get("provider.add.addButton")
+            }
+
+            /// TextField placeholder for provider base URL
+            static var baseUrlField: String {
+                Localized.get("provider.add.baseUrlField")
+            }
+
+            /// TextField placeholder for provider name
+            static var nameField: String {
+                Localized.get("provider.add.nameField")
+            }
+        }
+
+        enum AppleIntelligence {
+            /// Description shown for the Apple Intelligence provider option
+            static var description: String {
+                Localized.get("provider.appleIntelligence.description")
+            }
         }
 
         enum Credits {
@@ -1828,11 +1895,6 @@ enum Localized {
             static func warningFormat(_ p1: String) -> String {
                 String(format: Localized.get("provider.credits.warningFormat"), p1)
             }
-        }
-
-        /// Credits warning with provider name
-        static func creditsWarning(_ p1: String) -> String {
-            String(format: Localized.get("provider.creditsWarning"), p1)
         }
 
         enum Edit {
@@ -1860,11 +1922,6 @@ enum Localized {
             }
         }
 
-        /// A label describing the model of an agent.
-        static var modelLabel: String {
-            Localized.get("provider.modelLabel")
-        }
-
         enum Models {
             /// A message displayed when a provider has no supported models.
             static var empty: String {
@@ -1875,23 +1932,6 @@ enum Localized {
             static var noSearchResults: String {
                 Localized.get("provider.models.noSearchResults")
             }
-        }
-
-        /// Summary label showing how many models are enabled out of total; first %lld is enabled
-        /// count, second is total
-        static func modelsEnabledCount(_ p1: String, _ p2: String) -> String {
-            String(format: Localized.get("provider.modelsEnabledCount"), p1, p2)
-        }
-
-        /// A text label showing the number of models enabled for a provider, followed by the total
-        /// number of models available. Both numbers are displayed in parentheses.
-        static func modelsEnabledCountStr(_ p1: String, _ p2: String) -> String {
-            String(format: Localized.get("provider.modelsEnabledCountStr"), p1, p2)
-        }
-
-        /// Generic name for locally run models
-        static var onDevice: String {
-            Localized.get("provider.onDevice")
         }
 
         enum Picker {
@@ -1911,32 +1951,45 @@ enum Localized {
             }
         }
 
-        /// A label describing a recommended model for the user.
-        static var recommendedForYou: String {
-            Localized.get("provider.recommendedForYou")
-        }
-
-        /// A label displayed in the picker for selecting a model.
-        static var selectModel: String {
-            Localized.get("provider.selectModel")
-        }
-
-        /// A prompt in the setup form asking the user to select a provider.
-        static var selectProvider: String {
-            Localized.get("provider.selectProvider")
-        }
-
         enum Setup {
+            /// Alternative link shown below OAuth sign-in to switch to manual API key entry
+            static var apiKeyAlternative: String {
+                Localized.get("provider.setup.apiKeyAlternative")
+            }
+
+            /// A button label that invites the user to connect with a specific OAuth provider. The
+            /// argument is the name of the provider.
+            static func oauthConnect(_ p1: String) -> String {
+                String(format: Localized.get("provider.setup.oauthConnect"), p1)
+            }
+
+            /// A message displayed when the user dismisses the sign-in process and is presented
+            /// with options to try again or manually add an API key.
+            static var oauthFailureHint: String {
+                Localized.get("provider.setup.oauthFailureHint")
+            }
+
+            /// Subtitle on the OAuth sign-in button explaining the benefit
+            static var oauthSignIn: String {
+                Localized.get("provider.setup.oauthSignIn")
+            }
+
+            /// A footer label explaining the purpose of the "Next" button in the edit provider
+            /// view.
+            static var updateApiKeyHintNext: String {
+                Localized.get("provider.setup.updateApiKeyHintNext")
+            }
+
+            /// A description of the action to update a provider's API key and refresh its models.
+            static var updateApiKeyHintSave: String {
+                Localized.get("provider.setup.updateApiKeyHintSave")
+            }
+
             enum Anthropic {
                 /// Step-by-step instruction for obtaining an Anthropic API key
                 static var instruction: String {
                     Localized.get("provider.setup.anthropic.instruction")
                 }
-            }
-
-            /// Alternative link shown below OAuth sign-in to switch to manual API key entry
-            static var apiKeyAlternative: String {
-                Localized.get("provider.setup.apiKeyAlternative")
             }
 
             enum Custom {
@@ -1972,23 +2025,6 @@ enum Localized {
                 static var instruction: String {
                     Localized.get("provider.setup.mistral.instruction")
                 }
-            }
-
-            /// A button label that invites the user to connect with a specific OAuth provider. The
-            /// argument is the name of the provider.
-            static func oauthConnect(_ p1: String) -> String {
-                String(format: Localized.get("provider.setup.oauthConnect"), p1)
-            }
-
-            /// A message displayed when the user dismisses the sign-in process and is presented
-            /// with options to try again or manually add an API key.
-            static var oauthFailureHint: String {
-                Localized.get("provider.setup.oauthFailureHint")
-            }
-
-            /// Subtitle on the OAuth sign-in button explaining the benefit
-            static var oauthSignIn: String {
-                Localized.get("provider.setup.oauthSignIn")
             }
 
             enum Openai {
@@ -2034,32 +2070,6 @@ enum Localized {
                     Localized.get("provider.setup.scaleway.instruction")
                 }
             }
-
-            /// A footer label explaining the purpose of the "Next" button in the edit provider
-            /// view.
-            static var updateApiKeyHintNext: String {
-                Localized.get("provider.setup.updateApiKeyHintNext")
-            }
-
-            /// A description of the action to update a provider's API key and refresh its models.
-            static var updateApiKeyHintSave: String {
-                Localized.get("provider.setup.updateApiKeyHintSave")
-            }
-        }
-
-        /// Error when OAuth sheet is dismissed
-        static var signInDismissed: String {
-            Localized.get("provider.signInDismissed")
-        }
-
-        /// Recovery hint after OAuth dismissal
-        static var signInDismissedHint: String {
-            Localized.get("provider.signInDismissedHint")
-        }
-
-        /// OAuth signing in status
-        static func signingIn(_ p1: String) -> String {
-            String(format: Localized.get("provider.signingIn"), p1)
         }
 
         enum Status {
@@ -2078,16 +2088,6 @@ enum Localized {
                 Localized.get("provider.status.connectionActive")
             }
         }
-
-        /// Generic retry button label
-        static var tryAgain: String {
-            Localized.get("provider.tryAgain")
-        }
-
-        /// The title of the view that explains the use of cloud AI by Eigin.
-        static var typeLabel: String {
-            Localized.get("provider.typeLabel")
-        }
     }
 
     enum Schedule {
@@ -2100,18 +2100,6 @@ enum Localized {
     }
 
     enum Settings {
-        enum Action {
-            /// Button label to add a new MCP server
-            static var addMcpServer: String {
-                Localized.get("settings.action.addMcpServer")
-            }
-
-            /// Button label to add a new provider
-            static var addProvider: String {
-                Localized.get("settings.action.addProvider")
-            }
-        }
-
         /// Settings section header for administrative/debug actions
         static var administration: String {
             Localized.get("settings.administration")
@@ -2157,6 +2145,71 @@ enum Localized {
             Localized.get("settings.clearLog")
         }
 
+        /// The text that appears next to the icon in the "Development" section of the settings
+        /// menu.
+        static var development: String {
+            Localized.get("settings.development")
+        }
+
+        /// A button label that triggers the export of the app's log file.
+        static var exportLog: String {
+            Localized.get("settings.exportLog")
+        }
+
+        /// A section header in the advanced settings view, describing logging options.
+        static var logging: String {
+            Localized.get("settings.logging")
+        }
+
+        /// A label displayed above the section for managing an agent's proactivity settings.
+        static var proactivity: String {
+            Localized.get("settings.proactivity")
+        }
+
+        /// Settings item label to restart the onboarding flow (debug/admin)
+        static var reTriggerOnboarding: String {
+            Localized.get("settings.reTriggerOnboarding")
+        }
+
+        /// A button that sends a test notification to the user.
+        static var sendTestNotification: String {
+            Localized.get("settings.sendTestNotification")
+        }
+
+        /// Section header for speech engine assets
+        static var speechEngine: String {
+            Localized.get("settings.speechEngine")
+        }
+
+        /// A label displayed under the button that allows the user to change the response speed of
+        /// a live call.
+        static var turnDelay: String {
+            Localized.get("settings.turnDelay")
+        }
+
+        /// Settings item label to open the app log viewer
+        static var viewLog: String {
+            Localized.get("settings.viewLog")
+        }
+
+        /// A label displayed in the settings section of the agent profile view, related to voice
+        /// selection.
+        static var voice: String {
+            Localized.get("settings.voice")
+        }
+
+        enum Action {
+            /// Button label to add a new MCP server
+            static var addMcpServer: String {
+                Localized.get("settings.action.addMcpServer")
+            }
+
+            /// Button label to add a new provider
+            static var addProvider: String {
+                Localized.get("settings.action.addProvider")
+            }
+        }
+
         enum ClearModelStorage {
             /// A footer text in the Model Storage view that explains the purpose of the "Delete all
             /// listed" button.
@@ -2170,17 +2223,6 @@ enum Localized {
             static var label: String {
                 Localized.get("settings.debugMode.label")
             }
-        }
-
-        /// The text that appears next to the icon in the "Development" section of the settings
-        /// menu.
-        static var development: String {
-            Localized.get("settings.development")
-        }
-
-        /// A button label that triggers the export of the app's log file.
-        static var exportLog: String {
-            Localized.get("settings.exportLog")
         }
 
         enum ImportData {
@@ -2215,11 +2257,6 @@ enum Localized {
             static var empty: String {
                 Localized.get("settings.log.empty")
             }
-        }
-
-        /// A section header in the advanced settings view, describing logging options.
-        static var logging: String {
-            Localized.get("settings.logging")
         }
 
         enum Logging {
@@ -2266,11 +2303,6 @@ enum Localized {
             }
         }
 
-        /// A label displayed above the section for managing an agent's proactivity settings.
-        static var proactivity: String {
-            Localized.get("settings.proactivity")
-        }
-
         enum Proactivity {
             enum Balanced {
                 /// Full description of the balanced proactivity mode
@@ -2309,11 +2341,6 @@ enum Localized {
             }
         }
 
-        /// Settings item label to restart the onboarding flow (debug/admin)
-        static var reTriggerOnboarding: String {
-            Localized.get("settings.reTriggerOnboarding")
-        }
-
         enum Schedule {
             /// A button label for scheduling a background review with a balanced interval.
             static var balanced: String {
@@ -2337,33 +2364,6 @@ enum Localized {
                 Localized.get("settings.section.development")
             }
         }
-
-        /// A button that sends a test notification to the user.
-        static var sendTestNotification: String {
-            Localized.get("settings.sendTestNotification")
-        }
-
-        /// Section header for speech engine assets
-        static var speechEngine: String {
-            Localized.get("settings.speechEngine")
-        }
-
-        /// A label displayed under the button that allows the user to change the response speed of
-        /// a live call.
-        static var turnDelay: String {
-            Localized.get("settings.turnDelay")
-        }
-
-        /// Settings item label to open the app log viewer
-        static var viewLog: String {
-            Localized.get("settings.viewLog")
-        }
-
-        /// A label displayed in the settings section of the agent profile view, related to voice
-        /// selection.
-        static var voice: String {
-            Localized.get("settings.voice")
-        }
     }
 
     enum Skills {
@@ -2384,6 +2384,22 @@ enum Localized {
     }
 
     enum Space {
+        /// An alert message that appears when the user confirms deleting a space. It explains that
+        /// the chats and memories in the deleted space will be moved to the "All Chats" space.
+        static var deleteWarning: String {
+            Localized.get("space.deleteWarning")
+        }
+
+        /// A button label that allows a user to remove their active chat from a space.
+        static var removeFromSpace: String {
+            Localized.get("space.removeFromSpace")
+        }
+
+        /// Navigation title for space list
+        static var title: String {
+            Localized.get("space.title")
+        }
+
         enum Alert {
             /// Alert title for space deletion confirmation
             static var deleteTitle: String {
@@ -2401,12 +2417,6 @@ enum Localized {
             static var title: String {
                 Localized.get("space.bootstrap.title")
             }
-        }
-
-        /// An alert message that appears when the user confirms deleting a space. It explains that
-        /// the chats and memories in the deleted space will be moved to the "All Chats" space.
-        static var deleteWarning: String {
-            Localized.get("space.deleteWarning")
         }
 
         enum Detail {
@@ -2500,21 +2510,11 @@ enum Localized {
             }
         }
 
-        /// A button label that allows a user to remove their active chat from a space.
-        static var removeFromSpace: String {
-            Localized.get("space.removeFromSpace")
-        }
-
         enum Section {
             /// Section header for space instructions
             static var instructions: String {
                 Localized.get("space.section.instructions")
             }
-        }
-
-        /// Navigation title for space list
-        static var title: String {
-            Localized.get("space.title")
         }
     }
 
@@ -2640,6 +2640,11 @@ enum Localized {
     }
 
     enum Tools {
+        /// A label displayed above a list of tools discovered on a server.
+        static var sectionTitle: String {
+            Localized.get("tools.sectionTitle")
+        }
+
         enum Add {
             /// Display name for the add-fact tool
             static var fact: String {
@@ -2776,6 +2781,11 @@ enum Localized {
         }
 
         enum Get {
+            /// Display name for the get-presentation tool
+            static var presentation: String {
+                Localized.get("tools.get.presentation")
+            }
+
             enum Chat {
                 /// Display name for the get-chat-transcript tool
                 static var transcript: String {
@@ -2793,11 +2803,6 @@ enum Localized {
                 static var log: String {
                     Localized.get("tools.get.food.log")
                 }
-            }
-
-            /// Display name for the get-presentation tool
-            static var presentation: String {
-                Localized.get("tools.get.presentation")
             }
         }
 
@@ -2873,13 +2878,6 @@ enum Localized {
         }
 
         enum No {
-            enum Active {
-                /// Empty state label shown when no intents are currently active
-                static var intents: String {
-                    Localized.get("tools.no.active.intents")
-                }
-            }
-
             /// Empty state label shown when no chats exist
             static var chats: String {
                 Localized.get("tools.no.chats")
@@ -2893,6 +2891,13 @@ enum Localized {
             /// Empty state label shown when no memories exist
             static var memories: String {
                 Localized.get("tools.no.memories")
+            }
+
+            enum Active {
+                /// Empty state label shown when no intents are currently active
+                static var intents: String {
+                    Localized.get("tools.no.active.intents")
+                }
             }
         }
 
@@ -2982,11 +2987,6 @@ enum Localized {
             static var memories: String {
                 Localized.get("tools.search.memories")
             }
-        }
-
-        /// A label displayed above a list of tools discovered on a server.
-        static var sectionTitle: String {
-            Localized.get("tools.sectionTitle")
         }
 
         enum Select {
