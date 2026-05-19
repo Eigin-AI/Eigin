@@ -6,6 +6,10 @@ import SwiftUI
 /// background styles: `.clear` blends transparently with the page; `.surface`
 /// shows a rounded-top filled surface using the standard background color.
 struct AppNavigationBar: View {
+    static var height: CGFloat {
+        Spacing.n8 + 64 + Spacing.n8
+    }
+
     let background: AppNavigationBarBackground
     let tabs: [AppNavigationTab]
 

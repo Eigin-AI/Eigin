@@ -127,6 +127,7 @@ struct FactDetail: View {
                                 isBundled: isBundledEntity(related),
                                 agentID: agentID
                             )
+                            .hidesTabBar()
                         } label: {
                             HStack(spacing: Spacing.n8) {
                                 Image(systemName: "arrow.right.circle")
@@ -150,6 +151,7 @@ struct FactDetail: View {
                                 isBundled: isBundledEntity(related),
                                 agentID: agentID
                             )
+                            .hidesTabBar()
                         } label: {
                             HStack(spacing: Spacing.n8) {
                                 Image(systemName: "arrow.left.circle")

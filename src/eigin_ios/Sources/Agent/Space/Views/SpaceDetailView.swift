@@ -100,6 +100,7 @@ struct SpaceDetailView: View {
                     title: Localized.Space.Section.instructions,
                     text: $space.instructions
                 )
+                .hidesTabBar()
             } label: {
                 HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "text.alignleft", color: .blue)

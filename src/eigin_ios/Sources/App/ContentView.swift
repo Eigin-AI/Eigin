@@ -6,30 +6,28 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.themeManager) private var themeManager
     @Injected(\.languageManager) private var languageManager
-    @Environment(\.colors) private var colors
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
-    private enum TabItem: String {
-        case chats, agent, settings
-    }
-
-    @State private var selectedTab = TabItem.chats
+    @State private var selectedTab = RootTab.chats
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            Tab(Localized.Ui.chats, systemImage: "bubble", value: TabItem.chats) {
+        ZStack {
+            switch selectedTab {
+            case .chats:
                 ChatListView()
-            }
-            Tab(Localized.Ui.agent, systemImage: "person.crop.circle", value: TabItem.agent) {
+            case .agent:
                 AgentView()
-            }
-            Tab(Localized.Ui.settings, systemImage: "gearshape", value: TabItem.settings) {
+            case .settings:
                 SettingsView()
             }
+
+            NavigationBarView(selectedTab: $selectedTab)
         }
-        .tint(colors.accent)
         .id("\(themeManager.currentTheme.id)-\(languageManager.currentLanguage.rawValue)")
+        .onChange(of: selectedTab) {
+            TabBarVisibility.shared.popAll()
+        }
         .onChange(of: pendingInitiativeID) { _, newValue in
             if newValue != nil {
                 selectedTab = .chats
@@ -48,7 +46,7 @@ struct ContentView: View {
     private func ensureBackgroundSchedule() {
         let descriptor = FetchDescriptor<Agent>(
             predicate: #Predicate { $0.bootstrapComplete },
-            sortBy: [SortDescriptor(\Agent.updatedAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
         guard let agents = try? modelContext.fetch(descriptor),
               // TODO: Use the primary agent once that concept is formalized.
