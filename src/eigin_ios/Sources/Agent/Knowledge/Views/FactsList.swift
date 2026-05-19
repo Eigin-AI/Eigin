@@ -49,6 +49,7 @@ struct FactsList: View {
                                         facts: section.facts,
                                         agentID: agentID
                                     )
+                                    .hidesTabBar()
                                 } label: {
                                     Text(Localized.Ui.showAll("\(section.facts.count)"))
                                         .typography(Typography.note)
@@ -96,6 +97,7 @@ struct FactsList: View {
                 isBundled: isBundled(entity),
                 agentID: agentID
             )
+            .hidesTabBar()
         } label: {
             factRow(entity)
         }

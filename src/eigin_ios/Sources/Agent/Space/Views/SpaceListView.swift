@@ -37,6 +37,7 @@ struct SpaceListView: View {
                     ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
                         NavigationLink {
                             SpaceDetailView(space: space)
+                                .hidesTabBar()
                         } label: {
                             spaceRow(for: space)
                         }
@@ -74,6 +75,7 @@ struct SpaceListView: View {
         .navigationDestination(isPresented: $showBootstrap) {
             if let agent, let provider = activeProvider {
                 SpaceBootstrapView(agent: agent, provider: provider)
+                    .hidesTabBar()
             }
         }
         .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {

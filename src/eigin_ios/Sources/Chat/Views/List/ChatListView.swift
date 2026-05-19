@@ -79,11 +79,13 @@ struct ChatListView: View {
             }
             .navigationDestination(for: UUID.self) { chatID in
                 ChatView(chatID: chatID)
+                    .hidesTabBar()
             }
             .navigationDestination(for: ChatListDestination.self) { destination in
                 switch destination {
                 case .manageSpaces:
                     SpaceListView()
+                        .hidesTabBar()
                 }
             }
             .alert(Localized.Chat.Alert.renameTitle, isPresented: $showRenameAlert) {
@@ -123,7 +125,9 @@ struct ChatListView: View {
             } message: {
                 Text(Localized.Chat.deleteWarning)
             }
+            .tabBarPadding()
         }
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var groupedChats: [(String, [Chat])] {

@@ -8,6 +8,7 @@ struct SkillsList: View {
         List(BundledSkill.all) { skill in
             NavigationLink {
                 SkillDetail(skill: skill)
+                    .hidesTabBar()
             } label: {
                 VStack(alignment: .leading, spacing: Spacing.n4) {
                     Text(skill.displayName)

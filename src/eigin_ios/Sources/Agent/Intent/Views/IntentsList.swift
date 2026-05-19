@@ -39,6 +39,7 @@ struct IntentsList: View {
                     ForEach(sortedIntents) { intent in
                         NavigationLink {
                             IntentDetail(intent: intent)
+                                .hidesTabBar()
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(intentPreview(intent.content))

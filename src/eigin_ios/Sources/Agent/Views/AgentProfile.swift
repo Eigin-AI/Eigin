@@ -228,6 +228,7 @@ struct AgentProfile: View {
                         availableModels: availableModels,
                         selectedModel: $agent.model
                     )
+                    .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "cpu", color: .teal)
@@ -274,6 +275,7 @@ struct AgentProfile: View {
 
                 NavigationLink {
                     KnowledgeContainer(agentID: agent.id)
+                        .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "book.closed", color: .cyan)
@@ -285,6 +287,7 @@ struct AgentProfile: View {
 
                 NavigationLink {
                     IntentsList(agentID: agent.id)
+                        .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "arrow.triangle.branch", color: .orange)
@@ -296,6 +299,7 @@ struct AgentProfile: View {
 
                 NavigationLink {
                     SkillsList()
+                        .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "sparkles.rectangle.stack", color: .purple)
@@ -320,6 +324,7 @@ struct AgentProfile: View {
     ) -> some View {
         NavigationLink {
             DocumentEditor(title: title, text: text)
+                .hidesTabBar()
         } label: {
             HStack(spacing: Spacing.n8) {
                 SettingsIcon(systemName: icon, color: color)

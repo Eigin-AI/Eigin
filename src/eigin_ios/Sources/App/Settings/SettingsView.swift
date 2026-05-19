@@ -37,11 +37,15 @@ struct SettingsView: View {
             .navigationDestination(for: PersistentIdentifier.self) { id in
                 if let provider = providers.first(where: { $0.persistentModelID == id }) {
                     EditProvider(provider: provider, navigationPath: $navigationPath)
+                        .hidesTabBar()
                 } else if let server = mcpServers.first(where: { $0.persistentModelID == id }) {
                     MCPServerDetail(server: server)
+                        .hidesTabBar()
                 }
             }
+            .tabBarPadding()
         }
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     // MARK: - Sections
@@ -97,6 +101,7 @@ struct SettingsView: View {
             Section {
                 NavigationLink {
                     ToolPermissions(agent: agent)
+                        .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "lock.fill", color: .cyan)
@@ -171,6 +176,7 @@ struct SettingsView: View {
         Section {
             NavigationLink {
                 AdvancedSettings()
+                    .hidesTabBar()
             } label: {
                 HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
@@ -192,6 +198,7 @@ struct SettingsView: View {
         Section {
             NavigationLink {
                 DevelopmentMenu()
+                    .hidesTabBar()
             } label: {
                 HStack(spacing: Spacing.n8) {
                     SettingsIcon(systemName: "hammer.fill", color: .orange)
