@@ -349,7 +349,9 @@ pub fn parse_typography(tokens: &Value, fonts: Option<&InstalledFonts>) -> Resul
         let font_family = value.get("fontFamily").and_then(Value::as_str);
         let text_case = value.get("textCase").and_then(Value::as_str);
         let letter_spacing = resolve_letter_spacing(tokens, value, name)?;
+        let font_size = value.get("fontSize").and_then(Value::as_f64);
         let line_height = value.get("lineHeight").and_then(Value::as_f64);
+        let line_spacing = line_height.and_then(|lh| font_size.map(|fs| (lh - fs).max(0.0)));
 
         let font_expr = build_font_expr(value, font_weight, font_family, fonts, name)?;
 
@@ -358,7 +360,7 @@ pub fn parse_typography(tokens: &Value, fonts: Option<&InstalledFonts>) -> Resul
             font_expr,
             text_case: text_case.map(String::from),
             tracking: letter_spacing,
-            line_spacing: line_height,
+            line_spacing,
             description: token
                 .get("$description")
                 .and_then(Value::as_str)

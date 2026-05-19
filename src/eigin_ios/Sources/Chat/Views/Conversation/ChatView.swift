@@ -22,9 +22,7 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var showLiveCall = false
     @State private var voiceDownloadItem: AssetItem?
-    @State private var isEditingTitle = false
-    @State private var editingTitleText = ""
-    @FocusState private var isTitleFocused: Bool
+    @Environment(\.dismiss) private var dismiss
 
     init(chatID: UUID) {
         self.chatID = chatID
@@ -66,6 +64,21 @@ struct ChatView: View {
         @Bindable var viewModel = viewModel
 
         VStack(spacing: 0) {
+            ChatHeaderView(
+                chat: viewModel.chat,
+                onBack: { dismiss() },
+                onPhone: {
+                    if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
+                       !asset.state.isDownloading
+                    {
+                        voiceDownloadItem = AssetItem(asset)
+                    } else {
+                        showLiveCall = true
+                    }
+                },
+                isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting
+            )
+
             if !canSend, viewModel.window.messages.isEmpty {
                 ContentUnavailableView(
                     "No Agent",
@@ -120,26 +133,8 @@ struct ChatView: View {
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                titleView
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
-                       !asset.state.isDownloading
-                    {
-                        voiceDownloadItem = AssetItem(asset)
-                    } else {
-                        showLiveCall = true
-                    }
-                } label: {
-                    Image(systemName: "phone.fill")
-                }
-                .disabled(!canSend || viewModel.isStreaming || viewModel.isCompacting)
-            }
-        }
+        .ignoresSafeArea(edges: .top)
+        .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(isPresented: $showLiveCall) {
             if let agent, let provider = activeProvider {
                 LiveCallView(
@@ -229,53 +224,8 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - Title Editing
-
-    private var titleView: some View {
-        VStack(spacing: 2) {
-            if isEditingTitle {
-                TextField("Chat name", text: $editingTitleText)
-                    .typography(Typography.titleXS)
-                    .multilineTextAlignment(.center)
-                    .focused($isTitleFocused)
-                    .onSubmit { commitTitleEdit() }
-                    .onChange(of: isTitleFocused) { _, focused in
-                        if !focused { commitTitleEdit() }
-                    }
-                    .onAppear {
-                        editingTitleText = viewModel.chat?.title ?? ""
-                        isTitleFocused = true
-                    }
-            } else {
-                Text(viewModel.chat?.title.isEmpty == false ? viewModel.chat!.title : Localized
-                    .Tools.New.chat)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                    .onTapGesture {
-                        editingTitleText = viewModel.chat?.title ?? ""
-                        withAnimation(Animations.snap) {
-                            isEditingTitle = true
-                        }
-                    }
-            }
-        }
-    }
-
     private func syncVoice() {
         var service = speechService
         service.voiceIdentifier = agent?.voiceIdentifier
-    }
-
-    private func commitTitleEdit() {
-        let trimmed = editingTitleText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            viewModel.chat?.title = trimmed
-            viewModel.chat?.titleOrigin = .edited
-            viewModel.chat?.updatedAt = .now
-            Haptics.light()
-        }
-        withAnimation(Animations.snap) {
-            isEditingTitle = false
-        }
     }
 }
