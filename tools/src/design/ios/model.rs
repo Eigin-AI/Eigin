@@ -382,10 +382,16 @@ fn build_font_expr(
             .and_then(|(family, f)| f.postscript_name(family, font_weight));
         match postscript {
             Some(ps) => {
+                let size_str = fmt_cgfloat(font_size);
+                let features = resolve_features(value, font_family, fonts);
+                if features.is_empty() {
+                    return Ok(format!(".custom(\"{}\", size: {})", ps, size_str));
+                }
                 return Ok(format!(
-                    ".custom(\"{}\", size: {})",
+                    ".featuredFont(name: \"{}\", size: {}, features: [{}])",
                     ps,
-                    fmt_cgfloat(font_size)
+                    size_str,
+                    features.join(", ")
                 ));
             }
             None => {
@@ -429,12 +435,52 @@ fn build_font_expr(
                 .and_then(|f| fonts.map(|i| i.scale(f)))
                 .unwrap_or(1.0);
             let size = (base as f64 * scale).round() as u32;
-            Ok(format!(".custom(\"{ps}\", size: {size})"))
+            let features = resolve_features(value, font_family, fonts);
+            if features.is_empty() {
+                Ok(format!(".custom(\"{ps}\", size: {size})"))
+            } else {
+                Ok(format!(
+                    ".featuredFont(name: \"{ps}\", size: {size}, features: [{}])",
+                    features.join(", ")
+                ))
+            }
         }
         None => Ok(format!(
             ".system({swift_style}, design: {swift_design}, weight: {swift_weight})"
         )),
     }
+}
+
+fn resolve_features(
+    value: &Value,
+    font_family: Option<&str>,
+    fonts: Option<&InstalledFonts>,
+) -> Vec<String> {
+    // Typography-level override?
+    if let Some(arr) = value.get("fontFeatures").and_then(Value::as_array) {
+        return arr
+            .iter()
+            .filter_map(|entry| {
+                let obj = entry.as_object()?;
+                let tag = obj.get("tag")?.as_str()?;
+                let val = obj.get("value")?.as_number()?.as_i64()?;
+                Some(format!("FontFeature(tag: \"{tag}\", value: {val})"))
+            })
+            .collect();
+    }
+
+    // Fall back to family-level features
+    let Some(family) = font_family else {
+        return Vec::new();
+    };
+    let Some(installed) = fonts else {
+        return Vec::new();
+    };
+    installed
+        .family_features(family)
+        .iter()
+        .map(|f| format!("FontFeature(tag: \"{}\", value: {})", f.tag, f.value))
+        .collect()
 }
 
 pub fn parse_color_tree(tokens: &Value) -> Result<ColorTree> {

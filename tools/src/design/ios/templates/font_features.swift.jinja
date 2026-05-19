@@ -1,0 +1,25 @@
+{{ header }}import SwiftUI
+import CoreText
+
+/// OpenType font feature descriptor. Used by generated typography tokens.
+struct FontFeature {
+    let tag: String
+    let value: Int
+}
+
+extension Font {
+    /// Creates a custom font with the given PostScript name, size, and OpenType feature settings.
+    static func featuredFont(name: String, size: CGFloat, features: [FontFeature]) -> Font {
+        let settings: [[String: Any]] = features.map { f in
+            [
+                kCTFontOpenTypeFeatureTag as String: f.tag,
+                kCTFontOpenTypeFeatureValue as String: f.value
+            ]
+        }
+        let descriptor = UIFontDescriptor(name: name, size: size)
+            .addingAttributes([
+                kCTFontFeatureSettingsAttribute as UIFontDescriptor.AttributeName: settings
+            ])
+        return Font(UIFont(descriptor: descriptor, size: size))
+    }
+}
