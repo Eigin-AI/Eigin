@@ -10,7 +10,7 @@ packages:
     branch: main
   MCP:
     url: https://github.com/modelcontextprotocol/swift-sdk
-    from: "0.11.0"
+    exactVersion: "0.11.0"
   FluidAudio:
     url: https://github.com/FluidInference/FluidAudio.git
     from: "0.14.6"

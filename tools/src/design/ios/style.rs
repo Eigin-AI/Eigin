@@ -27,6 +27,10 @@ const TEMPLATES: &[(&str, &str)] = &[
         include_str!("templates/typography.swift.jinja"),
     ),
     (
+        "font_features",
+        include_str!("templates/font_features.swift.jinja"),
+    ),
+    (
         "font_registration",
         include_str!("templates/font_registration.swift.jinja"),
     ),
@@ -105,6 +109,15 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
         &output_dir,
         "Grid.swift",
     )?;
+
+    // FontFeatures (static helper for custom font OpenType features)
+    let font_features = env
+        .get_template("font_features")
+        .context("getting font_features")?;
+    let font_features_output = font_features
+        .render(minijinja::context!(header => GENERATED_HEADER))
+        .context("rendering font_features")?;
+    codegen::write_file(&output_dir, "FontFeatures.swift", &font_features_output)?;
 
     // Typography
     let scale = model::parse_typography(tokens, fonts)?;
