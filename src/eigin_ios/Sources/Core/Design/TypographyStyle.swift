@@ -4,7 +4,8 @@ struct TypographyStyle {
     let font: Font
     let textCase: Text.Case?
     let tracking: CGFloat
-    /// Additional line spacing in points (lineHeight - fontSize). Nil when not specified.
+    /// Extra line spacing in points added on top of the font's intrinsic
+    /// line height (`lineHeight - fontSize`). Nil when not specified.
     let lineSpacing: CGFloat?
 
     init(
