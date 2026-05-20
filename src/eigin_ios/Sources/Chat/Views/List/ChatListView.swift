@@ -50,7 +50,7 @@ struct ChatListView: View {
                     },
                     trailing: {
                         AppActionButton(
-                            icon: Image(systemName: "plus.bubble.fill"),
+                            icon: Iconography.Functional.plus,
                             variant: .open,
                             size: .medium,
                             action: createNewChat

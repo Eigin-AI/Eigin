@@ -66,9 +66,9 @@ struct SpaceFilterMenu: View {
         Group {
             if let space = selectedSpace {
                 Text(space.emoji)
-                    .font(.system(size: 28))
+                    .font(.system(size: 22))
             } else {
-                Image(systemName: "line.3.horizontal.decrease")
+                Iconography.Brand.security
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .foregroundStyle(colors.icon.standard.base)

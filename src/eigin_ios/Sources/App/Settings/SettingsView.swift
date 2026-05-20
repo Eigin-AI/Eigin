@@ -3,46 +3,20 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.themeManager) private var themeManager
     @Injected(\.languageManager) private var languageManager
     @Environment(\.colors) private var colors
-    @Environment(\.modelContext) private var modelContext
-    @Injected(\.keychainService) private var keychainService
     @Query(sort: \Agent.createdAt) private var agents: [Agent]
-    @Query(sort: \Provider.createdAt) private var providers: [Provider]
-    @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
-    @State private var showingAddProvider = false
-    @State private var showingAddMCPServer = false
-    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack {
             List {
-                appearanceSection
-                securitySection
-                providersSection
-                mcpServersSection
-                advancedSection
-                developmentSection
+                generalSection
+                agentSection
+                systemSection
             }
             .scrollContentBackground(.hidden)
             .background(colors.surface.standard.base.ignoresSafeArea())
             .navigationTitle(Localized.Ui.settings, style: Typography.titleXl)
-            .sheet(isPresented: $showingAddProvider) {
-                ProviderPicker()
-            }
-            .sheet(isPresented: $showingAddMCPServer) {
-                AddMCPServer()
-            }
-            .navigationDestination(for: PersistentIdentifier.self) { id in
-                if let provider = providers.first(where: { $0.persistentModelID == id }) {
-                    EditProvider(provider: provider, navigationPath: $navigationPath)
-                        .hidesTabBar()
-                } else if let server = mcpServers.first(where: { $0.persistentModelID == id }) {
-                    MCPServerDetail(server: server)
-                        .hidesTabBar()
-                }
-            }
             .tabBarPadding()
         }
         .ignoresSafeArea(.container, edges: .bottom)
@@ -50,35 +24,13 @@ struct SettingsView: View {
 
     // MARK: - Sections
 
-    private var appearanceSection: some View {
+    private var generalSection: some View {
         Section {
-            Group {
-                themePicker
-                languagePicker
-            }
-            .listRowBackground(colors.surface.standard.alternative)
+            languagePicker
+                .listRowBackground(colors.surface.standard.alternative)
         } header: {
-            Text(Localized.Settings.appearance)
+            Text(Localized.Settings.Section.general)
                 .typography(Typography.miniLabel)
-        }
-    }
-
-    private var themePicker: some View {
-        let binding = Binding(
-            get: { themeManager.currentTheme.id },
-            set: { newID in
-                if let theme = ThemeManager.availableThemes
-                    .first(where: { $0.id == newID })
-                {
-                    themeManager.selectTheme(theme)
-                }
-            }
-        )
-
-        return Picker(Localized.Ui.theme, selection: binding) {
-            ForEach(ThemeManager.availableThemes, id: \.id) { theme in
-                Text(theme.name).tag(theme.id)
-            }
         }
     }
 
@@ -95,146 +47,75 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private var securitySection: some View {
-        if let agent = agents.first {
-            Section {
+    private var agentSection: some View {
+        Section {
+            Group {
+                if let agent = agents.first {
+                    NavigationLink {
+                        ToolPermissions(agent: agent)
+                            .hidesTabBar()
+                    } label: {
+                        HStack(spacing: Spacing.n8) {
+                            SettingsIcon(systemName: "lock.fill", color: .cyan)
+                            Text(Localized.Settings.Label.permissions)
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.base)
+                        }
+                    }
+                }
+
                 NavigationLink {
-                    ToolPermissions(agent: agent)
+                    ConnectionsView()
                         .hidesTabBar()
                 } label: {
                     HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "lock.fill", color: .cyan)
-                        Text(Localized.Settings.Label.permissions)
+                        SettingsIcon(systemName: "link", color: .blue)
+                        Text(Localized.Ui.connections)
                             .typography(Typography.navTab)
                             .foregroundStyle(colors.text.standard.base)
                     }
                 }
-                .listRowBackground(colors.surface.standard.alternative)
-            } header: {
-                Text(Localized.Ui.security)
-                    .typography(Typography.miniLabel)
-            }
-        }
-    }
-
-    private var providersSection: some View {
-        Section {
-            ForEach(providers) { provider in
-                NavigationLink(value: provider.persistentModelID) {
-                    providerRow(provider)
-                }
-            }
-            .onDelete(perform: deleteProviders)
-            .listRowBackground(colors.surface.standard.alternative)
-
-            Button(Localized.Settings.Action.addProvider) {
-                showingAddProvider = true
-            }
-            .typography(Typography.navTab)
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Ui.providers)
-                .typography(Typography.miniLabel)
-        }
-    }
-
-    private func providerRow(_ provider: Provider) -> some View {
-        VStack(alignment: .leading) {
-            Text(provider.name)
-                .typography(Typography.navTab)
-            let count = provider.availableModels
-                .count(where: { KnownModelCatalog.lookup($0) != nil })
-            Text(Localized.Settings.Info.modelsAvailable("\(count)"))
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
-        }
-    }
-
-    private var mcpServersSection: some View {
-        Section {
-            ForEach(mcpServers) { server in
-                NavigationLink(value: server.persistentModelID) {
-                    MCPServerRow(server: server)
-                }
-            }
-            .onDelete(perform: deleteMCPServers)
-            .listRowBackground(colors.surface.standard.alternative)
-
-            Button(Localized.Settings.Action.addMcpServer) {
-                showingAddMCPServer = true
-            }
-            .typography(Typography.navTab)
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Ui.mcpServers)
-                .typography(Typography.miniLabel)
-        }
-    }
-
-    private var advancedSection: some View {
-        Section {
-            NavigationLink {
-                AdvancedSettings()
-                    .hidesTabBar()
-            } label: {
-                HStack(spacing: Spacing.n8) {
-                    SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
-                    Text(Localized.Settings.Section.advanced)
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.base)
-                }
             }
             .listRowBackground(colors.surface.standard.alternative)
         } header: {
-            Text(Localized.Settings.Section.advanced)
+            Text(Localized.Settings.Section.agent)
                 .typography(Typography.miniLabel)
         }
     }
 
-    @ViewBuilder
-    private var developmentSection: some View {
+    private var systemSection: some View {
+        Section {
+            Group {
+                NavigationLink {
+                    AdvancedSettings()
+                        .hidesTabBar()
+                } label: {
+                    HStack(spacing: Spacing.n8) {
+                        SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
+                        Text(Localized.Settings.Section.advanced)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
+                    }
+                }
+
 #if DEBUG
-        Section {
-            NavigationLink {
-                DevelopmentMenu()
-                    .hidesTabBar()
-            } label: {
-                HStack(spacing: Spacing.n8) {
-                    SettingsIcon(systemName: "hammer.fill", color: .orange)
-                    Text(Localized.Settings.Section.development)
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.base)
+                NavigationLink {
+                    DevelopmentMenu()
+                        .hidesTabBar()
+                } label: {
+                    HStack(spacing: Spacing.n8) {
+                        SettingsIcon(systemName: "hammer.fill", color: .orange)
+                        Text(Localized.Settings.Section.development)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
+                    }
                 }
+#endif
             }
             .listRowBackground(colors.surface.standard.alternative)
         } header: {
-            Text(Localized.Settings.Section.development)
+            Text(Localized.Settings.Section.system)
                 .typography(Typography.miniLabel)
-        }
-#endif
-    }
-
-    private func deleteProviders(at offsets: IndexSet) {
-        for index in offsets {
-            let provider = providers[index]
-            keychainService.delete(key: keychainService.providerKey(for: provider.id))
-
-            if ProviderPreset.isLocal(provider.baseURL) {
-                GemmaModelManager.shared.delete()
-            }
-
-            modelContext.delete(provider)
-        }
-    }
-
-    private func deleteMCPServers(at offsets: IndexSet) {
-        for index in offsets {
-            let server = mcpServers[index]
-            for suffix in MCPServer.keychainSuffixes {
-                keychainService.delete(key: keychainService.mcpKey(for: server.id, suffix: suffix))
-            }
-            modelContext.delete(server)
         }
     }
 }

@@ -5,10 +5,10 @@ import SwiftUI
 /// Edit flow for an existing provider: API key re-validation and model refresh.
 struct EditProvider: View {
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Injected(\.keychainService) private var keychainService
 
     @Bindable var provider: Provider
-    @Binding var navigationPath: NavigationPath
 
     @State private var apiKey = ""
     @State private var isConnecting = false
@@ -106,7 +106,7 @@ struct EditProvider: View {
                 )
 
                 isConnecting = false
-                navigationPath = NavigationPath()
+                dismiss()
             } catch {
                 connectionError = ConnectionError(from: error)
                 isConnecting = false

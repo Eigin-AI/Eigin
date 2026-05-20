@@ -5,48 +5,69 @@ import SwiftUI
 
 /// Content for the provider connection sheet.
 ///
-/// Handles OAuth or API key connection depending on the preset.
+/// Handles OAuth, API key, or custom connection setup depending on `mode`.
 /// Calls back with the created provider.
 struct ProviderConnectSheetContent: View {
+    enum Mode {
+        case preset(ProviderPreset)
+        case custom
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Injected(\.keychainService) private var keychainService
 
-    let preset: ProviderPreset
+    let mode: Mode
     let onComplete: (Provider) -> Void
     let onBack: () -> Void
 
     init(
-        preset: ProviderPreset,
+        mode: Mode,
         onComplete: @escaping (Provider) -> Void,
         onBack: @escaping () -> Void
     ) {
-        self.preset = preset
+        self.mode = mode
         self.onComplete = onComplete
         self.onBack = onBack
-        oauthService = preset.authMethod == .oAuthPKCE
-            ? DefaultOAuthPKCEService(preset: preset)
-            : nil
+        oauthService = if case .preset(let preset) = mode, preset.authMethod == .oAuthPKCE {
+            DefaultOAuthPKCEService(preset: preset)
+        } else {
+            nil
+        }
+    }
+
+    private var preset: ProviderPreset? {
+        if case .preset(let p) = mode { p } else { nil }
+    }
+
+    private var displayName: String {
+        preset?.name ?? Localized.Provider.Picker.customProvider
     }
 
     var body: some View {
         Group {
-            if preset.authMethod == .oAuthPKCE {
-                oauthFlow
-            } else {
-                apiKeyFlow
+            switch mode {
+            case .preset(let preset):
+                if preset.authMethod == .oAuthPKCE {
+                    oauthFlow
+                } else {
+                    apiKeyFlow
+                }
+            case .custom:
+                customFlow
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
         .sheet(isPresented: $showCreditsURL) {
-            if let urlString = preset.apiKeyURL, let url = URL(string: urlString) {
+            if let urlString = preset?.apiKeyURL, let url = URL(string: urlString) {
                 SafariView(url: url)
             }
         }
         .task {
-            guard preset.authMethod == .oAuthPKCE, oauthKey == nil,
-                  !isAuthenticating else { return }
+            guard case .preset(let p) = mode, p.authMethod == .oAuthPKCE,
+                  oauthKey == nil, !isAuthenticating
+            else { return }
             startOAuth()
         }
     }
@@ -70,7 +91,7 @@ struct ProviderConnectSheetContent: View {
             if isAuthenticating {
                 VStack(spacing: Spacing.n16) {
                     ProgressView()
-                    Text(Localized.Onboarding.Provider.signingIn(preset.name))
+                    Text(Localized.Onboarding.Provider.signingIn(displayName))
                         .typography(Typography.description)
                         .foregroundStyle(colors.text.standard.muted)
                         .multilineTextAlignment(.center)
@@ -93,7 +114,7 @@ struct ProviderConnectSheetContent: View {
                     .foregroundStyle(colors.accent)
 
                 VStack(spacing: Spacing.n8) {
-                    Text(Localized.Onboarding.Provider.connectedTo(preset.name))
+                    Text(Localized.Onboarding.Provider.connectedTo(displayName))
                         .typography(Typography.titleXS)
 
                     Text(Localized.Onboarding.Provider.creditsWarning)
@@ -103,7 +124,7 @@ struct ProviderConnectSheetContent: View {
                 }
 
                 AppButton(
-                    Localized.Onboarding.Provider.addCreditsLabel(preset.name),
+                    Localized.Onboarding.Provider.addCreditsLabel(displayName),
                     variant: .secondary,
                     size: .medium
                 ) {
@@ -178,29 +199,9 @@ struct ProviderConnectSheetContent: View {
     private var apiKeyFlow: some View {
         VStack(spacing: Sizing.PageLayout.gap) {
             if isConnecting {
-                VStack(spacing: Spacing.n16) {
-                    Spacer()
-                    ProgressView()
-                    Text(Localized.Onboarding.Provider.signingIn(preset.name))
-                        .typography(Typography.description)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                }
+                connectingState
             } else if let error = connectionError {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    errorContent(error)
-
-                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                        AppButton(Localized.Provider.tryAgain) {
-                            connectionError = nil
-                        }
-                        AppButton(
-                            Localized.Provider.Setup.changeProvider,
-                            variant: .secondary
-                        ) { onBack() }
-                    }
-                }
+                errorState(error)
             } else {
                 VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                     AppTextInput(
@@ -214,7 +215,7 @@ struct ProviderConnectSheetContent: View {
                     }
                     .disabled(!isAPIKeyValid)
 
-                    if let urlString = preset.apiKeyURL,
+                    if let urlString = preset?.apiKeyURL,
                        let url = URL(string: urlString)
                     {
                         Link("Get API Key", destination: url)
@@ -224,6 +225,79 @@ struct ProviderConnectSheetContent: View {
             }
         }
         .padding(.horizontal, Spacing.n24)
+    }
+
+    // MARK: - Custom Flow
+
+    @State private var customName = ""
+    @State private var customBaseURL = ""
+
+    private var isCustomFormValid: Bool {
+        !customName.trimmingCharacters(in: .whitespaces).isEmpty
+            && !customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !apiKey.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var customFlow: some View {
+        VStack(spacing: Sizing.PageLayout.gap) {
+            if isConnecting {
+                connectingState
+            } else if let error = connectionError {
+                errorState(error)
+            } else {
+                VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                    AppTextInput(
+                        label: Localized.Provider.Add.nameField,
+                        text: $customName
+                    )
+                    AppTextInput(
+                        label: Localized.Provider.Add.baseUrlField,
+                        text: $customBaseURL
+                    )
+                    AppTextInput(
+                        label: Localized.Common.Fields.apiKey,
+                        text: $apiKey,
+                        isSecure: true
+                    )
+
+                    AppButton(Localized.Ui.connect) {
+                        connectCustom()
+                    }
+                    .disabled(!isCustomFormValid)
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.n24)
+    }
+
+    // MARK: - Shared States
+
+    private var connectingState: some View {
+        VStack(spacing: Spacing.n16) {
+            Spacer()
+            ProgressView()
+            Text(Localized.Onboarding.Provider.signingIn(displayName))
+                .typography(Typography.description)
+                .foregroundStyle(colors.text.standard.muted)
+                .multilineTextAlignment(.center)
+            Spacer()
+        }
+    }
+
+    private func errorState(_ error: ConnectionError) -> some View {
+        VStack(spacing: Sizing.PageLayout.gap) {
+            errorContent(error)
+
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Provider.tryAgain) {
+                    connectionError = nil
+                }
+                AppButton(
+                    Localized.Provider.Setup.changeProvider,
+                    variant: .secondary
+                ) { onBack() }
+            }
+        }
     }
 
     // MARK: - Create Provider
@@ -236,6 +310,12 @@ struct ProviderConnectSheetContent: View {
         createProviderAndContinue(apiToken: apiKey.trimmingCharacters(in: .whitespaces))
     }
 
+    private func connectCustom() {
+        connectionError = nil
+        isConnecting = true
+        createProviderAndContinue(apiToken: apiKey.trimmingCharacters(in: .whitespaces))
+    }
+
     private func createProviderAndContinue(apiToken: String? = nil) {
         let token = apiToken ?? oauthKey ?? ""
         guard !token.isEmpty else {
@@ -243,16 +323,27 @@ struct ProviderConnectSheetContent: View {
             return
         }
 
+        let providerName: String
+        let providerBaseURL: String
+        switch mode {
+        case .preset(let preset):
+            providerName = preset.name
+            providerBaseURL = preset.baseURL
+        case .custom:
+            providerName = customName.trimmingCharacters(in: .whitespaces)
+            providerBaseURL = customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
         Task {
             do {
                 let client = LLMClientFactory.client(
-                    baseURL: preset.baseURL, apiToken: token
+                    baseURL: providerBaseURL, apiToken: token
                 )
                 let modelIDs = try await client.fetchModels()
 
                 let provider = Provider(
-                    name: preset.name,
-                    baseURL: preset.baseURL
+                    name: providerName,
+                    baseURL: providerBaseURL
                 )
                 provider.availableModels = modelIDs
                 provider.enabledModels = [KnownModelCatalog.bestModel(from: modelIDs) ?? ""]
