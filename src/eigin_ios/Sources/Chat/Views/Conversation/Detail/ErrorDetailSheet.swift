@@ -1,50 +1,38 @@
 import SwiftUI
 
-/// Detail sheet for viewing and copying full error information.
+/// Content view for viewing and copying full error information.
+///
+/// Present with the ``.appSheet`` modifier; this view provides only the
+/// scrollable content.
 struct ErrorDetailSheet: View {
     let error: ConnectionError
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colors) private var colors
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.n24) {
-                    HStack(spacing: Spacing.n8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(colors.text.standard.error)
-                        Text(error.title)
-                            .font(Typography.body.font.weight(.medium))
-                            .foregroundStyle(colors.text.standard.error)
-                    }
-
-                    DetailSection(title: "Suggestion") {
-                        Text(error.suggestion)
-                            .typography(Typography.body)
-                            .foregroundStyle(colors.text.standard.base)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if let raw = error.rawDescription {
-                        DetailSection(title: "Raw Error") {
-                            DetailCodeBlock(code: raw)
-                        }
-                    }
-                }
-                .padding()
+        VStack(alignment: .leading, spacing: Spacing.n24) {
+            HStack(spacing: Spacing.n8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(colors.text.standard.error)
+                Text(error.title)
+                    .font(Typography.body.font.weight(.medium))
+                    .foregroundStyle(colors.text.standard.error)
             }
-            .background(colors.surface.standard.base)
-            .navigationTitle("Error Details", style: Typography.titleXl)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+
+            DetailSection(title: "Suggestion") {
+                Text(error.suggestion)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.base)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let raw = error.rawDescription {
+                DetailSection(title: "Raw Error") {
+                    DetailCodeBlock(code: raw)
                 }
             }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .padding()
     }
 }
 

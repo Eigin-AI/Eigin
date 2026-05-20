@@ -5,5 +5,5 @@ enum AppButtonVariant {
 }
 
 enum AppButtonSize {
-    case large, medium, small
+    case large, medium, small, extraSmall
 }

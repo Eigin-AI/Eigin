@@ -49,6 +49,7 @@ struct AppActionButton: View {
         case .large: Sizing.Button.Action.large
         case .medium: Sizing.Button.Action.medium
         case .small: Sizing.Button.Action.small
+        case .extraSmall: Sizing.Button.Action.extraSmall
         }
     }
 
@@ -57,6 +58,7 @@ struct AppActionButton: View {
         case .large: Sizing.Button.Icon.large
         case .medium: Sizing.Button.Icon.medium
         case .small: Sizing.Button.Icon.small
+        case .extraSmall: Sizing.Button.Icon.extraSmall
         }
     }
 
@@ -136,6 +138,30 @@ struct AppActionButton: View {
             ) {}
             AppActionButton(icon: Image(systemName: "pause.fill"), variant: .spot, size: .small) {}
             AppActionButton(icon: Image(systemName: "pause.fill"), variant: .open, size: .small) {}
+        }
+    }
+    .resolveTheme()
+}
+
+#Preview("ExtraSmall") {
+    ButtonPreview {
+        VStack(spacing: Spacing.n16) {
+            AppActionButton(icon: Image(systemName: "pause.fill"), size: .extraSmall) {}
+            AppActionButton(
+                icon: Image(systemName: "pause.fill"),
+                variant: .secondary,
+                size: .extraSmall
+            ) {}
+            AppActionButton(
+                icon: Image(systemName: "pause.fill"),
+                variant: .spot,
+                size: .extraSmall
+            ) {}
+            AppActionButton(
+                icon: Image(systemName: "pause.fill"),
+                variant: .open,
+                size: .extraSmall
+            ) {}
         }
     }
     .resolveTheme()

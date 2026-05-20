@@ -1,88 +1,163 @@
 import SwiftUI
 
+/// Chat input with two visual states driven by focus.
+///
+/// Inactive: single-row pill with compact inline buttons on the right.
+/// Active: text field expands into a card with a footer row for buttons.
 struct AppChatInput: View {
     enum MicState { case idle, active, error }
 
     @Binding var text: String
     var placeholder: String = "Chat with Eigin"
     var isSendEnabled: Bool = false
+    var showStopButton: Bool = false
     var micState: MicState = .idle
     var onSend: () -> Void
+    var onStop: (() -> Void)?
     var onMicTap: () -> Void
+    var onActionTap: (() -> Void)?
 
-    @FocusState private var isFocused: Bool
+    var isFocused: FocusState<Bool>.Binding?
+    @FocusState private var internalFocus: Bool
     @Environment(\.colors) private var colors
-    /// Single state drives all visual changes through one withAnimation context.
-    @State private var isActive = false
+
+    private var focusBinding: FocusState<Bool>.Binding {
+        isFocused ?? $internalFocus
+    }
+
+    // Visual states — driven from isFocused, each with its own animation speed.
+    @State private var textActive = false
+    @State private var boxExpanded = false
+    @State private var showInline = true
+    @State private var showFooter = false
 
     var body: some View {
-        HStack(spacing: isActive ? Spacing.n16 : Spacing.n8) {
-            ZStack(alignment: .leading) {
-                TextField(placeholder, text: $text, axis: .vertical)
-                    .typography(Typography.chatMessageUser)
-                    .foregroundStyle(colors.text.standard.base)
-                    .lineLimit(isActive ? 1 ... 10 : 1 ... 1)
-                    .focused($isFocused)
-                    .opacity(isActive ? 1 : 0)
-                    .allowsHitTesting(isActive)
+        VStack(spacing: showFooter ? Spacing.n8 : 0) {
+            HStack(spacing: Spacing.n16) {
+                textFieldArea
+                    .frame(maxWidth: .infinity)
 
-                if !isActive {
-                    Text(text.isEmpty ? placeholder : text)
-                        .typography(Typography.chatMessageUser)
-                        .foregroundStyle(text.isEmpty
-                            ? colors.text.standard.muted
-                            : colors.text.standard.base)
-                        .lineLimit(1)
-                        .truncationMode(micState == .active ? .head : .tail)
-                        .allowsHitTesting(false)
+                if showInline {
+                    inlineButtons
                         .transition(.opacity)
-                        .id(micState)
                 }
             }
-            .frame(maxWidth: .infinity)
 
-            AppActionButton(
-                icon: Image(systemName: micState == .active ? "mic.fill" : "mic"),
-                variant: micState == .active ? .spot : .open,
-                size: isActive ? .small : .medium,
-                action: onMicTap
-            )
-            .pulse(isActive: micState == .active)
-            .animation(Animations.smooth, value: micState)
-
-            AppActionButton(
-                icon: Image(systemName: "arrow.up"),
-                variant: .primary,
-                size: isActive ? .small : .medium,
-                action: onSend
-            )
-            .disabled(!isSendEnabled)
+            if showFooter {
+                footerButtons
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
-        .padding(.vertical, isActive ? Spacing.n24 : Spacing.n8)
-        .padding(.leading, isActive ? Spacing.n32 : Sizing.Input.Px.left)
-        .padding(.trailing, isActive ? Spacing.n16 : Sizing.Input.Px.right)
+        .frame(minHeight: Sizing.Button.Action.medium)
+        .padding(.vertical, boxExpanded ? Spacing.n24 : Spacing.n8)
+        .padding(.leading, boxExpanded ? Spacing.n32 : Sizing.Input.Px.left)
+        .padding(.trailing, boxExpanded ? Spacing.n16 : Sizing.Input.Px.right)
         .background {
-            // Very large radii breaks animations for uneven rectangles
-            // We clamp it to a maximum of 100 so the animation works
             let pillRadius: CGFloat = min(Radius.full, 100)
             UnevenRoundedRectangle(cornerRadii: RectangleCornerRadii(
-                topLeading: isActive ? Radius.card : pillRadius,
-                bottomLeading: isActive ? 0 : pillRadius,
-                bottomTrailing: isActive ? 0 : pillRadius,
-                topTrailing: isActive ? Radius.card : pillRadius
+                topLeading: boxExpanded ? Radius.card : pillRadius,
+                bottomLeading: boxExpanded ? 0 : pillRadius,
+                bottomTrailing: boxExpanded ? 0 : pillRadius,
+                topTrailing: boxExpanded ? Radius.card : pillRadius
             ))
             .fill(colors.surface.standard.elevated)
         }
-        .onTapGesture { isFocused = true }
-        .padding(.horizontal, isActive ? 0 : Spacing.n8)
+        .onTapGesture { focusBinding.wrappedValue = true }
+        .padding(.horizontal, boxExpanded ? 0 : Spacing.n8)
         .frame(maxWidth: .infinity)
-        .animation(Animations.smooth, value: text)
-        .animation(Animations.smooth, value: micState)
-        .onChange(of: isFocused) { _, focused in
-            withAnimation(Animations.smooth) {
-                isActive = focused
+        .animation(Animations.snap, value: showFooter)
+        .animation(Animations.smooth, value: boxExpanded)
+        .animation(Animations.snap, value: textActive)
+        .animation(Animations.smooth, value: showStopButton)
+        .animation(Animations.snap, value: micState)
+        .onChange(of: focusBinding.wrappedValue) { _, focused in
+            textActive = focused
+            boxExpanded = focused
+            showInline = !focused
+            showFooter = focused
+        }
+    }
+
+    // MARK: - Text Field Area
+
+    private var textFieldArea: some View {
+        ZStack(alignment: .leading) {
+            TextField(placeholder, text: $text, axis: .vertical)
+                .typography(Typography.chatMessageUser)
+                .foregroundStyle(colors.text.standard.base)
+                .lineLimit(textActive ? 1 ... 10 : 1 ... 1)
+                .focused(focusBinding)
+                .opacity(textActive ? 1 : 0)
+                .allowsHitTesting(textActive)
+
+            if !textActive {
+                Text(text.isEmpty ? placeholder : text)
+                    .typography(Typography.chatMessageUser)
+                    .foregroundStyle(text.isEmpty
+                        ? colors.text.standard.muted
+                        : colors.text.standard.base)
+                    .lineLimit(1)
+                    .truncationMode(micState == .active ? .head : .tail)
+                    .allowsHitTesting(false)
             }
         }
+    }
+
+    // MARK: - Inline Buttons (inactive)
+
+    private var inlineButtons: some View {
+        HStack(spacing: Spacing.n16) {
+            if onActionTap != nil {
+                AppActionButton(
+                    icon: Iconography.Functional.plus,
+                    variant: .secondary,
+                    size: .extraSmall,
+                    action: { onActionTap?() }
+                )
+            }
+            micButton(size: .extraSmall)
+            sendOrStopButton(size: .medium)
+        }
+    }
+
+    // MARK: - Footer Buttons (active)
+
+    private var footerButtons: some View {
+        HStack(spacing: Spacing.n16) {
+            if onActionTap != nil {
+                AppActionButton(
+                    icon: Iconography.Functional.plus,
+                    variant: .secondary,
+                    size: .extraSmall,
+                    action: { onActionTap?() }
+                )
+            }
+            Spacer()
+            micButton(size: .extraSmall)
+            sendOrStopButton(size: .extraSmall)
+        }
+    }
+
+    // MARK: - Shared Buttons
+
+    private func micButton(size: AppButtonSize) -> some View {
+        AppActionButton(
+            icon: Iconography.Functional.microphone,
+            variant: micState == .active ? .spot : .secondary,
+            size: size,
+            action: onMicTap
+        )
+        .pulse(isActive: micState == .active)
+    }
+
+    private func sendOrStopButton(size: AppButtonSize) -> some View {
+        AppActionButton(
+            icon: showStopButton ? Iconography.Brand.pause : Iconography.Functional.Arrow.up,
+            variant: .primary,
+            size: size,
+            action: showStopButton ? (onStop ?? {}) : onSend
+        )
+        .disabled(!showStopButton && !isSendEnabled)
     }
 }
 
@@ -105,9 +180,27 @@ private struct AppChatInputStatesPreview: View {
 
     var body: some View {
         VStack(spacing: Spacing.n24) {
-            AppChatInput(text: $text, isSendEnabled: false, onSend: {}, onMicTap: {})
-            AppChatInput(text: $filledText, isSendEnabled: true, onSend: {}, onMicTap: {})
-            AppChatInput(text: $text, micState: .active, onSend: {}, onMicTap: {})
+            AppChatInput(
+                text: $text,
+                isSendEnabled: false,
+                onSend: {},
+                onMicTap: {},
+                onActionTap: {}
+            )
+            AppChatInput(
+                text: $filledText,
+                isSendEnabled: true,
+                onSend: {},
+                onMicTap: {},
+                onActionTap: {}
+            )
+            AppChatInput(
+                text: $text,
+                micState: .active,
+                onSend: {},
+                onMicTap: {},
+                onActionTap: {}
+            )
         }
         .padding(.vertical, Spacing.n24)
         .background(colors.surface.standard.base)
@@ -137,7 +230,8 @@ private struct AppChatInputInteractionPreview: View {
                     isSendEnabled: !text.trimmingCharacters(in: .whitespaces).isEmpty,
                     micState: micState,
                     onSend: { text = "" },
-                    onMicTap: { micState = micState == .active ? .idle : .active }
+                    onMicTap: { micState = micState == .active ? .idle : .active },
+                    onActionTap: {}
                 )
                 .padding(.bottom, Spacing.n8)
             }

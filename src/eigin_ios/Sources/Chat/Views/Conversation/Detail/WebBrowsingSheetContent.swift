@@ -9,13 +9,10 @@ import WebKit
 /// 3. Scanning overlay sweeps while the agent extracts text
 /// 4. After extraction, scanning stops and page lingers briefly
 /// 5. Completion fires, input bar transitions back to normal
-struct WebBrowsingView: View {
+struct WebBrowsingSheetContent: View {
     let request: BrowsingRequest
-    let agentName: String
     let onComplete: (BrowsingResult) -> Void
-    var onStop: (() -> Void)?
-
-    @Environment(\.colors) private var colors
+    var onPageReadyChanged: ((Bool) -> Void)?
 
     @State private var pageReady = false
     /// Guards against double-completion (linger vs display timeout race).
@@ -26,59 +23,16 @@ struct WebBrowsingView: View {
     /// Maximum time the browsing view stays on screen before auto-completing.
     private let maxDisplayDuration: Duration = .seconds(20)
 
-    private var actor: String {
-        agentName.isEmpty || agentName.count > 20 ? "Agent" : agentName
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            // Status line + stop button
-            HStack {
-                Group {
-                    if !pageReady {
-                        Text(Localized.Agent.Status.loadingPage(actor))
-                    } else {
-                        Text(Localized.Agent.Status.readingPage(actor))
-                    }
-                }
-                .typography(Typography.note)
-                .foregroundStyle(colors.text.standard.muted)
-                .contentTransition(.interpolate)
-                .animation(Animations.smooth, value: pageReady)
-
-                Spacer()
-
-                if let onStop {
-                    Button {
-                        Haptics.light()
-                        onStop()
-                    } label: {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(colors.accent)
-                            .clipShape(Circle())
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .padding(.bottom, Spacing.n8)
-
-            // Web view — breaks out of ChatBottomBox padding to feel full-width
-            BrowsingWebView(
-                url: request.url,
-                onCommit: { handlePageCommit() },
-                onResult: { result in handleWebViewResult(result) }
-            )
-            .containerRelativeFrame(.vertical) { height, _ in height * 0.45 }
-            .allowsHitTesting(false)
-            .opacity(pageReady ? 1 : 0)
-            .animation(.easeIn(duration: 0.6), value: pageReady)
-            // Bleed into the ChatBottomBox padding on sides and bottom
-            .padding(.horizontal, -Spacing.n16)
-            .padding(.bottom, -Spacing.n16)
-        }
+        BrowsingWebView(
+            url: request.url,
+            onCommit: { handlePageCommit() },
+            onResult: { result in handleWebViewResult(result) }
+        )
+        .containerRelativeFrame(.vertical) { height, _ in height }
+        .allowsHitTesting(false)
+        .opacity(pageReady ? 1 : 0)
+        .animation(Animations.gentle, value: pageReady)
         .onAppear {
             startDisplayTimeout()
         }
@@ -90,6 +44,7 @@ struct WebBrowsingView: View {
     private func handlePageCommit() {
         guard !pageReady else { return }
         pageReady = true
+        onPageReadyChanged?(true)
     }
 
     /// Called when WKWebView has finished loading and text has been extracted.

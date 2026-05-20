@@ -71,6 +71,7 @@ struct AppButton<Trailing: View>: View {
         case .large: Sizing.Button.Height.large
         case .medium: Sizing.Button.Height.medium
         case .small: Sizing.Button.Height.small
+        case .extraSmall: Sizing.Button.Height.extraSmall
         }
     }
 
@@ -79,6 +80,7 @@ struct AppButton<Trailing: View>: View {
         case .large: Sizing.Button.Gap.large
         case .medium: Sizing.Button.Gap.medium
         case .small: Sizing.Button.Gap.small
+        case .extraSmall: Sizing.Button.Gap.extraSmall
         }
     }
 
@@ -86,7 +88,7 @@ struct AppButton<Trailing: View>: View {
         if variant == .open { return 0 }
         return switch size {
         case .large, .medium: Spacing.n40
-        case .small: Spacing.n24
+        case .small, .extraSmall: Spacing.n24
         }
     }
 
@@ -94,7 +96,7 @@ struct AppButton<Trailing: View>: View {
         switch size {
         case .large: Typography.buttonLarge
         case .medium: Typography.button
-        case .small: Typography.buttonSmall
+        case .small, .extraSmall: Typography.buttonSmall
         }
     }
 
@@ -180,6 +182,18 @@ struct ButtonPreview<Content: View>: View {
             AppButton("Secondary", variant: .secondary, size: .small) {}
             AppButton("Spot", variant: .spot, size: .small) {}
             AppButton("Open", variant: .open, size: .small) {}
+        }
+    }
+    .resolveTheme()
+}
+
+#Preview("ExtraSmall") {
+    ButtonPreview {
+        VStack(alignment: .leading, spacing: Spacing.n16) {
+            AppButton("Primary", size: .extraSmall) {}
+            AppButton("Secondary", variant: .secondary, size: .extraSmall) {}
+            AppButton("Spot", variant: .spot, size: .extraSmall) {}
+            AppButton("Open", variant: .open, size: .extraSmall) {}
         }
     }
     .resolveTheme()
