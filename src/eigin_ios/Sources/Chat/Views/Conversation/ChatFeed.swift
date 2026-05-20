@@ -42,6 +42,9 @@ struct ChatFeed: View {
     let pagination: FeedPagination
     let interactions: FeedInteractions
     let context: FeedContext
+    /// When false, the input's action button is hidden regardless of what's available.
+    /// Use for surfaces (onboarding, bootstrap) where actions don't apply.
+    let showsInputActions: Bool
     /// Item ID whose footer should fade in (set when a streaming turn just ended).
     var lastStreamedItemID: String?
 
@@ -81,6 +84,7 @@ struct ChatFeed: View {
         pagination: FeedPagination = FeedPagination(),
         interactions: FeedInteractions = FeedInteractions(),
         context: FeedContext = FeedContext(),
+        showsInputActions: Bool = true,
         lastStreamedItemID: String? = nil
     ) {
         self.items = items
@@ -93,6 +97,7 @@ struct ChatFeed: View {
         self.pagination = pagination
         self.interactions = interactions
         self.context = context
+        self.showsInputActions = showsInputActions
         self.lastStreamedItemID = lastStreamedItemID
     }
 
@@ -211,6 +216,15 @@ struct ChatFeed: View {
                 UIApplication.shared.isIdleTimerDisabled = false
                 speechService.stop()
             }
+    }
+
+    /// Closure for the input's action button, or `nil` to hide it.
+    /// Returns `nil` when the surface opts out or when no individual action is available.
+    private var inputAction: (() -> Void)? {
+        guard showsInputActions else { return nil }
+        let hasMoveToSpace = context.onMoveToSpace != nil && !context.spaces.isEmpty
+        guard hasMoveToSpace else { return nil }
+        return { showActionSheet = true }
     }
 
     private var actorName: String {
@@ -343,7 +357,7 @@ struct ChatFeed: View {
                     agentName: context.agentName,
                     permissionRequest: interactions.permissionRequest,
                     onPermissionResponse: interactions.onPermissionResponse,
-                    onActionTap: { showActionSheet = true }
+                    onActionTap: inputAction
                 )
                 .ignoresSafeArea(.container, edges: .horizontal)
             }

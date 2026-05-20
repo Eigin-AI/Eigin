@@ -15,6 +15,7 @@ struct OnboardingChat: View {
     let provider: Provider
     let model: String
     let onReveal: (Agent, String, OnboardingPriority?) -> Void
+    let onBack: () -> Void
 
     @State private var orchestrator = OnboardingOrchestrator(
         greeting: LocalOnboardingScript.greeting,
@@ -33,15 +34,18 @@ struct OnboardingChat: View {
     @State private var streamTask: Task<Void, Never>?
     @State private var didAppear = false
     @State private var isGenerating = false
+    @State private var chatError: ConnectionError?
 
     init(
         provider: Provider,
         model: String,
-        onReveal: @escaping (Agent, String, OnboardingPriority?) -> Void
+        onReveal: @escaping (Agent, String, OnboardingPriority?) -> Void,
+        onBack: @escaping () -> Void
     ) {
         self.provider = provider
         self.model = model
         self.onReveal = onReveal
+        self.onBack = onBack
 
         let initialAgent = Agent(name: "Agent", providerID: provider.id, model: model)
         _agent = State(initialValue: initialAgent)
@@ -55,7 +59,7 @@ struct OnboardingChat: View {
         ChatItem.buildItems(
             from: displayedMessages + chatLoop.committedMessages,
             chatLoop: chatLoop,
-            chatError: nil
+            chatError: chatError
         )
     }
 
@@ -64,30 +68,52 @@ struct OnboardingChat: View {
     }
 
     var body: some View {
-        ChatFeed(
-            items: chatItems,
-            throttler: chatLoop.throttler,
-            splitter: chatLoop.splitter,
-            messageText: $messageText,
-            isInputDisabled: isInputDisabled,
-            onSend: { _ in handleSend() },
-            onStop: nil,
-            lastStreamedItemID: chatLoop.lastStreamedItemID
-        )
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let options = orchestrator.options, !isStreaming {
-                VStack(spacing: 0) {
-                    Divider()
-                    optionsRow(options)
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: onBack
+                    )
+                },
+                center: {
+                    AppBrandAvatar(image: Iconography.Brand.avatar, action: {})
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            )
+
+            ChatFeed(
+                items: chatItems,
+                throttler: chatLoop.throttler,
+                splitter: chatLoop.splitter,
+                messageText: $messageText,
+                isInputDisabled: isInputDisabled,
+                onSend: { _ in handleSend() },
+                onStop: nil,
+                showsInputActions: false,
+                lastStreamedItemID: chatLoop.lastStreamedItemID
+            )
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let options = orchestrator.options, !isStreaming {
+                    VStack(spacing: 0) {
+                        Divider()
+                        optionsRow(options)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
+            .animation(.spring(duration: 0.35, bounce: 0), value: orchestrator.options != nil)
         }
-        .animation(.spring(duration: 0.35, bounce: 0), value: orchestrator.options != nil)
         .background(colors.surface.standard.base.ignoresSafeArea())
+        .ignoresSafeArea(edges: .top)
         .task {
             guard !didAppear else { return }
             didAppear = true
+            let seededHello = Localized.Onboarding.Welcome.greeting
+                + " "
+                + Localized.Onboarding.Welcome.emoji
+            displayedMessages.append(ChatMessage(role: "user", content: seededHello))
             let scriptedService = ScriptedChatService(
                 text: orchestrator.greeting,
                 thinkingDelay: .milliseconds(Int.random(in: 500 ... 1000))
@@ -104,6 +130,7 @@ struct OnboardingChat: View {
                 let completed = chatLoop.completeRound()
                 displayedMessages.append(contentsOf: completed)
             } catch {
+                chatError = ConnectionError(from: error)
                 chatLoop.abort()
             }
         }
@@ -134,6 +161,7 @@ struct OnboardingChat: View {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
 
+        chatError = nil
         displayedMessages.append(ChatMessage(role: "user", content: text))
         messageText = ""
 
@@ -152,12 +180,14 @@ struct OnboardingChat: View {
                 )
                 await handleOutput(output)
             } catch {
+                chatError = ConnectionError(from: error)
                 chatLoop.abort()
             }
         }
     }
 
     private func handleSelect(_ option: String) {
+        chatError = nil
         displayedMessages.append(ChatMessage(role: "user", content: option))
 
         // Force the typing indicator to show immediately
@@ -175,6 +205,7 @@ struct OnboardingChat: View {
                 )
                 await handleOutput(output)
             } catch {
+                chatError = ConnectionError(from: error)
                 chatLoop.abort()
             }
         }
@@ -216,6 +247,7 @@ struct OnboardingChat: View {
                 let completed = chatLoop.completeRound()
                 displayedMessages.append(contentsOf: completed)
             } catch {
+                chatError = ConnectionError(from: error)
                 chatLoop.abort()
             }
 
@@ -236,6 +268,7 @@ struct OnboardingChat: View {
                 let completed = chatLoop.completeRound()
                 displayedMessages.append(contentsOf: completed)
             } catch {
+                chatError = ConnectionError(from: error)
                 chatLoop.abort()
             }
 

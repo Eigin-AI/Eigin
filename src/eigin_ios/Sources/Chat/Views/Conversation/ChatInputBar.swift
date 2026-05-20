@@ -61,9 +61,11 @@ struct ChatInputBar: View {
             onSend: send,
             onStop: stopStreaming,
             onMicTap: isDictating ? stopDictation : startDictation,
-            onActionTap: {
-                Haptics.light()
-                onActionTap?()
+            onActionTap: onActionTap.map { tap in
+                {
+                    Haptics.light()
+                    tap()
+                }
             },
             isFocused: isFocused
         )

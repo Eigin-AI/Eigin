@@ -6,6 +6,7 @@ import UserNotifications
 /// App entry point. Initializes all services and injects them into the view hierarchy.
 @main
 struct EiginApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var themeManager = ThemeManager()
 
     init() {

@@ -179,7 +179,7 @@ enum LocalOnboardingScript {
                 ),
                 FewShotExample(
                     userMessage: "[Assistant: \"Would you prefer brief or detailed?\"] \"Brief please\"",
-                    assistantResponse: "<style reason=\"The user chose brief from assistant's options\">concise and direct</style>"
+                    assistantResponse: "<style reason=\"The user chose brief from assistant's options\">brief</style>"
                 ),
                 FewShotExample(
                     userMessage: "[Assistant: \"So you'd prefer concise and direct?\"] \"Yeah exactly\"",
@@ -187,23 +187,23 @@ enum LocalOnboardingScript {
                 ),
                 FewShotExample(
                     userMessage: "Can we act like sparring partners?",
-                    assistantResponse: "<style reason=\"The user explicitly asked for sparring\">sparring partner</style>"
+                    assistantResponse: "<style reason=\"The user asked for sparring\">sparring partner</style>"
                 ),
                 FewShotExample(
                     userMessage: "Talk like a pirate",
                     assistantResponse: "<style reason=\"The user requested a specific persona\">pirate</style>"
                 ),
                 FewShotExample(
-                    userMessage: "Be warm and encouraging.",
-                    assistantResponse: "<style reason=\"The user explicitly asked for warmth and encouragement\">warm and encouraging</style>"
+                    userMessage: "I'd want your to be warm and encouraging.",
+                    assistantResponse: "<style reason=\"The user asked for warmth and encouragement\">warm and encouraging</style>"
                 ),
                 FewShotExample(
                     userMessage: "I like deep, thorough discussions.",
-                    assistantResponse: "<style reason=\"The user explicitly values depth and thoroughness\">deep and thorough</style>"
+                    assistantResponse: "<style reason=\"The user values depth and thoroughness\">deep and thorough</style>"
                 ),
                 FewShotExample(
                     userMessage: "Keep it playful and fun.",
-                    assistantResponse: "<style reason=\"The user explicitly asked for playfulness\">playful and fun</style>"
+                    assistantResponse: "<style reason=\"The user asked for playfulness\">playful and fun</style>"
                 ),
                 FewShotExample(
                     userMessage: "I don't know",

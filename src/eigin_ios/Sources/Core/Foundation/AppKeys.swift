@@ -9,5 +9,7 @@ enum AppKeys {
 
     static let downloadSessionIdentifier: String = bundleIdentifier + ".download"
 
+    static let notifyOnGemmaReadyKey: String = bundleIdentifier + ".notifyOnGemmaReady"
+
     static let logSinkQueueLabel: String = bundleIdentifier + ".logsink"
 }

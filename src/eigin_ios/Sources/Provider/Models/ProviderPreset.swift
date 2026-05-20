@@ -8,6 +8,20 @@ struct ProviderPreset: Identifiable, Hashable {
         case none
     }
 
+    enum Region: String {
+        case europe
+        case usa
+        case global
+
+        var emoji: String {
+            switch self {
+            case .europe: "🇪🇺"
+            case .usa: "🇺🇸"
+            case .global: "🌐"
+            }
+        }
+    }
+
     let id: String
     let name: String
     let baseURL: String
@@ -22,6 +36,8 @@ struct ProviderPreset: Identifiable, Hashable {
     let oAuthTokenExchangeURL: String?
     /// Whether this provider requires downloading a model before use.
     let requiresDownload: Bool
+    /// Broad geographic region for the provider.
+    let region: Region?
 
     init(
         id: String,
@@ -33,7 +49,8 @@ struct ProviderPreset: Identifiable, Hashable {
         authMethod: AuthMethod = .apiKey,
         oAuthAuthorizationURL: String? = nil,
         oAuthTokenExchangeURL: String? = nil,
-        requiresDownload: Bool = false
+        requiresDownload: Bool = false,
+        region: Region? = nil
     ) {
         self.id = id
         self.name = name
@@ -45,11 +62,12 @@ struct ProviderPreset: Identifiable, Hashable {
         self.oAuthAuthorizationURL = oAuthAuthorizationURL
         self.oAuthTokenExchangeURL = oAuthTokenExchangeURL
         self.requiresDownload = requiresDownload
+        self.region = region
     }
 
     /// Bundled logo from the asset catalog, falling back to nil if not found.
     var logo: UIImage? {
-        UIImage(named: "Icons/Provider/\(id)")
+        UIImage(named: "Icons/provider/\(id)")
     }
 
     /// Whether this provider runs on-device (no API key, no network).
@@ -65,35 +83,40 @@ struct ProviderPreset: Identifiable, Hashable {
             helpText: Localized.Onboarding.LocalModel.description,
             apiKeyURL: nil,
             systemImage: "cpu.fill",
-            authMethod: .none
+            authMethod: .none,
+            region: nil
         ),
         ProviderPreset(
             id: "openai",
             name: "OpenAI",
             baseURL: "https://api.openai.com/v1",
             helpText: Localized.Provider.Setup.Openai.instruction,
-            apiKeyURL: "https://platform.openai.com/api-keys"
+            apiKeyURL: "https://platform.openai.com/api-keys",
+            region: .usa
         ),
         ProviderPreset(
             id: "anthropic",
             name: "Anthropic",
             baseURL: "https://api.anthropic.com/v1",
             helpText: Localized.Provider.Setup.Anthropic.instruction,
-            apiKeyURL: "https://platform.claude.com/settings/keys"
+            apiKeyURL: "https://platform.claude.com/settings/keys",
+            region: .usa
         ),
         ProviderPreset(
             id: "google",
             name: "Google",
             baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
             helpText: Localized.Provider.Setup.Google.instruction,
-            apiKeyURL: "https://aistudio.google.com/api-keys"
+            apiKeyURL: "https://aistudio.google.com/api-keys",
+            region: .usa
         ),
         ProviderPreset(
             id: "mistral",
             name: "Mistral",
             baseURL: "https://api.mistral.ai/v1",
             helpText: Localized.Provider.Setup.Mistral.instruction,
-            apiKeyURL: "https://console.mistral.ai/api-keys"
+            apiKeyURL: "https://console.mistral.ai/api-keys",
+            region: .europe
         ),
         ProviderPreset(
             id: "eurouter",
@@ -103,7 +126,8 @@ struct ProviderPreset: Identifiable, Hashable {
             apiKeyURL: "https://www.eurouter.ai/dashboard",
             authMethod: .oAuthPKCE,
             oAuthAuthorizationURL: "https://api.eurouter.ai/api/v1/auth",
-            oAuthTokenExchangeURL: "https://api.eurouter.ai/api/v1/auth/keys"
+            oAuthTokenExchangeURL: "https://api.eurouter.ai/api/v1/auth/keys",
+            region: .europe
         ),
         ProviderPreset(
             id: "openrouter",
@@ -113,21 +137,24 @@ struct ProviderPreset: Identifiable, Hashable {
             apiKeyURL: "https://openrouter.ai/settings/credits",
             authMethod: .oAuthPKCE,
             oAuthAuthorizationURL: "https://openrouter.ai/auth",
-            oAuthTokenExchangeURL: "https://openrouter.ai/api/v1/auth/keys"
+            oAuthTokenExchangeURL: "https://openrouter.ai/api/v1/auth/keys",
+            region: .global
         ),
         ProviderPreset(
             id: "scaleway",
             name: "Scaleway",
             baseURL: "https://api.scaleway.ai/v1",
             helpText: Localized.Provider.Setup.Scaleway.instruction,
-            apiKeyURL: "https://console.scaleway.com/iam/api-keys"
+            apiKeyURL: "https://console.scaleway.com/iam/api-keys",
+            region: .europe
         ),
         ProviderPreset(
             id: "ovhcloud",
             name: "OVHcloud",
             baseURL: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
             helpText: Localized.Provider.Setup.Ovh.instruction,
-            apiKeyURL: "https://endpoints.ai.cloud.ovh.net/"
+            apiKeyURL: "https://endpoints.ai.cloud.ovh.net/",
+            region: .europe
         ),
     ]
 }

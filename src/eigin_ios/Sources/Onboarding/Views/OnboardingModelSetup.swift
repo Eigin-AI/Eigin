@@ -11,8 +11,26 @@ struct OnboardingModelSetup: View {
     let onReady: () -> Void
     let onCloudProviderReady: (Provider) -> Void
 
-    @State private var displayedState: AssetState = .notDownloaded
+    /// When non-nil, forces the view into this state for previews.
+    /// Always `nil` in production.
+    let previewState: AssetState?
+
+    @State private var displayedState: AssetState
+
+    init(
+        onReady: @escaping () -> Void,
+        onCloudProviderReady: @escaping (Provider) -> Void,
+        previewState: AssetState? = nil
+    ) {
+        self.onReady = onReady
+        self.onCloudProviderReady = onCloudProviderReady
+        self.previewState = previewState
+        _displayedState = State(initialValue: previewState ?? .notDownloaded)
+    }
+
     @State private var showCloudSetup = false
+    @State private var showCloudConnect = false
+    @State private var selectedPreset: ProviderPreset?
     @State private var currentWordIndex = 0
 
     private let cyclingWords = [
@@ -33,16 +51,45 @@ struct OnboardingModelSetup: View {
         .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .sheet(isPresented: $showCloudSetup) {
-            CloudProviderSetupSheet(
-                onComplete: { provider in
-                    showCloudSetup = false
-                    onCloudProviderReady(provider)
-                },
-                onCancel: { showCloudSetup = false }
-            )
+        .appSheet(
+            isPresented: $showCloudSetup,
+            title: Localized.Provider.typeLabel,
+            description: Localized.Onboarding.Provider.cloudExplanation,
+            detents: [.large]
+        ) {
+            ProviderSelectSheetContent { preset in
+                showCloudSetup = false
+                selectedPreset = preset
+                showCloudConnect = true
+            }
+        }
+        .appSheet(
+            isPresented: $showCloudConnect,
+            title: selectedPreset?.name ?? "",
+            description: selectedPreset?.helpText,
+            detents: [.large]
+        ) {
+            if let preset = selectedPreset {
+                ProviderConnectSheetContent(
+                    preset: preset,
+                    onComplete: { provider in
+                        showCloudConnect = false
+                        selectedPreset = nil
+                        onCloudProviderReady(provider)
+                    },
+                    onBack: {
+                        showCloudConnect = false
+                        selectedPreset = nil
+                        showCloudSetup = true
+                    }
+                )
+            }
         }
         .task {
+            if let previewState {
+                displayedState = previewState
+                return
+            }
             displayedState = gemmaManager.state
             gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
@@ -50,6 +97,7 @@ struct OnboardingModelSetup: View {
             }
         }
         .onChange(of: gemmaManager.state) { oldState, newState in
+            guard previewState == nil else { return }
             withAnimation(.easeInOut(duration: Animations.normal)) {
                 displayedState = newState
             }
@@ -112,22 +160,15 @@ struct OnboardingModelSetup: View {
 
             Spacer()
 
-            VStack(spacing: Spacing.n24) {
-                Text(Localized.Onboarding.LocalModel.description)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.muted)
-                    .multilineTextAlignment(.center)
+            Text(Localized.Onboarding.LocalModel.description)
+                .typography(Typography.body)
+                .foregroundStyle(colors.text.standard.muted)
+                .multilineTextAlignment(.center)
 
-                Button {
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Onboarding.ModelSetup.downloadAction) {
                     Task { await gemmaManager.download() }
-                } label: {
-                    Text(Localized.Onboarding.ModelSetup.downloadAction)
-                        .typography(Typography.titleXS)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(colors.accent)
 
                 cloudLink
             }
@@ -204,17 +245,10 @@ struct OnboardingModelSetup: View {
 
             Spacer()
 
-            VStack(spacing: Spacing.n24) {
-                Button {
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Common.Actions.cancel) {
                     gemmaManager.cancel()
-                } label: {
-                    Text(Localized.Common.Actions.cancel)
-                        .typography(Typography.titleXS)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.bordered)
-                .tint(colors.text.standard.muted)
 
                 cloudLink
             }
@@ -271,17 +305,10 @@ struct OnboardingModelSetup: View {
 
             Spacer()
 
-            VStack(spacing: Spacing.n24) {
-                Button {
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Common.Actions.continue) {
                     onReady()
-                } label: {
-                    Text(Localized.Common.Actions.continue)
-                        .typography(Typography.titleXS)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(colors.accent)
 
                 cloudLink
             }
@@ -306,17 +333,12 @@ struct OnboardingModelSetup: View {
                 }
             }
 
-            VStack(spacing: Spacing.n16) {
-                Button {
+            Spacer()
+
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Common.Actions.retry) {
                     Task { await gemmaManager.download() }
-                } label: {
-                    Text(Localized.Common.Actions.retry)
-                        .typography(Typography.titleXS)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(colors.accent)
 
                 cloudLink
             }
@@ -324,21 +346,61 @@ struct OnboardingModelSetup: View {
     }
 
     private var cloudLink: some View {
-        Button {
+        AppButton(Localized.Onboarding.ModelSetup.fallbackAction, variant: .secondary) {
             showCloudSetup = true
-        } label: {
-            HStack(spacing: Spacing.n4) {
-                Text(Localized.Onboarding.ModelSetup.fallbackAction)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 12))
-            }
-            .typography(Typography.navTab)
         }
-        .foregroundStyle(colors.text.standard.muted)
     }
 }
 
-#Preview {
-    OnboardingModelSetup(onReady: {}, onCloudProviderReady: { _ in })
-        .previewEnvironment()
+#Preview("Not Downloaded") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in }
+    )
+    .previewEnvironment()
+}
+
+#Preview("Downloading – 35%") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in },
+        previewState: .downloading(fractionCompleted: 0.35)
+    )
+    .previewEnvironment()
+}
+
+#Preview("Downloading – 90%") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in },
+        previewState: .downloading(fractionCompleted: 0.90)
+    )
+    .previewEnvironment()
+}
+
+#Preview("Compiling") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in },
+        previewState: .compiling(fractionCompleted: 0)
+    )
+    .previewEnvironment()
+}
+
+#Preview("Ready") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in },
+        previewState: .ready
+    )
+    .previewEnvironment()
+}
+
+#Preview("Failed") {
+    OnboardingModelSetup(
+        onReady: {},
+        onCloudProviderReady: { _ in },
+        previewState: .failed("Network connection lost. Please try again.")
+    )
+    .previewEnvironment()
 }

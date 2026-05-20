@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -18,6 +19,11 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     public var availableModels: [ModelInfo] = ModelInfo.defaults
     public var refreshTrigger = 0
     public var downloadingModelId: String?
+
+    /// Stashed by the AppDelegate when iOS relaunches the app for background
+    /// `URLSession` events. Invoked from `urlSessionDidFinishEvents` so iOS
+    /// knows we're done processing and can suspend the app.
+    public var backgroundCompletionHandler: (() -> Void)?
 
     // MARK: - Private
 
@@ -100,6 +106,34 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         config.timeoutIntervalForResource = 7200
         config.httpMaximumConnectionsPerHost = maxConcurrentDownloads
         session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        reattachInFlightTasks()
+    }
+
+    /// Rebuild in-memory bookkeeping for download tasks that iOS kept running
+    /// while the app was suspended or killed. Without this, delegate callbacks
+    /// for those tasks arrive against empty `activeDownloadTasks` and the
+    /// "are we done?" check in `fillDownloadSlots` never sees them.
+    private func reattachInFlightTasks() {
+        session.getAllTasks { [weak self] tasks in
+            guard let self else { return }
+            let downloadTasks = tasks.compactMap { $0 as? URLSessionDownloadTask }
+            guard !downloadTasks.isEmpty else { return }
+            DispatchQueue.main.async { [self] in
+                for task in downloadTasks {
+                    activeDownloadTasks[task.taskIdentifier] = task
+                    // Match the task back to its index in pendingFiles by
+                    // taskDescription (set when we dispatched it).
+                    if let desc = task.taskDescription,
+                       let idx = pendingFiles.firstIndex(where: { $0.localPath == desc })
+                    {
+                        activeTaskFileIndex[task.taskIdentifier] = idx
+                    }
+                }
+                // We're being driven by the URLSession daemon, not paused.
+                isPaused = false
+                isDownloading = true
+            }
+        }
     }
 
     // MARK: - Public
@@ -438,12 +472,46 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         progress = 1.0
         status = "Ready"
 
-        if let url = localModelURL(for: model) {
+        let resolved = localModelURL(for: model)
+        if resolved != nil {
+            postReadyNotificationIfRequested()
+        }
+
+        if let url = resolved {
             downloadContinuation?.resume(returning: url)
         } else {
             downloadContinuation?.resume(throwing: DownloadError.extractionFailed)
         }
         downloadContinuation = nil
+    }
+
+    /// Fire the "model ready" local notification when the user previously opted
+    /// in. Called from `finishDownload` so it works in both the foreground
+    /// (continuation flow) and the background-relaunch path (where there's no
+    /// awaiting `Task` to resume).
+    private func postReadyNotificationIfRequested() {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: AppKeys.notifyOnGemmaReadyKey) else { return }
+        defaults.set(false, forKey: AppKeys.notifyOnGemmaReadyKey)
+
+        let content = UNMutableNotificationContent()
+        content.title = Localized.Notification.modelReady
+        content.body = Localized.Onboarding.ModelSetup.successMessage
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "model-download-complete",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                AppLogger.error(
+                    "Failed to post model-ready notification: \(public: error.localizedDescription)",
+                    category: .general
+                )
+            }
+        }
     }
 
     // MARK: - Persistence
@@ -949,6 +1017,18 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             guard let self else { return }
             activeTaskBytes[taskId] = totalBytesWritten
             updateProgress()
+        }
+    }
+
+    /// Called when all background-session events for this launch have been
+    /// delivered. Invoke the completion handler stashed by the AppDelegate so
+    /// iOS knows we're done and can suspend the app.
+    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let handler = backgroundCompletionHandler
+            backgroundCompletionHandler = nil
+            handler?()
         }
     }
 

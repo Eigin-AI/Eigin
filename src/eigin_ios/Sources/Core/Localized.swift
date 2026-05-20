@@ -1976,6 +1976,11 @@ enum Localized {
                 Localized.get("provider.setup.apiKeyAlternative")
             }
 
+            /// Secondary action that returns the user to the provider picker from the connect sheet
+            static var changeProvider: String {
+                Localized.get("provider.setup.changeProvider")
+            }
+
             /// A button label that invites the user to connect with a specific OAuth provider. The
             /// argument is the name of the provider.
             static func oauthConnect(_ p1: String) -> String {

@@ -34,49 +34,47 @@ struct ChatListView: View {
         return chats
     }
 
-    private var selectedSpace: Space? {
-        guard let id = selectedSpaceID else { return nil }
-        return spaces.first { $0.id == id }
-    }
-
-    private var navigationTitle: String {
-        if let space = selectedSpace {
-            return "\(space.emoji) \(space.name)"
-        }
-        return Localized.Chat.title
-    }
-
     var body: some View {
         NavigationStack(path: $path) {
-            Group {
-                if filteredChats.isEmpty {
-                    ContentUnavailableView(
-                        Localized.Chat.EmptyState.title,
-                        systemImage: "bubble",
-                        description: Text(Localized.Chat.EmptyState.hint)
-                    )
-                } else {
-                    chatList
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(colors.surface.standard.base.ignoresSafeArea())
-            .navigationTitle(navigationTitle, style: Typography.titleXl)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    SpaceFilterMenu(
-                        spaces: spaces,
-                        selectedSpaceID: $selectedSpaceID,
-                        onManageSpaces: { path.append(ChatListDestination.manageSpaces) }
-                    )
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { createNewChat() } label: {
-                        Image(systemName: "plus.bubble.fill")
+            VStack(spacing: 0) {
+                AppNavigationHeader(
+                    leading: {
+                        SpaceFilterMenu(
+                            spaces: spaces,
+                            selectedSpaceID: $selectedSpaceID,
+                            onManageSpaces: { path.append(ChatListDestination.manageSpaces) }
+                        )
+                    },
+                    center: {
+                        AppBrandAvatar(image: Iconography.Brand.avatar, action: {})
+                    },
+                    trailing: {
+                        AppActionButton(
+                            icon: Image(systemName: "plus.bubble.fill"),
+                            variant: .open,
+                            size: .medium,
+                            action: createNewChat
+                        )
+                        .disabled(agent == nil)
                     }
-                    .disabled(agent == nil)
+                )
+
+                Group {
+                    if filteredChats.isEmpty {
+                        ContentUnavailableView(
+                            Localized.Chat.EmptyState.title,
+                            systemImage: "bubble",
+                            description: Text(Localized.Chat.EmptyState.hint)
+                        )
+                    } else {
+                        chatList
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .ignoresSafeArea(edges: .top)
             .navigationDestination(for: UUID.self) { chatID in
                 ChatView(chatID: chatID)
                     .hidesTabBar()

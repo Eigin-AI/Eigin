@@ -84,17 +84,9 @@ struct OnboardingWelcome: View {
             .offset(y: phase >= 3 ? 0 : 12)
 
             // Actions
-            Button {
+            AppButton(Localized.Onboarding.Welcome.primaryAction) {
                 onGetStarted()
-            } label: {
-                Text(Localized.Onboarding.Welcome.primaryAction)
-                    .typography(Typography.titleXS)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(colors.accent)
-            .opacity(phase >= 3 ? 1 : 0)
+            }.opacity(phase >= 3 ? 1 : 0)
         }
         .padding(.horizontal, Spacing.n24)
         .padding(.bottom, Spacing.n32)
@@ -160,7 +152,7 @@ struct OnboardingWelcome: View {
                     .lineLimit(1)
 
                 Text(subtitle)
-                    .typography(Typography.note)
+                    .typography(Typography.description)
                     .foregroundStyle(colors.text.standard.muted)
                     .lineLimit(1)
             }
