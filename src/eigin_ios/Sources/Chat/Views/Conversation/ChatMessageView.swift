@@ -16,10 +16,6 @@ struct ChatMessageView: View {
     @State private var showCopied = false
     @State private var footerRevealed = false
     @State private var downloadItem: AssetItem?
-    @State private var isCollapsed: Bool
-
-    private static let collapseThreshold = 200
-    private static let collapsedHeight: CGFloat = 110
 
     init(
         role: String,
@@ -33,13 +29,6 @@ struct ChatMessageView: View {
         self.messageID = messageID
         self.showFooter = showFooter
         self.animateFooter = animateFooter
-
-        let isUser = role == "user"
-        _isCollapsed = State(initialValue: isUser && content.count > Self.collapseThreshold)
-    }
-
-    private var isLongMessage: Bool {
-        content.count > Self.collapseThreshold
     }
 
     private var isUser: Bool {
@@ -71,59 +60,19 @@ struct ChatMessageView: View {
     }
 
     private var userMessageView: some View {
-        HStack {
-            Spacer(minLength: 0)
-            Text(content)
-                .typography(Typography.chatMessageUser)
-                .foregroundStyle(colors.text.standard.base)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: isLongMessage ? .infinity : nil, alignment: .leading)
-                .frame(maxHeight: isCollapsed ? Self.collapsedHeight : .infinity, alignment: .top)
-                .clipped()
-                .mask(alignment: .top) {
-                    if isLongMessage, isCollapsed {
-                        VStack(spacing: 0) {
-                            Color.black
-                            LinearGradient(
-                                colors: [.black, .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .frame(height: 28)
-                        }
-                    } else {
-                        Color.black
-                    }
-                }
-                .padding(10)
-                .background(colors.surface.standard.alternative)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
-                .onTapGesture {
-                    guard isLongMessage else { return }
-                    Haptics.light()
-                    withAnimation(Animations.gentle) {
-                        isCollapsed.toggle()
-                    }
-                }
-                .animation(Animations.gentle, value: isCollapsed)
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .containerRelativeFrame(.horizontal, alignment: .trailing) { width, _ in
-            width * 0.8
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        AppChatUserMessage(text: content)
     }
 
     private var assistantMessageView: some View {
-        VStack(alignment: .leading, spacing: Spacing.n16) {
-            ForEach(blocks) { block in
-                ContentBlockView(block: block)
-            }
+        AppChatBrandMessage {
+            VStack(alignment: .leading, spacing: Spacing.n16) {
+                ForEach(blocks) { block in
+                    ContentBlockView(block: block)
+                }
 
-            footerView
+                footerView
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .sheet(item: $downloadItem) { item in
             AssetDownloadPrompt(
                 asset: item.asset,

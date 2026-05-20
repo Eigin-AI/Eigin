@@ -10,4 +10,27 @@ protocol Theme: Sendable {
 
 extension EnvironmentValues {
     @Entry var colors: ResolvedColors = DefaultTheme().colors(for: .light)
+    @Entry var gridBreakpoint: Grid.Breakpoint = Grid.mobile
+}
+
+/// Maps the current horizontal size class to a layout grid breakpoint.
+private struct GridBreakpointResolver: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        content
+            .environment(
+                \.gridBreakpoint,
+                sizeClass == .regular ? Grid.tablet : Grid.mobile
+            )
+    }
+}
+
+extension View {
+    /// Injects the current grid breakpoint into the environment based on the
+    /// device's horizontal size class. Call at the root of a design-component
+    /// preview or anywhere a sub-view needs responsive sizing.
+    func resolveGridBreakpoint() -> some View {
+        modifier(GridBreakpointResolver())
+    }
 }
