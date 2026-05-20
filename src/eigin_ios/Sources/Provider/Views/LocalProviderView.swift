@@ -1,171 +1,228 @@
 import SwiftData
 import SwiftUI
 
+/// Manages the on-device Gemma model: download, preparation, and deletion.
+///
+/// Mirrors the state-based UI used in onboarding, plus a manage state when the
+/// model is ready that lets the user delete the downloaded weights.
 struct LocalProviderView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colors) private var colors
+    @Query(sort: \Provider.createdAt) private var providers: [Provider]
 
     let preset: ProviderPreset
 
     @State private var showStorageError = false
-    @State private var isCreating = false
+    @State private var showDeleteConfirm = false
     @Bindable private var gemmaManager = GemmaModelManager.shared
+
+    private var localProvider: Provider? {
+        providers.first { ProviderPreset.isLocal($0.baseURL) }
+    }
+
+    private var isPreparing: Bool {
+        gemmaManager.state == .downloaded || gemmaManager.state.isCompiling
+    }
 
     var body: some View {
         VStack(spacing: Spacing.n32) {
             Spacer()
-
-            modelStatusList
-
+            stateContent
             Spacer()
         }
         .padding(.horizontal, Spacing.n24)
+        .padding(.bottom, Spacing.n32)
+        .frame(maxWidth: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(preset.name, style: Typography.titleXl)
+        .navigationTitle(Localized.Provider.Picker.onDeviceModel, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                if isCreating {
-                    ProgressView()
-                } else {
-                    Button("Add") { createProvider() }
-                }
-            }
-        }
-        .alert("Not Enough Storage", isPresented: $showStorageError) {
-            Button("OK", role: .cancel) {}
+        .keepScreenAwake(isPreparing)
+        .alert(Localized.Errors.notAvailable, isPresented: $showStorageError) {
+            Button(Localized.Common.Actions.cancel, role: .cancel) {}
         } message: {
             let size = Double(GemmaModelManager.estimatedSize) / 1_000_000_000
-            Text(
-                Localized.Model.storageRequirement(String(format: "%.1f", size))
-            )
+            Text(Localized.Model.storageRequirement(String(format: "%.1f", size)))
         }
-    }
-
-    // MARK: - Model Status List
-
-    private var modelStatusList: some View {
-        VStack(spacing: Spacing.n24) {
-            appleModelRow
-            Divider()
-            gemmaModelRow
-        }
-        .padding(Spacing.n24)
-        .background(colors.surface.standard.alternative, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var appleModelRow: some View {
-        HStack(spacing: Spacing.n16) {
-            Image(systemName: "apple.logo")
-                .font(.system(size: 28))
-                .foregroundStyle(colors.text.standard.muted)
-                .frame(width: 44)
-
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(Localized.Model.appleFoundationModel)
-                    .typography(Typography.body)
-                Text(appleStatusText)
-                    .typography(Typography.miniLabel)
-                    .foregroundStyle(colors.text.standard.muted)
+        .task {
+            gemmaManager.checkAvailability()
+            if gemmaManager.state == .downloaded {
+                await gemmaManager.compile()
             }
-
-            Spacer()
-
-            appleStatusIcon
+        }
+        .onChange(of: gemmaManager.state) { _, newState in
+            if newState == .downloaded {
+                Task { await gemmaManager.compile() }
+            }
+            if newState == .ready {
+                ensureLocalProvider()
+            }
         }
     }
 
     @ViewBuilder
-    private var appleStatusIcon: some View {
-        if FoundationModelClient.unavailableReason != nil {
-            Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(colors.text.standard.error)
-        } else {
-            Image(systemName: "checkmark.circle")
-                .foregroundStyle(colors.accent)
-        }
-    }
-
-    private var appleStatusText: String {
-        if let reason = FoundationModelClient.unavailableReason {
-            return reason
-        }
-        return "Ready to use"
-    }
-
-    private var gemmaModelRow: some View {
-        HStack(spacing: Spacing.n16) {
-            Image(systemName: "brain")
-                .font(.system(size: 28))
-                .foregroundStyle(colors.text.standard.muted)
-                .frame(width: 44)
-
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(Localized.Model.gemma4e2b)
-                    .typography(Typography.body)
-                Text(gemmaStatusText)
-                    .typography(Typography.miniLabel)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-
-            Spacer()
-
-            gemmaStatusWidget
-        }
-    }
-
-    @ViewBuilder
-    private var gemmaStatusWidget: some View {
+    private var stateContent: some View {
         switch gemmaManager.state {
         case .notDownloaded:
-            Button("Download") { startGemmaDownload() }
-                .buttonStyle(.borderedProminent)
-                .tint(colors.accent)
+            notDownloadedView
         case .downloading(let progress):
-            VStack(alignment: .trailing, spacing: Spacing.n4) {
-                ProgressView(value: progress)
-                    .frame(width: 80)
-                Text(verbatim: "\(Int(progress * 100))%")
-                    .font(.caption2)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-        case .downloaded, .compiling:
-            ProgressView()
-                .controlSize(.small)
+            downloadingView(progress: progress)
+        case .downloaded:
+            compilingView
+        case .compiling:
+            compilingView
         case .ready:
-            Image(systemName: "checkmark.circle")
-                .foregroundStyle(colors.accent)
+            manageView
         case .failed(let message):
-            VStack(alignment: .trailing, spacing: Spacing.n4) {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(colors.text.standard.error)
-                Text(message)
-                    .font(.caption2)
-                    .foregroundStyle(colors.text.standard.error)
+            failedView(message: message)
+        }
+    }
+
+    // MARK: - Not Downloaded
+
+    private var notDownloadedView: some View {
+        VStack(spacing: Spacing.n32) {
+            Spacer()
+
+            VStack(spacing: Spacing.n32) {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 56))
+                    .foregroundStyle(colors.accent)
+
+                Text(Localized.Onboarding.LocalModel.description)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
+
+            AppButton(Localized.Onboarding.ModelSetup.downloadAction) {
+                startDownload()
             }
         }
     }
 
-    private var gemmaStatusText: String {
-        switch gemmaManager.state {
-        case .notDownloaded:
-            let size = Double(GemmaModelManager.estimatedSize) / 1_000_000_000
-            return "~\(String(format: "%.1f", size)) GB download — runs on Neural Engine"
-        case .downloading:
-            return "Downloading..."
-        case .downloaded, .compiling:
-            return Localized.Status.preparing
-        case .ready:
-            return "Downloaded and ready"
-        case .failed(let message):
-            return message
+    // MARK: - Downloading
+
+    private func downloadingView(progress: Double) -> some View {
+        VStack(spacing: Spacing.n32) {
+            Spacer()
+
+            ZStack {
+                CircularProgressView(
+                    progress: progress,
+                    size: 150,
+                    lineWidth: 8,
+                    accentColor: colors.accent
+                )
+
+                Text(verbatim: "\(Int(progress * 100))%")
+                    .typography(Typography.titleM)
+                    .foregroundStyle(colors.text.standard.base)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+
+            Text(Localized.LocalModel.downloadBackgroundHint)
+                .typography(Typography.body)
+                .foregroundStyle(colors.text.standard.muted)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+
+            AppButton(Localized.Common.Actions.cancel) {
+                gemmaManager.cancel()
+            }
+        }
+    }
+
+    // MARK: - Compiling / Preparing
+
+    private var compilingView: some View {
+        VStack(spacing: Spacing.n32) {
+            Spacer()
+
+            Image(systemName: "rectangle.3.group")
+                .font(.system(size: 56))
+                .foregroundStyle(colors.accent)
+                .symbolEffect(.breathe, options: .repeating)
+
+            Text(Localized.Status.preparingDevice)
+                .typography(Typography.body)
+                .foregroundStyle(colors.text.standard.muted)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Manage (Ready)
+
+    private var manageView: some View {
+        VStack(spacing: Spacing.n32) {
+            Spacer()
+
+            VStack(spacing: Spacing.n32) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(colors.accent)
+
+                Text(Localized.Onboarding.ModelSetup.readyStatus)
+                    .typography(Typography.titleM)
+                    .foregroundStyle(colors.text.standard.base)
+            }
+
+            Spacer()
+
+            AppButton(Localized.LocalModel.delete, variant: .secondary) {
+                showDeleteConfirm = true
+            }
+            .confirmationDialog(
+                Localized.LocalModel.delete,
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(Localized.Common.Actions.delete, role: .destructive) {
+                    deleteModel()
+                }
+                Button(Localized.Common.Actions.cancel, role: .cancel) {}
+            }
+        }
+    }
+
+    // MARK: - Failed
+
+    private func failedView(message: String) -> some View {
+        VStack(spacing: Spacing.n32) {
+            Spacer()
+
+            VStack(spacing: Spacing.n32) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(colors.text.standard.error)
+
+                VStack(spacing: Spacing.n8) {
+                    Text(Localized.Onboarding.ModelSetup.errorTitle)
+                        .typography(Typography.titleM)
+                        .foregroundStyle(colors.text.standard.base)
+                    Text(message)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .multilineTextAlignment(.center)
+                }
+            }
+
+            Spacer()
+
+            AppButton(Localized.Common.Actions.retry) {
+                startDownload()
+            }
         }
     }
 
     // MARK: - Actions
 
-    private func startGemmaDownload() {
+    private func startDownload() {
         let freeSpace = try? FileManager.default
             .attributesOfFileSystem(forPath: NSHomeDirectory())[.systemFreeSize] as? Int64
         guard (freeSpace ?? 0) >= GemmaModelManager.estimatedSize else {
@@ -178,34 +235,20 @@ struct LocalProviderView: View {
         }
     }
 
-    private var gemmaIsReady: Bool {
-        if case .ready = gemmaManager.state { return true }
-        return false
-    }
-
-    private func createProvider() {
-        if FoundationModelClient.unavailableReason != nil, !gemmaIsReady {
-            return
-        }
-
-        isCreating = true
-
-        let provider = Provider(
-            name: preset.name,
-            baseURL: preset.baseURL
-        )
-
-        var models: [String] = []
-        if FoundationModelClient.unavailableReason == nil {
-            models.append("apple-foundation-model")
-        }
-        if gemmaIsReady {
-            models.append("gemma-4-e2b")
-        }
-        provider.availableModels = models
-
+    private func ensureLocalProvider() {
+        guard localProvider == nil else { return }
+        let provider = Provider(name: preset.name, baseURL: preset.baseURL)
+        provider.availableModels = ["gemma-4-e2b"]
+        provider.enabledModels = ["gemma-4-e2b"]
         modelContext.insert(provider)
         Haptics.success()
-        dismiss()
+    }
+
+    private func deleteModel() {
+        gemmaManager.delete()
+        if let provider = localProvider {
+            modelContext.delete(provider)
+        }
+        Haptics.success()
     }
 }

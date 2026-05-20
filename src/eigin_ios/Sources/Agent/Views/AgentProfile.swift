@@ -49,17 +49,14 @@ struct AgentProfile: View {
         Form {
             presentationSection
             proactivitySection
-            coreSection
             providerSection
+            advancedSection
         }
         .scrollContentBackground(.hidden)
         .onChange(of: agent.name) { agent.updatedAt = .now }
         .onChange(of: agent.emoji) { agent.updatedAt = .now }
         .onChange(of: agent.providerID) { agent.updatedAt = .now }
         .onChange(of: agent.model) { agent.updatedAt = .now }
-        .onChange(of: agent.identityCore) { agent.updatedAt = .now }
-        .onChange(of: agent.userCore) { agent.updatedAt = .now }
-        .onChange(of: agent.soulCore) { agent.updatedAt = .now }
         .onChange(of: agent.voiceIdentifier) { agent.updatedAt = .now }
         .onChange(of: languageManager.currentLanguage) {
             // Reset voice to system default when the language changes,
@@ -249,96 +246,25 @@ struct AgentProfile: View {
         }
     }
 
-    // MARK: - Core
+    // MARK: - Advanced
 
-    private var coreSection: some View {
+    private var advancedSection: some View {
         Section {
-            Group {
-                coreDocumentRow(
-                    title: Localized.Agent.identityLabel,
-                    icon: "person.text.rectangle",
-                    color: .orange,
-                    text: $agent.identityCore
-                )
-                coreDocumentRow(
-                    title: Localized.Agent.userLabel,
-                    icon: "person.fill",
-                    color: .green,
-                    text: $agent.userCore
-                )
-                coreDocumentRow(
-                    title: Localized.Agent.soul,
-                    icon: "sparkles",
-                    color: .indigo,
-                    text: $agent.soulCore
-                )
-
-                NavigationLink {
-                    KnowledgeContainer(agentID: agent.id)
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "book.closed", color: .cyan)
-                        Text(Localized.Knowledge.sectionTitle)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
-
-                NavigationLink {
-                    IntentsList(agentID: agent.id)
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "arrow.triangle.branch", color: .orange)
-                        Text(Localized.Agent.intents)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
-
-                NavigationLink {
-                    SkillsList()
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "sparkles.rectangle.stack", color: .purple)
-                        Text(Localized.Agent.skills)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
+            NavigationLink {
+                AgentAdvanced(agent: agent)
+                    .hidesTabBar()
+            } label: {
+                HStack(spacing: Spacing.n8) {
+                    SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
+                    Text(Localized.Agent.Profile.Section.advanced)
+                        .typography(Typography.navTab)
+                        .foregroundStyle(colors.text.standard.base)
                 }
             }
             .listRowBackground(colors.surface.standard.alternative)
         } header: {
-            Text(Localized.Agent.Profile.Section.core)
+            Text(Localized.Settings.Section.system)
                 .typography(Typography.miniLabel)
-        }
-    }
-
-    private func coreDocumentRow(
-        title: String,
-        icon: String,
-        color: Color,
-        text: Binding<String>
-    ) -> some View {
-        NavigationLink {
-            DocumentEditor(title: title, text: text)
-                .hidesTabBar()
-        } label: {
-            HStack(spacing: Spacing.n8) {
-                SettingsIcon(systemName: icon, color: color)
-                Text(title)
-                    .typography(Typography.navTab)
-                    .foregroundStyle(colors.text.standard.base)
-                Spacer()
-                Text(text.wrappedValue
-                    .isEmpty ? Localized.Common.Placeholder
-                    .notSet : String(text.wrappedValue.prefix(30)) + "...")
-                    .foregroundStyle(colors.text.standard.muted)
-                    .typography(Typography.note)
-                    .lineLimit(1)
-            }
         }
     }
 

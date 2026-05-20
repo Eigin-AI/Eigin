@@ -205,6 +205,40 @@
         }
       }
     },
+    "agent.profile.section.advanced" : {
+      "comment" : "Section header and navigation title for the agent's advanced settings (identity/user/soul documents, knowledge, intents, skills)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avanceret"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Advanced"
+          }
+        }
+      }
+    },
+    "agent.profile.section.behaviour" : {
+      "comment" : "Section header in the agent advanced view grouping knowledge, intents, and skills",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adfærd"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Behaviour"
+          }
+        }
+      }
+    },
     "agent.profile.section.core" : {
       "comment" : "Section header for agent identity/user/soul documents",
       "localizations" : {
@@ -3018,6 +3052,23 @@
         }
       }
     },
+    "localModel.downloadBackgroundHint" : {
+      "comment" : "Hint shown during model download in Settings, telling the user they can leave and come back",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download kører i baggrunden. Du kan komme tilbage hertil når som helst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download runs in the background. You can come back here anytime."
+          }
+        }
+      }
+    },
     "localModel.delete" : {
       "comment" : "Button to delete downloaded model",
       "localizations" : {
@@ -5738,6 +5789,23 @@
         }
       }
     },
+    "provider.picker.onDeviceModel" : {
+      "comment" : "Row label for on-device model in Connections list",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal model"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local model"
+          }
+        }
+      }
+    },
     "provider.picker.experimental" : {
       "comment" : "Badge label for experimental providers",
       "localizations" : {
@@ -6975,6 +7043,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schedule (Proactive Interval)"
+          }
+        }
+      }
+    },
+    "settings.section.agent" : {
+      "comment" : "Section header in settings grouping agent-scoped configuration",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agent"
+          }
+        }
+      }
+    },
+    "settings.section.general" : {
+      "comment" : "Section header in settings grouping app-wide preferences",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generelt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "settings.section.system" : {
+      "comment" : "Section header grouping system-level/configuration entries",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
           }
         }
       }
@@ -9355,6 +9474,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connect"
+          }
+        }
+      }
+    },
+    "ui.connections" : {
+      "comment" : "Settings entry that groups provider and MCP server configuration",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connections"
           }
         }
       }

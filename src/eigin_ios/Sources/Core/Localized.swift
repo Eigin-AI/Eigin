@@ -117,6 +117,18 @@ enum Localized {
             }
 
             enum Section {
+                /// Section header and navigation title for the agent's advanced settings
+                /// (identity/user/soul documents, knowledge, intents, skills)
+                static var advanced: String {
+                    Localized.get("agent.profile.section.advanced")
+                }
+
+                /// Section header in the agent advanced view grouping knowledge, intents, and
+                /// skills
+                static var behaviour: String {
+                    Localized.get("agent.profile.section.behaviour")
+                }
+
                 /// Section header for agent identity/user/soul documents
                 static var core: String {
                     Localized.get("agent.profile.section.core")
@@ -1013,6 +1025,12 @@ enum Localized {
         /// Button to delete downloaded model
         static var delete: String {
             Localized.get("localModel.delete")
+        }
+
+        /// Hint shown during model download in Settings, telling the user they can leave and come
+        /// back
+        static var downloadBackgroundHint: String {
+            Localized.get("localModel.downloadBackgroundHint")
         }
 
         /// Status when download fails
@@ -1964,6 +1982,11 @@ enum Localized {
                 Localized.get("provider.picker.experimental")
             }
 
+            /// Row label for on-device model in Connections list
+            static var onDeviceModel: String {
+                Localized.get("provider.picker.onDeviceModel")
+            }
+
             /// Searchable prompt for provider picker
             static var searchPrompt: String {
                 Localized.get("provider.picker.searchPrompt")
@@ -2383,9 +2406,24 @@ enum Localized {
                 Localized.get("settings.section.advanced")
             }
 
+            /// Section header in settings grouping agent-scoped configuration
+            static var agent: String {
+                Localized.get("settings.section.agent")
+            }
+
             /// Section header for development tools
             static var development: String {
                 Localized.get("settings.section.development")
+            }
+
+            /// Section header in settings grouping app-wide preferences
+            static var general: String {
+                Localized.get("settings.section.general")
+            }
+
+            /// Section header grouping system-level/configuration entries
+            static var system: String {
+                Localized.get("settings.section.system")
             }
         }
     }
@@ -3200,6 +3238,11 @@ enum Localized {
         /// Short error title when a network request times out
         static var connectionTimedOut: String {
             Localized.get("ui.connection-timed-out")
+        }
+
+        /// Settings entry that groups provider and MCP server configuration
+        static var connections: String {
+            Localized.get("ui.connections")
         }
 
         /// Label for the agent's core identity section

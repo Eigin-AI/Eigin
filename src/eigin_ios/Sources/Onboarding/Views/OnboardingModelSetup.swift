@@ -30,8 +30,31 @@ struct OnboardingModelSetup: View {
 
     @State private var showCloudSetup = false
     @State private var showCloudConnect = false
-    @State private var selectedPreset: ProviderPreset?
+    @State private var selectedMode: ProviderConnectSheetContent.Mode?
     @State private var currentWordIndex = 0
+
+    private var connectSheetTitle: String {
+        switch selectedMode {
+        case .preset(let preset): preset.name
+        case .custom: Localized.Provider.Picker.customProvider
+        case nil: ""
+        }
+    }
+
+    private var isPreparing: Bool {
+        switch displayedState {
+        case .downloaded, .compiling: true
+        default: false
+        }
+    }
+
+    private var connectSheetDescription: String? {
+        switch selectedMode {
+        case .preset(let preset): preset.helpText
+        case .custom: Localized.Provider.Setup.Custom.apiRequirement
+        case nil: nil
+        }
+    }
 
     private let cyclingWords = [
         Localized.Onboarding.ModelSetup.Words.independence,
@@ -51,35 +74,41 @@ struct OnboardingModelSetup: View {
         .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
+        .keepScreenAwake(isPreparing)
         .appSheet(
             isPresented: $showCloudSetup,
             title: Localized.Provider.typeLabel,
             description: Localized.Onboarding.Provider.cloudExplanation,
             detents: [.large]
         ) {
-            ProviderSelectSheetContent { preset in
+            ProviderSelectSheetContent { selection in
                 showCloudSetup = false
-                selectedPreset = preset
+                switch selection {
+                case .preset(let preset):
+                    selectedMode = .preset(preset)
+                case .custom:
+                    selectedMode = .custom
+                }
                 showCloudConnect = true
             }
         }
         .appSheet(
             isPresented: $showCloudConnect,
-            title: selectedPreset?.name ?? "",
-            description: selectedPreset?.helpText,
+            title: connectSheetTitle,
+            description: connectSheetDescription,
             detents: [.large]
         ) {
-            if let preset = selectedPreset {
+            if let mode = selectedMode {
                 ProviderConnectSheetContent(
-                    preset: preset,
+                    mode: mode,
                     onComplete: { provider in
                         showCloudConnect = false
-                        selectedPreset = nil
+                        selectedMode = nil
                         onCloudProviderReady(provider)
                     },
                     onBack: {
                         showCloudConnect = false
-                        selectedPreset = nil
+                        selectedMode = nil
                         showCloudSetup = true
                     }
                 )

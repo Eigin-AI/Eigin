@@ -19,10 +19,26 @@ struct OnboardingFlow: View {
     @State private var revealUsedCloudProvider: Bool = false
     @State private var showProviderSetup = false
     @State private var showProviderConnect = false
-    @State private var selectedPreset: ProviderPreset?
+    @State private var selectedMode: ProviderConnectSheetContent.Mode?
 
     private var step: OnboardingStep {
         OnboardingStep(rawValue: stepRaw) ?? .welcome
+    }
+
+    private var connectSheetTitle: String {
+        switch selectedMode {
+        case .preset(let preset): preset.name
+        case .custom: Localized.Provider.Picker.customProvider
+        case nil: ""
+        }
+    }
+
+    private var connectSheetDescription: String? {
+        switch selectedMode {
+        case .preset(let preset): preset.helpText
+        case .custom: Localized.Provider.Setup.Custom.apiRequirement
+        case nil: nil
+        }
     }
 
     var body: some View {
@@ -90,24 +106,29 @@ struct OnboardingFlow: View {
                         description: Localized.Onboarding.Provider.cloudExplanation,
                         detents: [.large]
                     ) {
-                        ProviderSelectSheetContent { preset in
+                        ProviderSelectSheetContent { selection in
                             showProviderSetup = false
-                            selectedPreset = preset
+                            switch selection {
+                            case .preset(let preset):
+                                selectedMode = .preset(preset)
+                            case .custom:
+                                selectedMode = .custom
+                            }
                             showProviderConnect = true
                         }
                     }
                     .appSheet(
                         isPresented: $showProviderConnect,
-                        title: selectedPreset?.name ?? "",
-                        description: selectedPreset?.helpText,
+                        title: connectSheetTitle,
+                        description: connectSheetDescription,
                         detents: [.large]
                     ) {
-                        if let preset = selectedPreset {
+                        if let mode = selectedMode {
                             ProviderConnectSheetContent(
-                                preset: preset,
+                                mode: mode,
                                 onComplete: { provider in
                                     showProviderConnect = false
-                                    selectedPreset = nil
+                                    selectedMode = nil
 
                                     revealAgent?.providerID = provider.id
                                     revealAgent?.model = provider.enabledModels.first
@@ -119,7 +140,7 @@ struct OnboardingFlow: View {
                                 },
                                 onBack: {
                                     showProviderConnect = false
-                                    selectedPreset = nil
+                                    selectedMode = nil
                                     showProviderSetup = true
                                 }
                             )

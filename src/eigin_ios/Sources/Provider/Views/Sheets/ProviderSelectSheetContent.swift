@@ -1,13 +1,20 @@
 import SwiftUI
 
+/// User selection from the provider sheet.
+enum ProviderSelection {
+    case preset(ProviderPreset)
+    case custom
+}
+
 /// Content for the provider selection sheet.
 ///
-/// Presents OAuth providers as featured buttons and API key providers in a
-/// collapsible grid. Calls back with the selected preset.
+/// Shared between onboarding and Settings → Connections. Presents OAuth
+/// providers as featured buttons and API key providers in a collapsible grid,
+/// with a custom-provider tile appended to the grid.
 struct ProviderSelectSheetContent: View {
     @Environment(\.colors) private var colors
 
-    let onSelect: (ProviderPreset) -> Void
+    let onSelect: (ProviderSelection) -> Void
 
     @State private var showAPIKeyOptions = false
 
@@ -22,8 +29,8 @@ struct ProviderSelectSheetContent: View {
     }
 
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.n16),
-        GridItem(.flexible(), spacing: Spacing.n16),
+        GridItem(.flexible(), spacing: Sizing.PageLayout.ContentGrouping.gap),
+        GridItem(.flexible(), spacing: Sizing.PageLayout.ContentGrouping.gap),
     ]
 
     var body: some View {
@@ -42,7 +49,7 @@ struct ProviderSelectSheetContent: View {
                             icon: Iconography.Functional.Arrow.right,
                             size: .medium
                         ) {
-                            onSelect(preset)
+                            onSelect(.preset(preset))
                         }
                     }
                 }
@@ -70,12 +77,25 @@ struct ProviderSelectSheetContent: View {
                 }
 
                 if showAPIKeyOptions {
-                    LazyVGrid(columns: columns, spacing: Spacing.n16) {
-                        ForEach(apiKeyPresets) { preset in
-                            Button { onSelect(preset) } label: {
-                                presetTile(preset)
+                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                        LazyVGrid(
+                            columns: columns,
+                            spacing: Sizing.PageLayout.ContentGrouping.gap
+                        ) {
+                            ForEach(apiKeyPresets) { preset in
+                                Button { onSelect(.preset(preset)) } label: {
+                                    presetTile(preset)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                        }
+
+                        AppSubtleActionButton(
+                            Localized.Provider.Picker.customProvider,
+                            icon: Iconography.Functional.plus,
+                            size: .medium
+                        ) {
+                            onSelect(.custom)
                         }
                     }
                 }
