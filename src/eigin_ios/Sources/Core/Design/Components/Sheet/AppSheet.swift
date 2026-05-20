@@ -1,42 +1,73 @@
 import SwiftUI
 
-struct AppSheet<Header: View, Content: View>: View {
+/// A design-system sheet wrapper with consistent header and scrollable content areas.
+///
+/// The content is split into a **primary** area and an optional **secondary** area.
+/// When secondary content is provided, it is separated from the primary by `Spacing.n40`.
+struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
     @ViewBuilder let header: () -> Header
-    @ViewBuilder let content: () -> Content
+    @ViewBuilder let primary: () -> Primary
+    @ViewBuilder let secondary: () -> Secondary
+
+    init(
+        header: @escaping () -> Header,
+        @ViewBuilder primary: @escaping () -> Primary,
+        @ViewBuilder secondary: @escaping () -> Secondary = { EmptyView() }
+    ) {
+        self.header = header
+        self.primary = primary
+        self.secondary = secondary
+    }
+
+    private var hasSecondary: Bool {
+        Secondary.self != EmptyView.self
+    }
 
     var body: some View {
-        VStack(spacing: Sizing.PageLayout.gap) {
+        VStack(spacing: Sizing.PageLayout.pyTop) {
             header()
             ScrollView {
-                content()
-                    .padding(.bottom, Sizing.PageLayout.pyBottom)
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    primary()
+                    if hasSecondary {
+                        secondary()
+                    }
+                }
+                .padding(.bottom, Sizing.PageLayout.pyBottom)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
         .padding(.top, Sizing.PageLayout.pyTop)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 }
 
-// MARK: - Modifier
+// MARK: - Modifiers
 
 extension View {
     func appSheet(
         isPresented: Binding<Bool>,
         title: String,
+        label: String? = nil,
+        description: String? = nil,
         detents: Set<PresentationDetent> = [.medium, .large],
         showsDismissButton: Bool = true,
         onDismiss: (() -> Void)? = nil,
-        @ViewBuilder content: @escaping () -> some View
+        @ViewBuilder primary: @escaping () -> some View,
+        @ViewBuilder secondary: @escaping () -> some View = { EmptyView() }
     ) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
             AppSheet {
                 AppSheetHeader(
+                    label: label,
                     title: title,
+                    description: description,
                     onDismiss: showsDismissButton ? { isPresented.wrappedValue = false } : nil
                 )
-            } content: {
-                content()
+            } primary: {
+                primary()
+            } secondary: {
+                secondary()
             }
             .presentationDetents(detents)
             .presentationDragIndicator(.visible)
@@ -89,14 +120,17 @@ private struct AppSheetGallery: View {
             }
             .padding(.horizontal, Spacing.n24)
         }
-        .appSheet(isPresented: $showEpisode, title: "Edit episode") {
+        .appSheet(isPresented: $showEpisode, title: "Edit episode", detents: [.medium]) {
             EpisodeSheetContent()
         }
-        .appSheet(isPresented: $showWizard, title: "How did you sleep?") {
+        .appSheet(isPresented: $showWizard, title: "How did you sleep?", detents: [.medium]) {
             WizardSheetContent()
         }
         .appSheet(isPresented: $showConfirm, title: "Delete recording", showsDismissButton: false) {
             ConfirmSheetContent(onCancel: { showConfirm = false })
+        } secondary: {
+            AppSubtleActionButton("Permanently delete", icon: Image(systemName: "trash")) {}
+                .padding(.horizontal, contentPx)
         }
         .appSheet(isPresented: $showLong, title: "Preferences", detents: [.medium, .large]) {
             LongSheetContent()

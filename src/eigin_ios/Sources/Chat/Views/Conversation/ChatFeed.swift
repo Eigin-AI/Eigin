@@ -50,6 +50,11 @@ struct ChatFeed: View {
     @State private var isAtBottom = true
     @State private var appendAnchorID: String?
     @State private var selectedError: ConnectionError?
+    @State private var presentedPermissionRequest: PermissionRequest?
+    @State private var presentedBrowsingRequest: BrowsingRequest?
+    @State private var browsingPageReady = false
+    @State private var showActionSheet = false
+    @State private var showSpacePicker = false
     /// Item IDs that existed before the current streaming turn started.
     /// Items not in this set appeared mid-turn and get `.growIn()` animation.
     @State private var preStreamItemIDs: Set<String> = []
@@ -91,6 +96,132 @@ struct ChatFeed: View {
     }
 
     var body: some View {
+        feedContent
+            .onChange(of: interactions.permissionRequest) { _, new in
+                if let new {
+                    presentedPermissionRequest = new
+                }
+            }
+            .onChange(of: interactions.browsingRequest) { _, new in
+                if let new {
+                    presentedBrowsingRequest = new
+                    browsingPageReady = false
+                }
+            }
+            .appSheet(
+                isPresented: Binding(
+                    get: { selectedError != nil },
+                    set: { if !$0 { selectedError = nil } }
+                ),
+                title: "Error",
+                detents: [.medium, .large]
+            ) {
+                if let error = selectedError {
+                    ErrorDetailSheet(error: error)
+                }
+            }
+            .appSheet(
+                isPresented: Binding(
+                    get: { presentedPermissionRequest != nil },
+                    set: { if !$0 { presentedPermissionRequest = nil } }
+                ),
+                title: Localized.Permission.sheetTitle,
+                description: presentedPermissionRequest.map {
+                    Localized.Permission.wantsToUseFormat(context.agentName, $0.toolDisplayName)
+                },
+                detents: [.medium]
+            ) {
+                PermissionRequestSheetContent(
+                    allowOnceLabel: Localized.Permission.allowOnce,
+                    allowForChatLabel: Localized.Permission.allowForChat,
+                    denyLabel: Localized.Permission.deny,
+                    onResponse: { response in
+                        interactions.onPermissionResponse?(response)
+                    }
+                )
+            }
+            .appSheet(
+                isPresented: Binding(
+                    get: { presentedBrowsingRequest != nil },
+                    set: { if !$0 { presentedBrowsingRequest = nil } }
+                ),
+                title: Localized.Browsing.title,
+                description: browsingPageReady
+                    ? Localized.Agent.Status.readingPage(actorName)
+                    : Localized.Agent.Status.loadingPage(actorName),
+                detents: [.medium],
+                showsDismissButton: false,
+                onDismiss: {
+                    dismissBrowsing(
+                        result: .error("User dismissed the browser before request completed.")
+                    )
+                }
+            ) {
+                WebBrowsingSheetContent(
+                    request: presentedBrowsingRequest!,
+                    onComplete: dismissBrowsing,
+                    onPageReadyChanged: { ready in browsingPageReady = ready }
+                )
+            }
+            .appSheet(
+                isPresented: $showActionSheet,
+                title: Localized.Actions.title,
+                detents: [.medium]
+            ) {
+                ActionSheetContent(
+                    actions: [
+                        ActionItem(
+                            label: Localized.Debug.moveToSpaceTitle,
+                            icon: Iconography.Brand.security,
+                            action: {
+                                showActionSheet = false
+                                showSpacePicker = true
+                            }
+                        ),
+                    ]
+                )
+            }
+            .appSheet(
+                isPresented: $showSpacePicker,
+                title: Localized.Debug.moveToSpaceTitle,
+                detents: [.medium, .large]
+            ) {
+                SpacePickerSheetContent(
+                    spaces: context.spaces,
+                    currentSpaceID: context.currentSpaceID,
+                    onSelect: { spaceID in
+                        context.onMoveToSpace?(spaceID)
+                    }
+                )
+            } secondary: {
+                if context.currentSpaceID != nil {
+                    AppButton(
+                        Localized.Space.removeFromSpace,
+                        variant: .destructive
+                    ) {
+                        context.onMoveToSpace?(nil)
+                    }
+                    .padding(.horizontal, Sizing.PageLayout.ContentGrouping.Px.mobile)
+                }
+            }
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .toolbar(.hidden, for: .tabBar)
+            .onDisappear {
+                UIApplication.shared.isIdleTimerDisabled = false
+                speechService.stop()
+            }
+    }
+
+    private var actorName: String {
+        context.agentName.isEmpty || context.agentName.count > 20 ? "Agent" : context.agentName
+    }
+
+    private func dismissBrowsing(result: BrowsingResult) {
+        presentedBrowsingRequest = nil
+        interactions.onBrowsingComplete?(result)
+    }
+
+    private var feedContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -192,12 +323,12 @@ struct ChatFeed: View {
                                     .stroke(colors.text.standard.muted.opacity(0.2), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, Spacing.n8)
+                    .padding(.bottom, Spacing.n16)
                     .transition(.scale.combined(with: .opacity))
                 }
             }
             .animation(Animations.smooth, value: isAtBottom)
-            .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 ChatInputBar(
                     text: $messageText,
                     isDisabled: isInputDisabled,
@@ -210,9 +341,9 @@ struct ChatFeed: View {
                     agentName: context.agentName,
                     permissionRequest: interactions.permissionRequest,
                     onPermissionResponse: interactions.onPermissionResponse,
-                    browsingRequest: interactions.browsingRequest,
-                    onBrowsingComplete: interactions.onBrowsingComplete
+                    onActionTap: { showActionSheet = true }
                 )
+                .ignoresSafeArea(.container, edges: .horizontal)
             }
             // Scroll correction on prepend: old first item pinned to top
             .onChange(of: items.first?.id) { oldFirstID, newFirstID in
@@ -261,22 +392,6 @@ struct ChatFeed: View {
                     preStreamItemIDs = []
                 }
             }
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { selectedError != nil },
-                set: { if !$0 { selectedError = nil } }
-            )
-        ) {
-            if let error = selectedError {
-                ErrorDetailSheet(error: error)
-            }
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .tabBar)
-        .onDisappear {
-            UIApplication.shared.isIdleTimerDisabled = false
-            speechService.stop()
         }
     }
 

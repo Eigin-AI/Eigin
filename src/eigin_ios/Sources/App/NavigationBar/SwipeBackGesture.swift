@@ -9,7 +9,7 @@ import UIKit
 ///
 /// `gestureRecognizerShouldBegin` is gated on `viewControllers.count > 1`
 /// so the gesture is only active when there is a previous screen to pop to.
-extension UINavigationController: UIGestureRecognizerDelegate {
+extension UINavigationController: @retroactive UIGestureRecognizerDelegate {
     override open func viewDidLoad() {
         super.viewDidLoad()
         interactivePopGestureRecognizer?.delegate = self

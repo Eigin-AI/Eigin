@@ -12,6 +12,13 @@ enum Localized {
         bundle.localizedString(forKey: key, value: nil, table: nil)
     }
 
+    enum Actions {
+        /// Title of the action sheet shown from the chat input bar.
+        static var title: String {
+            Localized.get("actions.title")
+        }
+    }
+
     enum Agent {
         /// A heading for the identity section of the agent's core.
         static var identityLabel: String {
@@ -163,6 +170,13 @@ enum Localized {
         /// Status label shown while waiting for the user to complete authorization in the browser
         static var waiting: String {
             Localized.get("auth.waiting")
+        }
+    }
+
+    enum Browsing {
+        /// Title of the sheet shown while the agent is browsing a web page.
+        static var title: String {
+            Localized.get("browsing.title")
         }
     }
 
@@ -1736,6 +1750,11 @@ enum Localized {
         /// A section header that links to a view displaying the user's tool permissions.
         static var sectionTitle: String {
             Localized.get("permission.sectionTitle")
+        }
+
+        /// Title of the sheet that asks the user to grant a tool permission.
+        static var sheetTitle: String {
+            Localized.get("permission.sheetTitle")
         }
 
         /// A message displayed when a tool's execution is denied by the user's access policy.

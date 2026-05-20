@@ -18,6 +18,23 @@
         }
       }
     },
+    "actions.title" : {
+      "comment" : "Title of the action sheet shown from the chat input bar.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handlinger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions"
+          }
+        }
+      }
+    },
     "agent.identityLabel" : {
       "comment" : "A heading for the identity section of the agent's core.",
       "localizations" : {
@@ -371,6 +388,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ is reading the page"
+          }
+        }
+      }
+    },
+    "browsing.title" : {
+      "comment" : "Title of the sheet shown while the agent is browsing a web page.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browsing"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browsing the web"
           }
         }
       }
@@ -5258,6 +5292,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ wants to use %2$@"
+          }
+        }
+      }
+    },
+    "permission.sheetTitle" : {
+      "comment" : "Title of the sheet that asks the user to grant a tool permission.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilladelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permission"
           }
         }
       }
