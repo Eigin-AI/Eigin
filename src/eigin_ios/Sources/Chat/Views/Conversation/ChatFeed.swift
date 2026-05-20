@@ -46,6 +46,7 @@ struct ChatFeed: View {
     var lastStreamedItemID: String?
 
     @Environment(\.colors) private var colors
+    @Environment(\.gridBreakpoint) private var breakpoint
     @Injected(\.speechService) private var speechService
     @State private var isAtBottom = true
     @State private var appendAnchorID: String?
@@ -224,7 +225,7 @@ struct ChatFeed: View {
     private var feedContent: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
                     if pagination.hasOlderMessages {
                         Button {
                             pagination.onLoadMore?()
@@ -253,11 +254,12 @@ struct ChatFeed: View {
                         // reply is short, so the user message can't be scrolled off.
                         // When the reply naturally exceeds one viewport, the block
                         // grows past `minHeight` and the user can scroll through it.
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
                             ForEach(items[pinnedIndex...]) { item in
                                 itemRow(for: item)
                             }
                             StreamingContentView(throttler: throttler, splitter: splitter)
+                                .padding(.horizontal, breakpoint.inner)
                         }
                         .frame(
                             maxWidth: .infinity,
@@ -269,6 +271,7 @@ struct ChatFeed: View {
                             itemRow(for: item)
                         }
                         StreamingContentView(throttler: throttler, splitter: splitter)
+                            .padding(.horizontal, breakpoint.inner)
                     }
 
                     if pagination.hasNewerMessages {
@@ -284,7 +287,6 @@ struct ChatFeed: View {
                         }
                     }
                 }
-                .padding()
 
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
@@ -328,7 +330,7 @@ struct ChatFeed: View {
                 }
             }
             .animation(Animations.smooth, value: isAtBottom)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
                 ChatInputBar(
                     text: $messageText,
                     isDisabled: isInputDisabled,
@@ -419,6 +421,7 @@ struct ChatFeed: View {
             )
         case .typing:
             TypingIndicator()
+                .padding(.horizontal, breakpoint.inner)
         case .status(_, let text):
             HStack(spacing: Spacing.n8) {
                 ProgressView()
@@ -426,7 +429,7 @@ struct ChatFeed: View {
                     .typography(Typography.note)
                     .foregroundStyle(colors.text.standard.muted)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, breakpoint.inner)
         case .error(_, let error):
             Button {
                 selectedError = error
@@ -436,10 +439,13 @@ struct ChatFeed: View {
                     .font(Typography.body.font.weight(.medium))
             }
             .buttonStyle(.plain)
+            .padding(.horizontal, breakpoint.inner)
         case .toolGroup(_, let tools):
             ToolGroupView(tools: tools)
+                .padding(.horizontal, breakpoint.inner)
         case .compaction(_, let progress, let summary):
             CompactionDivider(progress: progress, summary: summary)
+                .padding(.horizontal, breakpoint.inner)
         }
     }
 
