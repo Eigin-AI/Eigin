@@ -35,18 +35,16 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     }
 
     private var contentFrame: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            leading()
-                .frame(maxHeight: .infinity, alignment: .center)
-
-            Spacer()
-
+        ZStack(alignment: .bottom) {
             center()
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            Spacer()
-
-            trailing()
-                .frame(maxHeight: .infinity, alignment: .center)
+            HStack(spacing: 0) {
+                leading()
+                Spacer()
+                trailing()
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
         }
         .frame(height: Spacing.n64)
     }

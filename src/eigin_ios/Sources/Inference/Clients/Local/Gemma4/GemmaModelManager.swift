@@ -1,5 +1,4 @@
 import Foundation
-import UserNotifications
 
 /// Manages the Gemma 4 E2B CoreML model lifecycle: download, load, unload.
 ///
@@ -23,7 +22,15 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private(set) var statusMessage = ""
 
     /// Whether to post a local notification when download completes.
-    var notifyOnDownloadComplete = false
+    ///
+    /// Backed by `UserDefaults` so the request survives the app being killed
+    /// while the background `URLSession` keeps downloading. The downloader
+    /// reads (and clears) this flag from its `finishDownload` callback on a
+    /// background relaunch, where this manager may not have been instantiated.
+    var notifyOnDownloadComplete: Bool {
+        get { UserDefaults.standard.bool(forKey: AppKeys.notifyOnGemmaReadyKey) }
+        set { UserDefaults.standard.set(newValue, forKey: AppKeys.notifyOnGemmaReadyKey) }
+    }
 
     /// The loaded inference engine, available after ``load()``.
     private(set) var llm: GemmaRuntime?
@@ -90,7 +97,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
                 statusMessage = ""
                 state = .downloaded
-                postDownloadNotificationIfNeeded()
             } catch is CancellationError {
                 statusMessage = ""
                 state = .notDownloaded
@@ -161,25 +167,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     func decline() {
         hasBeenDeclined = true
-    }
-
-    func postDownloadNotificationIfNeeded() {
-        guard notifyOnDownloadComplete else { return }
-        notifyOnDownloadComplete = false
-        Task {
-            let granted = await NotificationPermission.requestIfNeeded()
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = Localized.Notification.modelReady
-            content.body = Localized.Onboarding.ModelSetup.successMessage
-            content.sound = .default
-            let request = UNNotificationRequest(
-                identifier: "model-download-complete",
-                content: content,
-                trigger: nil
-            )
-            try? await UNUserNotificationCenter.current().add(request)
-        }
     }
 
     // MARK: - Memory lifecycle

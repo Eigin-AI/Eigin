@@ -4305,7 +4305,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download a model (4 GB) and work completely off the grid. No account needed."
+            "value" : "Download a model (4 GB) and work completely offline. No account needed."
           }
         }
       }
@@ -4622,13 +4622,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigin bruger cloud AI til at tænke.\nValget er dit.\nDu kan skifte når som helst."
+            "value" : "Eigin bruger cloud AI til at tænke: valget er dit. Du kan skifte når som helst."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigin uses cloud AI to think.\nThe choice is yours. \nYou can switch anytime."
+            "value" : "Eigin uses cloud AI to think: the choice is yours. You can switch anytime."
           }
         }
       }
@@ -5857,6 +5857,23 @@
         }
       }
     },
+    "provider.setup.changeProvider" : {
+      "comment" : "Secondary action that returns the user to the provider picker from the connect sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skift udbyder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Provider"
+          }
+        }
+      }
+    },
     "provider.setup.custom.apiRequirement" : {
       "comment" : "A description of the API key field, indicating that it is required for using an OpenAI-compatible API. It also includes a suggestion for how to obtain it from the provider.",
       "localizations" : {
@@ -5948,13 +5965,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbind med %@"
+            "value" : "Brug %@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connect with %@"
+            "value" : "Use %@"
           }
         }
       }

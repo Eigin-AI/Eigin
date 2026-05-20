@@ -18,6 +18,8 @@ struct OnboardingFlow: View {
     @State private var revealPriority: OnboardingPriority?
     @State private var revealUsedCloudProvider: Bool = false
     @State private var showProviderSetup = false
+    @State private var showProviderConnect = false
+    @State private var selectedPreset: ProviderPreset?
 
     private var step: OnboardingStep {
         OnboardingStep(rawValue: stepRaw) ?? .welcome
@@ -67,7 +69,8 @@ struct OnboardingFlow: View {
                             revealUsedCloudProvider = !ProviderPreset
                                 .isLocal(conversationProvider?.baseURL ?? "")
                             advanceTo(.reveal)
-                        }
+                        },
+                        onBack: { advanceTo(.modelSetup) }
                     )
                 }
 
@@ -81,20 +84,46 @@ struct OnboardingFlow: View {
                         onConnectCloud: { showProviderSetup = true },
                         onStayLocal: { onboardingComplete = true }
                     )
-                    .sheet(isPresented: $showProviderSetup) {
-                        CloudProviderSetupSheet(
-                            onComplete: { provider in
-                                revealAgent?.providerID = provider.id
-                                revealAgent?.model = provider.enabledModels.first
-                                    ?? provider.availableModels.first
-                                    ?? revealAgent?.model ?? ""
-                                try? modelContext.save()
+                    .appSheet(
+                        isPresented: $showProviderSetup,
+                        title: Localized.Provider.typeLabel,
+                        description: Localized.Onboarding.Provider.cloudExplanation,
+                        detents: [.large]
+                    ) {
+                        ProviderSelectSheetContent { preset in
+                            showProviderSetup = false
+                            selectedPreset = preset
+                            showProviderConnect = true
+                        }
+                    }
+                    .appSheet(
+                        isPresented: $showProviderConnect,
+                        title: selectedPreset?.name ?? "",
+                        description: selectedPreset?.helpText,
+                        detents: [.large]
+                    ) {
+                        if let preset = selectedPreset {
+                            ProviderConnectSheetContent(
+                                preset: preset,
+                                onComplete: { provider in
+                                    showProviderConnect = false
+                                    selectedPreset = nil
 
-                                showProviderSetup = false
-                                onboardingComplete = true
-                            },
-                            onCancel: { showProviderSetup = false }
-                        )
+                                    revealAgent?.providerID = provider.id
+                                    revealAgent?.model = provider.enabledModels.first
+                                        ?? provider.availableModels.first
+                                        ?? revealAgent?.model ?? ""
+                                    try? modelContext.save()
+
+                                    onboardingComplete = true
+                                },
+                                onBack: {
+                                    showProviderConnect = false
+                                    selectedPreset = nil
+                                    showProviderSetup = true
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -101,38 +101,19 @@ struct OnboardingReveal: View {
             .animation(.easeOut(duration: 0.6), value: phase >= 3)
 
             // Action buttons
-            VStack(spacing: Spacing.n16) {
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                 if showUpgradePitch {
-                    Button {
+                    AppButton(Localized.Onboarding.Provider.connectAction) {
                         onConnectCloud()
-                    } label: {
-                        Text(Localized.Onboarding.Provider.connectAction)
-                            .typography(Typography.titleXS)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.accent)
-
-                    Button {
-                        onStayLocal()
-                    } label: {
-                        Text(Localized.Onboarding.Provider.localAction)
-                            .typography(Typography.note)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(colors.text.standard.muted)
+                    AppButton(
+                        Localized.Onboarding.Provider.localAction,
+                        variant: .secondary
+                    ) { onStayLocal() }
                 } else {
-                    Button {
+                    AppButton(Localized.Onboarding.Welcome.primaryAction) {
                         onStayLocal()
-                    } label: {
-                        Text(Localized.Onboarding.Welcome.primaryAction)
-                            .typography(Typography.titleXS)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(colors.accent)
                 }
             }
             .opacity(phase >= 4 ? 1 : 0)
@@ -204,15 +185,83 @@ private struct GradientCurtainMask: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+private func previewAgent() -> Agent {
     let agent = Agent(name: "Nova", providerID: UUID(), model: "gemma-4-e2b")
     agent.emoji = "🦉"
+    return agent
+}
 
-    return OnboardingReveal(
-        agent: agent,
-        heroText: "I'm here to help you learn how to code and bring order to daily life.",
+private let previewHeroText =
+    "I'm here to help you learn how to code and bring order to daily life."
+
+#Preview("Pitch — Power") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
         priority: .power,
         showUpgradePitch: true,
+        onConnectCloud: {},
+        onStayLocal: {}
+    )
+    .previewEnvironment()
+}
+
+#Preview("Pitch — Privacy") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
+        priority: .privacy,
+        showUpgradePitch: true,
+        onConnectCloud: {},
+        onStayLocal: {}
+    )
+    .previewEnvironment()
+}
+
+#Preview("Pitch — Speed") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
+        priority: .speed,
+        showUpgradePitch: true,
+        onConnectCloud: {},
+        onStayLocal: {}
+    )
+    .previewEnvironment()
+}
+
+#Preview("Pitch — Freedom") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
+        priority: .freedom,
+        showUpgradePitch: true,
+        onConnectCloud: {},
+        onStayLocal: {}
+    )
+    .previewEnvironment()
+}
+
+#Preview("Pitch — No Priority") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
+        priority: nil,
+        showUpgradePitch: true,
+        onConnectCloud: {},
+        onStayLocal: {}
+    )
+    .previewEnvironment()
+}
+
+#Preview("No Pitch (cloud already connected)") {
+    OnboardingReveal(
+        agent: previewAgent(),
+        heroText: previewHeroText,
+        priority: .power,
+        showUpgradePitch: false,
         onConnectCloud: {},
         onStayLocal: {}
     )

@@ -8,13 +8,11 @@ import SwiftUI
 private struct JellyTransform {
     var x: CGFloat
     var y: CGFloat
-    var rotation: Double
 
     static func random() -> Self {
         Self(
-            x: CGFloat.random(in: 1.04 ... 1.10),
-            y: CGFloat.random(in: 0.90 ... 0.98),
-            rotation: Double.random(in: -8 ... 8)
+            x: CGFloat.random(in: 1.1 ... 1.25),
+            y: CGFloat.random(in: 0.75 ... 0.9)
         )
     }
 }
@@ -64,7 +62,6 @@ struct AppBrandAvatar: View {
                 x: isPressed ? jelly.x : 1.0,
                 y: isPressed ? jelly.y : 1.0
             )
-            .rotationEffect(.degrees(isPressed ? jelly.rotation : 0))
             .animation(
                 .spring(response: 0.35, dampingFraction: 0.40),
                 value: isPressed
