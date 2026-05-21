@@ -301,6 +301,11 @@ enum Localized {
                 Localized.get("common.actions.delete")
             }
 
+            /// Generic done button label, e.g. on a keyboard toolbar.
+            static var done: String {
+                Localized.get("common.actions.done")
+            }
+
             /// Button label to initiate a download
             static var download: String {
                 Localized.get("common.actions.download")
@@ -2269,6 +2274,91 @@ enum Localized {
             /// Settings toggle label for debug mode, which reveals private data in logs
             static var label: String {
                 Localized.get("settings.debugMode.label")
+            }
+        }
+
+        enum Feedback {
+            /// Button label that advances from the feedback form to the review screen.
+            static var continueButton: String {
+                Localized.get("settings.feedback.continueButton")
+            }
+
+            /// Button label that copies the feedback report body to the clipboard.
+            static var copyButton: String {
+                Localized.get("settings.feedback.copyButton")
+            }
+
+            /// Placeholder text shown in the feedback description field.
+            static var descriptionPlaceholder: String {
+                Localized.get("settings.feedback.descriptionPlaceholder")
+            }
+
+            /// Description shown in the feedback form sheet header. Warm and encouraging — explains
+            /// there is no telemetry so direct feedback is how the team learns.
+            static var formDescription: String {
+                Localized.get("settings.feedback.formDescription")
+            }
+
+            /// Helper text below the feedback report, showing the support email address.
+            static func helperText(_ p1: String) -> String {
+                String(format: Localized.get("settings.feedback.helperText"), p1)
+            }
+
+            /// Toggle label for attaching the log file to the feedback email.
+            static var includeLogs: String {
+                Localized.get("settings.feedback.includeLogs")
+            }
+
+            /// Description in the report sheet header. %@ is the support email address.
+            static func reportDescription(_ p1: String) -> String {
+                String(format: Localized.get("settings.feedback.reportDescription"), p1)
+            }
+
+            /// Navigation title for the feedback review and send screen.
+            static var reportTitle: String {
+                Localized.get("settings.feedback.reportTitle")
+            }
+
+            /// Button label that opens the mail composer pre-filled with the feedback report.
+            static var sendButton: String {
+                Localized.get("settings.feedback.sendButton")
+            }
+
+            /// Settings row label that opens the feedback sheet.
+            static var sendFeedback: String {
+                Localized.get("settings.feedback.sendFeedback")
+            }
+
+            /// Label shown above the Copy/Send buttons. %@ is the support email address.
+            static func sendTo(_ p1: String) -> String {
+                String(format: Localized.get("settings.feedback.sendTo"), p1)
+            }
+
+            /// Navigation title for the feedback form sheet.
+            static var sheetTitle: String {
+                Localized.get("settings.feedback.sheetTitle")
+            }
+
+            /// Label for the feedback type picker row.
+            static var typeLabel: String {
+                Localized.get("settings.feedback.typeLabel")
+            }
+
+            enum Kind {
+                /// Feedback type option: bug report.
+                static var bug: String {
+                    Localized.get("settings.feedback.type.bug")
+                }
+
+                /// Feedback type option: feature request.
+                static var feature: String {
+                    Localized.get("settings.feedback.type.feature")
+                }
+
+                /// Feedback type option: general feedback.
+                static var general: String {
+                    Localized.get("settings.feedback.type.general")
+                }
             }
         }
 

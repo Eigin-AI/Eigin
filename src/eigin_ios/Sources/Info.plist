@@ -26,6 +26,8 @@
 	<string>$(EIGIN_RELAY_KEY)</string>
 	<key>EiginRelayURL</key>
 	<string>$(EIGIN_RELAY_URL)</string>
+	<key>EiginSupportEmail</key>
+	<string>$(EIGIN_SUPPORT_EMAIL)</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
