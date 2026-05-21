@@ -44,6 +44,13 @@ struct ChatMessageView: View {
             && (speechService.isPreparingEngine || speechService.isBuffering)
     }
 
+    private var showDownloadSheet: Binding<Bool> {
+        Binding(
+            get: { downloadItem != nil },
+            set: { if !$0 { downloadItem = nil } }
+        )
+    }
+
     private var blocks: [ContentBlock] {
         guard !content.isEmpty else { return [] }
         return ContentBlock.split(
@@ -73,9 +80,14 @@ struct ChatMessageView: View {
                 footerView
             }
         }
-        .sheet(item: $downloadItem) { item in
-            AssetDownloadPrompt(
-                asset: item.asset,
+        .appSheet(
+            isPresented: showDownloadSheet,
+            title: downloadItem?.asset.displayName ?? "",
+            detents: [.medium],
+            showsDismissButton: false
+        ) {
+            AssetDownloadSheetContent(
+                asset: downloadItem!.asset,
                 onAccept: {
                     downloadItem = nil
                     speechService.speak(content)
@@ -85,7 +97,6 @@ struct ChatMessageView: View {
                     speechService.speak(content)
                 }
             )
-            .presentationDetents([.medium])
         }
     }
 

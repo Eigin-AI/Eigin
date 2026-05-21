@@ -46,7 +46,7 @@ struct AgentProfile: View {
     }
 
     var body: some View {
-        Form {
+        let base = Form {
             presentationSection
             proactivitySection
             providerSection
@@ -59,19 +59,7 @@ struct AgentProfile: View {
         .onChange(of: agent.model) { agent.updatedAt = .now }
         .onChange(of: agent.voiceIdentifier) { agent.updatedAt = .now }
         .onChange(of: languageManager.currentLanguage) {
-            // Reset voice to system default when the language changes,
-            // since the available voices may differ across engines/locales.
             agent.voiceIdentifier = nil
-        }
-        .sheet(isPresented: $showDownloadPrompt) {
-            if let asset = upgradeAsset {
-                AssetDownloadPrompt(
-                    asset: asset,
-                    onAccept: { showDownloadPrompt = false },
-                    onDecline: { showDownloadPrompt = false }
-                )
-                .presentationDetents([.medium])
-            }
         }
         .task(id: agent.providerID) {
             guard let provider = currentProvider else { return }
@@ -83,6 +71,23 @@ struct AgentProfile: View {
                 results.map { ($0.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
+        }
+
+        if let asset = upgradeAsset {
+            base.appSheet(
+                isPresented: $showDownloadPrompt,
+                title: asset.displayName,
+                detents: [.medium],
+                showsDismissButton: false
+            ) {
+                AssetDownloadSheetContent(
+                    asset: asset,
+                    onAccept: { showDownloadPrompt = false },
+                    onDecline: { showDownloadPrompt = false }
+                )
+            }
+        } else {
+            base
         }
     }
 

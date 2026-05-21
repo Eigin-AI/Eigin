@@ -3710,6 +3710,11 @@ enum Localized {
             Localized.get("voice.danishName")
         }
 
+        /// Pitch text shown in the asset download sheet for voice models
+        static var downloadPitch: String {
+            Localized.get("voice.downloadPitch")
+        }
+
         /// Download description for the enhanced voice model size
         static var enhancedDescription: String {
             Localized.get("voice.enhancedDescription")

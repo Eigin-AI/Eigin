@@ -101,8 +101,13 @@ struct EngineAssetRow: View {
         } message: {
             Text(Localized.Model.removeWarning)
         }
-        .sheet(isPresented: $showDownloadPrompt) {
-            AssetDownloadPrompt(
+        .appSheet(
+            isPresented: $showDownloadPrompt,
+            title: asset.displayName,
+            detents: [.medium],
+            showsDismissButton: false
+        ) {
+            AssetDownloadSheetContent(
                 asset: asset,
                 onAccept: { showDownloadPrompt = false },
                 onDecline: { showDownloadPrompt = false }

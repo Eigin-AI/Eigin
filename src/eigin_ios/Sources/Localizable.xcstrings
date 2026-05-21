@@ -11093,6 +11093,23 @@
         }
       }
     },
+    "voice.downloadPitch" : {
+      "comment" : "Pitch text shown in the asset download sheet for voice models",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Højkvalitets oplæsning der kører helt lokalt på din enhed."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High-quality spoken voice that runs entirely on your device."
+          }
+        }
+      }
+    },
     "voice.installHint" : {
       "comment" : "A footer text that encourages users to install more voices if they haven't already.",
       "localizations" : {

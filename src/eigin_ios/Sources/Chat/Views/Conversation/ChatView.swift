@@ -60,6 +60,13 @@ struct ChatView: View {
         agent != nil && activeProvider != nil
     }
 
+    private var showVoiceDownload: Binding<Bool> {
+        Binding(
+            get: { voiceDownloadItem != nil },
+            set: { if !$0 { voiceDownloadItem = nil } }
+        )
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
 
@@ -169,9 +176,14 @@ struct ChatView: View {
                 )
             }
         }
-        .sheet(item: $voiceDownloadItem) { item in
-            AssetDownloadPrompt(
-                asset: item.asset,
+        .appSheet(
+            isPresented: showVoiceDownload,
+            title: voiceDownloadItem?.asset.displayName ?? "",
+            detents: [.medium],
+            showsDismissButton: false
+        ) {
+            AssetDownloadSheetContent(
+                asset: voiceDownloadItem!.asset,
                 onAccept: {
                     voiceDownloadItem = nil
                     showLiveCall = true
@@ -181,7 +193,6 @@ struct ChatView: View {
                     showLiveCall = true
                 }
             )
-            .presentationDetents([.medium])
         }
         .sheet(isPresented: Binding(
             get: { viewModel.pendingEmailCompose != nil },
