@@ -30,7 +30,7 @@ struct GetRemindersTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Get reminders, optionally filtered by list, date range, or completion status.",
+            description: "Get reminders, optionally filtered by list, completion status, or a date range. A reminder is included if its due date OR creation date falls within the window: from 4 weeks before today through 4 weeks after today, by default (28 days in each direction). When an explicit date range is provided, the due date OR creation date must fall within that range. Reminders without a due date are included when their creation date falls within the window.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -40,15 +40,15 @@ struct GetRemindersTool: Tool {
                     ),
                     "start_date": .init(
                         type: "string",
-                        description: "Due date range start (e.g. \"2026-03-22\"). Optional."
+                        description: "Date range start, e.g. \"2026-03-22\". Reminders are included if their due date OR creation date falls on or after this date."
                     ),
                     "end_date": .init(
                         type: "string",
-                        description: "Due date range end (e.g. \"2026-03-29\"). Optional."
+                        description: "Date range end, e.g. \"2026-03-29\". Reminders are included if their due date OR creation date falls on or before this date."
                     ),
                     "include_completed": .init(
                         type: "boolean",
-                        description: "Whether to include completed reminders. Defaults to false."
+                        description: "Whether to include completed reminders. Defaults to false. Still limited to the default 4-week lookback and 4-week lookahead when no date range is given."
                     ),
                 ]
             )
