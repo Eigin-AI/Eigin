@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Injected(\.languageManager) private var languageManager
     @Environment(\.colors) private var colors
     @Query(sort: \Agent.createdAt) private var agents: [Agent]
+    @State private var showFeedbackSheet = false
 
     var body: some View {
         NavigationStack {
@@ -20,14 +21,33 @@ struct SettingsView: View {
             .tabBarPadding()
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .appSheet(
+            isPresented: $showFeedbackSheet,
+            title: Localized.Settings.Feedback.sheetTitle,
+            description: Localized.Settings.Feedback.formDescription,
+            detents: [.large]
+        ) {
+            FeedbackFormContent()
+        }
     }
 
     // MARK: - Sections
 
     private var generalSection: some View {
         Section {
-            languagePicker
-                .listRowBackground(colors.surface.standard.alternative)
+            Group {
+                languagePicker
+
+                Button { showFeedbackSheet = true } label: {
+                    HStack(spacing: Spacing.n8) {
+                        SettingsIcon(systemName: "envelope.fill", color: .green)
+                        Text(Localized.Settings.Feedback.sendFeedback)
+                            .typography(Typography.navTab)
+                            .foregroundStyle(colors.text.standard.base)
+                    }
+                }
+            }
+            .listRowBackground(colors.surface.standard.alternative)
         } header: {
             Text(Localized.Settings.Section.general)
                 .typography(Typography.miniLabel)

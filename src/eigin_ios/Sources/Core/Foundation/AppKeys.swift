@@ -12,4 +12,7 @@ enum AppKeys {
     static let notifyOnGemmaReadyKey: String = bundleIdentifier + ".notifyOnGemmaReady"
 
     static let logSinkQueueLabel: String = bundleIdentifier + ".logsink"
+
+    static let supportEmail: String =
+        Bundle.main.infoDictionary?["EiginSupportEmail"] as? String ?? "support@eigin.ai"
 }
