@@ -42,13 +42,12 @@ final class DefaultReminderService: ReminderService, @unchecked Sendable {
             calendars = [calendar]
         }
 
-        let predicate: NSPredicate = if let startDate, let endDate {
-            store.predicateForIncompleteReminders(
-                withDueDateStarting: startDate,
-                ending: endDate,
-                calendars: calendars
-            )
-        } else if includeCompleted {
+        let datesProvided = startDate != nil || endDate != nil
+        let defaultWindowDays = 28
+
+        // When dates are provided we fetch all reminders so we can filter by
+        // creationDate OR dueDate in memory.
+        let predicate: NSPredicate = if datesProvided || includeCompleted {
             store.predicateForReminders(in: calendars)
         } else {
             store.predicateForIncompleteReminders(
@@ -56,6 +55,19 @@ final class DefaultReminderService: ReminderService, @unchecked Sendable {
                 ending: nil,
                 calendars: calendars
             )
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let windowStart: Date? = if !datesProvided {
+            calendar.date(byAdding: .day, value: -defaultWindowDays, to: now)
+        } else {
+            nil
+        }
+        let windowEnd: Date? = if !datesProvided {
+            calendar.date(byAdding: .day, value: defaultWindowDays, to: now)
+        } else {
+            nil
         }
 
         nonisolated(unsafe) let unsafeStore = store
@@ -73,12 +85,40 @@ final class DefaultReminderService: ReminderService, @unchecked Sendable {
             }
             return ekReminders
                 .filter { includeCompleted || !$0.isCompleted }
+                .filter { reminder in
+                    if datesProvided {
+                        var fits = false
+                        if let dueDate = reminder.dueDateComponents?.date {
+                            let afterStart = startDate.map { dueDate >= $0 } ?? true
+                            let beforeEnd = endDate.map { dueDate <= $0 } ?? true
+                            if afterStart, beforeEnd { fits = true }
+                        }
+                        if !fits {
+                            if let creationDate = reminder.creationDate,
+                               let startDate, let endDate
+                            {
+                                if creationDate >= startDate, creationDate <= endDate {
+                                    fits = true
+                                }
+                            }
+                        }
+                        return fits
+                    } else {
+                        guard let windowStart, let windowEnd else { return true }
+                        let dueFits = reminder.dueDateComponents?.date
+                            .map { $0 >= windowStart && $0 <= windowEnd } ?? false
+                        let createdFits = reminder.creationDate
+                            .map { $0 >= windowStart && $0 <= windowEnd } ?? false
+                        return dueFits || createdFits
+                    }
+                }
                 .map { reminder in
                     ReminderItem(
                         id: reminder.calendarItemIdentifier,
                         title: reminder.title ?? "",
                         isCompleted: reminder.isCompleted,
                         dueDate: reminder.dueDateComponents?.date,
+                        creationDate: reminder.creationDate,
                         listName: reminder.calendar.title,
                         listID: reminder.calendar.calendarIdentifier,
                         notes: reminder.notes,

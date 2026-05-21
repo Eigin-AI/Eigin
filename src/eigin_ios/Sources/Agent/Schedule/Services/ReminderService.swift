@@ -26,6 +26,7 @@ struct ReminderItem {
     let title: String
     let isCompleted: Bool
     let dueDate: Date?
+    let creationDate: Date?
     let listName: String
     let listID: String
     let notes: String?

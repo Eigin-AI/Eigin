@@ -52,16 +52,27 @@ struct ScheduleToolTests {
     }
 
     private func sampleReminders() -> [ReminderItem] {
-        [
+        let now = Date()
+        let calendar = Calendar.current
+        let recent = calendar.date(byAdding: .day, value: -7, to: now)!
+        let old = calendar.date(byAdding: .day, value: -45, to: now)!
+        let farDueDate = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+        return [
             ReminderItem(
                 id: "rem-1", title: "Buy milk", isCompleted: false,
-                dueDate: Date(), listName: "Groceries", listID: "list-groceries",
+                dueDate: now, creationDate: recent, listName: "Groceries", listID: "list-groceries",
                 notes: nil, priority: 0
             ),
             ReminderItem(
                 id: "rem-2", title: "Call dentist", isCompleted: true,
-                dueDate: nil, listName: "Personal", listID: "list-personal",
+                dueDate: nil, creationDate: recent, listName: "Personal", listID: "list-personal",
                 notes: "Rescheduled", priority: 1
+            ),
+            ReminderItem(
+                id: "rem-3", title: "Old quarterly review", isCompleted: false,
+                dueDate: farDueDate, creationDate: old, listName: "Work", listID: "list-work",
+                notes: nil, priority: 0
             ),
         ]
     }
@@ -233,6 +244,8 @@ struct ScheduleToolTests {
         #expect(!result.isError)
         #expect(result.content.contains("Buy milk"))
         #expect(!result.content.contains("Call dentist")) // completed, excluded by default
+        #expect(!result.content
+            .contains("Old quarterly review")) // outside ±14 day window, excluded by default
         #expect(result.content.contains("available_lists"))
     }
 
@@ -252,6 +265,83 @@ struct ScheduleToolTests {
         #expect(!result.isError)
         #expect(result.content.contains("Buy milk"))
         #expect(result.content.contains("Call dentist"))
+    }
+
+    @Test @MainActor func getRemindersDefaultWindowExcludesOldReminders() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        let service = FakeReminderService()
+        service.reminders = sampleReminders()
+        service.lists = sampleLists()
+
+        let tool = GetRemindersTool(reminderService: service, canPromptUser: true)
+        let call = makeCall(name: "get_reminders", arguments: "{}")
+        let result = await tool.execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("Buy milk"))
+        #expect(!result.content
+            .contains("Old quarterly review")) // outside ±14 day window, excluded by default
+    }
+
+    @Test @MainActor func getRemindersExplicitDateRangeBypassesDefaultWindow() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        let service = FakeReminderService()
+        service.reminders = sampleReminders()
+        service.lists = sampleLists()
+
+        let tool = GetRemindersTool(reminderService: service, canPromptUser: true)
+        let call = makeCall(name: "get_reminders", arguments: """
+        {"start_date":"2026-01-01","end_date":"2026-12-31"}
+        """)
+        let result = await tool.execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("Buy milk"))
+        #expect(result.content
+            .contains("Old quarterly review")) // date range overrides default window
+    }
+
+    @Test @MainActor func getRemindersIncludeCompletedWithDateRange() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        let service = FakeReminderService()
+        service.reminders = sampleReminders()
+        service.lists = sampleLists()
+
+        let tool = GetRemindersTool(reminderService: service, canPromptUser: true)
+        let call = makeCall(name: "get_reminders", arguments: """
+        {"include_completed":true,"start_date":"2026-01-01","end_date":"2026-12-31"}
+        """)
+        let result = await tool.execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("Buy milk"))
+        #expect(result.content.contains("Call dentist"))
+        #expect(result.content.contains("Old quarterly review"))
+    }
+
+    @Test @MainActor func getRemindersIncludeCompletedRespectsDefaultWindow() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        let service = FakeReminderService()
+        service.reminders = sampleReminders()
+        service.lists = sampleLists()
+
+        let tool = GetRemindersTool(reminderService: service, canPromptUser: true)
+        let call = makeCall(name: "get_reminders", arguments: """
+        {"include_completed":true}
+        """)
+        let result = await tool.execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("Buy milk"))
+        #expect(result.content.contains("Call dentist")) // completed but within default window
+        #expect(!result.content
+            .contains(
+                "Old quarterly review"
+            )) // outside default window, excluded even with include_completed
     }
 
     // MARK: - ManageReminderTool

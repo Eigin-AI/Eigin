@@ -24,6 +24,34 @@ final class FakeReminderService: ReminderService, @unchecked Sendable {
         var result = reminders
         if let listID { result = result.filter { $0.listID == listID } }
         if !includeCompleted { result = result.filter { !$0.isCompleted } }
+
+        if startDate != nil || endDate != nil {
+            result = result.filter { reminder in
+                var fits = false
+                if let dueDate = reminder.dueDate {
+                    let afterStart = startDate.map { dueDate >= $0 } ?? true
+                    let beforeEnd = endDate.map { dueDate <= $0 } ?? true
+                    if afterStart, beforeEnd { fits = true }
+                }
+                if !fits, let creationDate = reminder.creationDate, let startDate, let endDate {
+                    if creationDate >= startDate, creationDate <= endDate { fits = true }
+                }
+                return fits
+            }
+        } else {
+            // Default window: created or due within ±28 days of now.
+            let calendar = Calendar.current
+            let now = Date()
+            let windowStart = calendar.date(byAdding: .day, value: -28, to: now)!
+            let windowEnd = calendar.date(byAdding: .day, value: 28, to: now)!
+            result = result.filter { reminder in
+                let dueFits = reminder.dueDate.map { $0 >= windowStart && $0 <= windowEnd } ?? false
+                let createdFits = reminder.creationDate
+                    .map { $0 >= windowStart && $0 <= windowEnd } ?? false
+                return dueFits || createdFits
+            }
+        }
+
         return result
     }
 
