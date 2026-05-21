@@ -46,6 +46,10 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     /// When a buffer's completion fires, we know that utterance's audio has played.
     private var scheduledUtterances: [String] = []
 
+    /// Playback buffering: accumulate a startup buffer so transient
+    /// model-generation stalls don't starve the player node queue.
+    private var playbackBuffer: PlaybackBuffer?
+
     // Engine runs at system rate (48kHz); model outputs at 24kHz.
     private nonisolated static let outputSampleRate: Double = 48000
     private nonisolated static let modelSampleRate: Double = 24000
@@ -92,6 +96,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         isGenerationActive = false
         generationTask?.cancel()
 
+        playbackBuffer = nil
         // finish() is nonisolated — stops new generation immediately.
         // cancel() awaits the generation task — store so startGenerating()
         // can wait for inference to fully stop before creating a new session.
@@ -161,7 +166,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         let myID = generationID
         isGenerationActive = true
 
-        generationTask = Task(priority: .utility) { [weak self] in
+        generationTask = Task(priority: .userInitiated) { [weak self] in
             defer { Task { @MainActor in self?.isGenerationActive = false } }
 
             // Wait for any previous session cancellation and generation to fully exit.
@@ -176,6 +181,10 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
             }
 
             let converter: AVAudioConverter? = await MainActor.run { self.converter }
+
+            await MainActor.run {
+                self.playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
+            }
 
             // Load model into memory (idempotent — no-op if already loaded, cancels pending
             // unload).
@@ -239,13 +248,21 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                         previousUtteranceIndex = uttIdx
                     }
 
-                    // Schedule audio buffer
+                    // Buffer audio frames; start playback once enough headroom
+                    // has accumulated to mask transient generation stalls.
                     let samples = frame.samples
                     if !samples.isEmpty, let converter {
                         if let resampled = Self.resample(samples, using: converter) {
-                            if let buffer = Self.createBuffer(from: resampled) {
-                                await MainActor.run {
-                                    self.playerNode?.scheduleBuffer(buffer)
+                            let frames = await MainActor.run {
+                                self.playbackBuffer?.append(samples: resampled)
+                            }
+                            if let frames {
+                                for frame in frames {
+                                    if let buffer = Self.createBuffer(from: frame) {
+                                        await MainActor.run {
+                                            self.playerNode?.scheduleBuffer(buffer)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -268,6 +285,18 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                 guard await MainActor.run(body: { self.generationID == myID }) else { return }
             }
 
+            // Flush any remaining buffered frames so the tail isn't dropped.
+            let tailFrames = await MainActor.run {
+                self.playbackBuffer?.flush() ?? []
+            }
+            for frame in tailFrames {
+                if let buffer = Self.createBuffer(from: frame) {
+                    await MainActor.run {
+                        self.playerNode?.scheduleBuffer(buffer)
+                    }
+                }
+            }
+
             // Stream ended — schedule finish marker for the last utterance
             // and nil the session so the next speak() creates a fresh one.
             guard await MainActor.run(body: { self.generationID == myID }) else { return }
@@ -283,6 +312,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                 self.session = nil
                 self.utteranceTexts.removeAll()
                 self.nextUtteranceIndex = 0
+                self.playbackBuffer = nil
             }
         }
     }

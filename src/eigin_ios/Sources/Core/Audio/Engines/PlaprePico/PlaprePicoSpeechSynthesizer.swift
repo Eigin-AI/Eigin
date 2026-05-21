@@ -35,6 +35,10 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
 
     private var scheduledUtterances: [String] = []
 
+    /// Playback buffering: accumulate a startup buffer so transient
+    /// model-generation stalls don't starve the player node queue.
+    private var playbackBuffer: PlaybackBuffer?
+
     private nonisolated static let outputSampleRate: Double = 48000
     private nonisolated static let modelSampleRate: Double = PlaprePicoConfig.sampleRate
     private var converter: AVAudioConverter?
@@ -78,6 +82,8 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         generationID += 1
         isGenerationActive = false
         generationTask?.cancel()
+
+        playbackBuffer = nil
 
         session?.finish()
         let sessionToCancel = session
@@ -157,6 +163,10 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
 
             let converter: AVAudioConverter? = await MainActor.run { self.converter }
 
+            await MainActor.run {
+                self.playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
+            }
+
             do {
                 try await modelManager.load()
             } catch {
@@ -230,12 +240,21 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                         }
                     }
 
+                    // Buffer audio frames; start playback once enough headroom
+                    // has accumulated to mask transient generation stalls.
                     let samples = frame.samples
                     if !samples.isEmpty, let converter {
                         if let resampled = Self.resample(samples, using: converter) {
-                            if let buffer = Self.createBuffer(from: resampled) {
-                                await MainActor.run {
-                                    self.playerNode?.scheduleBuffer(buffer)
+                            let frames = await MainActor.run {
+                                self.playbackBuffer?.append(samples: resampled)
+                            }
+                            if let frames {
+                                for frame in frames {
+                                    if let buffer = Self.createBuffer(from: frame) {
+                                        await MainActor.run {
+                                            self.playerNode?.scheduleBuffer(buffer)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -245,6 +264,18 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                 return
             } catch {
                 guard await MainActor.run(body: { self.generationID == myID }) else { return }
+            }
+
+            // Flush any remaining buffered frames so the tail isn't dropped.
+            let tailFrames = await MainActor.run {
+                self.playbackBuffer?.flush() ?? []
+            }
+            for frame in tailFrames {
+                if let buffer = Self.createBuffer(from: frame) {
+                    await MainActor.run {
+                        self.playerNode?.scheduleBuffer(buffer)
+                    }
+                }
             }
 
             guard await MainActor.run(body: { self.generationID == myID }) else { return }
@@ -260,6 +291,7 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                 self.session = nil
                 self.utteranceTexts.removeAll()
                 self.nextUtteranceIndex = 0
+                self.playbackBuffer = nil
             }
         }
     }
