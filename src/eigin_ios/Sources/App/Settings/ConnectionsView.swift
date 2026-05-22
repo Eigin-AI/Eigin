@@ -12,6 +12,7 @@ struct ConnectionsView: View {
     @State private var showConnectSheet = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
     @State private var showingAddMCPServer = false
+    @Bindable private var gemmaManager = GemmaModelManager.shared
 
     private var localPreset: ProviderPreset? {
         ProviderPreset.all.first { ProviderPreset.isLocal($0.baseURL) }
@@ -131,16 +132,24 @@ struct ConnectionsView: View {
             VStack(alignment: .leading) {
                 Text(Localized.Provider.Picker.onDeviceModel)
                     .typography(Typography.navTab)
-                if let provider = localProvider {
-                    let count = provider.availableModels.count
+                switch gemmaManager.state {
+                case .notDownloaded, .failed:
+                    Text(Localized.Settings.Info.modelNotDownloaded)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                case .downloading:
+                    Text(Localized.Settings.Info.modelDownloading)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                case .downloaded, .compiling:
+                    Text(Localized.Settings.Info.modelDownloaded)
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                case .ready:
+                    let count = localProvider?.availableModels.count ?? 0
                     Text(Localized.Settings.Info.modelsAvailable("\(count)"))
                         .typography(Typography.miniLabel)
                         .foregroundStyle(colors.text.standard.muted)
-                } else {
-                    Text(Localized.Onboarding.LocalModel.description)
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .lineLimit(1)
                 }
             }
         }

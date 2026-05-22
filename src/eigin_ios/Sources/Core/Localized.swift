@@ -2376,6 +2376,21 @@ enum Localized {
         }
 
         enum Info {
+            /// Status label when the local model has finished downloading
+            static var modelDownloaded: String {
+                Localized.get("settings.info.modelDownloaded")
+            }
+
+            /// Status label while the local model is downloading
+            static var modelDownloading: String {
+                Localized.get("settings.info.modelDownloading")
+            }
+
+            /// Status label when the local model has not been downloaded
+            static var modelNotDownloaded: String {
+                Localized.get("settings.info.modelNotDownloaded")
+            }
+
             /// Describes how many models are available for a provider
             static func modelsAvailable(_ p1: String) -> String {
                 String(format: Localized.get("settings.info.modelsAvailable"), p1)
