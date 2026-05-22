@@ -43,9 +43,9 @@ struct AddKnowledgeTool: Tool {
                             enum: ["actor", "thing", "fact", "output", "note"]
                         ),
                         "id": .init(type: "string", description: "Entry ID (snake_case)."),
-                        "fields": .init(type: "object", description: "Field name-value pairs."),
+                        "data": .init(type: "object", description: "Data name-value pairs."),
                     ],
-                    required: ["type", "id", "fields"]
+                    required: ["type", "id", "data"]
                 )
             )
         }
@@ -70,7 +70,7 @@ struct AddKnowledgeTool: Tool {
                         type: "string",
                         description: "Entry ID (snake_case). Must be unique within its type."
                     ),
-                    "fields": .init(
+                    "data": .init(
                         type: "object",
                         description: """
                         Field name-value pairs. \
@@ -89,7 +89,7 @@ struct AddKnowledgeTool: Tool {
                         items: .init(type: "string")
                     ),
                 ],
-                required: ["type", "id", "fields"]
+                required: ["type", "id", "data"]
             )
         )
     }
@@ -119,10 +119,27 @@ struct AddKnowledgeTool: Tool {
         if entityID.hasPrefix("\(entityType).") {
             entityID = String(entityID.dropFirst(entityType.count + 1))
         }
-        guard let fieldsDict = args["fields"] as? [String: Any] else {
+        if args["data"] == nil {
             return ToolResult(
                 toolCallID: callID,
-                content: ToolHelpers.output(errors: ["Missing 'fields' parameter"]), isError: true
+                content: ToolHelpers.output(
+                    errors: [
+                        "Missing 'data' parameter. You must provide a 'data' object containing the entry's properties. Received: \(toolCall.function.arguments)",
+                    ]
+                ),
+                isError: true
+            )
+        }
+        guard let dataDict = args["data"] as? [String: Any] else {
+            let actual = args["data"] ?? "nil"
+            return ToolResult(
+                toolCallID: callID,
+                content: ToolHelpers.output(
+                    errors: [
+                        "'data' must be an object, not \(type(of: actual)). Received: \(toolCall.function.arguments)",
+                    ]
+                ),
+                isError: true
             )
         }
 
@@ -139,7 +156,7 @@ struct AddKnowledgeTool: Tool {
         }
 
         let schema = Self.schemaFields[entityType] ?? [:]
-        var fields = fieldsDict.compactMap { key, value -> FirmField? in
+        var fields = dataDict.compactMap { key, value -> FirmField? in
             let fieldType = schema[key]
             guard let fieldValue = convertToFirmFieldValue(value, fieldType: fieldType) else {
                 return nil
