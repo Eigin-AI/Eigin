@@ -47,9 +47,9 @@ struct UpdateKnowledgeTool: Tool {
                             enum: ["actor", "thing", "fact", "output", "note"]
                         ),
                         "id": .init(type: "string", description: "Entry ID."),
-                        "fields": .init(type: "object", description: "Fields to update."),
+                        "data": .init(type: "object", description: "Data to update."),
                     ],
-                    required: ["type", "id", "fields"]
+                    required: ["type", "id", "data"]
                 )
             )
         }
@@ -72,7 +72,7 @@ struct UpdateKnowledgeTool: Tool {
                         type: "string",
                         description: "Entry ID (the short ID, e.g. \"eigin\" not \"thing.eigin\")."
                     ),
-                    "fields": .init(
+                    "data": .init(
                         type: "object",
                         description: "Field name-value pairs to update. Use plain strings for text, enum, and reference values. References are strings like \"actor.alice\". Lists are arrays of strings. Set valid_until to expire entries (e.g. \"2026-03-25\" or \"2026-03-25 14:00\")."
                     ),
@@ -82,7 +82,7 @@ struct UpdateKnowledgeTool: Tool {
                         items: .init(type: "string")
                     ),
                 ],
-                required: ["type", "id", "fields"]
+                required: ["type", "id", "data"]
             )
         )
     }
@@ -115,10 +115,26 @@ struct UpdateKnowledgeTool: Tool {
         if entityID.hasPrefix("\(entityType).") {
             entityID = String(entityID.dropFirst(entityType.count + 1))
         }
-        guard let fieldsDict = args["fields"] as? [String: Any] else {
+        if args["data"] == nil {
             return ToolResult(
                 toolCallID: callID,
-                content: ToolHelpers.output(errors: ["Missing 'fields' parameter"]),
+                content: ToolHelpers.output(
+                    errors: [
+                        "Missing 'data' parameter. You must provide a 'data' object containing the properties to update. Received: \(toolCall.function.arguments)",
+                    ]
+                ),
+                isError: true
+            )
+        }
+        guard let dataDict = args["data"] as? [String: Any] else {
+            let actual = args["data"] ?? "nil"
+            return ToolResult(
+                toolCallID: callID,
+                content: ToolHelpers.output(
+                    errors: [
+                        "'data' must be an object, not \(type(of: actual)). Received: \(toolCall.function.arguments)",
+                    ]
+                ),
                 isError: true
             )
         }
@@ -150,7 +166,7 @@ struct UpdateKnowledgeTool: Tool {
 
         // Merge in the new fields.
         let schema = AddKnowledgeTool.schemaFields[entityType] ?? [:]
-        for (key, value) in fieldsDict {
+        for (key, value) in dataDict {
             let fieldType = schema[key]
             guard let fieldValue = convertToFirmFieldValue(value, fieldType: fieldType)
             else { continue }

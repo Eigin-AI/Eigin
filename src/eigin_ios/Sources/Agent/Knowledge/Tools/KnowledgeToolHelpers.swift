@@ -7,11 +7,11 @@ func formatKnowledgeEntity(_ entity: FirmEntity) -> [String: Any] {
         "type": entity.entityType,
     ]
 
-    var fields: [String: Any] = [:]
+    var data: [String: Any] = [:]
     for field in entity.fields {
-        fields[field.name] = formatKnowledgeFieldValue(field.value)
+        data[field.name] = formatKnowledgeFieldValue(field.value)
     }
-    dict["fields"] = fields
+    dict["data"] = data
 
     return dict
 }
