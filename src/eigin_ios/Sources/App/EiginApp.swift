@@ -10,6 +10,10 @@ struct EiginApp: App {
     @State private var themeManager = ThemeManager()
 
     init() {
+        UserDefaults.standard.register(defaults: [
+            StorageKey.logSinkToFile: true,
+        ])
+
         FontRegistration.register()
         FontRegistration.configureNavigationBar()
 

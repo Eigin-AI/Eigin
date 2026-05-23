@@ -3,7 +3,7 @@ import SwiftUI
 
 struct FeedbackFormContent: View {
     @Environment(\.colors) private var colors
-    @AppStorage(StorageKey.logSinkToFile) private var logSinkToFile = false
+    @AppStorage(StorageKey.logSinkToFile) private var logSinkToFile = true
 
     @State private var feedbackType: FeedbackType = .bug
     @State private var description = ""

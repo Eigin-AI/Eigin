@@ -5,7 +5,7 @@ struct AdvancedSettings: View {
     @Environment(\.colors) private var colors
     @Injected(\.voiceService) private var voiceService
     @Injected(\.languageManager) private var languageManager
-    @AppStorage(StorageKey.logSinkToFile) private var logSinkToFile = false
+    @AppStorage(StorageKey.logSinkToFile) private var logSinkToFile = true
     @AppStorage(StorageKey.logFileLevel) private var logFileLevel = AppLogger.LogLevel.info.rawValue
     @State private var logFileURL: URL?
 
