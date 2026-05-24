@@ -272,8 +272,9 @@ struct ChatFeed: View {
                             ForEach(items[pinnedIndex...]) { item in
                                 itemRow(for: item)
                             }
-                            StreamingContentView(throttler: throttler, splitter: splitter)
-                                .padding(.horizontal, breakpoint.inner)
+                            AppChatBrandMessage {
+                                StreamingContentView(throttler: throttler, splitter: splitter)
+                            }
                         }
                         .frame(
                             maxWidth: .infinity,
@@ -284,8 +285,9 @@ struct ChatFeed: View {
                         ForEach(items) { item in
                             itemRow(for: item)
                         }
-                        StreamingContentView(throttler: throttler, splitter: splitter)
-                            .padding(.horizontal, breakpoint.inner)
+                        AppChatBrandMessage {
+                            StreamingContentView(throttler: throttler, splitter: splitter)
+                        }
                     }
 
                     if pagination.hasNewerMessages {
