@@ -91,14 +91,9 @@ pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
     let dark = make_icon(&logo_svg, dark_bg, &dark_icon, logo_size)?;
     let tinted = make_icon(&logo_svg, TINTED_BG, TINTED_ICON, logo_size)?;
 
-    light
-        .save(format!("{prod_dir}/AppIcon.png"))
-        .context("saving light icon")?;
-    dark.save(format!("{prod_dir}/AppIconDark.png"))
-        .context("saving dark icon")?;
-    tinted
-        .save(format!("{prod_dir}/AppIconTinted.png"))
-        .context("saving tinted icon")?;
+    save_rgb(&light, &format!("{prod_dir}/AppIcon.png")).context("saving light icon")?;
+    save_rgb(&dark, &format!("{prod_dir}/AppIconDark.png")).context("saving dark icon")?;
+    save_rgb(&tinted, &format!("{prod_dir}/AppIconTinted.png")).context("saving tinted icon")?;
     fs::write(format!("{prod_dir}/Contents.json"), PROD_CONTENTS_JSON)
         .with_context(|| format!("writing Contents.json to {prod_dir}"))?;
 
@@ -112,12 +107,18 @@ pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
     let x = ((bw - ow) / 2) as i64;
     let y = ((bh - oh) / 2) as i64;
     imageops::overlay(&mut dev, &overlay, x, y);
-    dev.save(format!("{dev_dir}/AppIcon.png"))
-        .context("saving dev icon")?;
+    save_rgb(&dev, &format!("{dev_dir}/AppIcon.png")).context("saving dev icon")?;
     fs::write(format!("{dev_dir}/Contents.json"), DEV_CONTENTS_JSON)
         .with_context(|| format!("writing Contents.json to {dev_dir}"))?;
 
     Ok(())
+}
+
+fn save_rgb(img: &image::RgbaImage, path: &str) -> Result<()> {
+    image::DynamicImage::ImageRgba8(img.clone())
+        .into_rgb8()
+        .save(path)
+        .with_context(|| format!("saving {path}"))
 }
 
 fn make_icon(
