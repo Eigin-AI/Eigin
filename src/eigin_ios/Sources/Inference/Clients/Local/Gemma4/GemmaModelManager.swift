@@ -21,17 +21,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// Human-readable status during download/compile.
     private(set) var statusMessage = ""
 
-    /// Whether to post a local notification when download completes.
-    ///
-    /// Backed by `UserDefaults` so the request survives the app being killed
-    /// while the background `URLSession` keeps downloading. The downloader
-    /// reads (and clears) this flag from its `finishDownload` callback on a
-    /// background relaunch, where this manager may not have been instantiated.
-    var notifyOnDownloadComplete: Bool {
-        get { UserDefaults.standard.bool(forKey: AppKeys.notifyOnGemmaReadyKey) }
-        set { UserDefaults.standard.set(newValue, forKey: AppKeys.notifyOnGemmaReadyKey) }
-    }
-
     /// The loaded inference engine, available after ``load()``.
     private(set) var llm: GemmaRuntime?
     private(set) var isLoading = false

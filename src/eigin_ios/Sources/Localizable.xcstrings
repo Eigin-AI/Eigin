@@ -3919,23 +3919,6 @@
         }
       }
     },
-    "notification.modelReady" : {
-      "comment" : "Push notification title sent when the on-device model finishes downloading",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Model klar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Model ready"
-          }
-        }
-      }
-    },
     "onboarding.chat.aboutYouPrompt" : {
       "comment" : "Recovery opener for the about stage, used when the previous stage failed to extract a name.",
       "localizations" : {
@@ -4418,13 +4401,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download kører i baggrunden. Vi kan give dig besked, når den er færdig."
+            "value" : "Download kører i baggrunden. Du kan altid komme tilbage senere og se, hvordan det går."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download runs in the background."
+            "value" : "Download runs in the background. Check back here anytime to see how we are doing."
           }
         }
       }
@@ -4480,57 +4463,6 @@
         }
       }
     },
-    "onboarding.modelSetup.notifyAction" : {
-      "comment" : "Button label to request a notification when the model finishes downloading",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giv mig besked"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notify me"
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.notifyConfirmation" : {
-      "comment" : "Confirmation message shown after the user enables download notifications",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vi giver dig besked, når den er klar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "We will notify you when it's ready"
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.notifyOffer" : {
-      "comment" : "Prompt offering to notify the user when the download completes",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vi kan give dig besked, når den er færdig"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "We can notify you when it's done"
-          }
-        }
-      }
-    },
     "onboarding.modelSetup.progressPercent" : {
       "comment" : "Progress percentage label",
       "localizations" : {
@@ -4561,23 +4493,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ready"
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.successMessage" : {
-      "comment" : "Success message shown after the on-device model is ready to use",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Din on-device model er klar til brug"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your on-device model is ready to use"
           }
         }
       }
@@ -8107,13 +8022,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbereder din enhed"
+            "value" : "Hold appen åben, mens vi forbereder din enhed. Det tager et par minutter. "
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preparing your device"
+            "value" : "Please keep the app open while we prepare your device. This can take a few minutes."
           }
         }
       }

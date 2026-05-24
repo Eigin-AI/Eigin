@@ -242,34 +242,6 @@ struct OnboardingModelSetup: View {
                 .typography(Typography.body)
                 .foregroundStyle(colors.text.standard.muted)
                 .multilineTextAlignment(.center)
-
-                Text(
-                    gemmaManager.notifyOnDownloadComplete
-                        ? Localized.Onboarding.ModelSetup.notifyConfirmation
-                        : Localized.Onboarding.ModelSetup.notifyOffer
-                )
-                .typography(Typography.body)
-                .foregroundStyle(colors.text.standard.muted)
-                .multilineTextAlignment(.center)
-
-                Button {
-                    Task {
-                        let granted = await NotificationPermission.requestIfNeeded()
-                        if granted {
-                            gemmaManager.notifyOnDownloadComplete = true
-                        }
-                    }
-                } label: {
-                    HStack(spacing: Spacing.n4) {
-                        Text(Localized.Onboarding.ModelSetup.notifyAction)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 12))
-                    }
-                    .typography(Typography.navTab)
-                }
-                .foregroundStyle(colors.accent)
-                .opacity(gemmaManager.notifyOnDownloadComplete ? 0 : 1)
-                .disabled(gemmaManager.notifyOnDownloadComplete)
             }
 
             Spacer()
