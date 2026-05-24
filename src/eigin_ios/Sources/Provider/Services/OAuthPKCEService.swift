@@ -15,7 +15,7 @@ struct DefaultOAuthPKCEService: OAuthPKCEService {
     private let tokenExchangeURL: URL
     private let urlSession: URLSession
 
-    private static let callbackURL = "https://42futures.com/eigin/callback/"
+    private static let callbackURL = "https://auth.eiginai/callback/"
 
     init(authorizationURL: URL, tokenExchangeURL: URL, urlSession: URLSession = .shared) {
         self.authorizationURL = authorizationURL
