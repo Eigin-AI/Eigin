@@ -10,6 +10,6 @@ pub fn generate(repo_root: &str) -> anyhow::Result<()> {
     let tokens = style::load_tokens(repo_root)?;
     let installed = fonts::install(repo_root, &tokens)?;
     style::generate(repo_root, &tokens, installed.as_ref())?;
-    assets::generate(repo_root)?;
+    assets::generate(repo_root, &tokens)?;
     icons::generate(repo_root)
 }
