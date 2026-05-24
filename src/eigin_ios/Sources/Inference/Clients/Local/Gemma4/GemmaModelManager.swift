@@ -17,7 +17,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         "Gemma 4 E2B on-device model (~2.8 GB download, ~1 GB memory). Supports Danish."
     }
 
-    internal(set) var state: AssetState = .notDownloaded
+    private(set) var state: AssetState = .notDownloaded
     /// Human-readable status during download/compile.
     private(set) var statusMessage = ""
 
@@ -105,7 +105,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// Load and ANE-compile the downloaded model. First run takes 1-2 minutes;
     /// subsequent runs use CoreML's cached compilation and complete in seconds.
     func compile() async {
-        guard isReady, llm == nil, !state.isCompiling else { return }
+        guard state == .downloaded else { return }
         state = .compiling(fractionCompleted: 0)
         statusMessage = "Preparing model for your device…"
 
@@ -145,16 +145,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         downloadTask = nil
         GemmaModelDownloader.shared.cancelDownload()
         state = .notDownloaded
-    }
-
-    /// Triggers compilation if the model is downloaded, not loaded, and the
-    /// app is in the foreground. Called from `ContentView` on every
-    /// foreground so the model has a chance to be ready before the user
-    /// starts a conversation.
-    func tryAutoCompile(isActive: Bool) {
-        guard isActive else { return }
-        guard isReady, llm == nil, !state.isCompiling else { return }
-        Task { await compile() }
     }
 
     func delete() {
