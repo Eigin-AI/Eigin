@@ -34,13 +34,21 @@ struct ContentView: View {
             }
         }
         .task {
-            ensureBackgroundSchedule()
+            performForegroundTasks()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                ensureBackgroundSchedule()
+                performForegroundTasks()
             }
         }
+    }
+
+    /// Tasks that run every time the app is in the foreground.
+    private func performForegroundTasks() {
+        ensureBackgroundSchedule()
+        GemmaModelManager.shared.tryAutoCompile(
+            isActive: UIApplication.shared.applicationState == .active
+        )
     }
 
     private func ensureBackgroundSchedule() {

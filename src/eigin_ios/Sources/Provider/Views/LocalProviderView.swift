@@ -46,12 +46,12 @@ struct LocalProviderView: View {
         .task {
             gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
-                await gemmaManager.compile()
+                gemmaManager.tryAutoCompile(isActive: true)
             }
         }
         .onChange(of: gemmaManager.state) { _, newState in
             if newState == .downloaded {
-                Task { await gemmaManager.compile() }
+                gemmaManager.tryAutoCompile(isActive: true)
             }
             if newState == .ready {
                 ensureLocalProvider()
