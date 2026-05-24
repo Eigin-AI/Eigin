@@ -1,53 +1,198 @@
 use anyhow::{Context, Result};
 use image::imageops;
+use regex::Regex;
+use serde_json::Value;
 use std::fs;
 
-const CONTENTS_JSON: &str = r#"{
-  "images": [
+use super::swift_mappings::resolve_alias;
+
+const ICON_SIZE: u32 = 1024;
+const LOGO_FRACTION: f32 = 0.70;
+
+// Tinted icon: pure black bg + white logo (OS applies its own colour tint).
+// These are absolute values not represented in the token system.
+const TINTED_BG: [u8; 3] = [0x00, 0x00, 0x00];
+const TINTED_ICON: &str = "#FFFFFF";
+
+const PROD_CONTENTS_JSON: &str = r#"{
+  "images" : [
     {
-      "filename": "AppIcon.png",
-      "idiom": "universal",
-      "platform": "ios",
-      "size": "1024x1024"
+      "filename" : "AppIcon.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "AppIconDark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "AppIconTinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
     }
   ],
-  "info": {
-    "author": "xcode",
-    "version": 1
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
   }
 }
 "#;
 
-pub fn generate(repo_root: &str) -> Result<()> {
-    let base_path = format!("{repo_root}/design/assets/app_icon/eigin_icon_light.png");
+const DEV_CONTENTS_JSON: &str = r#"{
+  "images" : [
+    {
+      "filename" : "AppIcon.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+"#;
+
+pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
+    let light_bg = token_rgb(tokens, "palette.brand.primary", "light")?;
+    let light_icon = token_hex(tokens, "color.icon.impact.base", "light")?;
+    let dark_bg = token_rgb(tokens, "color.surface.standard.base", "dark")?;
+    let dark_icon = token_hex(tokens, "palette.brand.primary", "light")?;
+
+    let logo_path = format!("{repo_root}/design/assets/app_icon/logo.svg");
     let overlay_path = format!("{repo_root}/design/assets/app_icon/dev_overlay.png");
     let prod_dir =
         format!("{repo_root}/src/eigin_ios/Resources/Assets.xcassets/AppIcon.appiconset");
     let dev_dir =
         format!("{repo_root}/src/eigin_ios/Resources/Assets.xcassets/AppIconDev.appiconset");
 
-    // Production — straight copy
-    fs::copy(&base_path, format!("{prod_dir}/AppIcon.png"))
-        .with_context(|| format!("copying base icon to {prod_dir}"))?;
-    fs::write(format!("{prod_dir}/Contents.json"), CONTENTS_JSON)
+    let logo_svg =
+        fs::read_to_string(&logo_path).with_context(|| format!("reading {logo_path}"))?;
+    let logo_size = (ICON_SIZE as f32 * LOGO_FRACTION) as u32;
+
+    let light = make_icon(&logo_svg, light_bg, &light_icon, logo_size)?;
+    let dark = make_icon(&logo_svg, dark_bg, &dark_icon, logo_size)?;
+    let tinted = make_icon(&logo_svg, TINTED_BG, TINTED_ICON, logo_size)?;
+
+    light
+        .save(format!("{prod_dir}/AppIcon.png"))
+        .context("saving light icon")?;
+    dark.save(format!("{prod_dir}/AppIconDark.png"))
+        .context("saving dark icon")?;
+    tinted
+        .save(format!("{prod_dir}/AppIconTinted.png"))
+        .context("saving tinted icon")?;
+    fs::write(format!("{prod_dir}/Contents.json"), PROD_CONTENTS_JSON)
         .with_context(|| format!("writing Contents.json to {prod_dir}"))?;
 
-    // Dev — composite overlay centred on base
-    let mut base = image::open(&base_path)
-        .context("opening base icon")?
-        .into_rgba8();
+    // Dev — light icon with dev overlay composited on top
+    let mut dev = light;
     let overlay = image::open(&overlay_path)
         .context("opening dev overlay")?
         .into_rgba8();
-    let (bw, bh) = base.dimensions();
+    let (bw, bh) = dev.dimensions();
     let (ow, oh) = overlay.dimensions();
     let x = ((bw - ow) / 2) as i64;
     let y = ((bh - oh) / 2) as i64;
-    imageops::overlay(&mut base, &overlay, x, y);
-    base.save(format!("{dev_dir}/AppIcon.png"))
+    imageops::overlay(&mut dev, &overlay, x, y);
+    dev.save(format!("{dev_dir}/AppIcon.png"))
         .context("saving dev icon")?;
-    fs::write(format!("{dev_dir}/Contents.json"), CONTENTS_JSON)
+    fs::write(format!("{dev_dir}/Contents.json"), DEV_CONTENTS_JSON)
         .with_context(|| format!("writing Contents.json to {dev_dir}"))?;
 
     Ok(())
+}
+
+fn make_icon(
+    logo_svg: &str,
+    bg: [u8; 3],
+    icon_color: &str,
+    logo_size: u32,
+) -> Result<image::RgbaImage> {
+    let mut canvas = image::RgbaImage::from_pixel(
+        ICON_SIZE,
+        ICON_SIZE,
+        image::Rgba([bg[0], bg[1], bg[2], 255]),
+    );
+
+    let colored = colorize_svg(logo_svg, icon_color);
+    let logo = render_svg(&colored, logo_size)?;
+
+    let x = ((ICON_SIZE - logo.width()) / 2) as i64;
+    let y = ((ICON_SIZE - logo.height()) / 2) as i64;
+    imageops::overlay(&mut canvas, &logo, x, y);
+
+    Ok(canvas)
+}
+
+fn colorize_svg(svg: &str, color: &str) -> String {
+    let re = Regex::new(r##"fill="#[0-9A-Fa-f]{3,8}""##).unwrap();
+    re.replace_all(svg, format!("fill=\"{color}\"").as_str())
+        .into_owned()
+}
+
+fn render_svg(svg_data: &str, max_size: u32) -> Result<image::RgbaImage> {
+    use resvg::{tiny_skia, usvg};
+
+    let options = usvg::Options::default();
+    let tree = usvg::Tree::from_str(svg_data, &options).context("parsing SVG")?;
+
+    let svg_w = tree.size().width();
+    let svg_h = tree.size().height();
+    let scale = max_size as f32 / svg_w.max(svg_h);
+    let w = (svg_w * scale) as u32;
+    let h = (svg_h * scale) as u32;
+
+    let mut pixmap = tiny_skia::Pixmap::new(w, h)
+        .ok_or_else(|| anyhow::anyhow!("failed to create {w}×{h} pixmap"))?;
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+
+    image::RgbaImage::from_raw(w, h, pixmap.take()).context("converting pixmap to RgbaImage")
+}
+
+/// Resolves a token path (e.g. `"palette.brand.primary"`) to a hex string for the given mode.
+fn token_hex(tokens: &Value, path: &str, mode: &str) -> Result<String> {
+    let alias = format!("{{{path}}}");
+    let hex = resolve_alias(tokens, &alias, mode, 0)
+        .with_context(|| format!("resolving '{path}' in {mode} mode"))?;
+    Ok(hex.to_string())
+}
+
+/// Resolves a token path to a `[u8; 3]` RGB triple.
+fn token_rgb(tokens: &Value, path: &str, mode: &str) -> Result<[u8; 3]> {
+    let hex = token_hex(tokens, path, mode)?;
+    parse_hex_rgb(&hex).with_context(|| format!("parsing colour '{hex}' for token '{path}'"))
+}
+
+fn parse_hex_rgb(hex: &str) -> Option<[u8; 3]> {
+    let h = hex.strip_prefix('#')?;
+    if h.len() != 6 {
+        return None;
+    }
+    Some([
+        u8::from_str_radix(&h[0..2], 16).ok()?,
+        u8::from_str_radix(&h[2..4], 16).ok()?,
+        u8::from_str_radix(&h[4..6], 16).ok()?,
+    ])
 }
