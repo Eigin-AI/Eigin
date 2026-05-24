@@ -1313,11 +1313,6 @@ enum Localized {
         static var chatCreationHint: String {
             Localized.get("notification.chatCreationHint")
         }
-
-        /// Push notification title sent when the on-device model finishes downloading
-        static var modelReady: String {
-            Localized.get("notification.modelReady")
-        }
     }
 
     enum Onboarding {
@@ -1507,21 +1502,6 @@ enum Localized {
                 Localized.get("onboarding.modelSetup.intro")
             }
 
-            /// Button label to request a notification when the model finishes downloading
-            static var notifyAction: String {
-                Localized.get("onboarding.modelSetup.notifyAction")
-            }
-
-            /// Confirmation message shown after the user enables download notifications
-            static var notifyConfirmation: String {
-                Localized.get("onboarding.modelSetup.notifyConfirmation")
-            }
-
-            /// Prompt offering to notify the user when the download completes
-            static var notifyOffer: String {
-                Localized.get("onboarding.modelSetup.notifyOffer")
-            }
-
             /// Progress percentage label
             static func progressPercent(_ p1: String) -> String {
                 String(format: Localized.get("onboarding.modelSetup.progressPercent"), p1)
@@ -1530,11 +1510,6 @@ enum Localized {
             /// A status label shown when the local model has finished downloading and is ready.
             static var readyStatus: String {
                 Localized.get("onboarding.modelSetup.readyStatus")
-            }
-
-            /// Success message shown after the on-device model is ready to use
-            static var successMessage: String {
-                Localized.get("onboarding.modelSetup.successMessage")
             }
 
             enum Words {

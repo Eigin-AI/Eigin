@@ -1,5 +1,4 @@
 import Foundation
-import UserNotifications
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -29,9 +28,9 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     private let fileManager = FileManager.default
     private var session: URLSession!
-    private var currentModel: ModelInfo?
-    private var destDir: URL?
-    private var pendingFiles: [DownloadFile] = []
+    var currentModel: ModelInfo?
+    var destDir: URL?
+    var pendingFiles: [DownloadFile] = []
     private var totalBytesForAllFiles: Int64 = 0
     private var downloadContinuation: CheckedContinuation<URL, Error>?
 
@@ -39,11 +38,16 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     // Parallel download state
     private let maxConcurrentDownloads = 4
-    private var nextFileIndex = 0
+    var nextFileIndex = 0
     private var completedBytes: Int64 = 0
-    private var activeDownloadTasks: [Int: URLSessionDownloadTask] = [:]
+    var activeDownloadTasks: [Int: URLSessionDownloadTask] = [:]
     private var activeTaskFileIndex: [Int: Int] = [:]
     private var activeTaskBytes: [Int: Int64] = [:]
+
+    /// Task IDs whose delegate callbacks have already been processed.
+    /// Used to prevent `reattachInFlightTasks` from resurrecting zombies
+    /// that completed before `getAllTasks` finished.
+    var completedTaskIDs: Set<Int> = []
 
     // MARK: - Types
 
@@ -82,10 +86,16 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         public static let defaults: [ModelInfo] = [gemma4e2b]
     }
 
-    private struct DownloadFile: Codable {
+    struct DownloadFile: Codable {
         let remotePath: String
         let localPath: String
         let estimatedSize: Int64
+
+        init(remotePath: String, localPath: String, estimatedSize: Int64) {
+            self.remotePath = remotePath
+            self.localPath = localPath
+            self.estimatedSize = estimatedSize
+        }
     }
 
     private struct PersistedState: Codable {
@@ -117,9 +127,13 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         session.getAllTasks { [weak self] tasks in
             guard let self else { return }
             let downloadTasks = tasks.compactMap { $0 as? URLSessionDownloadTask }
-            guard !downloadTasks.isEmpty else { return }
             DispatchQueue.main.async { [self] in
                 for task in downloadTasks {
+                    // Skip tasks whose delegate callbacks have already been
+                    // handled while we awaited `getAllTasks`; re-adding them
+                    // creates zombies that block `finishDownload`.
+                    guard !completedTaskIDs.contains(task.taskIdentifier) else { continue }
+
                     activeDownloadTasks[task.taskIdentifier] = task
                     // Match the task back to its index in pendingFiles by
                     // taskDescription (set when we dispatched it).
@@ -129,9 +143,20 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
                         activeTaskFileIndex[task.taskIdentifier] = idx
                     }
                 }
-                // We're being driven by the URLSession daemon, not paused.
-                isPaused = false
-                isDownloading = true
+
+                if !downloadTasks.isEmpty {
+                    // We're being driven by the URLSession daemon, not paused.
+                    isPaused = false
+                    isDownloading = true
+                    // Un-pausing may unblock earlier delegate callbacks that
+                    // bailed; give the gate a kick.
+                    fillDownloadSlots()
+                } else if isDownloading, isPaused, currentModel != nil {
+                    // All tasks completed while the app was killed; nothing to
+                    // reattach. Un-pause so fillDownloadSlots can finish.
+                    isPaused = false
+                    fillDownloadSlots()
+                }
             }
         }
     }
@@ -293,6 +318,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         activeDownloadTasks.removeAll()
         activeTaskFileIndex.removeAll()
         activeTaskBytes.removeAll()
+        completedTaskIDs.removeAll()
         nextFileIndex = 0
         completedBytes = 0
         isDownloading = false
@@ -378,7 +404,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     /// Start downloads until we have `maxConcurrentDownloads` active tasks,
     /// or all files are dispatched. Skips files that already exist on disk.
-    private func fillDownloadSlots() {
+    func fillDownloadSlots() {
         guard !isPaused else {
             saveState()
             return
@@ -473,9 +499,6 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         status = "Ready"
 
         let resolved = localModelURL(for: model)
-        if resolved != nil {
-            postReadyNotificationIfRequested()
-        }
 
         if let url = resolved {
             downloadContinuation?.resume(returning: url)
@@ -483,35 +506,6 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
             downloadContinuation?.resume(throwing: DownloadError.extractionFailed)
         }
         downloadContinuation = nil
-    }
-
-    /// Fire the "model ready" local notification when the user previously opted
-    /// in. Called from `finishDownload` so it works in both the foreground
-    /// (continuation flow) and the background-relaunch path (where there's no
-    /// awaiting `Task` to resume).
-    private func postReadyNotificationIfRequested() {
-        let defaults = UserDefaults.standard
-        guard defaults.bool(forKey: AppKeys.notifyOnGemmaReadyKey) else { return }
-        defaults.set(false, forKey: AppKeys.notifyOnGemmaReadyKey)
-
-        let content = UNMutableNotificationContent()
-        content.title = Localized.Notification.modelReady
-        content.body = Localized.Onboarding.ModelSetup.successMessage
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: "model-download-complete",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error {
-                AppLogger.error(
-                    "Failed to post model-ready notification: \(public: error.localizedDescription)",
-                    category: .general
-                )
-            }
-        }
     }
 
     // MARK: - Persistence
@@ -984,6 +978,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
 
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            completedTaskIDs.insert(taskId)
             activeDownloadTasks.removeValue(forKey: taskId)
             activeTaskFileIndex.removeValue(forKey: taskId)
             activeTaskBytes.removeValue(forKey: taskId)
@@ -1028,7 +1023,11 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             guard let self else { return }
             let handler = backgroundCompletionHandler
             backgroundCompletionHandler = nil
-            handler?()
+            // Defer one more main-queue turn so any pending notification-add
+            // IPC has time to commit before the app suspends.
+            DispatchQueue.main.async { [handler] in
+                handler?()
+            }
         }
     }
 
@@ -1041,6 +1040,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
         let taskId = task.taskIdentifier
         if (error as NSError).code == NSURLErrorCancelled {
             DispatchQueue.main.async { [weak self] in
+                self?.completedTaskIDs.insert(taskId)
                 self?.activeDownloadTasks.removeValue(forKey: taskId)
                 self?.activeTaskFileIndex.removeValue(forKey: taskId)
                 self?.activeTaskBytes.removeValue(forKey: taskId)
@@ -1050,6 +1050,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
 
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            completedTaskIDs.insert(taskId)
             activeDownloadTasks.removeValue(forKey: taskId)
             activeTaskFileIndex.removeValue(forKey: taskId)
             activeTaskBytes.removeValue(forKey: taskId)
