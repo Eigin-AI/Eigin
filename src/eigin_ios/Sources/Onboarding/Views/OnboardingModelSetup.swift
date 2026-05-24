@@ -122,7 +122,7 @@ struct OnboardingModelSetup: View {
             displayedState = gemmaManager.state
             gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
-                await gemmaManager.compile()
+                gemmaManager.tryAutoCompile(isActive: true)
             }
         }
         .onChange(of: gemmaManager.state) { oldState, newState in
@@ -131,7 +131,7 @@ struct OnboardingModelSetup: View {
                 displayedState = newState
             }
             if newState == .downloaded {
-                Task { await gemmaManager.compile() }
+                gemmaManager.tryAutoCompile(isActive: true)
             }
             if newState == .ready, oldState.isCompiling || oldState == .downloaded {
                 onReady()
