@@ -84,6 +84,11 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         )
 
         public static let defaults: [ModelInfo] = [gemma4e2b]
+
+        /// The default model.
+        public static var `default`: ModelInfo {
+            gemma4e2b
+        }
     }
 
     struct DownloadFile: Codable {
@@ -165,12 +170,21 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     public func isDownloaded(_ model: ModelInfo) -> Bool {
         if isDownloading, downloadingModelId == model.id { return false }
-        return localModelURL(for: model) != nil
+        return isModelComplete(model)
     }
 
-    public func hasFiles(_ model: ModelInfo) -> Bool {
-        fileManager
-            .fileExists(atPath: modelsDirectory.appendingPathComponent(model.folderName).path)
+    public func isModelComplete(_ model: ModelInfo) -> Bool {
+        let dest = modelsDirectory.appendingPathComponent(model.folderName)
+        for file in Self.expectedFiles(for: model) {
+            let path = dest.appendingPathComponent(file.localPath).path
+            guard fileManager.fileExists(atPath: path),
+                  let attrs = try? fileManager.attributesOfItem(atPath: path),
+                  let size = attrs[.size] as? Int64, size > 0
+            else {
+                return false
+            }
+        }
+        return true
     }
 
     public func localModelURL(for model: ModelInfo) -> URL? {
@@ -237,7 +251,9 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     /// Download a model, skipping files that already exist on disk.
     /// Set `repair: true` to re-check and download any missing files.
     public func download(_ model: ModelInfo, repair: Bool = false) async throws -> URL {
-        if !repair, let existing = localModelURL(for: model) { return existing }
+        if !repair, isModelComplete(model) {
+            return localModelURL(for: model)!
+        }
 
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async { [self] in
@@ -263,14 +279,12 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
                 let dest = modelsDirectory.appendingPathComponent(model.folderName)
                 destDir = dest
+                try? fileManager.removeItem(at: dest)
                 try? fileManager.createDirectory(at: dest, withIntermediateDirectories: true)
 
                 if model.downloadURL.contains("huggingface.co") {
                     buildHuggingFaceFileList(model)
-                    fillDownloadSlots()
                 } else {
-                    try? fileManager.removeItem(at: dest)
-                    try? fileManager.createDirectory(at: dest, withIntermediateDirectories: true)
                     pendingFiles = [DownloadFile(
                         remotePath: model.downloadURL,
                         localPath: "__archive.zip",
@@ -279,8 +293,8 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
                     totalBytesForAllFiles = 350_000_000
                     completedBytes = 0
                     nextFileIndex = 0
-                    fillDownloadSlots()
                 }
+                fillDownloadSlots()
             }
         }
     }
@@ -565,15 +579,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     // MARK: - HuggingFace File List
 
-    private func buildHuggingFaceFileList(_ model: ModelInfo) {
-        // 2K-context shipping model lives at the repo root on HF:
-        //   - Decode chunks:  swa/chunk{1-4}.mlmodelc/
-        //   - Prefill chunks: prefill/chunk{1-4}.mlmodelc/  (remote name is
-        //     chunk1, local is prefill_chunk1 to avoid colliding with decode)
-        // NOTE: `sdpa/` on HF is actually 8K — its metadata.json says 2048
-        // but model.mil has ctx=8192 (authoritative). Don't use `sdpa/` or
-        // `sdpa-8k/` until the 8K decode path lands (see docs/SPEED_8K.md).
-
+    static func expectedFiles(for model: ModelInfo) -> [DownloadFile] {
         func mlc(
             _ remoteDir: String,
             _ remoteName: String,
@@ -633,9 +639,6 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
                 ),
             ]
         }
-
-        var largeFiles: [DownloadFile] = []
-        var smallFiles: [DownloadFile] = []
 
         let chunkFiles = mlc("swa", "chunk1", "chunk1", weightSize: 155_436_864)
             + mlc("swa", "chunk2", "chunk2", weightSize: 133_963_968)
@@ -798,16 +801,25 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         ]
 
         let extraFiles = textFiles + (model.includeMultimodal ? multimodalFiles : [])
+        return chunkFiles + prefillFiles + extraFiles
+    }
 
+    static func expectedFileSizeBytes(for model: ModelInfo) -> Int64 {
+        expectedFiles(for: model).reduce(into: 0) { $0 += $1.estimatedSize }
+    }
+
+    private func buildHuggingFaceFileList(_ model: ModelInfo) {
+        let allFiles = Self.expectedFiles(for: model)
         let threshold: Int64 = 10_000_000
-        for file in chunkFiles + prefillFiles + extraFiles {
+        var largeFiles: [DownloadFile] = []
+        var smallFiles: [DownloadFile] = []
+        for file in allFiles {
             if file.estimatedSize >= threshold {
                 largeFiles.append(file)
             } else {
                 smallFiles.append(file)
             }
         }
-
         largeFiles.sort { $0.estimatedSize > $1.estimatedSize }
         pendingFiles = largeFiles + smallFiles
         totalBytesForAllFiles = pendingFiles.reduce(0) { $0 + $1.estimatedSize }
@@ -1055,18 +1067,25 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             activeTaskFileIndex.removeValue(forKey: taskId)
             activeTaskBytes.removeValue(forKey: taskId)
 
-            // If other tasks are still active, just log and continue
-            if !activeDownloadTasks.isEmpty || nextFileIndex < pendingFiles.count {
-                fillDownloadSlots()
-                return
+            // Any non-cancelled task failure borks the whole download.
+            // Cancel remaining tasks and clean up partial artifacts.
+            let remainingTasks = activeDownloadTasks.values
+            for t in remainingTasks {
+                t.cancel()
             }
+            activeDownloadTasks.removeAll()
+            activeTaskFileIndex.removeAll()
+            activeTaskBytes.removeAll()
+            nextFileIndex = pendingFiles.count // prevent new tasks from starting
 
-            // All tasks failed
             status = "Error: \(error.localizedDescription)"
             isDownloading = false
             isPaused = false
             downloadingModelId = nil
             cleanupPersistedState()
+            if let dest = destDir {
+                try? fileManager.removeItem(at: dest)
+            }
             downloadContinuation?.resume(throwing: error)
             downloadContinuation = nil
         }

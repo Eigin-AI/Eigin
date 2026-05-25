@@ -91,4 +91,69 @@ struct GemmaModelDownloaderTests {
         #expect(!downloader.isDownloading, "finishDownload should set isDownloading to false")
         #expect(downloader.progress == 1.0, "finishDownload should set progress to 1.0")
     }
+
+    // MARK: – isModelComplete
+
+    @Test func isModelCompleteReturnsFalseForPartialFiles() throws {
+        let downloader = GemmaModelDownloader.shared
+        let documents = try #require(
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        )
+        let dest = documents
+            .appendingPathComponent("Models")
+            .appendingPathComponent("partial-test-model")
+        try? FileManager.default.removeItem(at: dest)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dest) }
+
+        // Only create chunk1 weight.bin — not enough
+        let chunkDir = dest.appendingPathComponent("chunk1.mlmodelc/weights", isDirectory: true)
+        try FileManager.default.createDirectory(at: chunkDir, withIntermediateDirectories: true)
+        FileManager.default.createFile(
+            atPath: chunkDir.appendingPathComponent("weight.bin").path,
+            contents: nil,
+            attributes: nil
+        )
+
+        let model = GemmaModelDownloader.ModelInfo(
+            id: "partial-test-model",
+            name: "Partial Test",
+            size: "1 GB",
+            downloadURL: "http://example.com",
+            folderName: "partial-test-model"
+        )
+
+        #expect(!downloader.isModelComplete(model))
+    }
+
+    @Test func isModelCompleteReturnsTrueWhenAllFilesPresent() throws {
+        let downloader = GemmaModelDownloader.shared
+        let documents = try #require(
+            FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        )
+        let dest = documents
+            .appendingPathComponent("Models")
+            .appendingPathComponent("complete-test-model")
+        try? FileManager.default.removeItem(at: dest)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dest) }
+
+        let model = GemmaModelDownloader.ModelInfo(
+            id: "complete-test-model",
+            name: "Complete Test",
+            size: "1 GB",
+            downloadURL: "http://example.com",
+            folderName: "complete-test-model"
+        )
+
+        // Create every expected file with non-zero length
+        for file in GemmaModelDownloader.expectedFiles(for: model) {
+            let fileURL = dest.appendingPathComponent(file.localPath)
+            let parent = fileURL.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+            try Data("test".utf8).write(to: fileURL)
+        }
+
+        #expect(downloader.isModelComplete(model))
+    }
 }

@@ -11,11 +11,8 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     static let shared = GemmaModelManager()
 
     let id = "coreml-gemma"
-    let displayName = "Gemma 4"
-
-    var downloadDescription: String {
-        "Gemma 4 E2B on-device model (~2.8 GB download, ~1 GB memory). Supports Danish."
-    }
+    let displayName = Localized.Model.Gemma4e2b.name
+    let downloadDescription = Localized.Onboarding.LocalModel.description
 
     private(set) var state: AssetState = .notDownloaded
     /// Human-readable status during download/compile.
@@ -30,8 +27,13 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private let declinedKey = "coreml-gemma-declined"
 
     /// The model info from the CoreML-LLM library.
-    private var modelInfo: GemmaModelDownloader.ModelInfo {
-        GemmaModelDownloader.ModelInfo.defaults[0] // Gemma 4 E2B
+    private let localModelInfo = GemmaModelDownloader.ModelInfo.default
+
+    /// Injected disk-space service; swap in a fake for tests.
+    private let diskSpaceService: any DiskSpaceService
+
+    init(diskSpaceService: any DiskSpaceService = DefaultDiskSpaceService()) {
+        self.diskSpaceService = diskSpaceService
     }
 
     var hasBeenDeclined: Bool {
@@ -39,12 +41,19 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         set { UserDefaults.standard.set(newValue, forKey: declinedKey) }
     }
 
-    /// Estimated download size in bytes (~2.8 GB).
-    static let estimatedSize: Int64 = 2_800_000_000
+    /// Estimated download size in bytes, derived from the manifest.
+    static var estimatedSize: Int64 {
+        GemmaModelDownloader.expectedFileSizeBytes(for: GemmaModelDownloader.ModelInfo.default)
+    }
+
+    /// Multiplier applied to the estimated model size to reserve enough free
+    /// space for both downloading and ANE compilation. Increase if users hit
+    /// storage errors during first-run preparation.
+    static let storageHeadroomFactor: Double = 2.0
 
     /// Whether the model is fully downloaded and ready to use.
     var isReady: Bool {
-        GemmaModelDownloader.shared.isDownloaded(modelInfo)
+        GemmaModelDownloader.shared.isDownloaded(localModelInfo)
     }
 
     func checkAvailability() {
@@ -57,10 +66,33 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
+    // MARK: - Storage
+
+    static func minimumRequiredFreeSpaceBytes(
+        for model: GemmaModelDownloader.ModelInfo
+    ) -> Int64 {
+        let base = GemmaModelDownloader.expectedFileSizeBytes(for: model)
+        return Int64(Double(base) * storageHeadroomFactor)
+    }
+
+    func hasSufficientStorage() -> Bool {
+        let required = Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)
+        guard let free = diskSpaceService.availableBytes() else { return false }
+        return free >= required
+    }
+
     // MARK: - Download
 
     func download() async {
         guard !state.isDownloading else { return }
+
+        guard hasSufficientStorage() else {
+            let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)) /
+                1_000_000_000
+            state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
+            return
+        }
+
         state = .downloading(fractionCompleted: 0)
         statusMessage = "Downloading…"
 
@@ -79,7 +111,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                     }
                 }
 
-                _ = try await GemmaModelDownloader.shared.download(modelInfo)
+                _ = try await GemmaModelDownloader.shared.download(localModelInfo)
                 progressTask.cancel()
 
                 try Task.checkCancellation()
@@ -106,13 +138,21 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// subsequent runs use CoreML's cached compilation and complete in seconds.
     func compile() async {
         guard state == .downloaded else { return }
+
+        let modelSize = GemmaModelDownloader.expectedFileSizeBytes(for: localModelInfo)
+        guard let freeSpace = diskSpaceService.availableBytes(), freeSpace >= modelSize else {
+            let requiredGB = Double(modelSize) / 1_000_000_000
+            state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
+            return
+        }
+
         state = .compiling(fractionCompleted: 0)
         statusMessage = "Preparing model for your device…"
 
         URLCache.shared.removeAllCachedResponses()
 
         do {
-            let info = modelInfo
+            let info = localModelInfo
             let compiled = try await GemmaRuntime.load(
                 model: info,
                 onChunkLoaded: { @Sendable [weak self] loaded, total in
@@ -150,7 +190,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     func delete() {
         cancel()
         unload()
-        try? GemmaModelDownloader.shared.delete(modelInfo)
+        try? GemmaModelDownloader.shared.delete(localModelInfo)
         state = .notDownloaded
     }
 
@@ -177,7 +217,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
             category: .chat
         )
         isLoading = true
-        let info = modelInfo
+        let info = localModelInfo
         let task = Task { [weak self] in
             guard let self else { return }
             defer {
