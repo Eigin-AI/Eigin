@@ -2019,6 +2019,13 @@ enum Localized {
                 }
             }
 
+            enum Berget {
+                /// Step-by-step instruction for obtaining a Berget API key
+                static var instruction: String {
+                    Localized.get("provider.setup.berget.instruction")
+                }
+            }
+
             enum Custom {
                 /// A description of the API key field, indicating that it is required for using an
                 /// OpenAI-compatible API. It also includes a suggestion for how to obtain it from
@@ -2044,6 +2051,13 @@ enum Localized {
                 /// Step-by-step instruction for obtaining a Google AI Studio API key
                 static var instruction: String {
                     Localized.get("provider.setup.google.instruction")
+                }
+            }
+
+            enum Infercom {
+                /// Step-by-step instruction for obtaining an Infercom API key
+                static var instruction: String {
+                    Localized.get("provider.setup.infercom.instruction")
                 }
             }
 
@@ -2081,20 +2095,6 @@ enum Localized {
                 /// Instruction for connecting via OAuth to OpenRouter
                 static var oauthInstruction: String {
                     Localized.get("provider.setup.openrouter.oauthInstruction")
-                }
-            }
-
-            enum Ovh {
-                /// Step-by-step instruction for obtaining an OVH AI Endpoints token
-                static var instruction: String {
-                    Localized.get("provider.setup.ovh.instruction")
-                }
-            }
-
-            enum Scaleway {
-                /// Step-by-step instruction for obtaining a Scaleway API key
-                static var instruction: String {
-                    Localized.get("provider.setup.scaleway.instruction")
                 }
             }
         }

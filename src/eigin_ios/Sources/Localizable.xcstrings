@@ -6095,36 +6095,36 @@
         }
       }
     },
-    "provider.setup.ovh.instruction" : {
-      "comment" : "Step-by-step instruction for obtaining an OVH AI Endpoints token",
+    "provider.setup.berget.instruction" : {
+      "comment" : "Step-by-step instruction for obtaining a Berget API key",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opret et token til AI Endpoints i OVHcloud-dashboardet."
+            "value" : "Hent din API-nøgle i Berget-konsollen, og tilføj kredit på console.berget.ai/billing."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Create a token for AI Endpoints in the OVHcloud dashboard."
+            "value" : "Get your API key in the Berget console, and add credits at console.berget.ai/billing."
           }
         }
       }
     },
-    "provider.setup.scaleway.instruction" : {
-      "comment" : "Step-by-step instruction for obtaining a Scaleway API key",
+    "provider.setup.infercom.instruction" : {
+      "comment" : "Step-by-step instruction for obtaining an Infercom API key",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generér en API-nøgle i Scaleway Console under IAM."
+            "value" : "Hent din API-nøgle fra Infercom Inference-portalen, og tilføj kredit på cloud.infercom.ai/plans/billing."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Generate an API key in the Scaleway Console under IAM."
+            "value" : "Get your API key from the Infercom Inference portal, and add credits at cloud.infercom.ai/plans/billing."
           }
         }
       }
