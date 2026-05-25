@@ -3942,13 +3942,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Da du vægter valgfrihed, kan du forbinde din foretrukne Cloud AI-udbyder eller blive ved den lokale motor. Du bestemmer, hvilken model der håndterer hvilken opgave."
+            "value" : "Da du vægter valgfrihed, kan du forbinde cloud AI for den fulde oplevelse eller fortsætte lokalt. Du bestemmer, hvilken model der håndterer hvilken opgave."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Since you value choice, you can connect your preferred cloud AI provider or stick with the local engine. You decide which model handles which task."
+            "value" : "Since you value choice, you can connect cloud AI for the full experience or stick with the local model. You decide which model handles which tasks."
           }
         }
       }
@@ -3976,13 +3976,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ kører på din egen enhed. Forbind Cloud AI, hvis du vil have ekstra kraft til komplekse opgaver. Dine data forbliver beskyttet uanset hvad."
+            "value" : "%@ starter offline, på din enhed. Forbind cloud AI, når du er klar, for at låse op for appens fulde kraft."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ runs on your own device. Connect Cloud AI if you want extra power for complex tasks. Your data stays protected either way."
+            "value" : "%@ starts offline, on your device. Connect cloud AI when you're ready to unlock the full power of the app."
           }
         }
       }
@@ -4095,13 +4095,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ fungerer godt på din enhed. Forbind Cloud AI for at låse op for endnu mere kraft — det er dit valg. Dine data forbliver lokale uanset hvad."
+            "value" : "%@ starter offline, på din enhed. Forbind cloud AI, når du er klar, for at låse op for appens fulde kraft."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ works great on your device. Connect Cloud AI to unlock even more power — it's your choice. Your data stays local either way."
+            "value" : "%@ starts offline, on your device. Connect cloud AI when you're ready to unlock the full power of the app."
           }
         }
       }
@@ -4248,13 +4248,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Samtaler forbliver på din enhed"
+            "value" : "Dine data forbliver på din enhed"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conversations stay on your device"
+            "value" : "Your data stays on your device"
           }
         }
       }
@@ -4350,13 +4350,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download en model (4 GB) og arbejd helt offline. Ingen konto nødvendig."
+            "value" : "Download en model (4 GB) og start helt offline. Ingen konto nødvendig."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download a model (4 GB) and work completely offline. No account needed."
+            "value" : "Download a model (4 GB) and start completely offline. No account needed."
           }
         }
       }
@@ -4707,13 +4707,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbliv lokal"
+            "value" : "Gør det senere"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stay local"
+            "value" : "Do it later"
           }
         }
       }
