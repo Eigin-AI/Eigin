@@ -12,7 +12,6 @@ struct LocalProviderView: View {
 
     let preset: ProviderPreset
 
-    @State private var showStorageError = false
     @State private var showDeleteConfirm = false
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
@@ -37,12 +36,6 @@ struct LocalProviderView: View {
         .navigationTitle(Localized.Provider.Picker.onDeviceModel, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
         .keepScreenAwake(isPreparing)
-        .alert(Localized.Errors.notAvailable, isPresented: $showStorageError) {
-            Button(Localized.Common.Actions.cancel, role: .cancel) {}
-        } message: {
-            let size = Double(GemmaModelManager.estimatedSize) / 1_000_000_000
-            Text(Localized.Model.storageRequirement(String(format: "%.1f", size)))
-        }
         .task {
             gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
@@ -97,7 +90,7 @@ struct LocalProviderView: View {
             Spacer()
 
             AppButton(Localized.Onboarding.ModelSetup.downloadAction) {
-                startDownload()
+                Task { await gemmaManager.download() }
             }
         }
     }
@@ -215,25 +208,12 @@ struct LocalProviderView: View {
             Spacer()
 
             AppButton(Localized.Common.Actions.retry) {
-                startDownload()
+                Task { await gemmaManager.download() }
             }
         }
     }
 
     // MARK: - Actions
-
-    private func startDownload() {
-        let freeSpace = try? FileManager.default
-            .attributesOfFileSystem(forPath: NSHomeDirectory())[.systemFreeSize] as? Int64
-        guard (freeSpace ?? 0) >= GemmaModelManager.estimatedSize else {
-            showStorageError = true
-            return
-        }
-
-        Task {
-            await gemmaManager.download()
-        }
-    }
 
     private func ensureLocalProvider() {
         guard localProvider == nil else { return }
