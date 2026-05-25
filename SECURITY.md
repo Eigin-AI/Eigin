@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please use the [Security Disclosure issue template](https://code.eigin.ai/dev/eigin/-/issues/new?issuable_template=Security_Disclosure) to report a vulnerability. When filing the issue:
+Please use the [Security Disclosure issue template](https://code.eigin.ai/dev/eigin/-/issues/new?issuable_template=security_disclosure) to report a vulnerability. When filing the issue:
 
 - Mark it as **confidential**
 - Apply the `security` label
