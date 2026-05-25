@@ -141,19 +141,19 @@ struct ProviderPreset: Identifiable, Hashable {
             region: .global
         ),
         ProviderPreset(
-            id: "scaleway",
-            name: "Scaleway",
-            baseURL: "https://api.scaleway.ai/v1",
-            helpText: Localized.Provider.Setup.Scaleway.instruction,
-            apiKeyURL: "https://console.scaleway.com/iam/api-keys",
+            id: "berget",
+            name: "Berget AI",
+            baseURL: "https://api.berget.ai/v1",
+            helpText: Localized.Provider.Setup.Berget.instruction,
+            apiKeyURL: "https://console.berget.ai/api-keys",
             region: .europe
         ),
         ProviderPreset(
-            id: "ovhcloud",
-            name: "OVHcloud",
-            baseURL: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
-            helpText: Localized.Provider.Setup.Ovh.instruction,
-            apiKeyURL: "https://endpoints.ai.cloud.ovh.net/",
+            id: "infercom",
+            name: "Infercom",
+            baseURL: "https://api.infercom.ai/v1",
+            helpText: Localized.Provider.Setup.Infercom.instruction,
+            apiKeyURL: "https://cloud.infercom.ai/apis",
             region: .europe
         ),
     ]
