@@ -34,15 +34,14 @@ Two build targets, each hardwired to a relay environment:
 | `Eigin` | `relay.eigin.ai` (production) | `${BUNDLE_ID}` |
 | `EiginDev` | `staging.relay.eigin.ai` (staging) | `${BUNDLE_ID}.dev` |
 
-Both apps can be installed on the same device simultaneously. The relay URL and key come from `.env` via `_STAGING` / `_PRODUCTION` suffix labels (e.g. `EIGIN_RELAY_URL_STAGING`, `EIGIN_RELAY_KEY_PRODUCTION`). Build with `make ios-build` for production or `make ios-build SCHEME=EiginDev` for staging.
+Both apps can be installed on the same device simultaneously. The relay URL and key come from `.env` via `_STAGING` / `_PRODUCTION` suffix labels (e.g. `EIGIN_RELAY_URL_STAGING`, `EIGIN_RELAY_KEY_PRODUCTION`). Build with `just build ios` for production or `just build ios staging` for staging.
 
 ## Project generation
 
 The Xcode project is generated from `project.yml` — never edit `.xcodeproj` directly. To add files, dependencies, or build settings, edit `project.yml` then regenerate:
 
 ```
-make generate   # regenerate project
-make ios-open   # regenerate and open in Xcode
+just generate   # regenerate project
 ```
 
 ## Development principles
@@ -59,10 +58,10 @@ All user-facing strings live in `Sources/Localizable.xcstrings` and are accessed
 
 ## Code style
 
-Formatting is enforced by SwiftFormat — config at `src/eigin_ios/.swiftformat`. Run `make format` from the repo root before committing.
+Formatting is enforced by SwiftFormat — config at `src/eigin_ios/.swiftformat`. Run `just format` from the repo root before committing.
 
 ## Testing
 
 Framework is Swift Testing (`import Testing`, `@Test`, `@Suite`, `#expect`). One test file per service: `{Service}Tests.swift`. Fakes live in `Tests/Fakes/`. A common pattern is `FakeURLProtocol` injected into `URLSession` to intercept network calls without hitting the real network.
 
-Run with `make ios-test`.
+Run with `just test ios`.

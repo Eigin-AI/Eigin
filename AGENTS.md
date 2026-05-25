@@ -11,7 +11,7 @@ The app is a chat interface, a persistent agent, and an agent harness: users con
 - `assets/` — shared assets (sound effects, etc.)
 - `LICENSES/` — third-party license attributions (ML models, Swift packages, Rust crates)
 - `scripts/` — build and maintenance scripts
-- `Makefile` — build, test, and project generation commands (at repo root)
+- `justfile` — build, test, and project generation commands (at repo root)
 - `docs/` — high level documentation
 
 ## Prerequisites
@@ -22,23 +22,22 @@ See the platform-specific AGENTS file for environment setup:
 
 ## Build and test
 
-All commands run from the repo root:
+All commands run from the repo root. After cloning:
 
 ```
-make generate       # Regenerate .xcodeproj + LSP config
-
-make ios-build      # Generate + build iOS
-make ios-test       # Generate + run iOS unit tests
-make ios-clean      # Clean iOS build artifacts
-make ios-open       # Generate + open Xcode
-
-make relay-build    # Build relay (cargo build --release)
-make relay-test     # Run relay tests
-
-make test           # Run all platform tests
-make format         # Auto-format all code
-make lint           # Lint without modifying
+just hooks      # Install git hooks (one-time)
+just generate   # Regenerate the project
 ```
+
+Then the core loop:
+
+```
+just build      # Build all targets
+just test       # Run all tests
+just format     # Auto-format all code
+```
+
+Run `just --list` to see all available commands.
 
 ## Documentation
 
@@ -58,7 +57,7 @@ make lint           # Lint without modifying
 
 ## Principles
 
-**Formatting** — formatting is standardized and automated. Run `make format` before committing. Don't avoid style debates; let the formatter decide.
+**Formatting** — formatting is standardized and automated. Run `just format` before committing. Don't avoid style debates; let the formatter decide.
 
 **Comments** — document public APIs with summary comments. Use inline comments only for non-obvious logic. Explain what and why, not how. Write for the current state of the code — git history covers the rest.
 

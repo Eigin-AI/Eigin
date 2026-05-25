@@ -68,11 +68,11 @@ If neither `POOL_BUCKET` nor `POOL_FILE_PATH` is set, the pool runs in-memory (r
 Deployed to Scaleway Serverless Containers via Terraform. From the repo root:
 
 ```
-make infra-init              # First-time: terraform init (downloads providers)
-make infra-plan              # Preview staging changes
-make infra-plan ENV=production
-make infra-deploy            # Deploy to staging
-make infra-deploy ENV=production
+just infra init              # First-time: terraform init (downloads providers)
+just infra plan              # Preview staging changes
+just infra plan production
+just infra deploy            # Deploy to staging
+just infra deploy production
 ```
 
 `ENV` defaults to `staging`. The correct per-env relay key and Mojeek key are resolved automatically from `.env` via `scripts/tf-env.sh` — no manual TF_VAR edits required. See `infra/scaleway/` for the Terraform configuration.
@@ -89,4 +89,4 @@ After the first deploy:
 2. Wait for the record to propagate: `dig staging.relay.eigin.ai` should return the container domain.
 3. In the Scaleway console, go to the container → **Endpoints** → **Add endpoint** and enter the custom hostname.
 
-Subsequent `make infra-deploy` runs do not touch the domain binding.
+Subsequent `just infra deploy` runs do not touch the domain binding.

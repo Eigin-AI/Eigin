@@ -1,6 +1,6 @@
 # Design system
 
-Eigin uses a centralised design token system as the single source of truth for visual primitives: colours, spacing, typography, and layout. Changing a token and running `make generate` propagates the change through all generated platform code.
+Eigin uses a centralised design token system as the single source of truth for visual primitives: colours, spacing, typography, and layout. Changing a token and running `just generate` propagates the change through all generated platform code.
 
 ## Design tokens
 
@@ -42,7 +42,7 @@ SVG files placed in `design/assets/icons/` are picked up at generation time and 
 | `icons/provider/openai.svg` | `Iconography.Provider.openai` | `Image("Icons/provider/openai")` |
 | `icons/functional/send.svg` | `Iconography.Functional.send` | `Image("Icons/functional/send")` |
 
-Provider logos, brand marks, and functional icons all live in the same source tree. Adding or replacing an SVG and running `make generate` updates the asset catalogue and typed accessor automatically.
+Provider logos, brand marks, and functional icons all live in the same source tree. Adding or replacing an SVG and running `just generate` updates the asset catalogue and typed accessor automatically.
 
 ### App icon
 
@@ -50,7 +50,7 @@ The source icon lives in `design/assets/app_icon/`. Generation copies it into th
 
 ## Code generation
 
-Running `make generate` reads the token file and assets, then produces platform-native code. For iOS, the following files are written to `Sources/Core/Design/Generated/` (git-ignored, so machine-local font choices don't pollute source control):
+Running `just generate` reads the token file and assets, then produces platform-native code. For iOS, the following files are written to `Sources/Core/Design/Generated/` (git-ignored, so machine-local font choices don't pollute source control):
 
 | File | Contents |
 |---|---|

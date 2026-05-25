@@ -87,16 +87,7 @@ See [Localization](./localization.md) for how to add and use localised strings.
 
 The Xcode project is generated from `project.yml` by [XcodeGen](https://github.com/yonaskolb/XcodeGen). Don't edit the `.xcodeproj` directly: edit `project.yml` and regenerate.
 
-All commands run from the repo root:
-
-```
-make generate           # Regenerate .xcodeproj from project.yml
-make build              # Generate + build
-make test               # Generate + run unit tests
-make test-integration   # Generate + run integration tests
-make clean              # Clean build artifacts and derived data
-make open               # Generate + open in Xcode
-```
+All commands run from the repo root. After changing `project.yml`, run `just generate` to regenerate the `.xcodeproj`. Use `just build ios`, `just test ios`, and `just --list` for the full command surface.
 
 ## Critical files
 
@@ -104,4 +95,4 @@ make open               # Generate + open in Xcode
 - `src/eigin_ios/Sources/App/EiginApp.swift` — app entry, ModelContainer, environment injection
 - `src/eigin_ios/Sources/App/Container+Services.swift` — Factory DI registrations
 - `src/eigin_ios/Sources/App/ToolAssembly.swift` — tool composition from domain kits
-- `Makefile` — top-level build commands
+- `justfile` — top-level build commands
