@@ -31,11 +31,38 @@ Then jump into whatever you're touching: [Conversation](./conversation/README.md
 
 ## Building from source
 
-**Prerequisites:** Xcode (with `xcode-select -s`), [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+**iOS:**
+
+- Xcode — `xcode-select -s /Applications/Xcode.app/Contents/Developer`
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
+- [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) — `brew install swiftformat`
+
+**Relay:**
+
+- [Rust and Cargo](https://rustup.rs) — via rustup
+
+**Relay deployment:**
+
+- [Terraform](https://developer.hashicorp.com/terraform/install) — `brew install terraform`
+- [Scaleway CLI](https://github.com/scaleway/scaleway-cli) — `brew install scw`, then `scw init` to authenticate (the Terraform provider reads credentials from the scw config automatically)
+
+**Command runner:**
+
+- [just](https://just.systems) — `brew install just`
+
+After cloning, run:
 
 ```
-make generate   # Regenerate .xcodeproj from project.yml
-make build      # Generate + build
-make test       # Generate + run unit tests
-make open       # Generate + open in Xcode
+just hooks      # Install git hooks (one-time)
+just generate   # Regenerate the project
 ```
+
+Then the core loop:
+
+```
+just build      # Build all targets
+just test       # Run all tests
+just format     # Auto-format all code
+```
+
+Run `just --list` to see all available commands.

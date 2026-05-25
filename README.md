@@ -37,28 +37,26 @@ Open source with European roots. We fund the mission by offering sovereign AI to
 - [Terraform](https://developer.hashicorp.com/terraform/install) — `brew install terraform`
 - [Scaleway CLI](https://github.com/scaleway/scaleway-cli) — `brew install scw`, then `scw init` to authenticate (the Terraform provider reads credentials from the scw config automatically)
 
-Run `make generate` once after cloning, and again whenever you change top-level configuration (project layout, design tokens, localization sources). Application code is generated from root config.
+**Command runner:**
+
+- [just](https://just.systems) — `brew install just`
+
+After cloning, run:
 
 ```
-make generate     # Regenerate the application
-make test         # Run all tests
-make hooks        # Install git hooks
-make format       # Format codebase
-make lint         # Lint without modifying
-
-make ios-build    # Build iOS
-make ios-test     # Run iOS unit tests
-make ios-open     # Open in Xcode
-make ios-clean    # Clean iOS build artifacts
-
-make relay-build  # Build relay
-make relay-test   # Run relay tests
-make relay-run    # Run relay locally
-
-make infra-init   # First-time Terraform setup
-make infra-plan   # Preview infrastructure changes
-make infra-deploy # Apply infrastructure changes
+just hooks      # Install git hooks (one-time)
+just generate   # Regenerate the project
 ```
+
+and then:
+
+```
+just build      # Build all targets
+just test       # Run all tests
+just format     # Auto-format all code
+```
+
+Run `just --list` to see all available commands.
 
 ## License
 
