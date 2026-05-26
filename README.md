@@ -1,62 +1,28 @@
 # Eigin
 
-**Your personal AI - running on your own hardware, under your control.**
+**A local-first, sovereign personal AI.**
 
-To get real value from AI, you have to let it know you. The more it knows, the more useful it becomes - and the more personal it gets. Eigin is built so you can actually share: no questions about who owns your words, no concern that your thoughts are training someone else's model.
+What would you tell an AI, if you knew it was truly yours?
 
-You bring the model. Eigin holds everything it learns about you, on your device.
+Eigin is a personal agent that runs on your device. It connects to any inference provider you choose, and builds knowledge about you across every conversation. The model is yours to pick; Eigin handles everything else - privately, and under your control.
 
-## How it works
+## What it is
 
-**You bring the AI, Eigin holds the context.**
-Connect any model you trust - OpenAI, Anthropic, Google, Mistral, any OpenAI-compatible API, or a local model on your own silicon. Chats, knowledge, and agent configuration are stored locally. Uninstall and it's gone.
+**Persistent agent.** A personal agent with its own identity, knowledge, skills, and goals.
 
-**It starts blank.**
-No assumptions, no agenda. The agent persists across conversations and learns from you - knowledge, intents, and goals shaped by use.
+**Local-first.** Chats, knowledge, and everything the agent learns live on your device.
 
-**Deeply integrated.**
-Calendar, reminders, location, email, and more built in. Add any MCP server to extend it. Web search runs through Eigin Relay - a narrow, anonymous bridge that never sees your chat content.
+**Model-agnostic.** Connect OpenAI, Anthropic, Google, Mistral, OpenRouter, EUrouter or any OpenAI-compatible API with your own key. For complete privacy, conversations can run end-to-end on device with a local model.
 
-**Built for people, not platforms.**
-Open source with European roots. We fund the mission by offering sovereign AI to institutions that need the same guarantees you do.
+**Integrated.** Native apps that plug directly into platform features like calendar, reminders, location, email, and more. MCP support for everything else.
 
-## Build
+**Vocal.** On-device speech and a "live call" mode for hands-free conversation.
 
-**iOS:**
+Eigin is open source with European roots.
 
-- Xcode — `xcode-select -s /Applications/Xcode.app/Contents/Developer`
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
-- [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) — `brew install swiftformat`
+## Getting started
 
-**Relay:**
-
-- [Rust and Cargo](https://rustup.rs) — via rustup
-
-**Relay deployment:**
-
-- [Terraform](https://developer.hashicorp.com/terraform/install) — `brew install terraform`
-- [Scaleway CLI](https://github.com/scaleway/scaleway-cli) — `brew install scw`, then `scw init` to authenticate (the Terraform provider reads credentials from the scw config automatically)
-
-**Command runner:**
-
-- [just](https://just.systems) — `brew install just`
-
-After cloning, run:
-
-```
-just hooks      # Install git hooks (one-time)
-just generate   # Regenerate the project
-```
-
-and then:
-
-```
-just build      # Build all targets
-just test       # Run all tests
-just format     # Auto-format all code
-```
-
-Run `just --list` to see all available commands.
+See the [docs](docs/src/introduction.md) for prerequisites and build instructions.
 
 ## License
 

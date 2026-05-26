@@ -7,8 +7,8 @@ title = "Eigin"
 [output.html]
 default-theme = "coal"
 preferred-dark-theme = "coal"
-git-repository-url = "https://github.com/42futures/eigin"
-git-repository-icon = "fab-github"
+git-repository-url = "https://code.eigin.ai"
+git-repository-icon = "fab-gitlab"
 additional-css = ["theme/custom.css"]
 no-section-label = true
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
@@ -23,7 +23,10 @@ enable = false
 enable = true
 level = 0
 
-[preprocessor]
+[build]
+use-default-preprocessors = false
+
+[preprocessor.links]
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"

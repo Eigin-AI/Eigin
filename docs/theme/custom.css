@@ -1,13 +1,14 @@
 :root {
-    /* Design token palette — dark mode */
-    --bg-primary: #2E2D2B;      /* grey.950 — background */
-    --bg-secondary: #3E3D39;    /* brown.850 — surface */
-    --bg-tertiary: #5A4C3D;     /* brown.800 — surfaceSecondary */
-    --accent: #B29779;          /* brown.400 — accent */
-    --text-primary: #F9F9F9;    /* grey.10 — textPrimary */
-    --text-secondary: #D9CBBC;  /* brown.300 — textSecondary */
-    --text-tertiary: #C0A88F;   /* brown.500 — textTertiary */
-    --border: #4C4C4A;          /* grey.800 — border */
+    /* Design tokens — dark mode (from design/tokens.json) */
+    --bg-primary: #232323;      /* color.surface.standard.base dark */
+    --bg-secondary: #1B1B1B;    /* color.surface.standard.alternative dark */
+    --bg-elevated: #0E0001;     /* color.surface.standard.elevated dark */
+    --accent: #A7B04E;          /* palette.brand.primary — links, active */
+    --accent-warm: #B39779;     /* palette.brand.accent — decorative */
+    --text-primary: #EFEFEF;    /* palette.neutral.800 dark */
+    --text-secondary: #E8E8E8;  /* palette.neutral.700 dark */
+    --text-muted: #7E7F7B;      /* palette.neutral.500 dark */
+    --border: #4C4C4A;          /* palette.neutral.400 dark */
 
     --font-family:
         -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
@@ -21,7 +22,7 @@
     --fg: var(--text-primary);
     --sidebar-bg: var(--bg-secondary);
     --sidebar-fg: var(--text-secondary);
-    --sidebar-non-existant: var(--text-tertiary);
+    --sidebar-non-existant: var(--text-muted);
     --sidebar-active: var(--accent);
     --sidebar-spacer: var(--bg-primary);
     --scrollbar: var(--border);
@@ -33,7 +34,7 @@
     --theme-popup-border: var(--border);
     --theme-hover: var(--bg-primary);
     --quote-bg: var(--bg-secondary);
-    --quote-border: var(--accent);
+    --quote-border: var(--accent-warm);
     --table-border-color: var(--border);
     --table-header-bg: var(--bg-secondary);
     --table-alternate-bg: var(--bg-secondary);
@@ -60,7 +61,7 @@ h6 {
 }
 
 h1 {
-    color: var(--accent);
+    color: var(--accent-warm);
     border-bottom: 1px solid var(--border);
     margin-top: 0;
     padding-bottom: 0.4em;
@@ -76,14 +77,14 @@ h3 {
 
 code {
     font-family: var(--font-mono);
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-elevated);
     color: var(--text-secondary);
     padding: 0.1em 0.3em;
     border-radius: 3px;
 }
 
 pre {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: 4px;
 }
@@ -139,7 +140,7 @@ a:hover {
 }
 
 blockquote {
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--accent-warm);
     background-color: var(--bg-secondary);
     padding: 1em;
     margin: 1.5em 0;
@@ -198,8 +199,12 @@ button:hover {
     padding-bottom: 3em;
 }
 
-#theme-toggle {
-    display: none;
+#theme-toggle,
+#mdbook-theme-toggle,
+.theme-popup,
+#theme-list,
+#mdbook-theme-list {
+    display: none !important;
 }
 
 .content pre {

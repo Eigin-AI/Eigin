@@ -4,25 +4,9 @@ Skills are how the agent gains capabilities. A skill bundles a set of instructio
 
 ## Always-active and on-demand
 
-Some skills are always active — present in every chat from the start. Others are on-demand, enabled by the user or by the agent when the situation calls for them.
+Some skills are always active, present in every chat from the start. Knowledge, intents, awareness, and web search are examples of always-active skills.
 
-**Always active**
-
-| Skill | What it enables |
-|---|---|
-| Knowledge | Saving and recalling information from the knowledge base |
-| Intents | Setting, reinforcing, and resolving goals across conversations |
-| Awareness | Checking the current time and location |
-| Web | Searching the web and fetching page content |
-
-**On-demand**
-
-| Skill | What it enables |
-|---|---|
-| Self-Modification | Reading and editing core texts, presentation, proactivity, and vocabulary |
-| Email | Composing emails via the system mail client |
-| Organization | Managing spaces, moving chats, browsing chat history |
-| Scheduling | Reading and managing calendar events and reminders |
+Others are on-demand, enabled by the user or by the agent when the situation calls for them. Email, scheduling, and self-modification are examples of on-demand skills.
 
 ## How skills compose
 
