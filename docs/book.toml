@@ -2,7 +2,7 @@
 authors = ["Daniel Rothmann"]
 language = "en"
 src = "src"
-title = "Eigin"
+title = "Eigin Docs"
 
 [output.html]
 default-theme = "coal"
