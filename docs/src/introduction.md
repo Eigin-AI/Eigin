@@ -1,22 +1,16 @@
 # Introduction
 
-**Eigin is a personal AI agent that lives on your device.** It runs locally, owns its own memory and settings, and talks directly to the inference provider you choose. There is no Eigin account: the agent is yours.
+**Eigin is the application layer for personal AI:** a persistent agent that runs on your device, connects any AI inference provider you want, and builds knowledge about you across every conversation.
 
-This is the Eigin documentation: what it is, how the pieces fit together, and how native Eigin apps implement them.
-
-## Why Eigin?
-
-Most AI apps are chat sessions wrapped around someone else's account. The provider holds the memory, the data, and the relationship. The user holds a text box.
-
-Eigin is built the other way around. The agent persists, with its own identity, knowledge, and goals. It learns the user across conversations. The data is local. The provider is the user's choice.
+These are the technical docs for Eigin: what it is, how it works, and how its implemented.
 
 ## Features
 
-- **A persistent agent.** One per device, with its own identity, knowledge graph, intents, and skills. See [The Agent](./agents/README.md).
-- **Local-first.** Chats, knowledge, intents, and settings live on the device. Inference goes from the device to your provider with your API key. See [System context](./system-context.md).
-- **Your choice of provider.** Cloud (OpenAI, Anthropic, Google, Mistral, OpenRouter, any OpenAI-compatible API) or fully on-device (Apple Foundation Model). See [Inference providers](./providers.md).
-- **Voice.** Local dictation and half-duplex "live calls", built in. See [Voice](./voice/README.md).
-- **Free and open source.** Funded by 42futures' enterprise practice. See [Philosophy](./philosophy.md).
+- **Persistent agent.** One per device, with its own identity, knowledge graph, intents, and skills. See [The Agent](./agents/README.md).
+- **Local-first.** Chats, knowledge, intents, and settings live on the device. See [System context](./system-context.md).
+- **Model-agnostic.** Cloud (any OpenAI-compatible API) or fully local. See [Inference providers](./providers.md).
+- **Voice.** On-device dictation and a live call mode for hands-free conversation. See [Voice](./voice/README.md).
+- **Free and open source.** See [Philosophy](./philosophy.md).
 
 ## Where to start
 
@@ -31,6 +25,8 @@ Then jump into whatever you're touching: [Conversation](./conversation/README.md
 
 ## Building from source
 
+This is a monorepo containing all Eigin applications. Install dependencies for the platform you want to work on.
+
 **iOS:**
 
 - Xcode — `xcode-select -s /Applications/Xcode.app/Contents/Developer`
@@ -41,28 +37,16 @@ Then jump into whatever you're touching: [Conversation](./conversation/README.md
 
 - [Rust and Cargo](https://rustup.rs) — via rustup
 
-**Relay deployment:**
-
-- [Terraform](https://developer.hashicorp.com/terraform/install) — `brew install terraform`
-- [Scaleway CLI](https://github.com/scaleway/scaleway-cli) — `brew install scw`, then `scw init` to authenticate (the Terraform provider reads credentials from the scw config automatically)
-
-**Command runner:**
+**Command runner (required for all platforms):**
 
 - [just](https://just.systems) — `brew install just`
 
-After cloning, run:
+After cloning, run `just hooks` once to install git hooks. Then use `just build`, `just test`, and `just format`, scoped by platform if needed:
 
 ```
-just hooks      # Install git hooks (one-time)
-just generate   # Regenerate the project
-```
-
-Then the core loop:
-
-```
-just build      # Build all targets
-just test       # Run all tests
-just format     # Auto-format all code
+just build          # All targets
+just build ios      # iOS only
+just build relay    # Relay only
 ```
 
 Run `just --list` to see all available commands.

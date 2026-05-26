@@ -11,7 +11,7 @@ A chat is a persistent conversation between the user and the agent. Each chat ha
 - Created and updated timestamps
 - An optional [space](../conversation/spaces.md) it belongs to
 
-Chats live on the device. The only time messages go off-device is as part of a request to the inference provider for the active turn — and only while still within the live context window. See [compaction](../conversation/compaction.md).
+Chats live on the device. The only time messages go off-device is as part of a request to the inference provider for the active turn - and only while still within the live context window. See [compaction](../conversation/compaction.md).
 
 ### Scoping
 
@@ -20,20 +20,16 @@ Chats are scoped per space:
 - **Global chats** (no space): visible from anywhere
 - **Space-scoped chats**: only visible within their space
 
-When the user is in a space, the chat list shows that space's chats. Outside any space, only global chats are shown.
-
-### Lifecycle
-
-A chat starts when the user sends a first message, or when the agent starts a [background session](./initiative.md). It stays around until the user deletes it. There is no automatic archival.
+When the user is in a space, the chat list shows that space's chats. Outside any space, all chats are shown.
 
 ## Accessing past chats
 
 The current chat is always in working context. To reach beyond it, the agent has tools for browsing its own history:
 
-- **List chats** — scan recent chats
-- **Get chat transcript** — read a specific chat as a clean transcript
+- **List chats** - scan recent chats
+- **Get chat transcript** - read a specific chat as a clean transcript
 
-These tools respect space boundaries: an agent inside a space can't read chats from other spaces.
+These tools respect space boundaries: an agent can't read chats from other private spaces.
 
 ## Permissions
 

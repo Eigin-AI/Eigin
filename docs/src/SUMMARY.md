@@ -4,16 +4,13 @@
 [Philosophy](./philosophy.md)
 [FAQ](./faq.md)
 
-# Design
-
-- [Design system](./design.md)
-
 # Platform
 
 - [Overview](./system-context.md)
 - [Inference providers](./providers.md)
 - [Eigin Relay](./relay.md)
 - [Privacy and security](./privacy.md)
+- [Design system](./design.md)
 
 # The Agent
 
@@ -44,11 +41,6 @@
 - [Overview](./voice/README.md)
 - [Live call](./voice/live-call.md)
 
-# iOS Implementation
+# Apps
 
-- [Architecture](./ios/README.md)
-- [Services and dependency injection](./ios/services.md)
-- [Knowledge](./ios/knowledge.md)
-- [Skills](./ios/skills.md)
-- [Intents](./ios/intents.md)
-- [Live call](./ios/live-call.md)
+- [iOS](./ios/README.md)
