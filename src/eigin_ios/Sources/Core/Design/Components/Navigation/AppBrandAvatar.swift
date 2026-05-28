@@ -1,29 +1,9 @@
 import SwiftUI
 
-/// Random squash-and-stretch applied on every press, so no two presses look the same.
-///
-/// TODO: This is a placeholder animation added for a bit of playful delight. If we
-/// want to keep it, we should define a proper design-system animation style for
-/// interactive elements instead of one-off spring transforms.
-private struct JellyTransform {
-    var x: CGFloat
-    var y: CGFloat
-
-    static func random() -> Self {
-        Self(
-            x: CGFloat.random(in: 1.1 ... 1.25),
-            y: CGFloat.random(in: 0.75 ... 0.9)
-        )
-    }
-}
-
 /// A circular avatar with the brand spot color as background.
 ///
 /// Displays an image centered inside a circle filled with the spot button color.
 /// The image is inset so it doesn't touch the circle edge.
-///
-/// Provide an `action` and the icon will jelly-squash with a random
-/// rotation and stretch on every press, while the background stays perfectly still.
 struct AppBrandAvatar: View {
     let image: Image
     let size: CGFloat
@@ -31,9 +11,6 @@ struct AppBrandAvatar: View {
     let action: (() -> Void)?
 
     @Environment(\.colors) private var colors
-    @State private var isPressed = false
-    @State private var jelly = JellyTransform.random()
-    @State private var hapticTrigger = UUID()
 
     init(
         image: Image,
@@ -58,36 +35,15 @@ struct AppBrandAvatar: View {
             .aspectRatio(contentMode: .fit)
             .foregroundStyle(colors.text.standard.base)
             .padding(insets)
-            .scaleEffect(
-                x: isPressed ? jelly.x : 1.0,
-                y: isPressed ? jelly.y : 1.0
-            )
-            .animation(
-                .spring(response: 0.35, dampingFraction: 0.40),
-                value: isPressed
-            )
 
         if let action {
-            content
-                .frame(width: size, height: size)
-                .background(colors.surface.impact.base)
-                .clipShape(Circle())
-                .contentShape(Circle())
-                .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: hapticTrigger)
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in
-                            if !isPressed {
-                                jelly = JellyTransform.random()
-                                isPressed = true
-                            }
-                        }
-                        .onEnded { _ in
-                            isPressed = false
-                            hapticTrigger = UUID()
-                            action()
-                        }
-                )
+            Button(action: action) {
+                content
+                    .frame(width: size, height: size)
+                    .background(colors.surface.impact.base)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
         } else {
             content
                 .frame(width: size, height: size)
