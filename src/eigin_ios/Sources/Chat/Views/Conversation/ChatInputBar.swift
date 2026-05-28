@@ -29,9 +29,21 @@ struct ChatInputBar: View {
     @State private var soundManager = SoundManager()
     @State private var isDictating = false
     @State private var textBeforeDictation = ""
+    @State private var dictationText = ""
+
+    private var effectiveText: String {
+        guard isDictating else { return text }
+        if textBeforeDictation.isEmpty {
+            return dictationText
+        } else if dictationText.isEmpty {
+            return textBeforeDictation
+        } else {
+            return textBeforeDictation + " " + dictationText
+        }
+    }
 
     private var canSend: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isDisabled
+        !effectiveText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isDisabled
     }
 
     private var showStopButton: Bool {
@@ -67,18 +79,13 @@ struct ChatInputBar: View {
                     tap()
                 }
             },
+            overlayText: isDictating ? effectiveText : nil,
             isFocused: isFocused
         )
         .animation(Animations.snap, value: isDictating)
         .onChange(of: dictationService.transcription) { _, transcription in
             guard isDictating else { return }
-            if textBeforeDictation.isEmpty {
-                text = transcription
-            } else if transcription.isEmpty {
-                text = textBeforeDictation
-            } else {
-                text = textBeforeDictation + " " + transcription
-            }
+            dictationText = transcription
         }
     }
 
@@ -88,6 +95,7 @@ struct ChatInputBar: View {
         speechService.stop()
         isFocused.wrappedValue = false
         textBeforeDictation = text
+        dictationText = ""
         isDictating = true
         dictationService
             .setLocale(Locale(identifier: languageManager.currentLanguage.speechLocaleIdentifier))
@@ -98,6 +106,7 @@ struct ChatInputBar: View {
     private func stopDictation() {
         Haptics.light()
         dictationService.stop()
+        text = effectiveText
         isDictating = false
         soundManager.playUISound(.dictationStopped)
     }
@@ -107,6 +116,7 @@ struct ChatInputBar: View {
         isFocused.wrappedValue = false
         let mode: InteractionMode = isDictating ? .dictation : .text
         if isDictating {
+            text = effectiveText
             dictationService.stop()
             isDictating = false
         }

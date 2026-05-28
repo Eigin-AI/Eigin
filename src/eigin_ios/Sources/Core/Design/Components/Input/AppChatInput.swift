@@ -17,6 +17,7 @@ struct AppChatInput: View {
     var onMicTap: () -> Void
     var onActionTap: (() -> Void)?
 
+    var overlayText: String?
     var isFocused: FocusState<Bool>.Binding?
     @FocusState private var internalFocus: Bool
     @Environment(\.colors) private var colors
@@ -91,9 +92,10 @@ struct AppChatInput: View {
                 .allowsHitTesting(textActive)
 
             if !textActive {
-                Text(text.isEmpty ? placeholder : text)
+                let display = overlayText ?? text
+                Text(display.isEmpty ? placeholder : display)
                     .typography(Typography.chatMessageUser)
-                    .foregroundStyle(text.isEmpty
+                    .foregroundStyle(display.isEmpty
                         ? colors.text.standard.muted
                         : colors.text.standard.base)
                     .lineLimit(1)
