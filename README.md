@@ -22,7 +22,7 @@ Eigin is open source with European roots.
 
 ## Getting started
 
-See the [docs](docs/src/introduction.md) for prerequisites and build instructions.
+See the [docs](https://docs.eigin.ai) for prerequisites and build instructions.
 
 ## License
 
