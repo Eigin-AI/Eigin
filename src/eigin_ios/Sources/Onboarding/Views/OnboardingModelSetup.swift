@@ -331,6 +331,11 @@ struct OnboardingModelSetup: View {
                     Text(Localized.Onboarding.ModelSetup.errorTitle)
                         .typography(Typography.titleM)
                         .foregroundStyle(colors.text.standard.base)
+
+                    Text(message)
+                        .typography(Typography.body)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .multilineTextAlignment(.center)
                 }
             }
 

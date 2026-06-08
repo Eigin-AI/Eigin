@@ -3851,6 +3851,23 @@
         }
       }
     },
+    "model.insufficientRAM" : {
+      "comment" : "Error message when the device lacks sufficient RAM for local model inference.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne enhed har ikke nok hukommelse til at køre den lokale model. iPhone 15 eller nyere er påkrævet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device doesn't have enough memory to run the local model. iPhone 15 or later is required."
+          }
+        }
+      }
+    },
     "model.storageNotEnough" : {
       "comment" : "Storage error message with size argument",
       "localizations" : {
