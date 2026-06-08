@@ -176,6 +176,10 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     public func isModelComplete(_ model: ModelInfo) -> Bool {
         let dest = modelsDirectory.appendingPathComponent(model.folderName)
         for file in Self.expectedFiles(for: model) {
+            // Files the downloader treats as optional (404 → skipped) must
+            // also be treated as optional here, or a legitimately-complete
+            // download is mis-reported as incomplete forever.
+            if Self.isOptionalMlmodelcFile(file.localPath) { continue }
             let path = dest.appendingPathComponent(file.localPath).path
             guard fileManager.fileExists(atPath: path),
                   let attrs = try? fileManager.attributesOfItem(atPath: path),
@@ -898,7 +902,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     /// (since fixed) and `metadata.json` (still missing in some uploads); the
     /// latter is purely descriptive. Keep this list conservative — anything
     /// not listed here is treated as required.
-    private func isOptionalMlmodelcFile(_ localPath: String) -> Bool {
+    static func isOptionalMlmodelcFile(_ localPath: String) -> Bool {
         localPath.hasSuffix(".mlmodelc/metadata.json")
             || localPath.hasSuffix(".mlmodelc/analytics/coremldata.bin")
     }
@@ -937,7 +941,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             // an mlmodelc are descriptive, not functional — CoreML loads fine
             // without them. Treat 404 on these as non-fatal so a slightly
             // incomplete HF upload doesn't abort the entire download.
-            if http.statusCode == 404, isOptionalMlmodelcFile(localPath) {
+            if http.statusCode == 404, Self.isOptionalMlmodelcFile(localPath) {
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     activeDownloadTasks.removeValue(forKey: taskId)

@@ -37,7 +37,6 @@ struct LocalProviderView: View {
         .navigationBarTitleDisplayMode(.inline)
         .keepScreenAwake(isPreparing)
         .task {
-            gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
                 await gemmaManager.compile()
             }

@@ -120,7 +120,6 @@ struct OnboardingModelSetup: View {
                 return
             }
             displayedState = gemmaManager.state
-            gemmaManager.checkAvailability()
             if gemmaManager.state == .downloaded {
                 await gemmaManager.compile()
             }

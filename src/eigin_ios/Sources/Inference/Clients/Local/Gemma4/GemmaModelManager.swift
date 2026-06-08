@@ -14,7 +14,31 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     let displayName = Localized.Model.Gemma4e2b.name
     let downloadDescription = Localized.Onboarding.LocalModel.description
 
-    private(set) var state: AssetState = .notDownloaded
+    /// Runtime-only states that the disk can't tell us about. Terminal states
+    /// (notDownloaded / downloaded / ready) are derived from `llm` and disk
+    /// in ``state`` so they stay correct without anyone having to remember to
+    /// refresh them after a cold start or a lazy load from chat.
+    private enum Transient: Equatable {
+        case idle
+        case downloading(Double)
+        case compiling(Double)
+        case failed(String)
+    }
+
+    private var transient: Transient = .idle
+
+    var state: AssetState {
+        switch transient {
+        case .downloading(let p): .downloading(fractionCompleted: p)
+        case .compiling(let p): .compiling(fractionCompleted: p)
+        case .failed(let m): .failed(m)
+        case .idle:
+            if llm != nil { .ready }
+            else if isReady { .downloaded }
+            else { .notDownloaded }
+        }
+    }
+
     /// Human-readable status during download/compile.
     private(set) var statusMessage = ""
 
@@ -57,16 +81,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         GemmaModelDownloader.shared.isDownloaded(localModelInfo)
     }
 
-    func checkAvailability() {
-        if llm != nil {
-            state = .ready
-        } else if isReady {
-            state = .downloaded
-        } else {
-            state = .notDownloaded
-        }
-    }
-
     // MARK: - Device requirements
 
     static func minimumRequiredFreeSpaceBytes(
@@ -92,18 +106,20 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         guard !state.isDownloading else { return }
 
         guard hasRequiredRAM() else {
-            state = .failed(Localized.Model.insufficientRAM)
+            transient = .failed(Localized.Model.insufficientRAM)
             return
         }
 
         guard hasRequiredDiskSpace() else {
             let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)) /
                 1_000_000_000
-            state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
+            transient = .failed(
+                Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB))
+            )
             return
         }
 
-        state = .downloading(fractionCompleted: 0)
+        transient = .downloading(0)
         statusMessage = "Downloading…"
 
         downloadTask = Task {
@@ -113,7 +129,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .milliseconds(250))
                         if downloader.isDownloading {
-                            state = .downloading(fractionCompleted: downloader.progress)
+                            transient = .downloading(downloader.progress)
                             statusMessage = downloader.status.isEmpty
                                 ? "Downloading…"
                                 : downloader.status
@@ -127,13 +143,13 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                 try Task.checkCancellation()
 
                 statusMessage = ""
-                state = .downloaded
+                transient = .idle
             } catch is CancellationError {
                 statusMessage = ""
-                state = .notDownloaded
+                transient = .idle
             } catch {
                 statusMessage = ""
-                state = .failed(error.localizedDescription)
+                transient = .failed(error.localizedDescription)
                 AppLogger.error(
                     "Gemma model download failed: \(private: error.localizedDescription)",
                     category: .chat
@@ -152,11 +168,13 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         let modelSize = GemmaModelDownloader.expectedFileSizeBytes(for: localModelInfo)
         guard let freeSpace = deviceInfo.freeDiskSpaceBytes(), freeSpace >= modelSize else {
             let requiredGB = Double(modelSize) / 1_000_000_000
-            state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
+            transient = .failed(
+                Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB))
+            )
             return
         }
 
-        state = .compiling(fractionCompleted: 0)
+        transient = .compiling(0)
         statusMessage = "Preparing model for your device…"
 
         URLCache.shared.removeAllCachedResponses()
@@ -167,8 +185,8 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                 model: info,
                 onChunkLoaded: { @Sendable [weak self] loaded, total in
                     Task { @MainActor [weak self] in
-                        self?.state = .compiling(
-                            fractionCompleted: Double(loaded) / Double(max(total, 1))
+                        self?.transient = .compiling(
+                            Double(loaded) / Double(max(total, 1))
                         )
                     }
                 }
@@ -176,13 +194,13 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
             compiled.reset()
             llm = compiled
             statusMessage = ""
-            state = .ready
+            transient = .idle
         } catch is CancellationError {
             statusMessage = ""
-            state = .downloaded
+            transient = .idle
         } catch {
             statusMessage = ""
-            state = .failed(error.localizedDescription)
+            transient = .failed(error.localizedDescription)
             AppLogger.error(
                 "Gemma model compilation failed: \(private: error.localizedDescription)",
                 category: .chat
@@ -194,14 +212,14 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         downloadTask?.cancel()
         downloadTask = nil
         GemmaModelDownloader.shared.cancelDownload()
-        state = .notDownloaded
+        transient = .idle
     }
 
     func delete() {
         cancel()
         unload()
         try? GemmaModelDownloader.shared.delete(localModelInfo)
-        state = .notDownloaded
+        transient = .idle
     }
 
     func decline() {
