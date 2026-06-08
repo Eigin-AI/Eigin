@@ -1227,6 +1227,11 @@ enum Localized {
             Localized.get("model.gemmaDownloadedReady")
         }
 
+        /// Error message when the device lacks sufficient RAM for local model inference.
+        static var insufficientRAM: String {
+            Localized.get("model.insufficientRAM")
+        }
+
         /// Warning message when removing a model
         static var removeStorageWarning: String {
             Localized.get("model.removeStorageWarning")

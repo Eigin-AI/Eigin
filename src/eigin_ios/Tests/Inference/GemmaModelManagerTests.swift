@@ -1,23 +1,81 @@
 @testable import Eigin
 import Testing
 
-/// Verifies storage gating in ``GemmaModelManager``.
+/// Verifies device requirement gating in ``GemmaModelManager``.
 @MainActor
 @Suite("GemmaModelManager")
 struct GemmaModelManagerTests {
-    /// Fake ``DiskSpaceService`` for deterministic storage tests.
-    struct FakeDiskSpaceService: DiskSpaceService {
-        var bytes: Int64?
+    /// Fake ``DeviceInfoService`` for deterministic capability tests.
+    struct FakeDeviceInfoService: DeviceInfoService {
+        var diskBytes: Int64?
+        var ramBytes: UInt64
+        var identifier: String
 
-        func availableBytes() -> Int64? {
-            bytes
+        init(
+            diskBytes: Int64? = nil,
+            ramBytes: UInt64 = 8 * 1_073_741_824,
+            identifier: String = "iPhone16,1"
+        ) {
+            self.diskBytes = diskBytes
+            self.ramBytes = ramBytes
+            self.identifier = identifier
         }
+
+        func freeDiskSpaceBytes() -> Int64? {
+            diskBytes
+        }
+
+        func physicalMemoryBytes() -> UInt64 {
+            ramBytes
+        }
+
+        func deviceIdentifier() -> String {
+            identifier
+        }
+
+        func systemVersion() -> String {
+            "1.0"
+        }
+    }
+
+    // MARK: – RAM gating
+
+    @Test func downloadTransitionsToFailedWhenRAMIsLow() async {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(
+                diskBytes: .max,
+                ramBytes: 4 * 1_073_741_824
+            )
+        )
+        await manager.download()
+
+        if case .failed(let message) = manager.state {
+            #expect(message.contains("iPhone 15"))
+        } else {
+            Issue.record("Expected .failed state, got \(manager.state)")
+        }
+    }
+
+    @Test func hasRequiredRAMReturnsFalseForFourGigabytes() {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
+        )
+        #expect(!manager.hasRequiredRAM())
+    }
+
+    @Test func hasRequiredRAMReturnsTrueForSixGigabytes() {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(ramBytes: 6 * 1_073_741_824)
+        )
+        #expect(manager.hasRequiredRAM())
     }
 
     // MARK: – Storage gating
 
     @Test func downloadTransitionsToFailedWhenStorageIsLow() async {
-        let manager = GemmaModelManager(diskSpaceService: FakeDiskSpaceService(bytes: 1))
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(diskBytes: 1)
+        )
         await manager.download()
 
         if case .failed(let message) = manager.state {
@@ -33,9 +91,9 @@ struct GemmaModelManagerTests {
         )
 
         let manager = GemmaModelManager(
-            diskSpaceService: FakeDiskSpaceService(bytes: required + 1)
+            deviceInfo: FakeDeviceInfoService(diskBytes: required + 1)
         )
 
-        #expect(manager.hasSufficientStorage())
+        #expect(manager.hasRequiredDiskSpace())
     }
 }

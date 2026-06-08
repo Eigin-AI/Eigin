@@ -29,11 +29,12 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// The model info from the CoreML-LLM library.
     private let localModelInfo = GemmaModelDownloader.ModelInfo.default
 
-    /// Injected disk-space service; swap in a fake for tests.
-    private let diskSpaceService: any DiskSpaceService
+    private static let requiredRAMBytes: UInt64 = 5 * 1_073_741_824
 
-    init(diskSpaceService: any DiskSpaceService = DefaultDiskSpaceService()) {
-        self.diskSpaceService = diskSpaceService
+    private let deviceInfo: any DeviceInfoService
+
+    init(deviceInfo: any DeviceInfoService = DefaultDeviceInfoService()) {
+        self.deviceInfo = deviceInfo
     }
 
     var hasBeenDeclined: Bool {
@@ -66,7 +67,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
-    // MARK: - Storage
+    // MARK: - Device requirements
 
     static func minimumRequiredFreeSpaceBytes(
         for model: GemmaModelDownloader.ModelInfo
@@ -75,10 +76,14 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         return Int64(Double(base) * storageHeadroomFactor)
     }
 
-    func hasSufficientStorage() -> Bool {
+    func hasRequiredDiskSpace() -> Bool {
         let required = Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)
-        guard let free = diskSpaceService.availableBytes() else { return false }
+        guard let free = deviceInfo.freeDiskSpaceBytes() else { return false }
         return free >= required
+    }
+
+    func hasRequiredRAM() -> Bool {
+        deviceInfo.physicalMemoryBytes() >= Self.requiredRAMBytes
     }
 
     // MARK: - Download
@@ -86,7 +91,12 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     func download() async {
         guard !state.isDownloading else { return }
 
-        guard hasSufficientStorage() else {
+        guard hasRequiredRAM() else {
+            state = .failed(Localized.Model.insufficientRAM)
+            return
+        }
+
+        guard hasRequiredDiskSpace() else {
             let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)) /
                 1_000_000_000
             state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
@@ -140,7 +150,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         guard state == .downloaded else { return }
 
         let modelSize = GemmaModelDownloader.expectedFileSizeBytes(for: localModelInfo)
-        guard let freeSpace = diskSpaceService.availableBytes(), freeSpace >= modelSize else {
+        guard let freeSpace = deviceInfo.freeDiskSpaceBytes(), freeSpace >= modelSize else {
             let requiredGB = Double(modelSize) / 1_000_000_000
             state = .failed(Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB)))
             return
