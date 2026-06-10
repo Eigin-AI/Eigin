@@ -35,10 +35,17 @@ struct ContentView: View {
         }
         .task {
             ensureBackgroundSchedule()
+            GemmaModelManager.shared.prewarmIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 ensureBackgroundSchedule()
+                GemmaModelManager.shared.prewarmIfNeeded()
+            }
+            if phase == .background {
+                // Cancel prewarm: ANE compilation under the background memory
+                // limit risks jetsam. The pass resumes on next foreground.
+                GemmaModelManager.shared.cancelPrewarm()
             }
         }
     }

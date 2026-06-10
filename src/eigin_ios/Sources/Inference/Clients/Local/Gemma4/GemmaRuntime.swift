@@ -613,6 +613,54 @@ public final class GemmaRuntime: @unchecked Sendable {
     }
 }
 
+// MARK: - ANE prewarm
+
+extension GemmaRuntime {
+    /// Touch every `.mlmodelc` bundle once to populate CoreML's ANE
+    /// specialisation cache, then release each model immediately.
+    ///
+    /// This is the low-memory alternative to a full `load()`: it pays the
+    /// minutes-long first-run specialisation cost without keeping the ~4 GB
+    /// model resident. Subsequent `load()` calls against a warm cache complete
+    /// in seconds rather than minutes.
+    ///
+    /// The cache is keyed on each bundle's absolute path + file metadata +
+    /// `MLModelConfiguration` + OS build, so specialisation must be repeated
+    /// after app updates (container UUID path changes), OS updates, and
+    /// storage-pressure evictions. Call this once per app version via
+    /// `GemmaModelManager.prewarmIfNeeded()`.
+    ///
+    /// - Parameters:
+    ///   - directory: Root model directory (same as passed to `load(from:)`).
+    ///   - computeUnits: Must match what `load()` uses so the cache hits.
+    ///   - onProgress: Called with `(done, total)` after each entry is loaded.
+    ///     Suitable for driving a progress indicator.
+    static func prewarm(
+        from directory: URL,
+        computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
+        onProgress: (@Sendable (Int, Int) -> Void)? = nil
+    ) async throws {
+        let entries = GemmaModelLayout.entries(in: directory, computeUnits: computeUnits)
+        let total = entries.count
+        for (index, entry) in entries.enumerated() {
+            try Task.checkCancellation()
+            let start = ContinuousClock.now
+            // Load and immediately discard — we only want the e5rt cache populated.
+            _ = try autoreleasepool {
+                try MLModel(contentsOf: entry.url, configuration: entry.configuration)
+            }
+            let elapsed = start.duration(to: .now)
+            let ms = elapsed.components.seconds * 1000
+                + Int64(elapsed.components.attoseconds / 1_000_000_000_000_000)
+            AppLogger.info(
+                "GemmaRuntime: prewarm \(public: entry.name) in \(public: ms)ms",
+                category: .chat
+            )
+            onProgress?(index + 1, total)
+        }
+    }
+}
+
 // MARK: - Error types
 
 public enum GemmaRuntimeError: LocalizedError {

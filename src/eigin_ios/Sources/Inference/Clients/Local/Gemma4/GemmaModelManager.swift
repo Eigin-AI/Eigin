@@ -39,16 +39,14 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
-    /// Human-readable status during download/compile.
-    private(set) var statusMessage = ""
-
     /// The loaded inference engine, available after ``load()``.
     private(set) var llm: GemmaRuntime?
     private(set) var isLoading = false
 
     private var downloadTask: Task<Void, Never>?
     private var loadTask: Task<Void, Error>?
-    private let declinedKey = "coreml-gemma-declined"
+    private var prewarmTask: Task<Void, Never>?
+    private let declinedKey = StorageKey.gemmaDeclined
 
     /// The model info from the CoreML-LLM library.
     private let localModelInfo = GemmaModelDownloader.ModelInfo.default
@@ -56,9 +54,18 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private static let requiredRAMBytes: UInt64 = 5 * 1_073_741_824
 
     private let deviceInfo: any DeviceInfoService
+    /// Injected so tests can replace the real `GemmaRuntime.prewarm` call.
+    let prewarmRunner: @Sendable (URL, @escaping @Sendable (Int, Int) -> Void) async throws -> Void
 
-    init(deviceInfo: any DeviceInfoService = DefaultDeviceInfoService()) {
+    init(
+        deviceInfo: any DeviceInfoService = DefaultDeviceInfoService(),
+        prewarmRunner: (@Sendable (URL, @escaping @Sendable (Int, Int) -> Void) async throws
+            -> Void)? = nil
+    ) {
         self.deviceInfo = deviceInfo
+        self.prewarmRunner = prewarmRunner ?? { dir, progress in
+            try await GemmaRuntime.prewarm(from: dir, onProgress: progress)
+        }
     }
 
     var hasBeenDeclined: Bool {
@@ -120,7 +127,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
 
         transient = .downloading(0)
-        statusMessage = "Downloading…"
 
         downloadTask = Task {
             do {
@@ -130,9 +136,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                         try? await Task.sleep(for: .milliseconds(250))
                         if downloader.isDownloading {
                             transient = .downloading(downloader.progress)
-                            statusMessage = downloader.status.isEmpty
-                                ? "Downloading…"
-                                : downloader.status
                         }
                     }
                 }
@@ -142,18 +145,83 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
                 try Task.checkCancellation()
 
-                statusMessage = ""
                 transient = .idle
             } catch is CancellationError {
-                statusMessage = ""
                 transient = .idle
             } catch {
-                statusMessage = ""
                 transient = .failed(error.localizedDescription)
                 AppLogger.error(
                     "Gemma model download failed: \(private: error.localizedDescription)",
                     category: .chat
                 )
+            }
+        }
+    }
+
+    // MARK: - Prewarm
+
+    /// Trigger a low-memory ANE specialisation pass if the running app version
+    /// has not yet been warmed.
+    ///
+    /// Safe to call on every foreground activation — the version guard ensures
+    /// it runs at most once per build. The pass releases each chunk immediately
+    /// after specialisation, so peak memory stays ≈ one chunk (~500 MB) rather
+    /// than the full ~4 GB a real load would require.
+    func prewarmIfNeeded() {
+        // Version guard: skip if this build has already been fully warmed.
+        let currentVersion = deviceInfo.appBuildVersion()
+        let warmedVersion = UserDefaults.standard
+            .string(forKey: StorageKey.gemmaPrewarmedBuild) ?? ""
+        guard currentVersion != warmedVersion else { return }
+
+        // State guards: must be downloaded, idle, and not in use.
+        guard isReady,
+              llm == nil,
+              loadTask == nil,
+              prewarmTask == nil,
+              !state.isDownloading,
+              !state.isCompiling
+        else { return }
+
+        guard let modelDir = GemmaModelDownloader.shared.localModelURL(for: localModelInfo)?
+            .deletingLastPathComponent()
+        else { return }
+
+        transient = .compiling(0)
+
+        let totalChunks = GemmaModelLayout.entries(in: modelDir).count
+
+        prewarmTask = Task {
+            do {
+                try await prewarmRunner(modelDir) { @Sendable [weak self] done, _ in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        transient = .compiling(
+                            Double(done) / Double(max(totalChunks, 1))
+                        )
+                    }
+                }
+                // Mark this build as fully warmed.
+                UserDefaults.standard.set(
+                    currentVersion,
+                    forKey: StorageKey.gemmaPrewarmedBuild
+                )
+                AppLogger.info(
+                    "GemmaRuntime: prewarm complete for build \(public: currentVersion)",
+                    category: .chat
+                )
+            } catch is CancellationError {
+                // Interrupted by backgrounding or user action — will retry next foreground.
+            } catch {
+                AppLogger.error(
+                    "GemmaRuntime: prewarm failed: \(private: error.localizedDescription)",
+                    category: .chat
+                )
+            }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                prewarmTask = nil
+                transient = .idle
             }
         }
     }
@@ -175,7 +243,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
 
         transient = .compiling(0)
-        statusMessage = "Preparing model for your device…"
 
         URLCache.shared.removeAllCachedResponses()
 
@@ -193,13 +260,10 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
             )
             compiled.reset()
             llm = compiled
-            statusMessage = ""
             transient = .idle
         } catch is CancellationError {
-            statusMessage = ""
             transient = .idle
         } catch {
-            statusMessage = ""
             transient = .failed(error.localizedDescription)
             AppLogger.error(
                 "Gemma model compilation failed: \(private: error.localizedDescription)",
@@ -208,9 +272,21 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
+    /// Cancel only the prewarm pass. Called when the app moves to the background;
+    /// the pass will resume on the next foreground activation.
+    func cancelPrewarm() {
+        prewarmTask?.cancel()
+        prewarmTask = nil
+        if case .compiling = transient {
+            transient = .idle
+        }
+    }
+
     func cancel() {
         downloadTask?.cancel()
         downloadTask = nil
+        prewarmTask?.cancel()
+        prewarmTask = nil
         GemmaModelDownloader.shared.cancelDownload()
         transient = .idle
     }
@@ -229,6 +305,12 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     // MARK: - Memory lifecycle
 
     func load() async throws {
+        // If a prewarm is in flight, wait for it to finish. The model will then
+        // be cached and the real load below completes in seconds.
+        if let warmTask = prewarmTask {
+            await warmTask.value
+        }
+
         if state == .downloaded {
             await compile()
             if llm == nil { throw LocalClientError.modelNotLoaded }
@@ -273,6 +355,8 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     }
 
     func unload() {
+        prewarmTask?.cancel()
+        prewarmTask = nil
         loadTask?.cancel()
         loadTask = nil
         llm?.reset()
