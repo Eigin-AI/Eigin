@@ -113,6 +113,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     override init() {
         super.init()
+        excludeModelsFromBackup()
         cleanGraveyard()
         restorePendingDownload()
         let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
@@ -905,6 +906,26 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     static func isOptionalMlmodelcFile(_ localPath: String) -> Bool {
         localPath.hasSuffix(".mlmodelc/metadata.json")
             || localPath.hasSuffix(".mlmodelc/analytics/coremldata.bin")
+    }
+
+    /// Exclude the Models directory from iCloud and iTunes backups.
+    /// The ~3.8 GB of model weights are re-downloadable, so backing them up
+    /// wastes the user's iCloud quota. Called once on init; safe to call
+    /// repeatedly (it's a no-op if the attribute is already set).
+    private func excludeModelsFromBackup() {
+        var dir = modelsDirectory
+        do {
+            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try dir.setResourceValues(values)
+        } catch {
+            // Non-fatal: the model still works; it just won't be excluded from backup.
+            AppLogger.warning(
+                "GemmaModelDownloader: could not exclude Models from backup: \(public: error.localizedDescription)",
+                category: .chat
+            )
+        }
     }
 
     private var modelsDirectory: URL {

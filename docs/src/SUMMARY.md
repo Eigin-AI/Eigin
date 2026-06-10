@@ -44,3 +44,4 @@
 # Apps
 
 - [iOS](./ios/README.md)
+- [Local model](./ios/local-model.md)

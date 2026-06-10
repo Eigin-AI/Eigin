@@ -125,7 +125,16 @@ final class ChunkedEngine {
             guard let url = findModel(name) else {
                 throw GemmaRuntimeError.modelNotFound(name)
             }
-            return try MLModel(contentsOf: url, configuration: mlConfig)
+            let start = ContinuousClock.now
+            let model = try MLModel(contentsOf: url, configuration: mlConfig)
+            let elapsed = start.duration(to: .now)
+            let ms = elapsed.components.seconds * 1000
+                + Int64(elapsed.components.attoseconds / 1_000_000_000_000_000)
+            AppLogger.info(
+                "GemmaRuntime: load \(public: name) in \(public: ms)ms",
+                category: .chat
+            )
+            return model
         }
 
         // Load chunks sequentially to keep memory under the 4GB limit.

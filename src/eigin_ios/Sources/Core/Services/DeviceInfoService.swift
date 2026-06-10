@@ -11,6 +11,8 @@ protocol DeviceInfoService: Sendable {
     func deviceIdentifier() -> String
     /// Operating system version string, e.g. "18.0".
     func systemVersion() -> String
+    /// App build number from `CFBundleVersion`, e.g. "47".
+    func appBuildVersion() -> String
 }
 
 /// Production implementation that queries hardware directly.
@@ -44,5 +46,9 @@ struct DefaultDeviceInfoService: DeviceInfoService {
             return "\(v.majorVersion).\(v.minorVersion)"
         }
         return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+    }
+
+    func appBuildVersion() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
     }
 }
