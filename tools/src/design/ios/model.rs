@@ -271,7 +271,8 @@ fn parse_sizing_group(tokens: &Value, node: &Value) -> Result<Vec<SizingEntry>> 
         if key.starts_with('$') {
             continue;
         }
-        if value.get("$type").and_then(Value::as_str) == Some("dimension") {
+        let token_type = value.get("$type").and_then(Value::as_str);
+        if token_type == Some("dimension") {
             let raw = value
                 .get("$value")
                 .and_then(Value::as_str)
@@ -283,6 +284,15 @@ fn parse_sizing_group(tokens: &Value, node: &Value) -> Result<Vec<SizingEntry>> 
             entries.push(SizingEntry::Leaf {
                 name: key.clone(),
                 pts,
+            });
+        } else if token_type == Some("number") {
+            let raw = value
+                .get("$value")
+                .and_then(Value::as_f64)
+                .with_context(|| format!("sizing token '{key}': number $value must be numeric"))?;
+            entries.push(SizingEntry::Leaf {
+                name: key.clone(),
+                pts: raw,
             });
         } else {
             let children = parse_sizing_group(tokens, value)?;
