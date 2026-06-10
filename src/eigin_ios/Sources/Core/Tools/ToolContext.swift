@@ -13,4 +13,5 @@ struct ToolContext {
     var canPromptUser: Bool = true
     var onCompose: ComposeEmailHandler?
     var onBrowse: BrowseHandler?
+    var onPresentOptions: OptionsHandler?
 }

@@ -7,6 +7,7 @@ enum ChatItem: Identifiable {
     case status(id: String, text: String)
     case error(id: String, error: ConnectionError)
     case toolGroup(id: String, tools: [ToolCallInfo])
+    case options(id: String, set: OptionSet)
     case compaction(
         id: String,
         progress: Float?,
@@ -20,6 +21,7 @@ enum ChatItem: Identifiable {
         case .status(let id, _): id
         case .error(let id, _): id
         case .toolGroup(let id, _): id
+        case .options(let id, _): id
         case .compaction(let id, _, _): id
         }
     }
@@ -131,6 +133,11 @@ extension ChatItem {
         }
 
         flushTools()
+
+        // Append active option set at the end of the feed
+        if let optionSet = chatLoop.pendingOptions {
+            items.append(.options(id: optionSet.id, set: optionSet))
+        }
 
         if let chatError {
             items.append(.error(id: "error", error: chatError))

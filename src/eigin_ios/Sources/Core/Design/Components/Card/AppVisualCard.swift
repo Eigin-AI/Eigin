@@ -9,6 +9,8 @@ enum AppVisualCardVariant {
     case warm
     /// Taupe/accent impact background — muted text and symbol
     case soft
+    /// Neutral elevated background — muted text and symbol
+    case neutral
 }
 
 // MARK: - Component
@@ -104,6 +106,7 @@ struct AppVisualCard: View {
         case .brand: colors.surface.impact.base
         case .warm: colors.surface.impact.alternative
         case .soft: colors.surface.impact.subtle
+        case .neutral: colors.surface.standard.elevated
         }
     }
 
@@ -135,6 +138,13 @@ struct AppVisualCard: View {
                 explainer: "Four meetings, two deadlines, and one thing you said you'd get to eventually.",
                 symbol: Iconography.Brand.chatFill,
                 variant: .soft
+            )
+            AppVisualCard(
+                "Something else",
+                explainer: "Write your own answer",
+                symbol: Iconography.Functional.edit,
+                variant: .neutral,
+                action: { print("Tapped: neutral card") }
             )
         }
         .padding(Spacing.n24)

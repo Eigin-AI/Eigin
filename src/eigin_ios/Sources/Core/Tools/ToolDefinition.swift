@@ -1,7 +1,7 @@
 import Foundation
 
 /// Wire format for a tool definition in the OpenAI-compatible `tools` array.
-struct ToolDefinition: Encodable {
+struct ToolDefinition: Encodable, Sendable {
     let type: String
     let function: FunctionDefinition
 
@@ -10,7 +10,7 @@ struct ToolDefinition: Encodable {
         function = FunctionDefinition(name: name, description: description, parameters: parameters)
     }
 
-    struct FunctionDefinition: Encodable {
+    struct FunctionDefinition: Encodable, Sendable {
         let name: String
         let description: String
         let parameters: JSONSchema
@@ -20,7 +20,7 @@ struct ToolDefinition: Encodable {
 /// Minimal JSON Schema representation for encoding tool parameter schemas.
 /// OpenAI requires `properties` to be present when type is "object",
 /// so we default to an empty dictionary.
-struct JSONSchema: Encodable {
+struct JSONSchema: Encodable, Sendable {
     let type: String
     var properties: [String: Property]?
     var required: [String]?
@@ -37,7 +37,7 @@ struct JSONSchema: Encodable {
         case type, properties, required
     }
 
-    struct Property: Encodable {
+    struct Property: Encodable, Sendable {
         let type: String
         var description: String
         var `enum`: [String]?
@@ -49,8 +49,14 @@ struct JSONSchema: Encodable {
             case `enum`
         }
 
-        struct Items: Encodable {
+        struct Items: Encodable, Sendable {
             let type: String
+            var properties: [String: Property]?
+            var required: [String]?
+
+            enum CodingKeys: String, CodingKey {
+                case type, properties, required
+            }
         }
     }
 }

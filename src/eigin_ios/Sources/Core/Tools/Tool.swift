@@ -1,5 +1,16 @@
 import Foundation
 
+/// Controls how the chat loop handles a tool's execution.
+enum ToolExecutionMode {
+    /// Normal execution: runs with a timeout, input remains locked.
+    /// Use for all tools that do background work (API calls, data access, etc.).
+    case background
+
+    /// Interactive execution: no timeout, input re-enabled while the tool runs.
+    /// Use for tools that suspend waiting for user input (e.g. presenting options).
+    case interactive
+}
+
 /// A self-contained tool that an agent can invoke.
 protocol Tool: Sendable {
     var name: String { get }
@@ -13,6 +24,8 @@ protocol Tool: Sendable {
     var category: ToolCapability.Category { get }
     /// Default permission level when no explicit agent grant exists.
     var defaultPermissionLevel: ToolPermissionLevel { get }
+    /// How the loop handles this tool's execution. Defaults to `.background`.
+    var executionMode: ToolExecutionMode { get }
     func definition() -> ToolDefinition
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult
 }
@@ -33,5 +46,9 @@ extension Tool {
 
     var defaultPermissionLevel: ToolPermissionLevel {
         .ask
+    }
+
+    var executionMode: ToolExecutionMode {
+        .background
     }
 }

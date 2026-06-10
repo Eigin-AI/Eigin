@@ -10,4 +10,12 @@ struct ToolResult {
 /// Executes tool calls against an Agent model.
 protocol ToolExecutor: Sendable {
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult
+    /// Returns the execution mode for a tool by name. Defaults to `.background`.
+    func executionMode(for toolName: String) -> ToolExecutionMode
+}
+
+extension ToolExecutor {
+    func executionMode(for toolName: String) -> ToolExecutionMode {
+        .background
+    }
 }

@@ -98,7 +98,9 @@ struct ChatView: View {
                     throttler: viewModel.chatLoop.throttler,
                     splitter: viewModel.chatLoop.splitter,
                     messageText: $viewModel.messageText,
-                    isInputDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting,
+                    isInputDisabled: !canSend ||
+                        (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction) ||
+                        viewModel.isCompacting,
                     onSend: { context in
                         guard let agent, let provider = activeProvider else { return }
                         viewModel.send(
@@ -110,7 +112,8 @@ struct ChatView: View {
                             mcpServers: mcpServers
                         )
                     },
-                    onStop: viewModel.isStreaming ? { viewModel.handleStop() } : nil,
+                    onStop: (viewModel.isStreaming && !viewModel.chatLoop
+                        .isAwaitingUserInteraction) ? { viewModel.handleStop() } : nil,
                     pagination: FeedPagination(
                         hasOlderMessages: viewModel.window.hasOlderMessages,
                         onLoadMore: { viewModel.window.loadOlderMessages() },
@@ -127,7 +130,15 @@ struct ChatView: View {
                             viewModel.chatLoop.resolvePermission(response)
                         },
                         browsingRequest: viewModel.chatLoop.pendingBrowsing,
-                        onBrowsingComplete: { result in viewModel.chatLoop.resolveBrowsing(result) }
+                        onBrowsingComplete: { result in
+                            viewModel.chatLoop.resolveBrowsing(result)
+                        },
+                        onOptionSelected: { label in
+                            viewModel.chatLoop.resolveOptions(.selected(label: label))
+                        },
+                        onOptionDismissed: {
+                            viewModel.chatLoop.resolveOptions(.dismissed)
+                        }
                     ),
                     context: FeedContext(
                         agentName: agent?.name ?? "",

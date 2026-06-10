@@ -41,7 +41,8 @@ extension ToolRegistry {
         activeSkills: [Skill] = [],
         additionalTools: [any Tool] = [],
         onCompose: ComposeEmailHandler? = nil,
-        onBrowse: BrowseHandler? = nil
+        onBrowse: BrowseHandler? = nil,
+        onPresentOptions: OptionsHandler? = nil
     ) -> ToolRegistry {
         let context = ToolContext(
             voiceNames: voiceNames,
@@ -49,7 +50,8 @@ extension ToolRegistry {
             spaceID: spaceID, chatID: chatID, agentID: agentID,
             canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
             onCompose: onCompose,
-            onBrowse: onBrowse
+            onBrowse: onBrowse,
+            onPresentOptions: onPresentOptions
         )
         var tools = allChatTools(context: context)
         tools += additionalTools

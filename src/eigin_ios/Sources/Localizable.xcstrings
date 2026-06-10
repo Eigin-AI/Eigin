@@ -8968,6 +8968,23 @@
         }
       }
     },
+    "tools.present.options" : {
+      "comment" : "Display name for the present-options tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giv valgmuligheder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Present Options"
+          }
+        }
+      }
+    },
     "tools.read.core" : {
       "comment" : "Display name for the read-core (agent identity) tool",
       "localizations" : {
@@ -10137,6 +10154,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Instruction"
+          }
+        }
+      }
+    },
+    "ui.interaction" : {
+      "comment" : "Display name for the Interaction skill",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interaktion"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interaction"
           }
         }
       }
@@ -11439,6 +11473,40 @@
     },
     "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes." : {
 
+    },
+    "options.somethingElse" : {
+      "comment" : "Label for a card that lets the user write their own answer instead of picking a preset option.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noget andet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something else"
+          }
+        }
+      }
+    },
+    "options.writeOwnAnswer" : {
+      "comment" : "Subtitle explaining that the user can write their own answer.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv dit eget svar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write your own answer"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

@@ -1693,6 +1693,19 @@ enum Localized {
         }
     }
 
+    enum Options {
+        /// Label for a card that lets the user write their own answer instead of picking a preset
+        /// option.
+        static var somethingElse: String {
+            Localized.get("options.somethingElse")
+        }
+
+        /// Subtitle explaining that the user can write their own answer.
+        static var writeOwnAnswer: String {
+            Localized.get("options.writeOwnAnswer")
+        }
+    }
+
     enum Permission {
         /// A button label that allows a tool to run even when the user is in a chat.
         static var allowForChat: String {
@@ -3055,6 +3068,13 @@ enum Localized {
             }
         }
 
+        enum Present {
+            /// Display name for the present-options tool
+            static var options: String {
+                Localized.get("tools.present.options")
+            }
+        }
+
         enum Read {
             /// Display name for the read-core (agent identity) tool
             static var core: String {
@@ -3440,6 +3460,11 @@ enum Localized {
         /// Label for a single agent intent
         static var intent: String {
             Localized.get("ui.intent")
+        }
+
+        /// Display name for the Interaction skill
+        static var interaction: String {
+            Localized.get("ui.interaction")
         }
 
         /// Short error title when the entered URL is invalid

@@ -12,4 +12,4 @@
 --stripunusedargs closure-only
 --patternlet inline
 --exclude .build,Frameworks
---disable preferKeyPath
+--disable preferKeyPath,redundantSendable
