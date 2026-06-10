@@ -25,6 +25,8 @@ struct FeedInteractions {
     var onPermissionResponse: ((PermissionResponse) -> Void)?
     var browsingRequest: BrowsingRequest?
     var onBrowsingComplete: ((BrowsingResult) -> Void)?
+    var onOptionSelected: ((String) -> Void)?
+    var onOptionDismissed: (() -> Void)?
 }
 
 /// A shared scrollable chat feed with input bar.
@@ -459,6 +461,12 @@ struct ChatFeed: View {
         case .toolGroup(_, let tools):
             ToolGroupView(tools: tools)
                 .padding(.horizontal, breakpoint.inner)
+        case .options(_, let set):
+            OptionsGroupView(
+                set: set,
+                onSelect: { interactions.onOptionSelected?($0) },
+                onFocusInput: { isInputFocused = true }
+            )
         case .compaction(_, let progress, let summary):
             CompactionDivider(progress: progress, summary: summary)
                 .padding(.horizontal, breakpoint.inner)

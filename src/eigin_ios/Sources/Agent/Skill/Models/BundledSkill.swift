@@ -7,6 +7,7 @@ enum BundledSkill {
         knowledge,
         intents,
         awareness,
+        interaction,
         web,
         selfModification,
         email,
@@ -89,7 +90,28 @@ enum BundledSkill {
         alwaysActive: true
     )
 
-    // MARK: - On-Demand
+    static let interaction = Skill(
+        id: "interaction",
+        displayName: Localized.Ui.interaction,
+        description: "Rich interaction tools for presenting choices and collecting input.",
+        instruction: """
+        You have tools for richer interactions beyond plain text. Use them \
+        when they make the conversation clearer or faster for the user.
+
+        **present_options** — use this instead of listing things in chat. \
+        If you're about to write several distinct ideas, choices, or next \
+        steps as a list, and the user is likely to pick one, call \
+        present_options instead. For example: a user asks "give me a few \
+        ideas" or "what are my options?" — present options instea of a list. \
+        Don't use it to avoid giving a direct answer; if one option is \
+        clearly right, just say so.
+        """,
+        smallInstruction: "Tools that make interactions with the user richer than plain text.",
+        requiredTools: [
+            PresentOptionsTool.capability,
+        ],
+        alwaysActive: true
+    )
 
     static let web = Skill(
         id: "web",
@@ -107,6 +129,8 @@ enum BundledSkill {
         ],
         alwaysActive: true
     )
+
+    // MARK: - On-Demand
 
     static let selfModification = Skill(
         id: "self_modification",
@@ -171,7 +195,7 @@ enum BundledSkill {
         displayName: Localized.Ui.scheduling,
         description: "Read and manage calendar events and reminders.",
         instruction: """
-        You can access the user's Apple Calendar and Reminders. \
+        You can access the user's calendar and reminders. \
         Always check what exists before creating — use get_calendar_events \
         to review the schedule or get_reminders to check for duplicates. \
         When creating events, confirm key details (time, location, calendar) \

@@ -26,6 +26,10 @@ struct ToolRegistry: ToolExecutor {
     /// Maximum characters for tool result content in small-context mode.
     private static let smallContextResultLimit = 300
 
+    func executionMode(for toolName: String) -> ToolExecutionMode {
+        toolsByName[toolName]?.executionMode ?? .background
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         guard let tool = toolsByName[toolCall.function.name] else {
             return ToolResult(

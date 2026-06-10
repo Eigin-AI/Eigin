@@ -143,6 +143,13 @@ final class ChatViewModel {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
 
+        // If an interactive tool is waiting (e.g. options are showing), stop the current
+        // turn cleanly before starting the new user-message turn. handleStop() cancels
+        // the pending options continuation via stop(), so no double-resume.
+        if chatLoop.isAwaitingUserInteraction {
+            handleStop()
+        }
+
         // Snap window to bottom if scrolled away
         if window.hasNewerMessages { window.snapToBottom() }
 
@@ -198,6 +205,10 @@ final class ChatViewModel {
                 onBrowse: { [weak self] browsingRequest in
                     guard let self else { return .cancelled }
                     return await chatLoop.requestBrowsing(browsingRequest)
+                },
+                onPresentOptions: { [weak self] optionSet in
+                    guard let self else { return .dismissed }
+                    return await chatLoop.presentOptions(optionSet)
                 }
             )
 
@@ -215,6 +226,10 @@ final class ChatViewModel {
             let browseHandler: BrowseHandler? = { [weak self] browsingRequest in
                 guard let self else { return .cancelled }
                 return await chatLoop.requestBrowsing(browsingRequest)
+            }
+            let optionsHandler: OptionsHandler? = { [weak self] optionSet in
+                guard let self else { return .dismissed }
+                return await chatLoop.presentOptions(optionSet)
             }
             self.chatLoop.onToolsChanged = { [weak self] in
                 guard let self else { return (tools: registry.definitions, executor: registry) }
@@ -242,7 +257,8 @@ final class ChatViewModel {
                             + updatedSkills.filter { !$0.alwaysActive },
                         additionalTools: turn.mcpTools,
                         onCompose: composeHandler,
-                        onBrowse: browseHandler
+                        onBrowse: browseHandler,
+                        onPresentOptions: optionsHandler
                     )
                 }
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)

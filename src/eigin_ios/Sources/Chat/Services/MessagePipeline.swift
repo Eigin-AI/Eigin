@@ -46,7 +46,8 @@ enum MessagePipeline {
         hasSpaces: Bool,
         needsCompaction: Bool,
         onCompose: ComposeEmailHandler? = nil,
-        onBrowse: BrowseHandler? = nil
+        onBrowse: BrowseHandler? = nil,
+        onPresentOptions: OptionsHandler? = nil
     ) async -> TurnInputs {
         // 1. Per-turn MCP tool discovery
         let mcpServerManager = Container.shared.mcpServerManager()
@@ -128,7 +129,8 @@ enum MessagePipeline {
                 activeSkills: allActiveSkills,
                 additionalTools: mcpTools,
                 onCompose: onCompose,
-                onBrowse: onBrowse
+                onBrowse: onBrowse,
+                onPresentOptions: onPresentOptions
             )
         }
 

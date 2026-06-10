@@ -10,6 +10,7 @@ enum AgentToolKit: ToolKit {
         SetProactivityTool.capability,
         ComposeEmailTool.capability,
         ManageVocabularyTool.capability,
+        PresentOptionsTool.capability,
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
@@ -34,6 +35,7 @@ enum AgentToolKit: ToolKit {
                 vocabularyStore: vocabularyStore,
                 dictationService: dictationService
             ),
+            PresentOptionsTool(onPresentOptions: context.onPresentOptions),
         ]
     }
 }

@@ -74,6 +74,10 @@ final class AgenticChatLoop {
     private(set) var pendingPermission: PermissionRequest?
     private(set) var pendingBrowsing: BrowsingRequest?
 
+    /// True while an interactive tool is executing (e.g. presenting options to the user).
+    /// When true the view layer re-enables the input bar and hides the stop button.
+    private(set) var isAwaitingUserInteraction = false
+
     /// ID of the last assistant message from the most recent completed round.
     /// Read by the view layer for footer fade-in animation. Cleared on `reset()`.
     private(set) var lastStreamedItemID: String?
@@ -87,6 +91,10 @@ final class AgenticChatLoop {
     var permissionPolicy: ToolPermissionPolicy
     private var permissionContinuation: CheckedContinuation<PermissionResponse, Never>?
     private var browsingContinuation: CheckedContinuation<BrowsingResult, Never>?
+    private var optionsContinuation: CheckedContinuation<OptionSelection, Never>?
+
+    /// Active option set presented to the user while a tool is suspended.
+    private(set) var pendingOptions: OptionSet?
 
     /// Optional callback checked after each tool execution round.
     /// Return `true` to stop the loop early (e.g. background decision tool fired).
@@ -287,12 +295,20 @@ final class AgenticChatLoop {
                         )
                     )
 
+                    let executionMode = currentExecutor.executionMode(for: call.function.name)
                     let result: ToolResult
                     switch permission {
                     case .always:
-                        result = await executeWithTimeout(
-                            call, agent: agent, executor: currentExecutor
-                        )
+                        switch executionMode {
+                        case .interactive:
+                            isAwaitingUserInteraction = true
+                            result = await currentExecutor.execute(call, agent: agent)
+                            isAwaitingUserInteraction = false
+                        case .background:
+                            result = await executeWithTimeout(
+                                call, agent: agent, executor: currentExecutor
+                            )
+                        }
                     case .never:
                         result = ToolResult(
                             toolCallID: call.id,
@@ -474,6 +490,8 @@ final class AgenticChatLoop {
         shouldStop = false
         lastStreamedItemID = nil
         pendingBrowsing = nil
+        pendingOptions = nil
+        isAwaitingUserInteraction = false
         currentMessageID = ""
     }
 
@@ -500,6 +518,29 @@ final class AgenticChatLoop {
         pendingBrowsing = nil
     }
 
+    /// Presents options to the user and suspends until the UI resolves it.
+    func presentOptions(_ set: OptionSet) async -> OptionSelection {
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<OptionSelection, Never>) in
+            self.optionsContinuation = continuation
+            self.pendingOptions = set
+        }
+    }
+
+    /// Resolves a pending options request from the UI.
+    func resolveOptions(_ selection: OptionSelection) {
+        optionsContinuation?.resume(returning: selection)
+        optionsContinuation = nil
+        pendingOptions = nil
+    }
+
+    /// Force-dismiss any pending options (e.g. when user sends a text message).
+    func dismissPendingOptions() {
+        if pendingOptions != nil {
+            resolveOptions(.dismissed)
+        }
+    }
+
     /// Stops the stream and returns a checkpoint of safe messages.
     /// Returns only messages that were safely committed before the stop point.
     func stop() -> [ChatMessage] {
@@ -515,6 +556,11 @@ final class AgenticChatLoop {
         browsingContinuation?.resume(returning: .cancelled)
         browsingContinuation = nil
         pendingBrowsing = nil
+        // Cancel any pending interactive tool
+        optionsContinuation?.resume(returning: .dismissed)
+        optionsContinuation = nil
+        pendingOptions = nil
+        isAwaitingUserInteraction = false
         return buildCheckpoint()
     }
 
