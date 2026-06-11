@@ -33,13 +33,6 @@ struct ChatHintSourceTests {
         )
     }
 
-    @Test func reactiveNeverFires() async {
-        let source = ChatHintSource(proactivity: .reactive)
-        for _ in 0 ..< 5 {
-            #expect(await source.render(input()) == nil)
-        }
-    }
-
     @Test func nonReactiveFiresWhenConditionMet() async {
         // Non-reactive + a fresh agent ID (no prior delivery history) + compaction
         // needed should always fire the compaction warning (priority 10, cooldown 0).

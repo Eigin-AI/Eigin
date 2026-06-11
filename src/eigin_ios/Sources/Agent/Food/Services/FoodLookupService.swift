@@ -12,7 +12,7 @@ protocol FoodLookupService: Sendable {
 struct FoodProduct {
     let barcode: String
     let name: String
-    let brand: String?
+    let brands: [String]?
     let servingSize: String?
     let caloriesPer100g: Double?
     let caloriesPerServing: Double?

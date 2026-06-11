@@ -75,7 +75,7 @@ struct GetFoodDetailsTool: Tool {
                 "barcode": product.barcode,
                 "name": product.name,
             ]
-            if let brand = product.brand { dict["brand"] = brand }
+            if let brands = product.brands, !brands.isEmpty { dict["brands"] = brands }
             if let serving = product.servingSize { dict["serving_size"] = serving }
             if let cal = product.caloriesPer100g { dict["calories_per_100g"] = cal }
             if let cal = product.caloriesPerServing { dict["calories_per_serving"] = cal }

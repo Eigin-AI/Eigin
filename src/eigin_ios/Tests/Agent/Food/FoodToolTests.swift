@@ -287,12 +287,12 @@ struct FoodToolTests {
         let lookup = FakeFoodLookupService()
         lookup.searchResults = [
             FoodProduct(
-                barcode: "123", name: "Rolled Oats", brand: "Bob's",
+                barcode: "123", name: "Rolled Oats", brands: ["Bob's"],
                 servingSize: "40g", caloriesPer100g: 379, caloriesPerServing: 152,
                 proteinPer100g: 13.5, fatPer100g: 6.9, carbsPer100g: 67.7
             ),
             FoodProduct(
-                barcode: "456", name: "Greek Yogurt", brand: "Fage",
+                barcode: "456", name: "Greek Yogurt", brands: ["Fage"],
                 servingSize: "200g", caloriesPer100g: 97, caloriesPerServing: 194,
                 proteinPer100g: 9.0, fatPer100g: 5.0, carbsPer100g: 3.6
             ),
@@ -377,7 +377,7 @@ struct FoodToolTests {
         _ = _container
         let lookup = FakeFoodLookupService()
         lookup.productResult = FoodProduct(
-            barcode: "5060292302201", name: "Dark Chocolate 85%", brand: "Lindt",
+            barcode: "5060292302201", name: "Dark Chocolate 85%", brands: ["Lindt"],
             servingSize: "25g", caloriesPer100g: 600, caloriesPerServing: 150,
             proteinPer100g: 10.0, fatPer100g: 46.0, carbsPer100g: 19.0
         )
