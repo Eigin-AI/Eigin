@@ -14,6 +14,7 @@ struct HintContext {
     let messages: [ChatMessage]
     let hasSpaces: Bool
     let needsCompaction: Bool
+    let initiative: ProactivityLevel
 }
 
 /// The catalog of all available hint types.
@@ -27,6 +28,7 @@ enum HintCatalog {
         selfConfigure,
         compactionWarning,
         capabilitySpaces,
+        introduceInitiative,
     ]
 
     // MARK: - Hint Definitions
@@ -104,6 +106,22 @@ enum HintCatalog {
             The user can create focused spaces for different projects or topics, each with their \
             own context and instructions. If the user seems to have a recurring topic that would \
             benefit from dedicated context, you could mention this. Only if relevant.
+            """
+        }
+    )
+
+    /// Prompt the agent to introduce initiative to users who haven't enabled it yet.
+    static let introduceInitiative = HintType(
+        id: "introduce_initiative",
+        cooldown: 3 * 86400, // 3 days
+        priority: 4,
+        condition: { ctx in ctx.initiative == .reactive },
+        template: { _ in
+            """
+            Initiative is currently off. If it feels natural in the conversation, let the user \
+            know you can take initiative — reach out proactively, surface reminders, and flag \
+            things they might find useful. Mention that enabling it requires notification \
+            permission. Only bring it up if the moment is right.
             """
         }
     )
