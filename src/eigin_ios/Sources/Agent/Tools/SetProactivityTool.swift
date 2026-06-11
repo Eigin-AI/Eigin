@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 struct SetProactivityTool: Tool {
     static let capability = ToolCapability(
@@ -83,6 +84,14 @@ struct SetProactivityTool: Tool {
         agent.updatedAt = .now
 
         BackgroundPromptScheduler.reschedule(for: level)
+
+        if level.isBackgroundEnabled {
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            if settings.authorizationStatus == .notDetermined {
+                _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+            }
+        }
 
         return ToolResult(
             toolCallID: id,
