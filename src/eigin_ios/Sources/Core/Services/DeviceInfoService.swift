@@ -13,6 +13,10 @@ protocol DeviceInfoService: Sendable {
     func systemVersion() -> String
     /// App build number from `CFBundleVersion`, e.g. "47".
     func appBuildVersion() -> String
+    /// App display name from `CFBundleName`, e.g. "Eigin".
+    func appName() -> String
+    /// App marketing version from `CFBundleShortVersionString`, e.g. "1.0".
+    func appVersion() -> String
 }
 
 /// Production implementation that queries hardware directly.
@@ -46,6 +50,14 @@ struct DefaultDeviceInfoService: DeviceInfoService {
             return "\(v.majorVersion).\(v.minorVersion)"
         }
         return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+    }
+
+    func appName() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? ""
+    }
+
+    func appVersion() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 
     func appBuildVersion() -> String {

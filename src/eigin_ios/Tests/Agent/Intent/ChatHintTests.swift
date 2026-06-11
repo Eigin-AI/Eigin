@@ -17,7 +17,8 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: false,
-            needsCompaction: false
+            needsCompaction: false,
+            initiative: .balanced
         )
         #expect(result == nil)
     }
@@ -30,7 +31,8 @@ struct ChatHintTests {
                 ChatMessage(role: "user", content: "Hi"),
             ],
             hasSpaces: false,
-            needsCompaction: false
+            needsCompaction: false,
+            initiative: .balanced
         )
         #expect(result == nil)
     }
@@ -45,7 +47,8 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: true, // suppress the spaces hint
-            needsCompaction: true // forces compaction warning which has no cooldown
+            needsCompaction: true, // forces compaction warning which has no cooldown
+            initiative: .balanced
         )
         #expect(result != nil)
         // The returned text should be a plain-markdown body, no XML wrapper.
@@ -62,7 +65,8 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: true, // has spaces, so spaces hint won't fire
-            needsCompaction: true
+            needsCompaction: true,
+            initiative: .balanced
         )
         // Compaction warning has highest priority and no cooldown
         #expect(result != nil)

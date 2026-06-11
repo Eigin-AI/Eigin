@@ -40,6 +40,14 @@ struct GemmaModelManagerTests {
         func appBuildVersion() -> String {
             "test-build"
         }
+
+        func appName() -> String {
+            "Eigin"
+        }
+
+        func appVersion() -> String {
+            "1.0"
+        }
     }
 
     // MARK: – RAM gating
