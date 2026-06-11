@@ -229,6 +229,115 @@ struct KnownModelCatalogTests {
         #expect(entry?.displayName == "MiniMax M2.5")
     }
 
+    // MARK: - New models (2026-06 update)
+
+    @Test func gemini35FlashExactMatch() {
+        let entry = KnownModelCatalog.lookup("gemini-3.5-flash")
+        #expect(entry?.displayName == "Gemini 3.5 Flash")
+    }
+
+    @Test func gemini35FlashGoogleModelsPrefix() {
+        let entry = KnownModelCatalog.lookup("models/gemini-3.5-flash")
+        #expect(entry?.displayName == "Gemini 3.5 Flash")
+    }
+
+    @Test func gemini35FlashOpenRouterPrefix() {
+        let entry = KnownModelCatalog.lookup("google/gemini-3.5-flash")
+        #expect(entry?.displayName == "Gemini 3.5 Flash")
+    }
+
+    @Test func gemini31ProPreviewExactMatch() {
+        let entry = KnownModelCatalog.lookup("gemini-3.1-pro-preview")
+        #expect(entry?.displayName == "Gemini 3.1 Pro Preview")
+    }
+
+    @Test func gpt55ExactMatch() {
+        let entry = KnownModelCatalog.lookup("gpt-5.5")
+        #expect(entry?.displayName == "GPT-5.5")
+    }
+
+    @Test func gpt55ProExactMatch() {
+        let entry = KnownModelCatalog.lookup("gpt-5.5-pro")
+        #expect(entry?.displayName == "GPT-5.5 Pro")
+    }
+
+    @Test func claudeOpus48ExactMatch() {
+        let entry = KnownModelCatalog.lookup("claude-opus-4-8")
+        #expect(entry?.displayName == "Claude Opus 4.8")
+    }
+
+    @Test func minimaxM3ExactMatch() {
+        let entry = KnownModelCatalog.lookup("minimax-m3")
+        #expect(entry?.displayName == "MiniMax M3")
+    }
+
+    @Test func kimiK26ExactMatch() {
+        // Must match the K2.6 entry, NOT K2 with version tag "6"
+        let entry = KnownModelCatalog.lookup("kimi-k2.6")
+        #expect(entry?.displayName == "Kimi K2.6")
+    }
+
+    @Test func kimiK26NoVersionTag() {
+        // "kimi-k2.6" is a distinct model, not K2 with a suffix
+        let tag = KnownModelCatalog.versionTag(for: "kimi-k2.6")
+        #expect(tag == nil)
+    }
+
+    @Test func mistralLargeLatestExactMatch() {
+        let entry = KnownModelCatalog.lookup("mistral-large-latest")
+        #expect(entry?.displayName == "Mistral Large (latest)")
+    }
+
+    @Test func mistralMediumLatestExactMatch() {
+        let entry = KnownModelCatalog.lookup("mistral-medium-latest")
+        #expect(entry?.displayName == "Mistral Medium (latest)")
+    }
+
+    @Test func mistralSmallLatestExactMatch() {
+        let entry = KnownModelCatalog.lookup("mistral-small-latest")
+        #expect(entry?.displayName == "Mistral Small (latest)")
+    }
+
+    @Test func mistralMedium2604ExactMatch() {
+        let entry = KnownModelCatalog.lookup("mistral-medium-2604")
+        #expect(entry?.displayName == "Mistral Medium 3.5")
+    }
+
+    @Test func mistralSmall2603ExactMatch() {
+        let entry = KnownModelCatalog.lookup("mistral-small-2603")
+        #expect(entry?.displayName == "Mistral Small 4")
+    }
+
+    @Test func grok43ExactMatch() {
+        let entry = KnownModelCatalog.lookup("grok-4.3")
+        #expect(entry?.displayName == "Grok 4.3")
+    }
+
+    @Test func deepseekV4ProExactMatch() {
+        let entry = KnownModelCatalog.lookup("deepseek-v4-pro")
+        #expect(entry?.displayName == "DeepSeek V4 Pro")
+    }
+
+    @Test func deepseekV4FlashExactMatch() {
+        let entry = KnownModelCatalog.lookup("deepseek-v4-flash")
+        #expect(entry?.displayName == "DeepSeek V4 Flash")
+    }
+
+    @Test func glm51ExactMatch() {
+        let entry = KnownModelCatalog.lookup("glm-5.1")
+        #expect(entry?.displayName == "GLM 5.1")
+    }
+
+    @Test func qwen37MaxExactMatch() {
+        let entry = KnownModelCatalog.lookup("qwen3.7-max")
+        #expect(entry?.displayName == "Qwen 3.7 Max")
+    }
+
+    @Test func qwen37PlusExactMatch() {
+        let entry = KnownModelCatalog.lookup("qwen3.7-plus")
+        #expect(entry?.displayName == "Qwen 3.7 Plus")
+    }
+
     // MARK: - bestModel(from:)
 
     @Test func bestModelPicksHighestRanked() {
@@ -238,9 +347,9 @@ struct KnownModelCatalogTests {
     }
 
     @Test func bestModelHandlesVendorPrefix() {
-        let available = ["openai/gpt-5.2", "anthropic/claude-haiku-4-5"]
+        let available = ["openai/gpt-5.4", "anthropic/claude-haiku-4-5"]
         let best = KnownModelCatalog.bestModel(from: available)
-        #expect(best == "openai/gpt-5.2")
+        #expect(best == "openai/gpt-5.4")
     }
 
     @Test func bestModelHandlesDotFormat() {
