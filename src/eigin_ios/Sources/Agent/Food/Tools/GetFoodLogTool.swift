@@ -119,7 +119,7 @@ struct GetFoodLogTool: Tool {
 
         do {
             if fields.contains("weight") {
-                if let weight = try await service.readWeight() {
+                if let weight = try await service.readWeight(for: date) {
                     result["weight_kg"] = weight
                 } else {
                     warnings.append("No weight data available.")

@@ -4,7 +4,7 @@ import Foundation
 
 protocol HealthService: Sendable {
     func authorize(canPromptUser: Bool) async -> HealthAuthResult
-    func readWeight() async throws -> Double?
+    func readWeight(for date: Date) async throws -> Double?
     func readDietaryEnergy(for date: Date) async throws -> Double
     func readActiveEnergy(for date: Date) async throws -> Double
     func readBasalEnergy(for date: Date) async throws -> Double

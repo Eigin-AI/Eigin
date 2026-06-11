@@ -199,6 +199,22 @@ struct FoodToolTests {
         #expect(result.content.contains("No weight data"))
     }
 
+    @Test @MainActor func getFoodLogWeightForSpecificDate() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        let service = FakeHealthService()
+        service.weight = 87.93
+
+        let tool = GetFoodLogTool(healthService: service, canPromptUser: true)
+        let call = makeCall(name: "get_food_log", arguments: """
+        {"include":["weight"],"date":"2026-04-12"}
+        """)
+        let result = await tool.execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("87.93"))
+    }
+
     @Test @MainActor func getFoodLogScopedReturnOmitsUnrequested() async throws {
         let (agent, _container) = try makeAgent()
         _ = _container
