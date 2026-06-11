@@ -121,7 +121,8 @@ struct ChatFeed: View {
                     get: { selectedError != nil },
                     set: { if !$0 { selectedError = nil } }
                 ),
-                title: "Error",
+                title: selectedError?.title ?? "Error",
+                description: selectedError?.suggestion,
                 detents: [.medium, .large]
             ) {
                 if let error = selectedError {
@@ -449,14 +450,11 @@ struct ChatFeed: View {
             }
             .padding(.horizontal, breakpoint.inner)
         case .error(_, let error):
-            Button {
-                selectedError = error
-            } label: {
-                Label(error.title, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(colors.text.standard.error)
-                    .font(Typography.body.font.weight(.medium))
-            }
-            .buttonStyle(.plain)
+            AppCard(
+                error.title,
+                explainer: error.suggestion,
+                action: { selectedError = error }
+            )
             .padding(.horizontal, breakpoint.inner)
         case .toolGroup(_, let tools):
             ToolGroupView(tools: tools)
