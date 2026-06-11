@@ -9597,6 +9597,40 @@
         }
       }
     },
+    "tools.system.getDirections" : {
+      "comment" : "Display name for the get-directions system tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent rute"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Directions"
+          }
+        }
+      }
+    },
+    "tools.system.searchPlaces" : {
+      "comment" : "Display name for the search-places system tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søg steder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search Places"
+          }
+        }
+      }
+    },
     "tools.system.timeAndPlace" : {
       "comment" : "Display name for the get-time-and-place system tool",
       "localizations" : {

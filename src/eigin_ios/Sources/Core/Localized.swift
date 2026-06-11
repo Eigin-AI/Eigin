@@ -3283,6 +3283,16 @@ enum Localized {
                 Localized.get("tools.system.done")
             }
 
+            /// Display name for the get-directions system tool
+            static var getDirections: String {
+                Localized.get("tools.system.getDirections")
+            }
+
+            /// Display name for the search-places system tool
+            static var searchPlaces: String {
+                Localized.get("tools.system.searchPlaces")
+            }
+
             /// Display name for the get-time-and-place system tool
             static var timeAndPlace: String {
                 Localized.get("tools.system.timeAndPlace")
