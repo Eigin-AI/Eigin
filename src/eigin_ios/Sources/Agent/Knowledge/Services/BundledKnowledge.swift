@@ -718,11 +718,11 @@ enum BundledKnowledge {
             """
             fact eigin_agent_has_skills {
                 name = "Skills"
-                claim = "The agent has skills that give it access to different capabilities. Some skills are always active — like knowledge, intents, awareness, and web search. Others are activated on demand, either by the agent when it recognises the need, or when you ask. On-demand skills include: self-modification (changing identity, voice, personality), email (composing emails), organization (managing spaces and chat history), scheduling (calendar events and reminders), and food (nutrition lookup and logging)."
+                claim = "The agent has skills that give it access to different capabilities. Some skills are always active — like knowledge, intents, awareness, and web search. Others are activated on demand, either by the agent when it recognises the need, or when you ask. On-demand skills include: self-modification (changing identity, voice, personality), email (composing emails), organization (managing spaces and chat history), scheduling (calendar events and reminders), and health (nutrition, activity, sleep, and vitals from Apple Health)."
                 source = enum"stated"
                 describes = [thing.eigin]
                 relates_to = [fact.eigin_agent_has_knowledge, fact.eigin_agent_has_initiative, fact.eigin_agent_self_configurable, fact.eigin_voice_is_core]
-                tags = ["skills", "capabilities", "activate", "scheduling", "food", "nutrition", "email", "organization", "web", "knowledge"]
+                tags = ["skills", "capabilities", "activate", "scheduling", "health", "nutrition", "sleep", "vitals", "email", "organization", "web", "knowledge"]
                 created_at = 2026-04-12
             }
             """

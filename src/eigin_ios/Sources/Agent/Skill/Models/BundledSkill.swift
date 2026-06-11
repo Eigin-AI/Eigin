@@ -13,7 +13,7 @@ enum BundledSkill {
         email,
         organization,
         scheduling,
-        food,
+        health,
     ]
 
     /// Skills that are active in every chat from the start.
@@ -225,47 +225,42 @@ enum BundledSkill {
         alwaysActive: false
     )
 
-    static let food = Skill(
-        id: "food",
-        displayName: Localized.Ui.food,
-        description: "Track what you eat and understand your nutrition.",
+    static let health = Skill(
+        id: "health",
+        displayName: Localized.Ui.health,
+        description: "Understand and look after your health: nutrition, activity, sleep, and vitals.",
         instruction: """
-        You can help the user track what they eat and understand their \
-        nutrition. Use search_food to look up nutritional information, \
-        get_food_details for barcode lookups, log_food to save meals to \
-        Apple Health, and get_food_log to read what's been logged, \
-        calories, activity, and weight.
+        You can help the user understand and look after their health — \
+        nutrition, activity, sleep, body, and vitals. The frame is "how are \
+        you doing," not just "what did you eat." Follow the user's lead on \
+        what matters to them.
 
-        When the user mentions eating something, search for it and offer \
-        to log it. If an exact match isn't found, estimate based on similar \
-        foods and common portion sizes. Always confirm the values before \
-        logging. When reading the food log, only request the specific \
-        data points you need.
+        Use get_health_log and request only the data points you need. For \
+        nutrition, search_food and get_food_details look up foods; when the \
+        user mentions eating something, offer to log it with log_food, \
+        estimating from similar foods if there's no exact match. Confirm the \
+        values before any write — log_food, log_body_measurement, and \
+        log_sleep all change the user's Apple Health data.
 
-        Your role is to give the user a clear, objective picture of what \
-        they eat — in line with whatever goals they have. That could be \
-        weight loss, weight gain, eating more protein, reducing sugar, \
-        or just having better visibility. Follow the user's lead on what \
-        matters to them.
+        A couple of things to read correctly: resting and active calories \
+        accumulate through the day, so a reading at 14:00 is not the day's \
+        total — look at past days for a baseline. Sleep is filed under the \
+        morning the user wakes up, not the night they went to bed, so for \
+        "last night" query today's date (check the current date if unsure).
 
-        Understanding the numbers: total daily energy expenditure (TDEE) \
-        is roughly resting calories + active calories. Eating above TDEE \
-        leads to gradual weight gain; below leads to gradual loss. \
-        Important: resting and active calorie values from Apple Health \
-        accumulate throughout the day — a reading at 14:00 is not the \
-        full day's total. For a more accurate baseline, you can look at \
-        resting calories from past days.
-
-        Encourage consistent tracking — even rough estimates are more \
-        useful than gaps. When summarising the day, focus on what was \
-        eaten and the nutritional breakdown.
+        Use these tools for visibility and summarisation — not diagnosis. \
+        This is not a substitute for medical advice. For health advice \
+        beyond the basics, encourage the user to consult a professional. \
+        Encourage consistent tracking; even rough estimates beat gaps.
         """,
-        smallInstruction: "Track food and nutrition. Search, log, and review meals.",
+        smallInstruction: "Look after the user's health: nutrition, activity, sleep, and vitals.",
         requiredTools: [
             SearchFoodTool.capability,
             GetFoodDetailsTool.capability,
             LogFoodTool.capability,
-            GetFoodLogTool.capability,
+            LogBodyMeasurementTool.capability,
+            LogSleepTool.capability,
+            GetHealthLogTool.capability,
         ],
         alwaysActive: false
     )

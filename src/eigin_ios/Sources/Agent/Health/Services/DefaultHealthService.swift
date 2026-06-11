@@ -14,6 +14,12 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
         HKQuantityType(.dietaryProtein),
         HKQuantityType(.dietaryFatTotal),
         HKQuantityType(.dietaryCarbohydrates),
+        HKQuantityType(.stepCount),
+        HKQuantityType(.appleExerciseTime),
+        HKQuantityType(.restingHeartRate),
+        HKQuantityType(.heartRateVariabilitySDNN),
+        HKCategoryType(.sleepAnalysis),
+        HKWorkoutType.workoutType(),
     ]
 
     private static let writeTypes: Set<HKSampleType> = [
@@ -21,6 +27,8 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
         HKQuantityType(.dietaryProtein),
         HKQuantityType(.dietaryFatTotal),
         HKQuantityType(.dietaryCarbohydrates),
+        HKQuantityType(.bodyMass),
+        HKCategoryType(.sleepAnalysis),
     ]
 
     // MARK: - Authorization
@@ -125,6 +133,103 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
         }
     }
 
+    func readSteps(for date: Date) async throws -> Double {
+        try await cumulativeSum(for: .stepCount, unit: .count(), date: date)
+    }
+
+    func readExerciseMinutes(for date: Date) async throws -> Double {
+        try await cumulativeSum(for: .appleExerciseTime, unit: .minute(), date: date)
+    }
+
+    func readRestingHeartRate(for date: Date) async throws -> Double? {
+        try await discreteAverage(
+            for: .restingHeartRate,
+            unit: HKUnit.count().unitDivided(by: .minute()),
+            date: date
+        )
+    }
+
+    func readHeartRateVariability(for date: Date) async throws -> Double? {
+        try await discreteAverage(
+            for: .heartRateVariabilitySDNN,
+            unit: .secondUnit(with: .milli),
+            date: date
+        )
+    }
+
+    func readWorkouts(for date: Date) async throws -> [WorkoutSample] {
+        let predicate = dayPredicate(for: date)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+        let workouts = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<
+            [HKWorkout],
+            Error
+        >) in
+            let query = HKSampleQuery(
+                sampleType: .workoutType(), predicate: predicate,
+                limit: HKObjectQueryNoLimit, sortDescriptors: [sort]
+            ) { _, results, error in
+                if let error { cont.resume(throwing: error) }
+                else { cont.resume(returning: (results as? [HKWorkout]) ?? []) }
+            }
+            store.execute(query)
+        }
+
+        return workouts.map { workout in
+            let energy = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?
+                .sumQuantity()?.doubleValue(for: .kilocalorie())
+            let distance = workout.statistics(for: HKQuantityType(.distanceWalkingRunning))?
+                .sumQuantity()?.doubleValue(for: .meter())
+            return WorkoutSample(
+                type: workout.workoutActivityType.displayName,
+                start: workout.startDate,
+                duration: workout.duration,
+                activeEnergy: energy,
+                distance: distance
+            )
+        }
+    }
+
+    func readSleep(for date: Date) async throws -> SleepSummary? {
+        let predicate = sleepNightPredicate(for: date)
+
+        let samples = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<
+            [HKCategorySample],
+            Error
+        >) in
+            let query = HKSampleQuery(
+                sampleType: HKCategoryType(.sleepAnalysis), predicate: predicate,
+                limit: HKObjectQueryNoLimit, sortDescriptors: nil
+            ) { _, results, error in
+                if let error { cont.resume(throwing: error) }
+                else { cont.resume(returning: (results as? [HKCategorySample]) ?? []) }
+            }
+            store.execute(query)
+        }
+
+        guard !samples.isEmpty else { return nil }
+
+        var deep = 0.0, core = 0.0, rem = 0.0, awake = 0.0, inBed = 0.0
+        for sample in samples {
+            let hours = sample.endDate.timeIntervalSince(sample.startDate) / 3600
+            switch HKCategoryValueSleepAnalysis(rawValue: sample.value) {
+            case .asleepDeep: deep += hours
+            case .asleepCore: core += hours
+            case .asleepREM: rem += hours
+            case .asleepUnspecified: core += hours
+            case .awake: awake += hours
+            case .inBed: inBed += hours
+            default: break
+            }
+        }
+
+        return SleepSummary(
+            asleep: deep + core + rem,
+            deep: deep, core: core, rem: rem,
+            awake: awake, inBed: inBed
+        )
+    }
+
     // MARK: - Write
 
     func logDietaryEnergy(
@@ -176,7 +281,57 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
         try await store.save(correlation)
     }
 
+    func logWeight(_ kilograms: Double, date: Date) async throws {
+        let sample = HKQuantitySample(
+            type: HKQuantityType(.bodyMass),
+            quantity: HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: kilograms),
+            start: date, end: date
+        )
+        try await store.save(sample)
+    }
+
+    func logSleep(start: Date, end: Date) async throws {
+        let sample = HKCategorySample(
+            type: HKCategoryType(.sleepAnalysis),
+            value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+            start: start, end: end
+        )
+        try await store.save(sample)
+    }
+
     // MARK: - Helpers
+
+    /// Average of discrete samples (e.g. heart rate) over the day, or nil when
+    /// no samples exist.
+    private func discreteAverage(
+        for identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        date: Date
+    ) async throws -> Double? {
+        let type = HKQuantityType(identifier)
+        let predicate = dayPredicate(for: date)
+
+        return try await withCheckedThrowingContinuation { cont in
+            let query = HKStatisticsQuery(
+                quantityType: type, quantitySamplePredicate: predicate,
+                options: .discreteAverage
+            ) { _, statistics, error in
+                if let error { cont.resume(throwing: error); return }
+                cont.resume(returning: statistics?.averageQuantity()?.doubleValue(for: unit))
+            }
+            store.execute(query)
+        }
+    }
+
+    /// Window for the night ending on the morning of `date`: 18:00 the previous
+    /// evening through 18:00 on `date`.
+    private func sleepNightPredicate(for date: Date) -> NSPredicate {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .hour, value: 18, to: startOfDay)!
+        let start = calendar.date(byAdding: .hour, value: -6, to: startOfDay)!
+        return HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+    }
 
     private func cumulativeSum(
         for identifier: HKQuantityTypeIdentifier,
@@ -204,5 +359,32 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
         let start = calendar.startOfDay(for: date)
         let end = calendar.date(byAdding: .day, value: 1, to: start)!
         return HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    }
+}
+
+// MARK: - Workout naming
+
+private extension HKWorkoutActivityType {
+    /// A human-readable name for the common activity types. Falls back to a
+    /// generic label for the long tail HealthKit defines.
+    var displayName: String {
+        switch self {
+        case .walking: "Walking"
+        case .running: "Running"
+        case .cycling: "Cycling"
+        case .swimming: "Swimming"
+        case .hiking: "Hiking"
+        case .yoga: "Yoga"
+        case .functionalStrengthTraining, .traditionalStrengthTraining: "Strength training"
+        case .highIntensityIntervalTraining: "HIIT"
+        case .elliptical: "Elliptical"
+        case .rowing: "Rowing"
+        case .coreTraining: "Core training"
+        case .pilates: "Pilates"
+        case .dance, .cardioDance, .socialDance: "Dance"
+        case .stairClimbing, .stairs: "Stair climbing"
+        case .mixedCardio: "Cardio"
+        default: "Workout"
+        }
     }
 }
