@@ -1,12 +1,14 @@
 import Factory
 import Foundation
 
-enum FoodToolKit: ToolKit {
+enum HealthToolKit: ToolKit {
     static let capabilities: [ToolCapability] = [
         SearchFoodTool.capability,
         GetFoodDetailsTool.capability,
         LogFoodTool.capability,
-        GetFoodLogTool.capability,
+        LogBodyMeasurementTool.capability,
+        LogSleepTool.capability,
+        GetHealthLogTool.capability,
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
@@ -16,7 +18,11 @@ enum FoodToolKit: ToolKit {
             SearchFoodTool(),
             GetFoodDetailsTool(),
             LogFoodTool(healthService: healthService, canPromptUser: context.canPromptUser),
-            GetFoodLogTool(healthService: healthService, canPromptUser: context.canPromptUser),
+            LogBodyMeasurementTool(
+                healthService: healthService, canPromptUser: context.canPromptUser
+            ),
+            LogSleepTool(healthService: healthService, canPromptUser: context.canPromptUser),
+            GetHealthLogTool(healthService: healthService, canPromptUser: context.canPromptUser),
         ]
     }
 }

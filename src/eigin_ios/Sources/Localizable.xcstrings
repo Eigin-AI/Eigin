@@ -8849,6 +8849,23 @@
         }
       }
     },
+    "tools.get.health.log" : {
+      "comment" : "Display name for the get-health-log tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent helbredslog"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get Health Log"
+          }
+        }
+      }
+    },
     "tools.get.presentation" : {
       "comment" : "Display name for the get-presentation tool",
       "localizations" : {
@@ -8934,6 +8951,23 @@
         }
       }
     },
+    "tools.log.bodyMeasurement" : {
+      "comment" : "Display name for the log-body-measurement tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log kropsmål"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log Body Measurement"
+          }
+        }
+      }
+    },
     "tools.log.food" : {
       "comment" : "Display name for the log-food tool",
       "localizations" : {
@@ -8947,6 +8981,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Log Food"
+          }
+        }
+      }
+    },
+    "tools.log.sleep" : {
+      "comment" : "Display name for the log-sleep tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log søvn"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log Sleep"
           }
         }
       }
@@ -10290,6 +10341,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Food"
+          }
+        }
+      }
+    },
+    "ui.health" : {
+      "comment" : "Tab or section label for the health tracking feature",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helbred"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health"
           }
         }
       }

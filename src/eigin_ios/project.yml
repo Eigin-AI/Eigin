@@ -95,8 +95,8 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Eigin uses your location to provide context-aware responses."
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Eigin accesses your calendar to check your schedule and create events for you."
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to provide insights into your nutrition and activity."
-        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves nutritional data to Apple Health when you log meals."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
         EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_PRODUCTION}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
@@ -166,8 +166,8 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Eigin uses your location to provide context-aware responses."
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "Eigin accesses your calendar to check your schedule and create events for you."
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to provide insights into your nutrition and activity."
-        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves nutritional data to Apple Health when you log meals."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
         EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_STAGING}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}

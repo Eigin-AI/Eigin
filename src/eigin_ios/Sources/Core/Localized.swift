@@ -3020,6 +3020,13 @@ enum Localized {
                     Localized.get("tools.get.food.log")
                 }
             }
+
+            enum Health {
+                /// Display name for the get-health-log tool
+                static var log: String {
+                    Localized.get("tools.get.health.log")
+                }
+            }
         }
 
         enum Knowledge {
@@ -3049,9 +3056,19 @@ enum Localized {
         }
 
         enum Log {
+            /// Display name for the log-body-measurement tool
+            static var bodyMeasurement: String {
+                Localized.get("tools.log.bodyMeasurement")
+            }
+
             /// Display name for the log-food tool
             static var food: String {
                 Localized.get("tools.log.food")
+            }
+
+            /// Display name for the log-sleep tool
+            static var sleep: String {
+                Localized.get("tools.log.sleep")
             }
         }
 
@@ -3511,6 +3528,11 @@ enum Localized {
         /// Display name for the Gemma 4 E2B CoreML on-device model
         static var gemma4E2bCoreml: String {
             Localized.get("ui.gemma-4-e2b-coreml")
+        }
+
+        /// Tab or section label for the health tracking feature
+        static var health: String {
+            Localized.get("ui.health")
         }
 
         /// Button label to collapse the raw error response in the error detail sheet

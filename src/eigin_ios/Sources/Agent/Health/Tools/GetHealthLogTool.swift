@@ -1,13 +1,13 @@
 import Foundation
 
-struct GetFoodLogTool: Tool {
+struct GetHealthLogTool: Tool {
     static let capability = ToolCapability(
-        kind: .builtIn, key: "get_food_log",
-        displayName: Localized.Tools.Get.Food.log,
+        kind: .builtIn, key: "get_health_log",
+        displayName: Localized.Tools.Get.Health.log,
         defaultPermissionLevel: .ask, category: .system
     )
 
-    let name = "get_food_log"
+    let name = "get_health_log"
     var isSmallContext: Bool = false
     let healthService: (any HealthService)?
     let canPromptUser: Bool
@@ -30,18 +30,20 @@ struct GetFoodLogTool: Tool {
     private static let validFields: Set<String> = [
         "weight", "calories_consumed", "active_calories",
         "resting_calories", "dietary_entries",
+        "steps", "exercise_minutes", "workouts",
+        "resting_heart_rate", "hrv", "sleep",
     ]
 
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Read food and nutrition data from Apple Health. Only request the specific data points you need.",
+            description: "Read health data from Apple Health: nutrition, activity, sleep, vitals, and body metrics. Only request the specific data points you need.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
                     "include": .init(
                         type: "array",
-                        description: "Data points to return: \"weight\", \"calories_consumed\", \"active_calories\", \"resting_calories\", \"dietary_entries\".",
+                        description: "Data points to return: \"weight\", \"calories_consumed\", \"active_calories\", \"resting_calories\", \"dietary_entries\", \"steps\", \"exercise_minutes\", \"workouts\", \"resting_heart_rate\", \"hrv\", \"sleep\".",
                         items: .init(type: "string")
                     ),
                     "date": .init(
@@ -150,6 +152,60 @@ struct GetFoodLogTool: Tool {
                     if let f = sample.fat { entry["fat_g"] = f }
                     if let c = sample.carbs { entry["carbs_g"] = c }
                     return entry
+                }
+            }
+
+            if fields.contains("steps") {
+                result["steps"] = try await service.readSteps(for: date)
+            }
+
+            if fields.contains("exercise_minutes") {
+                result["exercise_minutes"] = try await service.readExerciseMinutes(for: date)
+            }
+
+            if fields.contains("resting_heart_rate") {
+                if let bpm = try await service.readRestingHeartRate(for: date) {
+                    result["resting_heart_rate_bpm"] = bpm
+                } else {
+                    warnings.append("No resting heart rate data available.")
+                }
+            }
+
+            if fields.contains("hrv") {
+                if let hrv = try await service.readHeartRateVariability(for: date) {
+                    result["hrv_ms"] = hrv
+                } else {
+                    warnings.append("No heart rate variability data available.")
+                }
+            }
+
+            if fields.contains("workouts") {
+                let workouts = try await service.readWorkouts(for: date)
+                result["workouts"] = workouts.map { workout in
+                    var entry: [String: Any] = [
+                        "type": workout.type,
+                        "start": LocalDateFormatter.string(from: workout.start),
+                        "duration_min": workout.duration / 60,
+                    ]
+                    if let energy = workout.activeEnergy { entry["active_calories"] = energy }
+                    if let distance = workout.distance { entry["distance_m"] = distance }
+                    return entry
+                }
+            }
+
+            if fields.contains("sleep") {
+                if let sleep = try await service.readSleep(for: date) {
+                    var entry: [String: Any] = [
+                        "asleep_hours": sleep.asleep,
+                        "deep_hours": sleep.deep,
+                        "core_hours": sleep.core,
+                        "rem_hours": sleep.rem,
+                        "awake_hours": sleep.awake,
+                    ]
+                    if sleep.inBed > 0 { entry["in_bed_hours"] = sleep.inBed }
+                    result["sleep"] = entry
+                } else {
+                    warnings.append("No sleep data available.")
                 }
             }
 

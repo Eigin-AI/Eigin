@@ -12,7 +12,7 @@ extension ToolRegistry {
         ChatToolKit.self,
         WebToolKit.self,
         ScheduleToolKit.self,
-        FoodToolKit.self,
+        HealthToolKit.self,
         SystemToolKit.self,
     ]
 
