@@ -13,6 +13,8 @@ enum BundledKnowledge {
     static let agentActorID = "actor.agent"
     /// The user's actor entity in the knowledge graph.
     static let userActorID = "actor.user"
+    /// The Eigin app entity in the knowledge graph.
+    static let eiginThingID = "thing.eigin"
 
     // MARK: - Schemas
 

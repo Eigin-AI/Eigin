@@ -11,6 +11,7 @@ struct OnboardingChat: View {
     @Environment(\.modelContext) private var modelContext
     @Injected(\.chatService) private var chatService
     @Injected(\.languageManager) private var languageManager
+    @Injected(\.knowledgeService) private var knowledgeService
 
     let provider: Provider
     let model: String
@@ -364,11 +365,60 @@ struct OnboardingChat: View {
         )
 
         agent.bootstrapComplete = true
+        await seedActorEntries()
         onReveal(agent, finalHeroText, orchestrator.data.priority)
     }
 
     private func defaultHeroText() -> String {
         Localized.Onboarding.Welcome.description
+    }
+
+    private func seedActorEntries() async {
+        let now = LocalDateFormatter.iso8601String(from: Date())
+
+        let userActor = FirmEntity(
+            id: BundledKnowledge.userActorID,
+            entityType: "actor",
+            fields: [
+                FirmField(
+                    name: "name",
+                    value: .string(value: orchestrator.data.userName ?? "User")
+                ),
+                FirmField(name: "type", value: .enum(value: "human")),
+                FirmField(name: "created_at", value: .dateTime(value: now)),
+            ]
+        )
+
+        let agentActor = FirmEntity(
+            id: BundledKnowledge.agentActorID,
+            entityType: "actor",
+            fields: [
+                FirmField(name: "name", value: .string(value: agent.name)),
+                FirmField(name: "type", value: .enum(value: "ai")),
+                FirmField(name: "created_at", value: .dateTime(value: now)),
+                FirmField(name: "relates_to", value: .list(items: [
+                    .entityReference(entityId: BundledKnowledge.userActorID),
+                ])),
+                FirmField(name: "uses", value: .list(items: [
+                    .entityReference(entityId: BundledKnowledge.eiginThingID),
+                ])),
+            ]
+        )
+
+        do {
+            try await knowledgeService.addEntity(userActor, spaceID: nil, agentID: nil, chatID: nil)
+            try await knowledgeService.addEntity(
+                agentActor,
+                spaceID: nil,
+                agentID: nil,
+                chatID: nil
+            )
+        } catch {
+            AppLogger.error(
+                "Failed to seed actor entries: \(private: error.localizedDescription)",
+                category: .onboarding
+            )
+        }
     }
 
     private func appendSystemHint(_ hint: String, to messages: [ChatMessage]) -> [ChatMessage] {
