@@ -59,15 +59,16 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
 
     // MARK: - Read
 
-    func readWeight() async throws -> Double? {
+    func readWeight(for date: Date) async throws -> Double? {
         let type = HKQuantityType(.bodyMass)
+        let predicate = dayPredicate(for: date)
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
         let samples = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<
             [HKQuantitySample],
             Error
         >) in
             let query = HKSampleQuery(
-                sampleType: type, predicate: nil,
+                sampleType: type, predicate: predicate,
                 limit: 1, sortDescriptors: [sort]
             ) { _, results, error in
                 if let error { cont.resume(throwing: error) }

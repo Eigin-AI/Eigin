@@ -21,7 +21,7 @@ final class FakeHealthService: HealthService, @unchecked Sendable {
         authResult
     }
 
-    func readWeight() async throws -> Double? {
+    func readWeight(for date: Date) async throws -> Double? {
         weight
     }
 
