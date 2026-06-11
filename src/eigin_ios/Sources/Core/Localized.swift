@@ -637,6 +637,13 @@ enum Localized {
             }
         }
 
+        enum Account {
+            /// Short error title when the provider account is locked or suspended (HTTP 423)
+            static var locked: String {
+                Localized.get("errors.account.locked")
+            }
+        }
+
         enum AppleIntelligence {
             /// Recovery suggestion when Apple Intelligence is disabled in system settings
             static var enableHint: String {
@@ -676,6 +683,18 @@ enum Localized {
             /// reason
             static func failedWithReason(_ p1: String) -> String {
                 String(format: Localized.get("errors.authorization.failedWithReason"), p1)
+            }
+        }
+
+        enum Billing {
+            /// Short error title when a 400 response suggests a possible billing or credits issue
+            static var checkRequired: String {
+                Localized.get("errors.billing.checkRequired")
+            }
+
+            /// Short error title when the provider requires billing or credits (HTTP 402)
+            static var required: String {
+                Localized.get("errors.billing.required")
             }
         }
 
@@ -721,6 +740,11 @@ enum Localized {
         }
 
         enum Provider {
+            /// Recovery suggestion when the provider account is locked or suspended (HTTP 423)
+            static var accountLocked: String {
+                Localized.get("errors.provider.accountLocked")
+            }
+
             /// Error message when the token exchange step of OAuth fails; %@ is substituted with
             /// the underlying reason
             static func apiKeyRetrievalFailed(_ p1: String) -> String {
@@ -730,6 +754,16 @@ enum Localized {
             /// Recovery suggestion when the provider base URL is rejected as invalid
             static var baseUrlHint: String {
                 Localized.get("errors.provider.baseUrlHint")
+            }
+
+            /// Recovery suggestion when a 400 response may indicate a billing or credits issue
+            static var billingCheckRequired: String {
+                Localized.get("errors.provider.billingCheckRequired")
+            }
+
+            /// Recovery suggestion when the provider returns HTTP 402 (insufficient credits)
+            static var billingRequired: String {
+                Localized.get("errors.provider.billingRequired")
             }
 
             /// Recovery suggestion when the server refuses the connection
@@ -752,6 +786,12 @@ enum Localized {
                 Localized.get("errors.provider.invalidApiKey")
             }
 
+            /// Recovery suggestion when the provider rejects a request due to invalid parameters
+            /// (HTTP 422)
+            static var invalidRequest: String {
+                Localized.get("errors.provider.invalidRequest")
+            }
+
             /// Recovery suggestion when the URL cannot be parsed
             static var malformedUrl: String {
                 Localized.get("errors.provider.malformedUrl")
@@ -770,6 +810,11 @@ enum Localized {
             /// Recovery suggestion when the provider returns HTTP 429
             static var rateLimited: String {
                 Localized.get("errors.provider.rateLimited")
+            }
+
+            /// Recovery suggestion when the request payload exceeds the provider's limit (HTTP 413)
+            static var requestTooLarge: String {
+                Localized.get("errors.provider.requestTooLarge")
             }
 
             /// Recovery suggestion for non-standard HTTP error codes from the provider
@@ -803,6 +848,17 @@ enum Localized {
             /// Short error title for a failed HTTP request
             static var failed: String {
                 Localized.get("errors.request.failed")
+            }
+
+            /// Short error title when the provider rejects a request due to invalid parameters
+            /// (HTTP 422)
+            static var invalid: String {
+                Localized.get("errors.request.invalid")
+            }
+
+            /// Short error title when the request payload is too large for the provider (HTTP 413)
+            static var tooLarge: String {
+                Localized.get("errors.request.tooLarge")
             }
         }
 
@@ -3447,6 +3503,11 @@ enum Localized {
             Localized.get("ui.gemma-4-e2b-coreml")
         }
 
+        /// Button label to collapse the raw error response in the error detail sheet
+        static var hideRawError: String {
+            Localized.get("ui.hideRawError")
+        }
+
         /// Success message shown after a data import completes
         static var importSuccessful: String {
             Localized.get("ui.import-successful")
@@ -3677,6 +3738,11 @@ enum Localized {
         /// parentheses is replaced with the actual number of facts of that type.
         static func showAll(_ p1: String) -> String {
             String(format: Localized.get("ui.showAll"), p1)
+        }
+
+        /// Button label to expand the raw error response in the error detail sheet
+        static var showRawError: String {
+            Localized.get("ui.showRawError")
         }
 
         /// Speed tier label — slow but powerful model option

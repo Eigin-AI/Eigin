@@ -1994,6 +1994,57 @@
         }
       }
     },
+    "errors.account.locked" : {
+      "comment" : "Short error title when the provider account is locked or suspended (HTTP 423)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto låst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account locked"
+          }
+        }
+      }
+    },
+    "errors.billing.checkRequired" : {
+      "comment" : "Short error title when a 400 response suggests a possible billing or credits issue",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tjek fakturering"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check billing"
+          }
+        }
+      }
+    },
+    "errors.billing.required" : {
+      "comment" : "Short error title when the provider requires billing or credits (HTTP 402)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mangler credits"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Out of credits"
+          }
+        }
+      }
+    },
     "errors.authentication.failed" : {
       "comment" : "Short error title when authentication fails (e.g. HTTP 401)",
       "localizations" : {
@@ -2187,13 +2238,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tjek at base-URL er korrekt og starter med https://."
+            "value" : "Tjek at udbyderens adresse er korrekt og starter med https://."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check that the base URL is correct and starts with https://."
+            "value" : "Check that the provider address is correct and starts with https://."
           }
         }
       }
@@ -2204,13 +2255,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serveren accepterer ikke forbindelser. Den kan være nede, eller URL kan være forkert."
+            "value" : "Din udbyder accepterer ikke forbindelser. Tjek adressen eller prøv igen senere."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The server isn't accepting connections. It may be down or the URL may be wrong."
+            "value" : "Your provider isn't accepting connections. Check the address or try again later."
           }
         }
       }
@@ -2238,13 +2289,98 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Værtsnavnet kunne ikke opløses. Tjek base-URL for tastefejl."
+            "value" : "Din udbyder kunne ikke nås. Tjek udbyderens adresse for tastefejl."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The hostname couldn't be resolved. Check the base URL for typos."
+            "value" : "Your provider couldn't be reached. Check the provider address for typos."
+          }
+        }
+      }
+    },
+    "errors.provider.accountLocked" : {
+      "comment" : "Recovery suggestion when the provider account is locked or suspended (HTTP 423)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din konto hos udbyderen er låst eller suspenderet. Kontakt deres support for at få den genaktiveret."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider account is locked or suspended. Contact their support to get it reinstated."
+          }
+        }
+      }
+    },
+    "errors.provider.billingCheckRequired" : {
+      "comment" : "Recovery suggestion when a 400 response may indicate a billing or credits issue",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din udbyder kræver muligvis opdateret fakturering. Tjek din udbyders dashboard og prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider may require updated billing. Check your provider's dashboard and try again."
+          }
+        }
+      }
+    },
+    "errors.provider.billingRequired" : {
+      "comment" : "Recovery suggestion when the provider returns HTTP 402 (insufficient credits)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din udbyders konto mangler credits eller aktiv fakturering. Tjek din udbyders dashboard og prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your AI provider account needs credits or active billing. Check your provider's dashboard and try again."
+          }
+        }
+      }
+    },
+    "errors.provider.invalidRequest" : {
+      "comment" : "Recovery suggestion when the provider rejects a request due to invalid parameters (HTTP 422)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udbyderen kunne ikke behandle beskeden. Tjek at modelnavnet og eventuelle avancerede indstillinger er korrekte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider couldn't process the request. Check that the model name and any advanced settings are correct."
+          }
+        }
+      }
+    },
+    "errors.provider.requestTooLarge" : {
+      "comment" : "Recovery suggestion when the request payload exceeds the provider's limit (HTTP 413)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit besked-indhold er for stort til udbyderen. Prøv at forkorte beskeden eller fjern vedhæftede filer."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your message content is too large for this provider. Try shortening your message or removing attachments."
           }
         }
       }
@@ -2272,13 +2408,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URL ser ud til at være forkert. Sørg for at den er indtastet korrekt og starter med https://."
+            "value" : "Tjek at udbyderens adresse er korrekt og starter med https://."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The URL appears to be malformed. Make sure it's entered correctly and starts with https://."
+            "value" : "Check that the provider address is correct and starts with https://."
           }
         }
       }
@@ -2289,13 +2425,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Model-endpoint blev ikke fundet på denne URL. Sørg for at base-URL er korrekt."
+            "value" : "Prøv at vælge en anden model."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The models endpoint wasn't found at this URL. Make sure the base URL is correct."
+            "value" : "Try selecting a different model."
           }
         }
       }
@@ -2306,13 +2442,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Din API-nøgle har ikke tilladelse til denne ressource. Tjek dine kontotilladelser."
+            "value" : "Din udbyder tillader ikke adgang til denne model. Prøv en anden model, eller tjek dit abonnement i udbyderens dashboard."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your API key doesn't have permission to access this resource. Check your account permissions."
+            "value" : "Your provider won't allow access to this model. Try a different model or check your plan in your provider's dashboard."
           }
         }
       }
@@ -2340,13 +2476,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Udbyderen returnerede en fejl. Se detaljer nedenfor."
+            "value" : "Din udbyder returnerede en fejl. Tryk for detaljer."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The provider returned an error. See details below."
+            "value" : "Your provider returned an error. Tap for details."
           }
         }
       }
@@ -2391,13 +2527,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serveren var for lang tid om at svare. Prøv igen eller tjek URL."
+            "value" : "Din udbyder svarede ikke hurtigt nok. Prøv igen senere."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The server took too long to respond. Try again or check the URL."
+            "value" : "Your provider took too long to respond. Try again later."
           }
         }
       }
@@ -2408,13 +2544,47 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Serveren returnerede noget uventet. Sørg for at URL peger på en OpenAI-kompatibel API."
+            "value" : "Din udbyder returnerede et uventet svar. Tjek udbyderens URL og den valgte model."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The server returned something unexpected. Make sure the URL points to an OpenAI-compatible API."
+            "value" : "Your provider returned an unexpected response. Check the provider URL and selected model."
+          }
+        }
+      }
+    },
+    "errors.request.invalid" : {
+      "comment" : "Short error title when the provider rejects a request due to invalid parameters (HTTP 422)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugyldig besked"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid request"
+          }
+        }
+      }
+    },
+    "errors.request.tooLarge" : {
+      "comment" : "Short error title when the request payload is too large for the provider (HTTP 413)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besked for stor"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request too large"
           }
         }
       }
@@ -11327,6 +11497,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yes"
+          }
+        }
+      }
+    },
+    "ui.hideRawError" : {
+      "comment" : "Button label to collapse the raw error response in the error detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjul rå fejl"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide raw error"
+          }
+        }
+      }
+    },
+    "ui.showRawError" : {
+      "comment" : "Button label to expand the raw error response in the error detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis rå fejl"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show raw error"
           }
         }
       }

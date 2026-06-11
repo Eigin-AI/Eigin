@@ -30,17 +30,39 @@ struct ConnectionError: Equatable {
                 title = Localized.Ui.unexpectedResponse
                 suggestion = Localized.Errors.Provider.unexpectedResponse
 
-            case .httpError(let code, _):
+            case .httpError(let code, let body):
                 switch code {
+                case 400:
+                    let creditPattern =
+                        /(?i)credit[s]?\s+balance|insufficient[_\s]+(?:credit[s]?|quota)|out\s+of\s+credit[s]?/
+                    if let body, body.contains(creditPattern) {
+                        title = Localized.Errors.Billing.checkRequired
+                        suggestion = Localized.Errors.Provider.billingCheckRequired
+                    } else {
+                        title = "\(Localized.Errors.Request.failed)"
+                        suggestion = Localized.Errors.Provider.returnedError
+                    }
                 case 401:
                     title = Localized.Errors.Authentication.failed
                     suggestion = Localized.Errors.Provider.invalidApiKey
+                case 402:
+                    title = Localized.Errors.Billing.required
+                    suggestion = Localized.Errors.Provider.billingRequired
                 case 403:
                     title = Localized.Errors.Access.denied
                     suggestion = Localized.Errors.Provider.permissionDenied
                 case 404:
                     title = Localized.Ui.endpointNotFound
                     suggestion = Localized.Errors.Provider.modelsEndpointNotFound
+                case 413:
+                    title = Localized.Errors.Request.tooLarge
+                    suggestion = Localized.Errors.Provider.requestTooLarge
+                case 422:
+                    title = Localized.Errors.Request.invalid
+                    suggestion = Localized.Errors.Provider.invalidRequest
+                case 423:
+                    title = Localized.Errors.Account.locked
+                    suggestion = Localized.Errors.Provider.accountLocked
                 case 429:
                     title = Localized.Ui.rateLimited
                     suggestion = Localized.Errors.Provider.rateLimited
