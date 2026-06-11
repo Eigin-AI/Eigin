@@ -53,9 +53,8 @@ struct GetTimeAndPlaceTool: Tool {
         var warnings: [String]?
 
         switch location {
-        case .place(let placeName):
-            result["location"] = placeName
-        case .coordinates(let lat, let lon):
+        case .resolved(let placeName, let lat, let lon):
+            if let placeName { result["location"] = placeName }
             result["latitude"] = lat
             result["longitude"] = lon
         case .unavailable(let warning):
@@ -73,8 +72,8 @@ struct GetTimeAndPlaceTool: Tool {
 // MARK: - LocationHelper
 
 private enum LocationResult {
-    case place(String)
-    case coordinates(Double, Double)
+    /// A resolved location: always carries coordinates, plus a place name when one is known.
+    case resolved(name: String?, lat: Double, lon: Double)
     case unavailable(String)
 }
 
@@ -136,10 +135,12 @@ private final class LocationHelper: NSObject, CLLocationManagerDelegate, @unchec
             return .unavailable("Could not determine current location.")
         }
 
-        if let placeName = await reverseGeocode(location) {
-            return .place(placeName)
-        }
-        return .coordinates(location.coordinate.latitude, location.coordinate.longitude)
+        let placeName = await reverseGeocode(location)
+        return .resolved(
+            name: placeName,
+            lat: location.coordinate.latitude,
+            lon: location.coordinate.longitude
+        )
     }
 
     private static func fetchCurrentLocation() async -> CLLocation? {

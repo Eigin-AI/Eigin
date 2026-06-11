@@ -78,14 +78,25 @@ enum BundledSkill {
     static let awareness = Skill(
         id: "awareness",
         displayName: Localized.Settings.awareness,
-        description: "Know the current time and location.",
+        description: "Know the current time and place, find places, and estimate trips.",
         instruction: """
-        You can check the current time and the user's location when relevant to the \
-        conversation. Use this to give timely, context-aware responses.
+        You can sense where and when the user is, and reason about the world around \
+        them. Check the current time and the user's location to give timely, \
+        context-aware answers. Search for places — by name or nearby — to ground vague \
+        references into real, located spots. Get coarse directions between two points \
+        (travel time, distance, traffic) to judge how far or how long a trip is.
+
+        Chain these tools: get_time_and_place tells you where the user is now; \
+        search_places turns a name or a nearby search into coordinates; get_directions \
+        estimates the trip between two coordinates. For "how do I get to my kid's \
+        school," find the school with search_places, then route from the user's current \
+        location.
         """,
-        smallInstruction: "Check the current time and location.",
+        smallInstruction: "Sense time and place, search for places, and estimate trips.",
         requiredTools: [
             GetTimeAndPlaceTool.capability,
+            SearchPlacesTool.capability,
+            GetDirectionsTool.capability,
         ],
         alwaysActive: true
     )
