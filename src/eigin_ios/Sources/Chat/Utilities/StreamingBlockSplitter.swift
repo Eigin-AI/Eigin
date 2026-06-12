@@ -12,6 +12,9 @@ final class StreamingBlockSplitter {
 
     private var messageID: String = ""
     private var observationTask: Task<Void, Never>?
+    /// Text of the last `process` call, used to skip redundant re-splits while the
+    /// throttler holds `displayedText` steady between published words.
+    private var lastProcessedText: String?
 
     init(throttler: any StreamThrottling) {
         self.throttler = throttler
@@ -23,6 +26,7 @@ final class StreamingBlockSplitter {
 
     func start() {
         allBlocks = []
+        lastProcessedText = nil
 
         observationTask?.cancel()
         observationTask = Task { [weak self] in
@@ -41,6 +45,7 @@ final class StreamingBlockSplitter {
         observationTask = nil
 
         allBlocks = []
+        lastProcessedText = nil
     }
 
     private func observeThrottler() async {
@@ -61,6 +66,9 @@ final class StreamingBlockSplitter {
     }
 
     private func process(newText: String) {
+        guard newText != lastProcessedText else { return }
+        lastProcessedText = newText
+
         guard !newText.isEmpty else {
             allBlocks = []
             return
