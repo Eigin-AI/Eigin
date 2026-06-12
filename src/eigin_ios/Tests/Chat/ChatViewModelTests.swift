@@ -211,6 +211,59 @@ struct ChatViewModelTests {
         #expect(chat.title == "Already Set")
     }
 
+    // MARK: - Cancellation vs. errors
+
+    @MainActor
+    private func makeViewModel(
+        chat: Chat,
+        agent: Agent,
+        container: ModelContainer,
+        chatService: FakeChatService
+    ) -> ChatViewModel {
+        Container.shared.reset()
+        Container.shared.chatService.register { chatService }
+        Container.shared.knowledgeService.register { PreviewKnowledgeService() }
+        Container.shared.intentService.register { PreviewIntentService() }
+
+        let vm = ChatViewModel(chatID: chat.id)
+        vm.setUp(modelContext: container.mainContext)
+        vm.chat = chat
+        vm.gatekeeper = Gatekeeper(
+            proactivity: agent.proactivity,
+            knowledgeService: PreviewKnowledgeService()
+        )
+        vm.messageText = "Hello"
+        return vm
+    }
+
+    @Test("a thrown non-cancellation error surfaces as a chatError")
+    @MainActor
+    func realErrorSetsChatError() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.throwOnEventStream(URLError(.cannotConnectToHost))
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+
+        #expect(vm.chatError != nil)
+    }
+
+    @Test("a cancellation error does not surface as a chatError")
+    @MainActor
+    func cancellationDoesNotSetChatError() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.throwOnEventStream(CancellationError())
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+
+        #expect(vm.chatError == nil)
+    }
+
     // MARK: - moveToSpace
 
     @Test("moveToSpace updates chat spaceID")
