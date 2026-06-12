@@ -60,11 +60,6 @@ enum Localized {
             String(format: Localized.get("agent.privateByDesign"), p1)
         }
 
-        /// A text label indicating how many times a particular intent has been reinforced.
-        static func reinforcedCount(_ p1: String) -> String {
-            String(format: Localized.get("agent.reinforcedCount"), p1)
-        }
-
         /// A label displaying the number of rounds in the current notification session.
         static func roundsCount(_ p1: String) -> String {
             String(format: Localized.get("agent.roundsCount"), p1)
@@ -1026,6 +1021,21 @@ enum Localized {
         /// A message displayed when dismissing an intent.
         static var dismissWarning: String {
             Localized.get("intent.dismissWarning")
+        }
+
+        /// Section header listing an intent's dated events.
+        static var events: String {
+            Localized.get("intent.events")
+        }
+
+        /// Section header listing an intent's recurring schedules.
+        static var schedules: String {
+            Localized.get("intent.schedules")
+        }
+
+        /// Section header listing an intent's tasks.
+        static var tasks: String {
+            Localized.get("intent.tasks")
         }
 
         enum EmptyState {
@@ -2884,6 +2894,11 @@ enum Localized {
                 Localized.get("tools.agent.activateSkill")
             }
 
+            /// Display name for the add-intent tool
+            static var addIntent: String {
+                Localized.get("tools.agent.addIntent")
+            }
+
             /// Display name for the list-intents tool
             static var listIntents: String {
                 Localized.get("tools.agent.listIntents")
@@ -2894,9 +2909,9 @@ enum Localized {
                 Localized.get("tools.agent.resolveIntent")
             }
 
-            /// Display name for the set-intent tool
-            static var setIntent: String {
-                Localized.get("tools.agent.setIntent")
+            /// Display name for the update-intent tool
+            static var updateIntent: String {
+                Localized.get("tools.agent.updateIntent")
             }
         }
 
@@ -3685,11 +3700,6 @@ enum Localized {
             Localized.get("ui.recommended")
         }
 
-        /// Label for the reinforced memory strength level
-        static var reinforced: String {
-            Localized.get("ui.reinforced")
-        }
-
         /// Section label for relationship facts
         static var relationships: String {
             Localized.get("ui.relationships")
@@ -3807,11 +3817,6 @@ enum Localized {
             Localized.get("ui.status")
         }
 
-        /// Label for the memory strength indicator
-        static var strength: String {
-            Localized.get("ui.strength")
-        }
-
         /// Section label for item tags
         static var tags: String {
             Localized.get("ui.tags")
@@ -3830,12 +3835,6 @@ enum Localized {
         /// Label showing how many times something has occurred; %lld is substituted with the count
         static func timesCount(_ p1: String) -> String {
             String(format: Localized.get("ui.timesCount"), p1)
-        }
-
-        /// A label describing how many times a given intent has been reinforced. The argument is
-        /// the number of times the intent has been reinforced.
-        static func timesCountStr(_ p1: String) -> String {
-            String(format: Localized.get("ui.timesCountStr"), p1)
         }
 
         /// A label within the checkout view displaying the title of a notification that was

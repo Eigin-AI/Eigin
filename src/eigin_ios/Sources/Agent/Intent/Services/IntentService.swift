@@ -2,24 +2,64 @@ import Foundation
 import SwiftData
 
 /// Sendable value type for passing intent data across isolation boundaries.
-struct IntentSnapshot {
+struct IntentSnapshot: Sendable {
     let id: UUID
     let content: String
     let status: IntentStatus
-    let effectiveStrength: Double
-    let reinforcedCount: Int
+    let tasks: [IntentTask]
+    let events: [IntentEvent]
+    let schedules: [IntentSchedule]
     let createdAt: Date
     let updatedAt: Date
+
+    /// Blended temporal relevance, used for ordering (see ``IntentRelevance``).
+    var relevance: Double {
+        IntentRelevance.relevance(for: self)
+    }
+}
+
+extension Intent {
+    /// A `Sendable` snapshot of this persisted intent.
+    var snapshot: IntentSnapshot {
+        IntentSnapshot(
+            id: id,
+            content: content,
+            status: intentStatus,
+            tasks: tasks,
+            events: events,
+            schedules: schedules,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
 }
 
 /// Manages agent intents — self-set goals that guide behavior across conversations.
+///
+/// Intents persist until explicitly resolved or dismissed; there is no decay.
 protocol IntentService: Sendable {
     func activeIntents(agentID: UUID, limit: Int, accessPolicy: SpaceAccessPolicy) async throws
         -> [IntentSnapshot]
     func allIntents(agentID: UUID, limit: Int, accessPolicy: SpaceAccessPolicy) async throws
         -> [IntentSnapshot]
-    func create(content: String, agentID: UUID, spaceID: UUID?, chatID: UUID?) async throws -> UUID
-    func reinforce(id: UUID) async throws
+    func create(
+        content: String,
+        agentID: UUID,
+        spaceID: UUID?,
+        chatID: UUID?,
+        tasks: [IntentTask],
+        events: [IntentEvent],
+        schedules: [IntentSchedule]
+    ) async throws -> UUID
+    /// Updates an intent in place. Non-nil collections fully replace the
+    /// existing ones; nil leaves a field untouched. Touches `updatedAt`.
+    func update(
+        id: UUID,
+        content: String?,
+        tasks: [IntentTask]?,
+        events: [IntentEvent]?,
+        schedules: [IntentSchedule]?
+    ) async throws
     func resolve(id: UUID) async throws
     func dismiss(id: UUID) async throws
 }
@@ -40,25 +80,12 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         let context = ModelContext(modelContainer)
         let activeStatus = IntentStatus.active.rawValue
         let descriptor = FetchDescriptor<Intent>(
-            predicate: #Predicate { $0.agentID == agentID && $0.status == activeStatus },
-            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+            predicate: #Predicate { $0.agentID == agentID && $0.status == activeStatus }
         )
-        let intents = try context.fetch(descriptor)
-        return intents
+        return try context.fetch(descriptor)
             .filter { accessPolicy.canAccess(itemSpaceID: $0.spaceID) }
-            .map { intent in
-                IntentSnapshot(
-                    id: intent.id,
-                    content: intent.content,
-                    status: intent.intentStatus,
-                    effectiveStrength: intent.effectiveStrength,
-                    reinforcedCount: intent.reinforcedCount,
-                    createdAt: intent.createdAt,
-                    updatedAt: intent.updatedAt
-                )
-            }
-            .filter { $0.effectiveStrength > IntentDecay.activeThreshold }
-            .sorted { $0.effectiveStrength > $1.effectiveStrength }
+            .map(\.snapshot)
+            .sorted { $0.relevance > $1.relevance }
             .prefix(limit)
             .map(\.self)
     }
@@ -73,71 +100,74 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
             predicate: #Predicate { $0.agentID == agentID },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        let intents = try context.fetch(descriptor)
-        return intents
+        return try context.fetch(descriptor)
             .filter { accessPolicy.canAccess(itemSpaceID: $0.spaceID) }
             .prefix(limit)
-            .map { intent in
-                IntentSnapshot(
-                    id: intent.id,
-                    content: intent.content,
-                    status: intent.intentStatus,
-                    effectiveStrength: intent.effectiveStrength,
-                    reinforcedCount: intent.reinforcedCount,
-                    createdAt: intent.createdAt,
-                    updatedAt: intent.updatedAt
-                )
-            }
+            .map(\.snapshot)
     }
 
     func create(
         content: String,
         agentID: UUID,
         spaceID: UUID?,
-        chatID: UUID?
+        chatID: UUID?,
+        tasks: [IntentTask] = [],
+        events: [IntentEvent] = [],
+        schedules: [IntentSchedule] = []
     ) async throws -> UUID {
         let context = ModelContext(modelContainer)
-        let intent = Intent(agentID: agentID, content: content, spaceID: spaceID, chatID: chatID)
+        let intent = Intent(
+            agentID: agentID,
+            content: content,
+            spaceID: spaceID,
+            chatID: chatID,
+            tasks: tasks,
+            events: events,
+            schedules: schedules
+        )
         context.insert(intent)
         try context.save()
         return intent.id
     }
 
-    func reinforce(id: UUID) async throws {
+    func update(
+        id: UUID,
+        content: String?,
+        tasks: [IntentTask]?,
+        events: [IntentEvent]?,
+        schedules: [IntentSchedule]?
+    ) async throws {
         let context = ModelContext(modelContainer)
-        let descriptor = FetchDescriptor<Intent>(
-            predicate: #Predicate { $0.id == id }
-        )
-        guard let intent = try context.fetch(descriptor).first else {
+        guard let intent = try fetch(id: id, in: context) else {
             throw IntentServiceError.notFound(id: id)
         }
-        intent.reinforcedCount += 1
+        if let content { intent.content = content }
+        if let tasks { intent.tasks = tasks }
+        if let events { intent.events = events }
+        if let schedules { intent.schedules = schedules }
         intent.updatedAt = .now
         try context.save()
     }
 
     func resolve(id: UUID) async throws {
-        let context = ModelContext(modelContainer)
-        let descriptor = FetchDescriptor<Intent>(
-            predicate: #Predicate { $0.id == id }
-        )
-        guard let intent = try context.fetch(descriptor).first else {
-            throw IntentServiceError.notFound(id: id)
-        }
-        intent.intentStatus = .resolved
-        try context.save()
+        try await setStatus(.resolved, for: id)
     }
 
     func dismiss(id: UUID) async throws {
+        try await setStatus(.dismissed, for: id)
+    }
+
+    private func setStatus(_ status: IntentStatus, for id: UUID) async throws {
         let context = ModelContext(modelContainer)
-        let descriptor = FetchDescriptor<Intent>(
-            predicate: #Predicate { $0.id == id }
-        )
-        guard let intent = try context.fetch(descriptor).first else {
+        guard let intent = try fetch(id: id, in: context) else {
             throw IntentServiceError.notFound(id: id)
         }
-        intent.intentStatus = .dismissed
+        intent.intentStatus = status
         try context.save()
+    }
+
+    private func fetch(id: UUID, in context: ModelContext) throws -> Intent? {
+        try context.fetch(FetchDescriptor<Intent>(predicate: #Predicate { $0.id == id })).first
     }
 }
 
@@ -174,12 +204,21 @@ struct PreviewIntentService: IntentService {
         content: String,
         agentID: UUID,
         spaceID: UUID?,
-        chatID: UUID?
+        chatID: UUID?,
+        tasks: [IntentTask],
+        events: [IntentEvent],
+        schedules: [IntentSchedule]
     ) async throws -> UUID {
         UUID()
     }
 
-    func reinforce(id: UUID) async throws {}
+    func update(
+        id: UUID,
+        content: String?,
+        tasks: [IntentTask]?,
+        events: [IntentEvent]?,
+        schedules: [IntentSchedule]?
+    ) async throws {}
     func resolve(id: UUID) async throws {}
     func dismiss(id: UUID) async throws {}
 }

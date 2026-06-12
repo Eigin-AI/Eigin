@@ -3,7 +3,8 @@ import Foundation
 
 enum IntentToolKit: ToolKit {
     static let capabilities: [ToolCapability] = [
-        SetIntentTool.capability,
+        AddIntentTool.capability,
+        UpdateIntentTool.capability,
         ListIntentsTool.capability,
         ResolveIntentTool.capability,
     ]
@@ -12,11 +13,12 @@ enum IntentToolKit: ToolKit {
         let intentService = Container.shared.intentService()
 
         return [
-            SetIntentTool(
+            AddIntentTool(
                 intentService: intentService,
                 spaceID: context.spaceID,
                 chatID: context.chatID
             ),
+            UpdateIntentTool(intentService: intentService),
             ListIntentsTool(
                 intentService: intentService,
                 accessPolicy: context.accessPolicy

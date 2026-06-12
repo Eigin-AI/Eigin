@@ -66,8 +66,8 @@ enum BackgroundPrompt {
             for intent in activeIntents {
                 let days = Int(Date.now.timeIntervalSince(intent.createdAt) / 86400)
                 var detail = "\(days) \(days == 1 ? "day" : "days")"
-                if intent.reinforcedCount > 0 {
-                    detail += ", reinforced \(intent.reinforcedCount)x"
+                if let cue = IntentDigest.summary(for: intent) {
+                    detail += ", \(cue)"
                 }
                 content += "\n- \"\(intent.content)\" (\(detail))"
             }
