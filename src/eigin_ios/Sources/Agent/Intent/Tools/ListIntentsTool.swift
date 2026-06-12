@@ -75,15 +75,23 @@ struct ListIntentsTool: Tool {
                     accessPolicy: accessPolicy
                 )
             }
+            let now = Date.now
             let items: [[String: Any]] = intents.map { intent in
-                let daysActive = Int(Date.now.timeIntervalSince(intent.createdAt) / 86400)
                 var entry: [String: Any] = [
                     "id": intent.id.uuidString,
                     "content": intent.content,
-                    "strength": round(intent.effectiveStrength * 100) / 100,
-                    "days_active": daysActive,
-                    "reinforced_count": intent.reinforcedCount,
+                    "days_active": Int(now.timeIntervalSince(intent.createdAt) / 86400),
                 ]
+                if !intent.tasks.isEmpty {
+                    entry["tasks"] = intent.tasks.map { Self.taskEntry($0) }
+                    entry["open_task_count"] = intent.tasks.count { !$0.completed }
+                }
+                if !intent.events.isEmpty {
+                    entry["events"] = intent.events.map { Self.eventEntry($0, now: now) }
+                }
+                if !intent.schedules.isEmpty {
+                    entry["schedules"] = intent.schedules.map { Self.scheduleEntry($0, now: now) }
+                }
                 if includeResolved {
                     entry["status"] = intent.status.rawValue
                 }
@@ -101,5 +109,40 @@ struct ListIntentsTool: Tool {
                 isError: true
             )
         }
+    }
+
+    private static func taskEntry(_ task: IntentTask) -> [String: Any] {
+        var entry: [String: Any] = [
+            "id": task.id.uuidString,
+            "content": task.content,
+            "completed": task.completed,
+        ]
+        if let due = task.due { entry["due"] = LocalDateFormatter.string(from: due) }
+        if let priority = task.priority { entry["priority"] = priority.rawValue }
+        if let blockedBy = task.blockedBy { entry["blocked_by"] = blockedBy }
+        return entry
+    }
+
+    private static func eventEntry(_ event: IntentEvent, now: Date) -> [String: Any] {
+        [
+            "id": event.id.uuidString,
+            "content": event.content,
+            "at": LocalDateFormatter.string(from: event.at),
+            "in_days": Int((event.at.timeIntervalSince(now) / 86400).rounded()),
+        ]
+    }
+
+    private static func scheduleEntry(_ schedule: IntentSchedule, now: Date) -> [String: Any] {
+        var entry: [String: Any] = [
+            "id": schedule.id.uuidString,
+            "content": schedule.content,
+            "frequency": schedule.frequency.rawValue,
+        ]
+        if let weekdays = schedule.weekdays { entry["weekdays"] = weekdays }
+        if let monthDays = schedule.monthDays { entry["month_days"] = monthDays }
+        if let next = schedule.nextOccurrence(onOrAfter: now) {
+            entry["next"] = LocalDateFormatter.string(from: next)
+        }
+        return entry
     }
 }

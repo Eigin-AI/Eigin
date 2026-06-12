@@ -11,8 +11,7 @@ Background initiative uses the platform's scheduled task system. On each app lau
 
 Two kinds of background session are scheduled at different intervals:
 
-- **Initiative**: the agent reviews its intents, recent chats, and what's been going on, then decides whether there's something worth acting on. If so, it triggers a notification. Tapping the notification opens the app and starts a new chat.
+- **Initiative**: the agent reviews its intents, recent chats, and what's been going on, then decides whether there's something worth acting on. If there's something worth saying, it triggers a notification.
 - **Maintenance**: the agent reflects and organises its own context, consolidating knowledge and tidying intents.
 
 During any background session, the agent runs with a restricted tool set. Only tools that don't require user consent are available.
-

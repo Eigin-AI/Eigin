@@ -324,23 +324,6 @@
         }
       }
     },
-    "agent.reinforcedCount" : {
-      "comment" : "A text label indicating how many times a particular intent has been reinforced.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "forstærket %@x"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reinforced %@x"
-          }
-        }
-      }
-    },
     "agent.roundsCount" : {
       "comment" : "A label displaying the number of rounds in the current notification session.",
       "localizations" : {
@@ -1909,6 +1892,23 @@
         }
       }
     },
+    "errors.account.locked" : {
+      "comment" : "Short error title when the provider account is locked or suspended (HTTP 423)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto låst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account locked"
+          }
+        }
+      }
+    },
     "errors.appleIntelligence.enableHint" : {
       "comment" : "Recovery suggestion when Apple Intelligence is disabled in system settings",
       "localizations" : {
@@ -1994,19 +1994,36 @@
         }
       }
     },
-    "errors.account.locked" : {
-      "comment" : "Short error title when the provider account is locked or suspended (HTTP 423)",
+    "errors.authentication.failed" : {
+      "comment" : "Short error title when authentication fails (e.g. HTTP 401)",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Konto låst"
+            "value" : "Godkendelse fejlede"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Account locked"
+            "value" : "Authentication failed"
+          }
+        }
+      }
+    },
+    "errors.authorization.failedWithReason" : {
+      "comment" : "Error message when OAuth authorization fails; %@ is substituted with the underlying reason",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godkendelse fejlede: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authorization failed: %@"
           }
         }
       }
@@ -2041,40 +2058,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Out of credits"
-          }
-        }
-      }
-    },
-    "errors.authentication.failed" : {
-      "comment" : "Short error title when authentication fails (e.g. HTTP 401)",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Godkendelse fejlede"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Authentication failed"
-          }
-        }
-      }
-    },
-    "errors.authorization.failedWithReason" : {
-      "comment" : "Error message when OAuth authorization fails; %@ is substituted with the underlying reason",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Godkendelse fejlede: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Authorization failed: %@"
           }
         }
       }
@@ -2215,6 +2198,23 @@
         }
       }
     },
+    "errors.provider.accountLocked" : {
+      "comment" : "Recovery suggestion when the provider account is locked or suspended (HTTP 423)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din konto hos udbyderen er låst eller suspenderet. Kontakt deres support for at få den genaktiveret."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider account is locked or suspended. Contact their support to get it reinstated."
+          }
+        }
+      }
+    },
     "errors.provider.apiKeyRetrievalFailed" : {
       "comment" : "Error message when the token exchange step of OAuth fails; %@ is substituted with the underlying reason",
       "localizations" : {
@@ -2245,6 +2245,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Check that the provider address is correct and starts with https://."
+          }
+        }
+      }
+    },
+    "errors.provider.billingCheckRequired" : {
+      "comment" : "Recovery suggestion when a 400 response may indicate a billing or credits issue",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din udbyder kræver muligvis opdateret fakturering. Tjek din udbyders dashboard og prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider may require updated billing. Check your provider's dashboard and try again."
+          }
+        }
+      }
+    },
+    "errors.provider.billingRequired" : {
+      "comment" : "Recovery suggestion when the provider returns HTTP 402 (insufficient credits)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din udbyders konto mangler credits eller aktiv fakturering. Tjek din udbyders dashboard og prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your AI provider account needs credits or active billing. Check your provider's dashboard and try again."
           }
         }
       }
@@ -2300,53 +2334,19 @@
         }
       }
     },
-    "errors.provider.accountLocked" : {
-      "comment" : "Recovery suggestion when the provider account is locked or suspended (HTTP 423)",
+    "errors.provider.invalidApiKey" : {
+      "comment" : "Recovery suggestion when the server rejects the API key (HTTP 401)",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Din konto hos udbyderen er låst eller suspenderet. Kontakt deres support for at få den genaktiveret."
+            "value" : "Din API-nøgle blev afvist. Tjek at den er korrekt og ikke er udløbet."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your provider account is locked or suspended. Contact their support to get it reinstated."
-          }
-        }
-      }
-    },
-    "errors.provider.billingCheckRequired" : {
-      "comment" : "Recovery suggestion when a 400 response may indicate a billing or credits issue",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Din udbyder kræver muligvis opdateret fakturering. Tjek din udbyders dashboard og prøv igen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your provider may require updated billing. Check your provider's dashboard and try again."
-          }
-        }
-      }
-    },
-    "errors.provider.billingRequired" : {
-      "comment" : "Recovery suggestion when the provider returns HTTP 402 (insufficient credits)",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Din udbyders konto mangler credits eller aktiv fakturering. Tjek din udbyders dashboard og prøv igen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your AI provider account needs credits or active billing. Check your provider's dashboard and try again."
+            "value" : "Your API key was rejected. Double-check that it's correct and hasn't expired."
           }
         }
       }
@@ -2364,40 +2364,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The provider couldn't process the request. Check that the model name and any advanced settings are correct."
-          }
-        }
-      }
-    },
-    "errors.provider.requestTooLarge" : {
-      "comment" : "Recovery suggestion when the request payload exceeds the provider's limit (HTTP 413)",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dit besked-indhold er for stort til udbyderen. Prøv at forkorte beskeden eller fjern vedhæftede filer."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your message content is too large for this provider. Try shortening your message or removing attachments."
-          }
-        }
-      }
-    },
-    "errors.provider.invalidApiKey" : {
-      "comment" : "Recovery suggestion when the server rejects the API key (HTTP 401)",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Din API-nøgle blev afvist. Tjek at den er korrekt og ikke er udløbet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your API key was rejected. Double-check that it's correct and hasn't expired."
           }
         }
       }
@@ -2466,6 +2432,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Too many requests. Wait a moment and try again."
+          }
+        }
+      }
+    },
+    "errors.provider.requestTooLarge" : {
+      "comment" : "Recovery suggestion when the request payload exceeds the provider's limit (HTTP 413)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit besked-indhold er for stort til udbyderen. Prøv at forkorte beskeden eller fjern vedhæftede filer."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your message content is too large for this provider. Try shortening your message or removing attachments."
           }
         }
       }
@@ -2555,6 +2538,23 @@
         }
       }
     },
+    "errors.request.failed" : {
+      "comment" : "Short error title for a failed HTTP request",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forespørgsel fejlede"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request failed"
+          }
+        }
+      }
+    },
     "errors.request.invalid" : {
       "comment" : "Short error title when the provider rejects a request due to invalid parameters (HTTP 422)",
       "localizations" : {
@@ -2585,23 +2585,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Request too large"
-          }
-        }
-      }
-    },
-    "errors.request.failed" : {
-      "comment" : "Short error title for a failed HTTP request",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forespørgsel fejlede"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Request failed"
           }
         }
       }
@@ -3099,6 +3082,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Intents will appear here as your agent notices your goals and interests."
+          }
+        }
+      }
+    },
+    "intent.events" : {
+      "comment" : "Section header listing an intent's dated events.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begivenheder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events"
+          }
+        }
+      }
+    },
+    "intent.schedules" : {
+      "comment" : "Section header listing an intent's recurring schedules.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidsplaner"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedules"
+          }
+        }
+      }
+    },
+    "intent.tasks" : {
+      "comment" : "Section header listing an intent's tasks.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgaver"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasks"
           }
         }
       }
@@ -3851,6 +3885,23 @@
         }
       }
     },
+    "model.insufficientRAM" : {
+      "comment" : "Error message when the device lacks sufficient RAM for local model inference.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne enhed har ikke nok hukommelse til at køre den lokale model. iPhone 15 eller nyere er påkrævet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device doesn't have enough memory to run the local model. iPhone 15 or later is required."
+          }
+        }
+      }
+    },
     "model.picker.allModels" : {
       "comment" : "Section header for all models",
       "localizations" : {
@@ -4017,23 +4068,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Installed"
-          }
-        }
-      }
-    },
-    "model.insufficientRAM" : {
-      "comment" : "Error message when the device lacks sufficient RAM for local model inference.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne enhed har ikke nok hukommelse til at køre den lokale model. iPhone 15 eller nyere er påkrævet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This device doesn't have enough memory to run the local model. iPhone 15 or later is required."
           }
         }
       }
@@ -5211,6 +5245,40 @@
         }
       }
     },
+    "options.somethingElse" : {
+      "comment" : "Label for a card that lets the user write their own answer instead of picking a preset option.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noget andet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something else"
+          }
+        }
+      }
+    },
+    "options.writeOwnAnswer" : {
+      "comment" : "Subtitle explaining that the user can write their own answer.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv dit eget svar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write your own answer"
+          }
+        }
+      }
+    },
     "permission.allowForChat" : {
       "comment" : "A button label that allows a tool to run even when the user is in a chat.",
       "localizations" : {
@@ -6044,6 +6112,23 @@
         }
       }
     },
+    "provider.setup.berget.instruction" : {
+      "comment" : "Step-by-step instruction for obtaining a Berget API key",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent din API-nøgle i Berget-konsollen, og tilføj kredit på console.berget.ai/billing."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get your API key in the Berget console, and add credits at console.berget.ai/billing."
+          }
+        }
+      }
+    },
     "provider.setup.changeProvider" : {
       "comment" : "Secondary action that returns the user to the provider picker from the connect sheet",
       "localizations" : {
@@ -6125,6 +6210,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create an API key in Google AI Studio."
+          }
+        }
+      }
+    },
+    "provider.setup.infercom.instruction" : {
+      "comment" : "Step-by-step instruction for obtaining an Infercom API key",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent din API-nøgle fra Infercom Inference-portalen, og tilføj kredit på cloud.infercom.ai/plans/billing."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get your API key from the Infercom Inference portal, and add credits at cloud.infercom.ai/plans/billing."
           }
         }
       }
@@ -6278,40 +6380,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sign in to connect your OpenRouter account."
-          }
-        }
-      }
-    },
-    "provider.setup.berget.instruction" : {
-      "comment" : "Step-by-step instruction for obtaining a Berget API key",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hent din API-nøgle i Berget-konsollen, og tilføj kredit på console.berget.ai/billing."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get your API key in the Berget console, and add credits at console.berget.ai/billing."
-          }
-        }
-      }
-    },
-    "provider.setup.infercom.instruction" : {
-      "comment" : "Step-by-step instruction for obtaining an Infercom API key",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hent din API-nøgle fra Infercom Inference-portalen, og tilføj kredit på cloud.infercom.ai/plans/billing."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get your API key from the Infercom Inference portal, and add credits at cloud.infercom.ai/plans/billing."
           }
         }
       }
@@ -8543,19 +8611,36 @@
         }
       }
     },
-    "tools.agent.setIntent" : {
-      "comment" : "Display name for the set-intent tool",
+    "tools.agent.addIntent" : {
+      "comment" : "Display name for the add-intent tool",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sæt hensigt"
+            "value" : "Tilføj hensigt"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Set Intent"
+            "value" : "Add Intent"
+          }
+        }
+      }
+    },
+    "tools.agent.updateIntent" : {
+      "comment" : "Display name for the update-intent tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opdater hensigt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update Intent"
           }
         }
       }
@@ -10345,23 +10430,6 @@
         }
       }
     },
-    "ui.health" : {
-      "comment" : "Tab or section label for the health tracking feature",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helbred"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health"
-          }
-        }
-      }
-    },
     "ui.fractionFormat" : {
       "comment" : "A label showing the number of selected models in a section header. The first argument is the count of selected models. The second argument is the total count of models in the section.",
       "localizations" : {
@@ -10392,6 +10460,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gemma 4 E2B (CoreML)"
+          }
+        }
+      }
+    },
+    "ui.health" : {
+      "comment" : "Tab or section label for the health tracking feature",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helbred"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health"
+          }
+        }
+      }
+    },
+    "ui.hideRawError" : {
+      "comment" : "Button label to collapse the raw error response in the error detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjul rå fejl"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide raw error"
           }
         }
       }
@@ -10430,23 +10532,6 @@
         }
       }
     },
-    "ui.interaction" : {
-      "comment" : "Display name for the Interaction skill",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interaktion"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interaction"
-          }
-        }
-      }
-    },
     "ui.intent" : {
       "comment" : "Label for a single agent intent",
       "localizations" : {
@@ -10460,6 +10545,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Intent"
+          }
+        }
+      }
+    },
+    "ui.interaction" : {
+      "comment" : "Display name for the Interaction skill",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interaktion"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interaction"
           }
         }
       }
@@ -10889,23 +10991,6 @@
         }
       }
     },
-    "ui.reinforced" : {
-      "comment" : "Label for the reinforced memory strength level",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forstærket"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reinforced"
-          }
-        }
-      }
-    },
     "ui.relationships" : {
       "comment" : "Section label for relationship facts",
       "localizations" : {
@@ -11178,6 +11263,23 @@
         }
       }
     },
+    "ui.showRawError" : {
+      "comment" : "Button label to expand the raw error response in the error detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis rå fejl"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show raw error"
+          }
+        }
+      }
+    },
     "ui.slow" : {
       "comment" : "Speed tier label — slow but powerful model option",
       "localizations" : {
@@ -11280,23 +11382,6 @@
         }
       }
     },
-    "ui.strength" : {
-      "comment" : "Label for the memory strength indicator",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Styrke"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Strength"
-          }
-        }
-      }
-    },
     "ui.tags" : {
       "comment" : "Section label for item tags",
       "localizations" : {
@@ -11361,23 +11446,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld times"
-          }
-        }
-      }
-    },
-    "ui.timesCountStr" : {
-      "comment" : "A label describing how many times a given intent has been reinforced. The argument is the number of times the intent has been reinforced.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ gange"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ times"
           }
         }
       }
@@ -11603,40 +11671,6 @@
         }
       }
     },
-    "ui.hideRawError" : {
-      "comment" : "Button label to collapse the raw error response in the error detail sheet",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skjul rå fejl"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide raw error"
-          }
-        }
-      }
-    },
-    "ui.showRawError" : {
-      "comment" : "Button label to expand the raw error response in the error detail sheet",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vis rå fejl"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show raw error"
-          }
-        }
-      }
-    },
     "voice.danishDescription" : {
       "comment" : "Download description for the Danish voice model size",
       "localizations" : {
@@ -11779,40 +11813,6 @@
     },
     "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes." : {
 
-    },
-    "options.somethingElse" : {
-      "comment" : "Label for a card that lets the user write their own answer instead of picking a preset option.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noget andet"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Something else"
-          }
-        }
-      }
-    },
-    "options.writeOwnAnswer" : {
-      "comment" : "Subtitle explaining that the user can write their own answer.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skriv dit eget svar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Write your own answer"
-          }
-        }
-      }
     }
   },
   "version" : "1.1"

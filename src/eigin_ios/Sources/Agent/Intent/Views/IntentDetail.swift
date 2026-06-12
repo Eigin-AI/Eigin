@@ -18,18 +18,39 @@ struct IntentDetail: View {
                     .foregroundStyle(colors.text.standard.base)
             }
 
-            Section(Localized.Ui.details) {
-                LabeledContent(Localized.Ui.strength) {
-                    HStack(spacing: Spacing.n8) {
-                        strengthIndicator(intent.effectiveStrength)
-                        Text(String(format: "%.0f%%", intent.effectiveStrength * 100))
-                            .typography(Typography.note)
+            if !intent.tasks.isEmpty {
+                Section(Localized.Intent.tasks) {
+                    ForEach(intent.tasks) { task in
+                        taskRow(task)
                     }
                 }
-                LabeledContent(Localized.Ui.reinforced) {
-                    Text(Localized.Ui.timesCountStr(String(intent.reinforcedCount)))
-                        .typography(Typography.note)
+            }
+
+            if !intent.events.isEmpty {
+                Section(Localized.Intent.events) {
+                    ForEach(intent.events) { event in
+                        LabeledContent(event.content) {
+                            Text(LocalDateFormatter.string(from: event.at))
+                                .typography(Typography.note)
+                                .foregroundStyle(colors.text.standard.muted)
+                        }
+                    }
                 }
+            }
+
+            if !intent.schedules.isEmpty {
+                Section(Localized.Intent.schedules) {
+                    ForEach(intent.schedules) { schedule in
+                        LabeledContent(schedule.content) {
+                            Text(scheduleSummary(schedule))
+                                .typography(Typography.note)
+                                .foregroundStyle(colors.text.standard.muted)
+                        }
+                    }
+                }
+            }
+
+            Section(Localized.Ui.details) {
                 LabeledContent(Localized.Ui.created) {
                     Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .typography(Typography.note)
@@ -66,15 +87,43 @@ struct IntentDetail: View {
         }
     }
 
-    private func strengthIndicator(_ strength: Double) -> some View {
-        Circle()
-            .fill(strengthColor(strength))
-            .frame(width: 8, height: 8)
+    private func taskRow(_ task: IntentTask) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.n8) {
+            Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(task.completed ? colors.text.standard.muted : colors.text.standard
+                    .base)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task.content)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.base)
+                    .strikethrough(task.completed)
+                if let due = task.due {
+                    Text(LocalDateFormatter.string(from: due))
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+            }
+        }
     }
 
-    private func strengthColor(_ strength: Double) -> Color {
-        if strength > 0.7 { return .green }
-        if strength > 0.3 { return .yellow }
-        return .orange
+    /// A compact human-readable description of a recurring schedule.
+    private func scheduleSummary(_ schedule: IntentSchedule) -> String {
+        var parts: [String] = []
+        switch schedule.frequency {
+        case .daily:
+            parts.append("Daily")
+        case .weekly:
+            let symbols = Calendar.current.shortWeekdaySymbols
+            let days = (schedule.weekdays ?? [])
+                .compactMap { (1 ... 7).contains($0) ? symbols[$0 - 1] : nil }
+            parts.append(days.isEmpty ? "Weekly" : "Weekly on \(days.joined(separator: ", "))")
+        case .monthly:
+            let days = (schedule.monthDays ?? []).map(String.init)
+            parts.append(days.isEmpty ? "Monthly" : "Monthly on \(days.joined(separator: ", "))")
+        }
+        if let hour = schedule.hour {
+            parts.append(String(format: "at %02d:%02d", hour, schedule.minute ?? 0))
+        }
+        return parts.joined(separator: " ")
     }
 }

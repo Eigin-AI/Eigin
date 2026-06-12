@@ -32,3 +32,51 @@ enum SchemaV1: VersionedSchema {
     // Note: model list must exactly match the live @Model types in Sources/Models/Data/.
     // When adding a new model, add it here AND add a SchemaV1+<Model>.swift snapshot.
 }
+
+// MARK: - V2: Intents gain tasks/events/schedules, lose decay
+
+/// Schema V2 reshapes `Intent`: the decay model (`reinforcedCount` and the
+/// derived strength) is dropped, and intents gain `tasks`, `events`, and
+/// `schedules`. Every other model is unchanged and reused from V1.
+///
+/// Model definitions that changed live in `SchemaV2/SchemaV2+<Model>.swift`.
+enum SchemaV2: VersionedSchema {
+    static let versionIdentifier = Schema.Version(2, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV1.Agent.self,
+            SchemaV1.Chat.self,
+            SchemaV1.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV1.MCPServer.self,
+            SchemaV1.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+        ]
+    }
+}
+
+/// Migration plan for the on-device store.
+///
+/// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
+/// defaulting to empty) and dropping `reinforcedCount` are both changes
+/// SwiftData can infer automatically. No data is lost — existing intents keep
+/// their content, status, and timestamps.
+enum EiginMigrationPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] {
+        [SchemaV1.self, SchemaV2.self]
+    }
+
+    static var stages: [MigrationStage] {
+        [migrateV1toV2]
+    }
+
+    static let migrateV1toV2 = MigrationStage.lightweight(
+        fromVersion: SchemaV1.self,
+        toVersion: SchemaV2.self
+    )
+}

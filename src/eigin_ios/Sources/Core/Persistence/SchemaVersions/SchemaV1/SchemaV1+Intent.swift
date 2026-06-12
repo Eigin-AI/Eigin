@@ -29,19 +29,5 @@ extension SchemaV1 {
             get { IntentStatus(rawValue: status) ?? .active }
             set { status = newValue.rawValue }
         }
-
-        /// Effective strength decays over time. Half-life grows with reinforcement.
-        var effectiveStrength: Double {
-            let days = max(0, Date.now.timeIntervalSince(updatedAt) / 86400)
-            let halfLife = Double(min(
-                IntentDecay.baseHalfLifeDays + IntentDecay.reinforcementBonusDays * reinforcedCount,
-                IntentDecay.maxHalfLifeDays
-            ))
-            return exp(-days / halfLife)
-        }
-
-        var isActive: Bool {
-            intentStatus == .active && effectiveStrength > IntentDecay.activeThreshold
-        }
     }
 }

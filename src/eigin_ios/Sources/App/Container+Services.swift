@@ -19,7 +19,8 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV1.models, version: SchemaV1.versionIdentifier)
+                for: Schema(SchemaV2.models, version: SchemaV2.versionIdentifier),
+                migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
     }

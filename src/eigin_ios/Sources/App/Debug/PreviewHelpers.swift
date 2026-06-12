@@ -56,7 +56,7 @@ struct PreviewEnvironment: ViewModifier {
 
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(
-            for: Schema(SchemaV1.models, version: SchemaV1.versionIdentifier),
+            for: Schema(SchemaV2.models, version: SchemaV2.versionIdentifier),
             configurations: config
         )
 

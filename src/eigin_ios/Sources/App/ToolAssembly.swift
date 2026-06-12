@@ -132,9 +132,10 @@ extension ToolRegistry {
         )
         var tools = allChatTools(context: context)
 
-        // Background can read intents but not create/resolve them
+        // Background can read intents but not create, edit, or resolve them
         let excludedFromBackground: Set<String> = [
-            SetIntentTool.capability.key,
+            AddIntentTool.capability.key,
+            UpdateIntentTool.capability.key,
             ResolveIntentTool.capability.key,
         ]
         tools.removeAll { excludedFromBackground.contains($0.name) }

@@ -21,9 +21,9 @@ struct IntentsList: View {
         )
     }
 
-    /// Intents sorted by effective strength (strongest first).
+    /// Intents sorted by temporal relevance (most pressing first).
     private var sortedIntents: [Intent] {
-        intents.sorted { $0.effectiveStrength > $1.effectiveStrength }
+        intents.sorted { $0.snapshot.relevance > $1.snapshot.relevance }
     }
 
     var body: some View {
@@ -47,13 +47,11 @@ struct IntentsList: View {
                                     .foregroundStyle(colors.text.standard.base)
                                     .lineLimit(2)
                                 HStack(spacing: Spacing.n8) {
-                                    strengthIndicator(intent.effectiveStrength)
                                     Text(RelativeTimestamp.string(for: intent.updatedAt))
                                         .typography(Typography.miniLabel)
                                         .foregroundStyle(colors.text.standard.muted)
-                                    if intent.reinforcedCount > 0 {
-                                        Text(Localized.Agent
-                                            .reinforcedCount(String(intent.reinforcedCount)))
+                                    if let cue = IntentDigest.summary(for: intent.snapshot) {
+                                        Text(cue)
                                             .typography(Typography.miniLabel)
                                             .foregroundStyle(colors.text.standard.disabled)
                                     }
@@ -98,17 +96,5 @@ struct IntentsList: View {
             return String(firstLine.prefix(60)) + "..."
         }
         return String(firstLine)
-    }
-
-    private func strengthIndicator(_ strength: Double) -> some View {
-        Circle()
-            .fill(strengthColor(strength))
-            .frame(width: 8, height: 8)
-    }
-
-    private func strengthColor(_ strength: Double) -> Color {
-        if strength > 0.7 { return .green }
-        if strength > 0.3 { return .yellow }
-        return .orange
     }
 }

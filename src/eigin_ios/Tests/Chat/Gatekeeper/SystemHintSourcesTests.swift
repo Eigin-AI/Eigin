@@ -9,13 +9,14 @@ import Testing
 struct SystemHintSourcesTests {
     // MARK: - Helpers
 
-    private func intent(_ content: String, strength: Double = 1.0) -> IntentSnapshot {
+    private func intent(_ content: String) -> IntentSnapshot {
         IntentSnapshot(
             id: UUID(),
             content: content,
             status: .active,
-            effectiveStrength: strength,
-            reinforcedCount: 0,
+            tasks: [],
+            events: [],
+            schedules: [],
             createdAt: .now,
             updatedAt: .now
         )

@@ -1,13 +1,15 @@
 import Foundation
 
-struct SetIntentTool: Tool {
+/// Creates a new intent — a goal the agent will pursue until it resolves it.
+/// Optionally seeds the intent with tasks, events, and schedules.
+struct AddIntentTool: Tool {
     static let capability = ToolCapability(
-        kind: .builtIn, key: "set_intent",
-        displayName: Localized.Tools.Agent.setIntent,
+        kind: .builtIn, key: "add_intent",
+        displayName: Localized.Tools.Agent.addIntent,
         defaultPermissionLevel: .always, category: .agent
     )
 
-    let name = "set_intent"
+    let name = "add_intent"
     var isSmallContext: Bool = false
     let intentService: any IntentService
     let spaceID: UUID?
@@ -42,35 +44,34 @@ struct SetIntentTool: Tool {
         if isSmallContext {
             return ToolDefinition(
                 name: name,
-                description: "Set or reinforce a goal.",
+                description: "Set a goal for yourself.",
                 parameters: JSONSchema(
                     type: "object",
                     properties: [
                         "content": .init(type: "string", description: "Goal description."),
-                        "id": .init(
-                            type: "string",
-                            description: "Existing intent ID to reinforce."
-                        ),
-                    ]
+                    ],
+                    required: ["content"]
                 )
             )
         }
         return ToolDefinition(
             name: name,
-            description: "Set a goal for yourself based on what the user needs. Intents guide how you help across conversations. Pass an id to reinforce an existing intent, or content to create a new one.",
+            description: "Set a new goal for yourself based on what the user needs. Intents "
+                + "guide how you help across conversations and persist until you resolve them. "
+                + "Optionally attach tasks to track, events to tie it to a date, or schedules "
+                + "to make it recur.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
                     "content": .init(
                         type: "string",
-                        description: "Natural language description of the intent. Required when creating a new intent."
+                        description: "Natural language description of the intent."
                     ),
-                    "id": .init(
-                        type: "string",
-                        description: "ID of an existing intent to reinforce. When provided, content is ignored."
-                    ),
+                    "tasks": IntentToolSchema.tasks,
+                    "events": IntentToolSchema.events,
+                    "schedules": IntentToolSchema.schedules,
                 ],
-                required: nil
+                required: ["content"]
             )
         )
     }
@@ -86,45 +87,23 @@ struct SetIntentTool: Tool {
             )
         }
 
-        // Reinforce existing intent
-        if let intentIDString = args["id"] as? String,
-           let intentID = UUID(uuidString: intentIDString)
-        {
-            do {
-                try await intentService.reinforce(id: intentID)
-                return ToolResult(
-                    toolCallID: id,
-                    content: ToolHelpers.output(result: [
-                        "id": intentID.uuidString,
-                        "action": "reinforced",
-                    ]),
-                    isError: false
-                )
-            } catch {
-                return ToolResult(
-                    toolCallID: id,
-                    content: ToolHelpers.output(errors: [error.localizedDescription]),
-                    isError: true
-                )
-            }
-        }
-
-        // Create new intent
         guard let content = args["content"] as? String, !content.isEmpty else {
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers
-                    .output(
-                        errors: ["Either 'content' (to create) or 'id' (to reinforce) is required"]
-                    ),
+                content: ToolHelpers.output(errors: ["'content' is required"]),
                 isError: true
             )
         }
 
         do {
             let newID = try await intentService.create(
-                content: content, agentID: agent.id,
-                spaceID: spaceID, chatID: chatID
+                content: content,
+                agentID: agent.id,
+                spaceID: spaceID,
+                chatID: chatID,
+                tasks: IntentArguments.tasks(from: args["tasks"]) ?? [],
+                events: IntentArguments.events(from: args["events"]) ?? [],
+                schedules: IntentArguments.schedules(from: args["schedules"]) ?? []
             )
             return ToolResult(
                 toolCallID: id,

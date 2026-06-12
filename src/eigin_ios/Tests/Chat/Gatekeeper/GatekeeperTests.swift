@@ -33,8 +33,8 @@ struct GatekeeperTests {
 
     private func intent(_ content: String) -> IntentSnapshot {
         IntentSnapshot(
-            id: UUID(), content: content, status: .active, effectiveStrength: 1.0,
-            reinforcedCount: 0, createdAt: .now, updatedAt: .now
+            id: UUID(), content: content, status: .active, tasks: [],
+            events: [], schedules: [], createdAt: .now, updatedAt: .now
         )
     }
 

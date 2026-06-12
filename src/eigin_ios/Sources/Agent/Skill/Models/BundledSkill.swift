@@ -60,15 +60,21 @@ enum BundledSkill {
         description: "Set goals and track what matters to the user across conversations.",
         instruction: """
         You can set intents for yourself: goals based on what the user cares about. \
-        These guide how you help across conversations and in the background.
-        When you pick up on a new direction, need, or recurring theme from the user, \
-        set an intent. When an existing intent comes up again, reinforce it. When you've \
-        fulfilled an intent or it's no longer relevant, resolve it. Don't force it — \
-        they're a long-term compass, not an agenda to impose.
+        These guide how you help across conversations and in the background. \
+        When you pick up on a new direction, need, or recurring theme, add an intent. \
+        Break it into tasks you tick off as you go, tie it to an event when it hinges on \
+        a date (a birthday, a deadline), or give it a schedule when it recurs (a daily \
+        routine, a weekend chore) — these help surface the intent at the right moment. Keep an \
+        intent current with update_intent as things change, and resolve it once the goal \
+        is met or it's no longer relevant. Don't force it — they're a long-term compass, \
+        not an agenda to impose. \
+        Each intent has an id; use it to call your tools, but never mention or show ids to \
+        the user — they're internal plumbing, not part of the conversation.
         """,
         smallInstruction: "Set and resolve intents — goals based on what the user cares about.",
         requiredTools: [
-            SetIntentTool.capability,
+            AddIntentTool.capability,
+            UpdateIntentTool.capability,
             ListIntentsTool.capability,
             ResolveIntentTool.capability,
         ],
