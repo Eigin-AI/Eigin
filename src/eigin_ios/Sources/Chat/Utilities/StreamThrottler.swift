@@ -34,16 +34,30 @@ final class StreamThrottler: StreamThrottling {
 
     private var inputCount = 0
     private var displayedCount = 0
+    /// Monotonic catch-up cursor (characters). Advances every tick regardless of word
+    /// boundaries; `displayedCount` snaps back to the last whole word at or under it.
+    /// Separating them keeps the display word-aligned while the cursor still always
+    /// reaches `inputCount`, so the drain can't stall on a trailing partial word.
+    private var scanCount = 0
     private var displayLink: CADisplayLink?
     private var serverDone = false
     private var tickCount = 0
-    private let scrollEvery = 6 // scroll at ~10Hz instead of 60Hz
+    private let scrollEvery = 6 // scroll every 6 published words
+    /// Timestamp of the previous tick, used to scale catch-up by real elapsed time.
+    /// Zero means "no prior tick yet" (first tick assumes the nominal interval).
+    private var lastTickTime: CFTimeInterval = 0
 
-    /// Fraction of the pending gap consumed each display-link tick (60 fps).
-    /// Higher = faster catch-up, less perceived lag. Range: 0.03 (slow) – 0.15 (fast).
+    /// Maximum tick rate for the display link. Publishing a few words per second
+    /// doesn't need full refresh-rate fidelity, so cap it to save work per frame.
+    private let maxFrameRate: Float = 30
+
+    /// Continuous catch-up coefficient, per second: each tick closes `1 - exp(-rate · dt)`
+    /// of the gap to the buffered text, where `dt` is the real elapsed time since the last
+    /// tick. Scaling by `dt` keeps reveal speed independent of refresh rate and tick
+    /// cadence. Higher = faster catch-up and larger word chunks per tick.
     private let catchUpRate: Double
 
-    init(catchUpRate: Double = 0.05) {
+    init(catchUpRate: Double = 2.0) {
         self.catchUpRate = catchUpRate
     }
 
@@ -95,6 +109,7 @@ final class StreamThrottler: StreamThrottling {
         fullText = ""
         inputCount = 0
         displayedCount = 0
+        scanCount = 0
         scrollTrigger = 0
         serverDone = false
         tickCount = 0
@@ -103,11 +118,15 @@ final class StreamThrottler: StreamThrottling {
     // MARK: - Display Link
 
     private func startTimer() {
-        let trampoline = DisplayLinkTrampoline { [weak self] in
-            self?.tick()
+        lastTickTime = 0
+        let trampoline = DisplayLinkTrampoline { [weak self] timestamp in
+            self?.tick(timestamp: timestamp)
         }
         let link = CADisplayLink(
-            target: trampoline, selector: #selector(DisplayLinkTrampoline.tick)
+            target: trampoline, selector: #selector(DisplayLinkTrampoline.tick(_:))
+        )
+        link.preferredFrameRateRange = CAFrameRateRange(
+            minimum: 15, maximum: maxFrameRate, preferred: maxFrameRate
         )
         link.add(to: .main, forMode: .common)
         displayLink = link
@@ -118,16 +137,44 @@ final class StreamThrottler: StreamThrottling {
         displayLink = nil
     }
 
-    private func tick() {
-        let distance = inputCount - displayedCount
+    private func tick(timestamp: CFTimeInterval) {
+        // Real elapsed time since the last tick. Falls back to the nominal interval
+        // on the first tick (when there's no previous timestamp to diff against).
+        let dt = lastTickTime > 0 ? max(0, timestamp - lastTickTime) : 1 / Double(maxFrameRate)
+        lastTickTime = timestamp
+
+        let distance = inputCount - scanCount
         guard distance > 0 else {
             if serverDone { completeDisplay() }
             return
         }
 
-        let advance = max(1, Int(round(Double(distance) * catchUpRate)))
-        displayedCount = min(displayedCount + advance, inputCount)
-        displayedText = String(fullText.prefix(displayedCount))
+        // Advance the catch-up cursor by a time-scaled fraction of the gap, so reveal
+        // speed is the same regardless of how often this fires or the display's
+        // refresh rate. `scanCount` always moves toward `inputCount` and never parks.
+        let fraction = 1 - exp(-catchUpRate * dt)
+        let advance = max(1, Int(round(Double(distance) * fraction)))
+        scanCount = min(scanCount + advance, inputCount)
+        let candidate = fullText.prefix(scanCount)
+
+        let revealed: Substring
+        if serverDone, scanCount >= inputCount {
+            // Nothing more is coming and the cursor has reached the end: reveal
+            // everything, including the final (possibly partial) word.
+            revealed = candidate
+        } else if let words = Self.wholeWords(candidate) {
+            // Otherwise reveal only completed words, so line-breaking never reflows
+            // a half-typed word.
+            revealed = words
+        } else {
+            // No completed word in range yet — wait for the cursor to advance.
+            return
+        }
+
+        let newCount = revealed.count
+        guard newCount > displayedCount else { return }
+        displayedCount = newCount
+        displayedText = String(revealed)
 
         tickCount += 1
         if tickCount % scrollEvery == 0 {
@@ -139,6 +186,13 @@ final class StreamThrottler: StreamThrottling {
         }
     }
 
+    /// Trims a streamed prefix back to the last completed word so we never reveal a
+    /// half-typed word. Returns `nil` when no whole word is available yet.
+    static func wholeWords(_ candidate: Substring) -> Substring? {
+        guard let lastSpace = candidate.lastIndex(where: \.isWhitespace) else { return nil }
+        return candidate[...lastSpace]
+    }
+
     private func completeDisplay() {
         stopTimer()
         // Guard redundant text update to avoid two layout passes in one frame
@@ -147,6 +201,7 @@ final class StreamThrottler: StreamThrottling {
             displayedText = fullText
         }
         displayedCount = inputCount
+        scanCount = inputCount
         phase = .done
     }
 }
@@ -154,13 +209,15 @@ final class StreamThrottler: StreamThrottling {
 // MARK: - CADisplayLink trampoline
 
 private final class DisplayLinkTrampoline: @unchecked Sendable {
-    let action: @MainActor () -> Void
-    init(action: @escaping @MainActor () -> Void) {
+    let action: @MainActor (CFTimeInterval) -> Void
+    init(action: @escaping @MainActor (CFTimeInterval) -> Void) {
         self.action = action
     }
 
-    @objc func tick() {
-        // CADisplayLink always fires on the main thread, so this is safe.
-        MainActor.assumeIsolated { [action] in action() }
+    @objc func tick(_ link: CADisplayLink) {
+        // CADisplayLink always fires on the main thread, so this is safe. Read the
+        // (Sendable) timestamp here so the non-Sendable link never crosses isolation.
+        let timestamp = link.timestamp
+        MainActor.assumeIsolated { [action] in action(timestamp) }
     }
 }
