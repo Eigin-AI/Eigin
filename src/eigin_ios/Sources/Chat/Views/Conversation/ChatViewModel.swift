@@ -283,7 +283,13 @@ final class ChatViewModel {
                     generateTitle(agent: agent, provider: provider)
                 }
             } catch {
-                chatError = ConnectionError(from: error)
+                // A user-initiated stop cancels streamTask, which surfaces here as a
+                // cancellation error (Swift's CancellationError or URLSession's -999).
+                // That's not a failure — handleStop already snapshotted the partial
+                // response, so settle quietly without painting an error banner.
+                if !(Task.isCancelled || error is CancellationError) {
+                    chatError = ConnectionError(from: error)
+                }
                 chatLoop.abort()
             }
         }

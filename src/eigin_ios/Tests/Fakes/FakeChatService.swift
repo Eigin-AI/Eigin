@@ -50,6 +50,16 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         }
     }
 
+    /// Error thrown by the next ``chatCompletionEventStream`` call, before the
+    /// stream is returned. Mirrors how URLSession surfaces a request that fails
+    /// (or is cancelled) at connection time rather than mid-stream.
+    private var _eventStreamThrow: Error?
+
+    /// Make the next ``chatCompletionEventStream`` call throw `error` directly.
+    func throwOnEventStream(_ error: Error) {
+        lock.withLock { _eventStreamThrow = error }
+    }
+
     func chatCompletionStream(
         baseURL: String,
         providerID: UUID,
@@ -89,6 +99,14 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         model: String,
         tools: [ToolDefinition]?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        if let thrown: Error = lock.withLock({
+            let e = _eventStreamThrow
+            _eventStreamThrow = nil
+            return e
+        }) {
+            throw thrown
+        }
+
         let events: [ChatStreamEvent] = lock.withLock {
             if _callIndex < _eventSequences.count {
                 let e = _eventSequences[_callIndex].first ?? []
