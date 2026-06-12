@@ -13,6 +13,19 @@ struct ConnectionError: Equatable {
     }
 
     init(from error: Error) {
+        if let localError = error as? LocalClientError {
+            switch localError {
+            case .deviceUnsupported(let detail):
+                title = Localized.Model.deviceUnsupportedTitle
+                suggestion = Localized.Model.deviceUnsupportedSuggestion
+                rawDescription = detail
+            case .modelNotLoaded:
+                title = Localized.Errors.Connection.failed
+                suggestion = error.localizedDescription
+                rawDescription = error.localizedDescription
+            }
+            return
+        }
         if let clientError = error as? OpenAICompatibleClientError,
            case .httpError(_, let body) = clientError, let body
         {

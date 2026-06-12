@@ -51,6 +51,15 @@ extension LocalClient {
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let manager = await GemmaModelManager.shared
 
+        // Gate before any load. Devices below the RAM bar OOM-crash on load — a
+        // jetsam kill that can't be caught — so we must refuse up front and let
+        // this surface as a chat error.
+        guard await manager.hasRequiredRAM() else {
+            throw await LocalClientError.deviceUnsupported(
+                detail: manager.insufficientResourcesDetail()
+            )
+        }
+
         if await manager.llm == nil {
             try await manager.load()
         }

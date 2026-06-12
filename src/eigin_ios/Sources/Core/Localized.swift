@@ -1278,6 +1278,17 @@ enum Localized {
             Localized.get("model.bundled")
         }
 
+        /// Suggestion shown in the chat error card when the device lacks the memory to run the
+        /// on-device model, pointing the user to cloud providers.
+        static var deviceUnsupportedSuggestion: String {
+            Localized.get("model.deviceUnsupportedSuggestion")
+        }
+
+        /// Title of the chat error card shown when the device cannot run the on-device model.
+        static var deviceUnsupportedTitle: String {
+            Localized.get("model.deviceUnsupportedTitle")
+        }
+
         /// Button to download a model
         static var download: String {
             Localized.get("model.download")
