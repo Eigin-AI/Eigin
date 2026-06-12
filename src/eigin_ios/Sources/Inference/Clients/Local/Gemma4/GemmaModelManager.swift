@@ -107,6 +107,29 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         deviceInfo.physicalMemoryBytes() >= Self.requiredRAMBytes
     }
 
+    /// JSON diagnostic describing why this device can't run the model. Surfaced
+    /// as the raw payload of ``LocalClientError/deviceUnsupported(detail:)`` and
+    /// rendered as a structured field card in the chat error detail sheet.
+    func insufficientResourcesDetail() -> String {
+        let gb = { (bytes: UInt64) in
+            String(format: "%.1f", Double(bytes) / 1_073_741_824)
+        }
+        let payload: [String: Any] = [
+            "error": [
+                "type": "insufficient_memory",
+                "message": Localized.Model.deviceUnsupportedSuggestion,
+                "required_memory_gb": gb(Self.requiredRAMBytes),
+                "device_memory_gb": gb(deviceInfo.physicalMemoryBytes()),
+            ],
+        ]
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]
+        ), let json = String(data: data, encoding: .utf8) else {
+            return Localized.Model.deviceUnsupportedSuggestion
+        }
+        return json
+    }
+
     // MARK: - Download
 
     func download() async {

@@ -3817,6 +3817,40 @@
         }
       }
     },
+    "model.deviceUnsupportedSuggestion" : {
+      "comment" : "Suggestion shown in the chat error card when the device lacks the memory to run the on-device model, pointing the user to cloud providers.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne enhed har ikke nok hukommelse til at køre den lokale model. Skift til en cloud-udbyder i indstillinger for at fortsætte med at chatte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device doesn't have enough memory to run the on-device model. Switch to a cloud AI provider in settings to keep chatting."
+          }
+        }
+      }
+    },
+    "model.deviceUnsupportedTitle" : {
+      "comment" : "Title of the chat error card shown when the device cannot run the on-device model.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kan ikke køre på denne enhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't run on this device"
+          }
+        }
+      }
+    },
     "model.download" : {
       "comment" : "Button to download a model",
       "localizations" : {

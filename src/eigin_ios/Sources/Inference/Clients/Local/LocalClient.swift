@@ -56,10 +56,12 @@ struct LocalClient: LLMClient {
 
 enum LocalClientError: LocalizedError {
     case modelNotLoaded
+    case deviceUnsupported(detail: String)
 
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded: "Local model is not loaded"
+        case .deviceUnsupported: Localized.Model.insufficientRAM
         }
     }
 }

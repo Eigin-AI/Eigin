@@ -1,4 +1,5 @@
 @testable import Eigin
+import Foundation
 import Testing
 
 /// Verifies device requirement gating in ``GemmaModelManager``.
@@ -80,6 +81,24 @@ struct GemmaModelManagerTests {
             deviceInfo: FakeDeviceInfoService(ramBytes: 6 * 1_073_741_824)
         )
         #expect(manager.hasRequiredRAM())
+    }
+
+    @Test func insufficientResourcesDetailIsJSONWithMemoryFields() throws {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
+        )
+
+        let detail = manager.insufficientResourcesDetail()
+        let data = try #require(detail.data(using: .utf8))
+        let root = try #require(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let errorObj = try #require(root["error"] as? [String: Any])
+
+        #expect(errorObj["type"] as? String == "insufficient_memory")
+        #expect(errorObj["device_memory_gb"] as? String == "4.0")
+        #expect(errorObj["required_memory_gb"] as? String == "5.0")
+        #expect(errorObj["message"] as? String != nil)
     }
 
     // MARK: – Storage gating
