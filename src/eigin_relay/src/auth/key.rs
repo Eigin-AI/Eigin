@@ -1,4 +1,8 @@
-//! Authentication middleware for the relay.
+//! Relay key middleware.
+//!
+//! All routes except `/health` require the `x-eigin-key` header to match
+//! the configured relay key. This excludes non-Eigin clients without
+//! identifying who is asking.
 
 use std::sync::Arc;
 
@@ -14,7 +18,6 @@ const EIGIN_KEY_HEADER: &str = "x-eigin-key";
 
 /// Middleware that validates the `x-eigin-key` header.
 ///
-/// Checks that the request includes a valid relay key matching `AppState.eigin_relay_key`.
 /// Returns `AppError::Unauthorized` if the key is missing or incorrect.
 pub async fn require_eigin_key(
     State(state): State<Arc<AppState>>,

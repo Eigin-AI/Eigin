@@ -11,19 +11,46 @@ Going forward, this is the intended home for agent synchronisation and agent-to-
 src/
   main.rs         — server setup, env config, router
   lib.rs          — public API
-  auth.rs         — EIGIN_RELAY_KEY middleware
-  rate_limit.rs   — per-IP rate limiter
+  auth/           — authentication and request identity
+    key.rs        — EIGIN_RELAY_KEY middleware
+    bearer.rs     — Bearer-token extractor (credit token → wallet lookup)
+  rate_limit.rs   — sliding window rate limiter, generic over key type (IpAddr or Uuid)
   state.rs        — shared AppState (Arc)
   health.rs       — health check handler
-  error.rs        — AppError type
+  error.rs        — AppError type (OpenAI-compatible JSON error body)
   search/         — search proxy (client, handler, pool, connection pool)
     pool/
       backend.rs  — PoolBackend trait, PoolState, BackendError
       file.rs     — local file backend (dev / single-instance)
       s3.rs       — S3-compatible backend with SigV4 signing + ETag optimistic locking
       state.rs    — Pool, PoolConfig, PoolConfig::from_env()
+  credits/        — credit system (tokens, ledger, Apple verification, HTTP handlers)
+    mod.rs        — public exports
+    token.rs      — token generation (eict_ prefix), SHA-256 hashing, AEAD at-rest encryption
+    ledger.rs     — CreditLedger trait + types (Wallet, WalletOrigin, WalletStatus)
+    memory.rs     — InMemoryLedger (tests / dev)
+    postgres.rs   — PostgresLedger (sqlx, runs migrations on startup)
+    apple.rs      — AppleVerifier trait + AppStoreVerifier (app-store-server-library) + fake module
+    redeem.rs     — POST /credits/redeem (purchase + idempotent restore)
+    balance.rs    — GET /credits/balance
+    webhook.rs    — POST /webhooks/apple/appstore (App Store Server Notifications V2)
+  inference/      — OpenAI-compatible inference proxy with credit metering
+    mod.rs        — public exports
+    catalog.rs    — models.toml + products.toml loading + GET /v1/models
+    rates.rs      — usage → millicredits cost computation
+    usage.rs      — SSE/JSON usage-block extraction (never touches content)
+    upstream.rs   — UpstreamClient trait + reqwest impl
+    handler.rs    — POST /v1/chat/completions (admit, stream, settle)
+migrations/
+  0001_create_wallets.sql
+  0002_create_processed_notifications.sql
+config/
+  models.toml     — curated model catalog + credit rates (TODO: pin to provider)
+  products.toml   — IAP product credit tiers (TODO: pin to App Store products before launch)
+  apple/          — Apple Root CA .cer files (DER-encoded, public certs, safe to commit)
 tests/
-  integration.rs  — integration tests using httpmock
+  integration.rs  — search integration tests (httpmock)
+  credits.rs      — end-to-end credit lifecycle tests (InMemoryLedger + FakeVerifier)
 ```
 
 ## Prerequisites
@@ -34,10 +61,12 @@ tests/
 
 All configuration is via environment variables:
 
+### Search
+
 | Variable | Default | Description |
 |---|---|---|
 | `MOJEEK_API_KEY` | required | Upstream search API key |
-| `EIGIN_RELAY_KEY` | required | Auth key expected from Eigin clients |
+| `EIGIN_RELAY_KEY` | required | Shared auth key expected from Eigin clients |
 | `SEARCH_API_URL` | `https://api.mojeek.com` | Upstream search base URL |
 | `RATE_LIMIT_REQUESTS` | `10` | Max requests per window per IP |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window duration |
@@ -52,9 +81,41 @@ All configuration is via environment variables:
 
 If neither `POOL_BUCKET` nor `POOL_FILE_PATH` is set, the pool runs in-memory (resets on restart).
 
+### Credits and inference
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | — | Postgres connection string. If unset, uses `InMemoryLedger` (dev only, logs a warning). |
+| `TOKEN_ENCRYPTION_KEY` | — | 32-byte base64url AEAD key for encrypting credit tokens at rest. Generate with `openssl rand -base64 32`. |
+| `UPSTREAM_API_URL` | — | Base URL of the upstream inference provider. If unset, inference routes return 503. |
+| `UPSTREAM_API_KEY` | — | API key for the upstream inference provider. |
+| `APPLE_BUNDLE_ID` | — | App bundle ID, e.g. `ai.eigin.app`. |
+| `APPLE_ENVIRONMENT` | `Sandbox` | `Sandbox` (staging) or `Production`. |
+| `APPLE_APP_APPLE_ID` | — | Numeric App Store app ID. Required in Production. |
+| `MODELS_CONFIG_PATH` | `config/models.toml` | Path to the model catalog TOML. |
+| `PRODUCTS_CONFIG_PATH` | `config/products.toml` | Path to the IAP product credit tiers TOML. |
+| `ADMIT_FLOOR_CREDITS` | `50` | Minimum credits required to admit an inference request (≈ €0.50). |
+| `TOKEN_RATE_LIMIT_REQUESTS` | `20` | Max inference completions per token per window. |
+| `TOKEN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for per-token limiting. |
+
+Runtime-tunable values (`UPSTREAM_API_KEY`, `UPSTREAM_API_URL`, `TOKEN_ENCRYPTION_KEY`, `APPLE_BUNDLE_ID`) are stored in Scaleway Secret Manager in production — update them there and restart the container. Model catalog and product tiers (`models.toml`, `products.toml`) are deploy-time config — update them in the repo and redeploy.
+
 ## Design principles
 
 **Stateless and anonymous by design.** The relay is a bridge, not a backend. It holds no user data and no user identifiers. The shared auth key exists to exclude non-Eigin clients, not to identify who is asking. This constraint applies to future work too — agent sync and agent-to-agent connectivity should be designed to preserve anonymity, not work around it.
+
+**The credit ledger stores purchase fingerprints, never user identity.** A wallet is keyed by a SHA-256 hash of an Apple transaction ID — it identifies a purchase, not a person. The user never creates an Eigin account. We know about purchases; we do not know about users.
+
+**Zero content retention.** The inference proxy reads upstream usage metadata (token counts, model ID) from responses to compute cost. It never logs or stores prompt or response content. No content should appear in traces, logs, or debug output — do not add `tracing` calls that include request/response bodies.
+
+**Debit after spend.** Inference requests are admitted if balance > admit floor. The true cost is settled after the stream completes, using the upstream usage block. A request may cause the balance to go slightly negative; the next request is then blocked by the floor check.
+
+## API reference
+
+`GET /docs` serves a Scalar API reference page. The OpenAPI spec (`api.yaml`, in the relay
+source root) is embedded in the binary at compile time via `include_str!` — no runtime file
+read required. Changing `api.yaml` requires a rebuild; the Terraform image hash includes the
+file so a deploy picks up changes automatically.
 
 ## Key patterns
 

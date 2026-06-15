@@ -6,6 +6,7 @@ mod config;
 mod design;
 mod format;
 mod generate;
+mod grant;
 mod hooks;
 mod infra;
 mod lint;
@@ -25,6 +26,8 @@ enum Command {
     Generate(generate::GenerateArgs),
     /// Format all code in the repo.
     Format(format::FormatArgs),
+    /// Generate and sign credit grant tokens.
+    Grant(grant::GrantArgs),
     /// Manage and run git hooks.
     Hooks(hooks::Args),
     /// Infrastructure tooling (Terraform, deployment).
@@ -42,6 +45,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Generate(args) => generate::run(args),
         Command::Format(args) => format::run(args),
+        Command::Grant(args) => grant::run(args),
         Command::Hooks(args) => hooks::run(args),
         Command::Infra(args) => infra::run(args),
         Command::Lint(args) => lint::run(args),

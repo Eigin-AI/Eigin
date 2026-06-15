@@ -10,18 +10,23 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
+[doc('Regenerate the Xcode project and other generated files')]
 generate:
     {{ tools }} generate
 
+[doc('Auto-format all code')]
 format:
     {{ tools }} format
 
+[doc('Lint all code')]
 lint:
     {{ tools }} lint
 
+[doc('Install git hooks (one-time setup)')]
 hooks:
     {{ tools }} hooks install
 
+[doc('Build or serve the docs (build | serve)')]
 docs command="build":
     #!/usr/bin/env bash
     case "{{ command }}" in
@@ -57,9 +62,28 @@ _test-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-test target="all" env="staging" verbose="false":
-    @if [ "{{ target }}" = "ios"   ] || [ "{{ target }}" = "all" ]; then just _test-ios {{ env }} {{ verbose }}; fi
-    @if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then just _test-relay {{ verbose }}; fi
+[doc('Run tests (target: all | ios | relay, variant: unit | postgres)')]
+test target="all" variant="unit" env="staging" verbose="false":
+    #!/usr/bin/env bash
+    if [ "{{ target }}" = "ios" ] || [ "{{ target }}" = "all" ]; then just _test-ios {{ env }} {{ verbose }}; fi
+    if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then
+        if [ "{{ variant }}" = "postgres" ]; then
+            just _test-relay-postgres
+        else
+            just _test-relay {{ verbose }}
+        fi
+    fi
+
+[private]
+_test-relay-postgres:
+    #!/usr/bin/env bash
+    set -e
+    container=$(docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16)
+    trap "docker stop $container" EXIT
+    echo "Waiting for Postgres to be ready..."
+    until docker exec "$container" pg_isready -U postgres -q; do sleep 0.5; done
+    DATABASE_URL=postgres://postgres:postgres@localhost/postgres \
+        cargo test --manifest-path {{ relay_dir }}/Cargo.toml -- --ignored --nocapture
 
 # --- Build ---
 
@@ -86,27 +110,86 @@ _build-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
+[doc('Build all targets (target: all | ios | relay)')]
 build target="all" env="staging" verbose="false":
     @if [ "{{ target }}" = "ios"   ] || [ "{{ target }}" = "all" ]; then just _build-ios {{ env }} {{ verbose }}; fi
     @if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then just _build-relay {{ verbose }}; fi
 
+# --- Grants ---
+
+# Generate or sign credit grant tokens.
+#
+# Local dev key in {{ relay_dir }}/config/grant (gitignored, local testing only):
+#   just grant keygen
+#   just grant sign
+#   just grant sign eigin.credits.v1.grant.500
+#
+# Remote: sign with a deployed environment's Terraform-generated key
+# (pulled from state into the environment, never written to disk):
+#   just grant sign-remote staging
+#   just grant sign-remote staging eigin.credits.v1.grant.500
+[doc('Generate or sign credit grant tokens (keygen | sign | sign-remote)')]
+grant command="keygen" *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    grant_dir="{{ relay_dir }}/config/grant"
+    default_product="eigin.credits.v1.grant.500"
+    args=({{ args }})
+    case "{{ command }}" in
+        keygen) {{ tools }} grant keygen --out-dir "$grant_dir" ;;
+        sign)
+            product="${args[0]:-$default_product}"
+            if [ ! -f "$grant_dir/grant_private.pem" ]; then
+                echo "No local signing key. Run 'just grant keygen' first."; exit 1
+            fi
+            {{ tools }} grant sign --private-key "$grant_dir/grant_private.pem" --product "$product"
+            ;;
+        sign-remote)
+            env="${args[0]:-staging}"
+            product="${args[1]:-$default_product}"
+            eval "$({{ tools }} infra tf-vars "$env")"
+            terraform -chdir={{ infra_dir }} workspace select -or-create "$env" >/dev/null
+            GRANT_PRIVATE_KEY="$(terraform -chdir={{ infra_dir }} output -raw grant_private_key_pem)" \
+                {{ tools }} grant sign --product "$product"
+            ;;
+        *) echo "Unknown grant command: {{ command }}"; exit 1 ;;
+    esac
+
 # --- Run / Clean / Open ---
 
+[doc('Run a target locally (target: relay)')]
 run target env="staging":
     #!/usr/bin/env bash
     case "{{ target }}" in
         relay)
             [ -f .env ] && source .env
             suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
+
+            # Secrets come from .env, per environment (suffixed).
             mojeek_key="MOJEEK_API_KEY_${suffix}"
             relay_key="EIGIN_RELAY_KEY_${suffix}"
+            upstream_api_key="UPSTREAM_API_KEY_${suffix}"
             export MOJEEK_API_KEY="${!mojeek_key}"
             export EIGIN_RELAY_KEY="${!relay_key}"
+            export UPSTREAM_API_KEY="${!upstream_api_key}"
+
+            # Non-secret config comes from the environment's tfvars (single source of truth).
+            tfvars="{{ infra_dir }}/environments/{{ env }}.tfvars"
+            get_tfvar() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=[[:space:]]*"?([^"]*)"?.*/\1/'; }
+            export UPSTREAM_API_URL="$(get_tfvar upstream_api_url)"
+            export APPLE_BUNDLE_ID="$(get_tfvar apple_bundle_id)"
+            export APPLE_APP_APPLE_ID="$(get_tfvar apple_app_apple_id)"
+            apple_env="$(get_tfvar apple_environment)"
+            export APPLE_ENVIRONMENT="${apple_env:-Sandbox}"
+
+            grant_key_file="{{ relay_dir }}/config/grant/grant_public.pem"
+            [ -f "$grant_key_file" ] && export GRANT_PUBLIC_KEY="$(cat "$grant_key_file")"
             cd {{ relay_dir }} && cargo run
             ;;
         *) echo "Unknown run target: {{ target }}"; exit 1 ;;
     esac
 
+[doc('Clean the iOS build and derived data')]
 clean env="staging":
     #!/usr/bin/env bash
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
@@ -116,6 +199,7 @@ clean env="staging":
 
 # --- Infra ---
 
+[doc('Manage infra (command: init | plan | deploy)')]
 infra command env="staging":
     #!/usr/bin/env bash
     case "{{ command }}" in

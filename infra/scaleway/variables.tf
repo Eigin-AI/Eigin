@@ -28,12 +28,6 @@ variable "mojeek_api_key" {
   sensitive   = true
 }
 
-variable "eigin_relay_key" {
-  description = "Shared auth key expected from Eigin clients"
-  type        = string
-  sensitive   = true
-}
-
 variable "monthly_pool_size" {
   description = "Monthly search quota cap"
   type        = number
@@ -44,5 +38,66 @@ variable "max_scale" {
   description = "Maximum number of container instances"
   type        = number
   default     = 3
+}
+
+# --- Inference proxy ---
+
+variable "upstream_api_key" {
+  description = "API key for the upstream inference provider"
+  type        = string
+  sensitive   = true
+}
+
+variable "upstream_api_url" {
+  description = "Base URL for the upstream inference provider"
+  type        = string
+
+  validation {
+    condition     = startswith(var.upstream_api_url, "https://") || startswith(var.upstream_api_url, "http://")
+    error_message = "upstream_api_url must include an http:// or https:// scheme."
+  }
+}
+
+variable "apple_bundle_id" {
+  description = "Apple app bundle ID, e.g. ai.eigin.app"
+  type        = string
+  default     = ""
+}
+
+variable "apple_environment" {
+  description = "Apple StoreKit environment: Sandbox or Production"
+  type        = string
+  default     = "Sandbox"
+}
+
+variable "apple_app_apple_id" {
+  description = "Numeric Apple app ID (required in Production)"
+  type        = string
+  default     = ""
+}
+
+variable "grant_issuer" {
+  description = "Expected issuer (iss) for credit grant tokens"
+  type        = string
+  default     = "eigin"
+}
+
+variable "admit_floor_credits" {
+  description = "Minimum credits required to admit an inference request"
+  type        = number
+  default     = 50
+}
+
+
+variable "token_rate_limit_requests" {
+  description = "Maximum inference completions per token per window"
+  type        = number
+  default     = 20
+}
+
+variable "token_rate_limit_window_seconds" {
+  description = "Rate limit window in seconds for per-token limiting"
+  type        = number
+  default     = 60
 }
 
