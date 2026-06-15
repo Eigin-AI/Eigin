@@ -33,7 +33,7 @@ pub async fn handle(
 
     let ip = addr.ip();
 
-    state.rate_limiter.check(ip)?;
+    state.ip_rate_limiter.check(ip)?;
     state.pool.try_consume().await?;
 
     let body = state

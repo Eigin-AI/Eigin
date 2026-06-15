@@ -1,0 +1,19 @@
+# IAP product credit tiers.
+#
+# Maps IAP product ID → millicredits granted on redemption.
+# 1 credit = 1,000 millicredits ≈ €0.01 of inference at current rates.
+# Margin is in the IAP tier pricing, not in models.toml rates.
+#
+# Product ID format: eigin.credits.v1.<store>.<tier>
+#   <store> — matches the source that issued the entitlement: apple, google, grant, etc.
+#             `grant` is a credit grant signed directly by a trusted issuer, not a store.
+#   <tier>  — nominal credit amount; actual millicredits set here, not derived from the name.
+#
+# Per-store entries allow different credit amounts for the same tier across stores
+# (e.g. to account for differing platform margins).
+#
+# TODO: pin product IDs and credit amounts to store listings before launch.
+
+[products]
+"eigin.credits.v1.apple.500" = 500_000
+"eigin.credits.v1.grant.500" = 500_000

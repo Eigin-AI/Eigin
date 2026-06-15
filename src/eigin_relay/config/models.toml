@@ -1,0 +1,17 @@
+# Curated model catalog and credit rates.
+#
+# Rates are raw upstream cost in millicredits per 1M tokens.
+# 1 credit = 1,000 millicredits ≈ €0.01 of inference.
+#
+# To convert a provider's quoted price (e.g. $5.00 / 1M tokens):
+#   1. Convert to euros (e.g. $5.00 ≈ €4.60)
+#   2. Divide by €0.01 to get credits (€4.60 / €0.01 = 460 credits)
+#   3. Multiply by 1,000 to get millicredits (460 × 1,000 = 460,000)
+#
+# TODO: pin model IDs and rates to chosen upstream provider before launch.
+
+[[models]]
+id = "mistralai/Mistral-Medium-3.5-128B"
+input_millicredits_per_1m_tokens = 150_000
+cached_input_millicredits_per_1m_tokens = 0
+output_millicredits_per_1m_tokens = 500_000

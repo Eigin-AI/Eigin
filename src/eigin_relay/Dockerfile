@@ -8,11 +8,18 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release --target x86_64-unknown-linux-musl && rm -rf src
 
 COPY src ./src
+COPY migrations ./migrations
+COPY api.yaml ./api.yaml
 RUN touch src/main.rs && cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/eigin-relay /usr/local/bin/
+# sqlx migrations (run on startup when DATABASE_URL is set)
+COPY --from=builder /app/migrations /migrations
+# Model catalog and Apple Root CA certificates
+# api.yaml is embedded in the binary at compile time — no runtime copy needed
+COPY config /config
 
 EXPOSE 8080
 CMD ["eigin-relay"]

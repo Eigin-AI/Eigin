@@ -1,29 +1,33 @@
 # Eigin Relay
 
-Eigin Relay is a free connectivity service operated by Eigin. It brokers features that require reaching external services - things the app can't do on its own because they need a server-side API key or a persistent endpoint.
+Eigin Relay is a connectivity service for Eigin agents. It brokers the few capabilities an agent can't perform on device because they need a server-side key or a stable endpoint. Today that means web search and AI inference.
 
-## Anonymous by design
+Using the relay is anonymous. There are no user accounts.
 
-Using the relay is anonymous. There is no user identifier attached to requests. The app sends a shared key with each request, but its only purpose is to keep non-Eigin clients out.
+## Search
 
-## What it does today
+When the agent searches the web, the query goes to the relay, which forwards it to [Mojeek](https://www.mojeek.com), a privacy-respecting independent search engine, and returns the results. Search draws from a shared monthly pool; if it is exhausted, the app falls back to on-device search.
 
-**Web search.** When the agent uses the web search tool, the query goes to the relay, which forwards it to [Mojeek](https://www.mojeek.com) and returns the results. Mojeek is a privacy-respecting, independent search engine.
+## Inference
 
-## What's next
+The relay forwards inference requests to a vetted upstream provider, so users can run capable models without managing a provider key of their own. Prompt and response content is never logged or stored; the relay reads only the token counts it needs to compute cost.
 
-Connectivity that requires a stable, reachable endpoint: agent-to-agent communication, device synchronization, backup, and potentially inference. The relay expands as Eigin does, within the same constraint: it sees only what it needs to fulfil the request.
+Inference is gated by credits, and credits are tied to a purchase or a grant instead of a user identity:
+
+- Users buy non-expiring credit packs via IAP, or receive a direct credit grant. Either way, a wallet is created from the proof and identified by a hash of the transaction instead of the person.
+- A request is admitted when the wallet has enough balance. Credits are debited after the request completes, based on actual upstream token usage. 1 credit gives you roughly €0.01 of inference at upstream cost.
 
 ## Abuse prevention
 
-Three layers gate the relay:
+- A shared key (`x-eigin-key`) gates every request.
+- Per-IP rate limiting caps how fast a single client can call.
+- Per-purchase rate limiting caps how many devices can consume a single credit pack.
+- Shared quota pools bound total usage; when a pool is exhausted, the feature pauses until it resets.
 
-1. **Shared key.** Every request carries a key in a header (`x-eigin-key`). This raises the bar for casual abuse - you have to have the key. Requests without it are rejected immediately.
+## API
 
-2. **Per-IP rate limiting.** A sliding window limits how many requests a single IP can make in a given period.
-
-3. **Community pool.** Relay-backed features draw from a shared monthly quota. If the pool is exhausted, those features become unavailable until it resets. Since the relay is optional, this is an acceptable outcome - and for search specifically, the app falls back to on-device search.
+For endpoints and request formats, see the live API docs at <https://relay.eigin.ai/docs>.
 
 ## Self-hosting
 
-The relay ships as a Docker image. If you'd rather not rely on the Eigin instance, you can run it yourself with your own API keys and no shared limits. The repository includes Terraform code to deploy it to the cloud.
+The relay ships as a Docker image with Terraform to deploy it. If you would rather not use the Eigin instance, run your own with your own keys and no shared limits.

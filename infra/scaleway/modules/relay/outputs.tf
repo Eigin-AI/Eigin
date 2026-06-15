@@ -12,3 +12,15 @@ output "pool_bucket" {
   description = "S3 bucket name used for pool state"
   value       = scaleway_object_bucket.pool.name
 }
+
+output "grant_private_key_pem" {
+  description = "Ed25519 private key (PEM) for signing credit grants in this environment"
+  value       = tls_private_key.grant.private_key_pem
+  sensitive   = true
+}
+
+output "eigin_relay_key" {
+  description = "Generated x-eigin-key for this environment; configure clients with it"
+  value       = random_password.eigin_relay_key.result
+  sensitive   = true
+}

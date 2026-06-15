@@ -1,0 +1,659 @@
+//! End-to-end integration tests for the credit system lifecycle.
+//!
+//! All tests use `InMemoryLedger` + `FakeVerifier` + `httpmock` upstream — no real
+//! Apple certificates, no real database, no real upstream provider.
+//!
+//! Lifecycle covered:
+//! - Redeem → balance → chat (stream) → balance reflects debit
+//! - Drain to floor → 402
+//! - Redeem same transaction again → same token + spent-down balance
+//! - Webhook refund → 402 with refunded status
+//! - Per-token rate limiting
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
+
+use axum::Router;
+use axum::body::to_bytes;
+use axum::http::{Request, StatusCode};
+use axum::middleware;
+use axum::routing::{get, post};
+use tower::util::ServiceExt;
+
+use eigin_relay::AppState;
+use eigin_relay::RateLimiter;
+use eigin_relay::credits::InMemoryLedger;
+use eigin_relay::inference::catalog::ModelConfig;
+use eigin_relay::inference::upstream::UpstreamClient;
+
+mod fakes;
+use fakes::apple::FakeVerifier;
+use fakes::grant::FakeGrantVerifier;
+use fakes::search::NoopSearch;
+use fakes::upstream::{BufferUpstream, FakeUpstream};
+
+// ── Test helpers ──────────────────────────────────────────────────────────────
+
+fn test_model() -> ModelConfig {
+    ModelConfig {
+        id: "test-model".into(),
+        // 10_000mc per 1M input tokens, 20_000mc per 1M output tokens
+        input_millicredits_per_1m_tokens: 10_000u64,
+        cached_input_millicredits_per_1m_tokens: 0u64,
+        output_millicredits_per_1m_tokens: 20_000u64,
+    }
+}
+
+async fn make_state(
+    verifier: FakeVerifier,
+    product_credits: HashMap<String, i64>,
+    upstream: impl UpstreamClient + 'static,
+    _initial_balance_millicredits: i64,
+    admit_floor_millicredits: i64,
+) -> Arc<AppState> {
+    let mut model_rates = HashMap::new();
+    model_rates.insert("test-model".to_string(), test_model());
+
+    Arc::new(AppState {
+        search_client: Arc::new(NoopSearch),
+        mojeek_api_key: String::new(),
+        eigin_relay_key: "relay-key".into(),
+        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
+        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        ledger: Arc::new(InMemoryLedger::default()),
+        apple_verifier: Arc::new(verifier),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits,
+        token_encryption_key: [0u8; 32],
+        upstream_client: Arc::new(upstream),
+        upstream_api_key: Some("test-key".into()),
+        model_rates,
+        admit_floor_millicredits,
+        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+    })
+}
+
+fn build_router(state: Arc<AppState>) -> Router {
+    let authed = Router::new()
+        .route(
+            "/v1/credits/redeem",
+            post(eigin_relay::credits::redeem::handle),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            eigin_relay::require_eigin_key,
+        ));
+
+    Router::new()
+        .route(
+            "/v1/credits/balance",
+            get(eigin_relay::credits::balance::handle),
+        )
+        .route(
+            "/v1/models",
+            get(eigin_relay::inference::catalog::handle_list),
+        )
+        .route(
+            "/v1/chat/completions",
+            post(eigin_relay::inference::handler::handle),
+        )
+        .route(
+            "/webhooks/apple/appstore",
+            post(eigin_relay::credits::apple::webhook::handle),
+        )
+        .merge(authed)
+        .with_state(state)
+}
+
+async fn redeem(app: &Router, jws: &str) -> serde_json::Value {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/credits/redeem")
+        .header("x-eigin-key", "relay-key")
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(
+            serde_json::json!({ "type": "apple_iap", "proof": jws }).to_string(),
+        ))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let bytes = to_bytes(resp.into_body(), 4096).await.unwrap();
+    serde_json::from_slice(&bytes).unwrap()
+}
+
+async fn balance(app: &Router, token: &str) -> (StatusCode, serde_json::Value) {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .uri("/v1/credits/balance")
+        .header("Authorization", format!("Bearer {token}"))
+        .extension(connect_info)
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let bytes = to_bytes(resp.into_body(), 4096).await.unwrap();
+    (status, serde_json::from_slice(&bytes).unwrap())
+}
+
+async fn chat(app: &Router, token: &str, model: &str) -> StatusCode {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": model,
+        "stream": true,
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    // Drain body so the settle task can complete.
+    let status = resp.status();
+    let _ = to_bytes(resp.into_body(), 65536).await.unwrap();
+    // Give the settle task a moment.
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    status
+}
+
+async fn chat_non_streaming(app: &Router, token: &str, model: &str) -> StatusCode {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": model,
+        "stream": false,
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let _ = to_bytes(resp.into_body(), 65536).await.unwrap();
+    status
+}
+
+async fn webhook_refund(app: &Router, original_tx_id: &str, uuid: &str) -> StatusCode {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({ "signedPayload": "fake-signed-payload" });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/webhooks/apple/appstore")
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+
+    // We need a state-aware router with the refund verifier, so this helper is called
+    // with a router already configured with the right fake verifier.
+    let _ = (original_tx_id, uuid);
+    app.clone().oneshot(req).await.unwrap().status()
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn redeem_mints_wallet_and_returns_token() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-001", "ai.eigin.credits.500");
+    let state = make_state(
+        verifier,
+        products,
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let json = redeem(&app, "fake-jws").await;
+    assert_eq!(json["status"], "active");
+    assert_eq!(json["credits"], 500);
+    assert!(json["token"].as_str().unwrap().starts_with("eict_"));
+}
+
+#[tokio::test]
+async fn redeem_same_transaction_returns_same_token_and_spent_down_balance() {
+    use eigin_relay::credits::CreditLedger;
+    use eigin_relay::credits::token;
+
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let ledger: Arc<dyn CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    // First redeem: mint the wallet.
+    let state1 = make_state_with_ledger(
+        FakeVerifier::with_transaction("tx-same", "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app1 = build_router(state1);
+    let first = redeem(&app1, "fake-jws").await;
+    let token1 = first["token"].as_str().unwrap().to_owned();
+    assert_eq!(first["credits"], 500);
+
+    // Simulate some spend directly on the ledger.
+    let hash = token::hash(&token1);
+    let wallet = ledger.find_by_token_hash(&hash).await.unwrap().unwrap();
+    ledger.debit(wallet.id, 100_000).await.unwrap(); // spend 100 credits
+
+    // Second redeem (restore): same tx id, same ledger — must return same token and spent-down balance.
+    let state2 = make_state_with_ledger(
+        FakeVerifier::with_transaction("tx-same", "ai.eigin.credits.500"),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app2 = build_router(state2);
+    let second = redeem(&app2, "fake-jws").await;
+    let token2 = second["token"].as_str().unwrap().to_owned();
+
+    assert_eq!(token1, token2, "restore must return the same stable token");
+    assert_eq!(second["credits"], 400, "balance must reflect prior spend");
+}
+
+async fn make_state_with_ledger(
+    verifier: FakeVerifier,
+    product_credits: HashMap<String, i64>,
+    ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
+) -> Arc<AppState> {
+    let mut model_rates = HashMap::new();
+    model_rates.insert("test-model".to_string(), test_model());
+
+    Arc::new(AppState {
+        search_client: Arc::new(NoopSearch),
+        mojeek_api_key: String::new(),
+        eigin_relay_key: "relay-key".into(),
+        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
+        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        ledger,
+        apple_verifier: Arc::new(verifier),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits,
+        token_encryption_key: [0u8; 32],
+        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
+        upstream_api_key: Some("test-key".into()),
+        model_rates,
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+    })
+}
+
+async fn make_grant_state(
+    grant_verifier: FakeGrantVerifier,
+    product_credits: HashMap<String, i64>,
+    ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
+) -> Arc<AppState> {
+    let mut model_rates = HashMap::new();
+    model_rates.insert("test-model".to_string(), test_model());
+
+    Arc::new(AppState {
+        search_client: Arc::new(NoopSearch),
+        mojeek_api_key: String::new(),
+        eigin_relay_key: "relay-key".into(),
+        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
+        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        ledger,
+        apple_verifier: Arc::new(FakeVerifier::failing()),
+        grant_verifier: Arc::new(grant_verifier),
+        product_credits,
+        token_encryption_key: [0u8; 32],
+        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
+        upstream_api_key: Some("test-key".into()),
+        model_rates,
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+    })
+}
+
+async fn redeem_grant(app: &Router) -> (StatusCode, serde_json::Value) {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/credits/redeem")
+        .header("x-eigin-key", "relay-key")
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(
+            serde_json::json!({ "type": "grant", "proof": "fake-jwt" }).to_string(),
+        ))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let bytes = to_bytes(resp.into_body(), 4096).await.unwrap();
+    (status, serde_json::from_slice(&bytes).unwrap())
+}
+
+#[tokio::test]
+async fn grant_redeem_mints_wallet_and_returns_token() {
+    let mut products = HashMap::new();
+    products.insert("eigin.credits.v1.grant.500".into(), 500_000i64);
+
+    let verifier =
+        FakeGrantVerifier::with_grant("eigin", "grant-001", "eigin.credits.v1.grant.500");
+    let state = make_grant_state(verifier, products, Arc::new(InMemoryLedger::default())).await;
+    let app = build_router(state);
+
+    let (status, json) = redeem_grant(&app).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["status"], "active");
+    assert_eq!(json["credits"], 500);
+    assert!(json["token"].as_str().unwrap().starts_with("eict_"));
+}
+
+#[tokio::test]
+async fn grant_redeem_same_grant_restores_same_token_and_balance() {
+    use eigin_relay::credits::CreditLedger;
+    use eigin_relay::credits::token;
+
+    let mut products = HashMap::new();
+    products.insert("eigin.credits.v1.grant.500".into(), 500_000i64);
+
+    let ledger: Arc<dyn CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    // First redeem: mint.
+    let state1 = make_grant_state(
+        FakeGrantVerifier::with_grant("eigin", "grant-same", "eigin.credits.v1.grant.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let (_, first) = redeem_grant(&build_router(state1)).await;
+    let token1 = first["token"].as_str().unwrap().to_owned();
+    assert_eq!(first["credits"], 500);
+
+    // Spend some credits directly on the ledger.
+    let hash = token::hash(&token1);
+    let wallet = ledger.find_by_token_hash(&hash).await.unwrap().unwrap();
+    ledger.debit(wallet.id, 100_000).await.unwrap();
+
+    // Second redeem of the same grant: same token, spent-down balance.
+    let state2 = make_grant_state(
+        FakeGrantVerifier::with_grant("eigin", "grant-same", "eigin.credits.v1.grant.500"),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let (_, second) = redeem_grant(&build_router(state2)).await;
+
+    assert_eq!(second["token"].as_str().unwrap(), token1);
+    assert_eq!(second["credits"], 400);
+}
+
+#[tokio::test]
+async fn grant_redeem_unknown_product_returns_400() {
+    let verifier =
+        FakeGrantVerifier::with_grant("eigin", "grant-002", "eigin.credits.v1.grant.999");
+    let state = make_grant_state(
+        verifier,
+        HashMap::new(),
+        Arc::new(InMemoryLedger::default()),
+    )
+    .await;
+    let app = build_router(state);
+
+    let (status, _) = redeem_grant(&app).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn balance_returns_current_credits() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-002", "ai.eigin.credits.500");
+    let state = make_state(
+        verifier,
+        products,
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap();
+
+    let (status, bal) = balance(&app, token).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(bal["credits"], 500);
+    assert_eq!(bal["status"], "active");
+}
+
+#[tokio::test]
+async fn balance_with_unknown_token_returns_401() {
+    let state = make_state(
+        FakeVerifier::failing(),
+        HashMap::new(),
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let (status, _) = balance(&app, "eict_unknown").await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn chat_debits_balance_after_stream() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-003", "ai.eigin.credits.500");
+    // Upstream reports 1000 prompt tokens (non-cached) + 500 output tokens.
+    // Cost = (1000 * 10_000 + 500 * 20_000) / 1_000_000 = 20 millicredits.
+    let state = make_state(
+        verifier,
+        products,
+        FakeUpstream::with_usage(1000, 500),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let status = chat(&app, &token, "test-model").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    // 500,000 - 20 = 499,980 millicredits = 499 whole credits (floor division).
+    assert_eq!(bal["credits"].as_i64().unwrap(), 499);
+}
+
+#[tokio::test]
+async fn chat_non_streaming_debits_balance() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-003b", "ai.eigin.credits.500");
+    // Upstream reports 1000 prompt tokens (non-cached) + 500 output tokens.
+    // Cost = (1000 * 10_000 + 500 * 20_000) / 1_000_000 = 20 millicredits.
+    let state = make_state(
+        verifier,
+        products,
+        BufferUpstream::with_usage(1000, 500),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let status = chat_non_streaming(&app, &token, "test-model").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    // 500,000 - 20 = 499,980 millicredits = 499 whole credits (floor division).
+    assert_eq!(bal["credits"].as_i64().unwrap(), 499);
+}
+
+#[tokio::test]
+async fn chat_below_floor_returns_402() {
+    let mut products = HashMap::new();
+    // Mint just 10 credits (10_000 millicredits), floor is 50_000 → immediately blocked.
+    products.insert("ai.eigin.credits.small".into(), 10_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-004", "ai.eigin.credits.small");
+    let state = make_state(
+        verifier,
+        products,
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let status = chat(&app, &token, "test-model").await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+}
+
+#[tokio::test]
+async fn chat_with_unknown_model_returns_400() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-005", "ai.eigin.credits.500");
+    let state = make_state(
+        verifier,
+        products,
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let status = chat(&app, &token, "gpt-unknown-model").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn webhook_refund_closes_wallet() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let tx_id = "tx-refund-001";
+    let notification_uuid = "notif-uuid-001";
+
+    // First: mint a wallet via redeem.
+    let verifier = FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500");
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(verifier, products.clone(), Arc::clone(&ledger)).await;
+    let app = build_router(Arc::clone(&state));
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    // Confirm wallet is active.
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(bal["status"], "active");
+
+    // Now send a refund webhook. We need a new state with a refund verifier.
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, notification_uuid),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+
+    let wh_status = webhook_refund(&refund_app, tx_id, notification_uuid).await;
+    assert_eq!(wh_status, StatusCode::OK);
+
+    // Balance check on same token now shows refunded status.
+    let (_, bal_after) = balance(&app, &token).await;
+    assert_eq!(bal_after["status"], "refunded");
+    assert_eq!(bal_after["credits"], 0);
+}
+
+#[tokio::test]
+async fn webhook_refund_is_idempotent() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-refund-002";
+    let notification_uuid = "notif-uuid-002";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    // Mint wallet.
+    let state1 = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app1 = build_router(state1);
+    redeem(&app1, "fake-jws").await;
+
+    // Send refund twice — both must return 200.
+    for _ in 0..2 {
+        let state = make_state_with_ledger(
+            FakeVerifier::with_refund_notification(tx_id, notification_uuid),
+            products.clone(),
+            Arc::clone(&ledger),
+        )
+        .await;
+        let app = build_router(state);
+        let status = webhook_refund(&app, tx_id, notification_uuid).await;
+        assert_eq!(status, StatusCode::OK);
+    }
+}
+
+#[tokio::test]
+async fn chat_after_refund_returns_402() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-refund-003";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    // Refund.
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, "notif-003"),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+    webhook_refund(&refund_app, tx_id, "notif-003").await;
+
+    // Attempting to chat with the refunded wallet must fail with 402.
+    let status = chat(&app, &token, "test-model").await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+}

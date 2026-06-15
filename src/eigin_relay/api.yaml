@@ -1,0 +1,515 @@
+openapi: 3.1.0
+
+info:
+  title: Eigin Relay API
+  version: "1.0"
+  description: |
+    A connectivity service for Eigin agents.
+
+    ## Auth
+
+    - `EiginKey` - `x-eigin-key` header. Required on all routes except `/health`, `/docs`, and the Apple webhook.
+    - `BearerToken` - `Authorization: Bearer <token>`. Credit token from `POST /v1/credits/redeem`. Required on balance and inference routes, in addition to `EiginKey`.
+
+    ## Errors
+
+    ```json
+    { "error": { "message": "...", "type": "..." } }
+    ```
+
+    | `type` | Status |
+    |---|---|
+    | `authentication_error` | 401 |
+    | `invalid_request_error` | 400 |
+    | `insufficient_credits` | 402 |
+    | `rate_limit_error` | 429 |
+    | `service_unavailable` | 503 |
+    | `upstream_error` | 502 |
+    | `internal_error` | 500 |
+
+  contact:
+    name: Eigin
+    url: https://eigin.ai
+  license:
+    name: AGPL-3.0
+
+servers:
+  - url: https://relay.eigin.ai
+    description: Production
+  - url: https://staging.relay.eigin.ai
+    description: Staging
+
+tags:
+  - name: System
+  - name: Search
+    description: Anonymous search against a shared monthly quota pool.
+  - name: Credits
+    description: Credit wallet management. Wallets are keyed by purchase, not user identity.
+  - name: Inference
+    description: OpenAI-compatible proxy. Debits wallet after response based on token usage. Content is never logged.
+  - name: Webhooks
+    description: Apple App Store Server Notifications V2.
+
+components:
+  securitySchemes:
+    EiginKey:
+      type: apiKey
+      in: header
+      name: x-eigin-key
+      description: |
+        Shared secret for Eigin clients. Set via `EIGIN_RELAY_KEY`.
+
+    BearerToken:
+      type: http
+      scheme: bearer
+      description: |
+        Per-wallet credit token (`eict_<base64url>`). From `POST /v1/credits/redeem`. Store in Keychain.
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [message, type]
+          properties:
+            message: { type: string, example: "insufficient credits" }
+            type: { type: string, example: "insufficient_credits" }
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok] }
+
+    SearchResponse:
+      type: object
+      description: Raw upstream search provider response, passed through unmodified.
+      additionalProperties: true
+
+    WalletStatus:
+      type: string
+      enum: [active, refunded, closed]
+      description: |
+        `active` - spendable. `refunded` - credits zeroed by store. `closed` - administratively closed.
+
+    RedeemRequest:
+      type: object
+      required: [type, proof]
+      properties:
+        type:
+          type: string
+          enum: [apple_iap, grant]
+          description: |
+            Entitlement source. `apple_iap` = StoreKit 2; `grant` = a credit grant
+            signed directly by a trusted issuer. Additional values may be added.
+          example: "apple_iap"
+        proof:
+          type: string
+          description: |
+            Credential from the entitlement source. For `apple_iap`:
+            `Transaction.jwsRepresentation`. For `grant`: an Ed25519-signed grant JWT.
+          example: "eyJhbGciOiJFUzI1NiIsIng1YyI6WyIuLi4iXX0.eyJvcmlnaW5hbFRyYW5..."
+
+    RedeemResponse:
+      type: object
+      required: [token, credits, status]
+      properties:
+        token:
+          type: string
+          description: |
+            Credit token (`eict_<base64url>`). The same entitlement always returns the same token. Store in Keychain.
+          example: "eict_pjt33RI6zQcdj1teOI-Nct63j54V2bOTUiXaKP43a68"
+        credits:
+          type: integer
+          description: Whole credits (1 credit ≈ €0.01). Reflects spent-down balance on restore.
+          example: 500
+        status:
+          $ref: "#/components/schemas/WalletStatus"
+
+    BalanceResponse:
+      type: object
+      required: [credits, status]
+      properties:
+        credits:
+          type: integer
+          description: Current whole-credit balance. May be slightly negative after an overrun.
+          example: 342
+        status:
+          $ref: "#/components/schemas/WalletStatus"
+
+    ModelsListResponse:
+      type: object
+      required: [object, data]
+      properties:
+        object: { type: string, enum: [list] }
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelObject"
+
+    ModelObject:
+      type: object
+      required: [id, object, owned_by]
+      properties:
+        id:
+          type: string
+          description: |
+            Model ID for use in `POST /v1/chat/completions`.
+          example: "google/gemini-3-flash-preview"
+        object: { type: string, enum: [model] }
+        owned_by: { type: string, enum: [eigin] }
+
+    ChatCompletionRequest:
+      type: object
+      required: [model, messages]
+      description: |
+        OpenAI-compatible. `stream_options.include_usage` is injected when `stream: true`. Content is never logged.
+      properties:
+        model:
+          type: string
+          description: |
+            Model ID from `GET /v1/models`.
+          example: "google/gemini-3-flash-preview"
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [system, user, assistant, tool] }
+              content:
+                oneOf:
+                  - type: string
+                  - type: array
+        stream: { type: boolean, default: false }
+        temperature: { type: number, minimum: 0, maximum: 2 }
+        max_tokens: { type: integer }
+        tools: { type: array }
+        tool_choice:
+          oneOf:
+            - type: string
+            - type: object
+      additionalProperties: true
+
+    ChatCompletionResponse:
+      type: object
+      description: OpenAI-compatible non-streaming response, passed through unmodified.
+      properties:
+        id: { type: string }
+        object: { type: string, enum: [chat.completion] }
+        created: { type: integer }
+        model: { type: string }
+        choices: { type: array, items: { type: object } }
+        usage: { $ref: "#/components/schemas/UsageBlock" }
+      additionalProperties: true
+
+    ChatCompletionChunk:
+      type: object
+      description: |
+        SSE chunk, passed through unmodified. Stream ends with `data: [DONE]`.
+        Final chunk contains `usage` when `stream_options.include_usage` is set.
+      properties:
+        id: { type: string }
+        object: { type: string, enum: [chat.completion.chunk] }
+        created: { type: integer }
+        model: { type: string }
+        choices: { type: array, items: { type: object } }
+        usage:
+          $ref: "#/components/schemas/UsageBlock"
+          nullable: true
+      additionalProperties: true
+
+    UsageBlock:
+      type: object
+      properties:
+        prompt_tokens: { type: integer }
+        completion_tokens: { type: integer }
+        total_tokens: { type: integer }
+        prompt_tokens_details:
+          type: object
+          properties:
+            cached_tokens:
+              type: integer
+              description: Tokens served from cache, charged at the lower cached rate.
+      additionalProperties: true
+
+    WebhookRequest:
+      type: object
+      required: [signedPayload]
+      properties:
+        signedPayload:
+          type: string
+          description: Signed JWT from Apple. Verified against Apple Root CA certificates.
+          example: "eyJhbGciOiJFUzI1NiIsIng1YyI6WyIuLi4iXX0..."
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [System]
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+              example: { status: ok }
+
+  /v1/search:
+    get:
+      operationId: search
+      summary: Web search
+      description: Proxies to the upstream search provider. Returns 429 when the monthly quota is exhausted.
+      tags: [Search]
+      security:
+        - EiginKey: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          example: "personal AI privacy"
+      responses:
+        "200":
+          description: Search results.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResponse" }
+        "400":
+          description: "Missing or empty `q`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Rate limited or quota exhausted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502":
+          description: Upstream error.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/credits/redeem:
+    post:
+      operationId: redeemCredits
+      summary: Redeem or restore a wallet
+      description: |
+        Verifies proof and returns a credit token. The same entitlement always returns the same token and the current balance.
+      tags: [Credits]
+      security:
+        - EiginKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RedeemRequest" }
+      responses:
+        "200":
+          description: Wallet resolved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RedeemResponse" }
+              examples:
+                new_purchase:
+                  value:
+                    {
+                      token: "eict_pjt33RI6zQcdj1teOI-Nct63j54V2bOTUiXaKP43a68",
+                      credits: 500,
+                      status: "active",
+                    }
+                restore:
+                  value:
+                    {
+                      token: "eict_pjt33RI6zQcdj1teOI-Nct63j54V2bOTUiXaKP43a68",
+                      credits: 342,
+                      status: "active",
+                    }
+                refunded:
+                  value:
+                    {
+                      token: "eict_pjt33RI6zQcdj1teOI-Nct63j54V2bOTUiXaKP43a68",
+                      credits: 0,
+                      status: "refunded",
+                    }
+        "400":
+          description: Unknown entitlement type or unrecognised product.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Proof verification failed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/credits/balance:
+    get:
+      operationId: getBalance
+      summary: Get credit balance
+      tags: [Credits]
+      security:
+        - EiginKey: []
+          BearerToken: []
+      responses:
+        "200":
+          description: Current balance.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BalanceResponse" }
+              example: { credits: 342, status: "active" }
+        "401":
+          description: Invalid or unknown token.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/models:
+    get:
+      operationId: listModels
+      summary: List available models
+      description: Accepted regardless of balance.
+      tags: [Inference]
+      security:
+        - EiginKey: []
+          BearerToken: []
+      responses:
+        "200":
+          description: Available models.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelsListResponse" }
+              example:
+                object: "list"
+                data:
+                  - {
+                      id: "google/gemini-3-flash-preview",
+                      object: "model",
+                      owned_by: "eigin",
+                    }
+        "401":
+          description: Invalid or unknown token.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/chat/completions:
+    post:
+      operationId: chatCompletions
+      summary: Chat completion
+      description: |
+        OpenAI-compatible proxy. Requires balance >= admit floor (~€0.50). Debits wallet after response using upstream token counts. Balance may go slightly negative on the last request before the floor.
+      tags: [Inference]
+      security:
+        - EiginKey: []
+          BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatCompletionRequest" }
+            examples:
+              streaming:
+                value:
+                  {
+                    model: "google/gemini-3-flash-preview",
+                    stream: true,
+                    messages:
+                      [
+                        {
+                          role: user,
+                          content: "What is the capital of France?",
+                        },
+                      ],
+                  }
+              non_streaming:
+                value:
+                  {
+                    model: "google/gemini-3-flash-preview",
+                    stream: false,
+                    messages:
+                      [
+                        {
+                          role: user,
+                          content: "What is the capital of France?",
+                        },
+                      ],
+                  }
+      responses:
+        "200":
+          description: |
+            `stream: false` → `application/json` (`chat.completion`).
+            `stream: true` → `text/event-stream` SSE. Ends with `data: [DONE]`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatCompletionResponse" }
+            text/event-stream:
+              schema: { $ref: "#/components/schemas/ChatCompletionChunk" }
+              example: |
+                data: {"id":"gen-123","object":"chat.completion.chunk","choices":[{"delta":{"content":"Paris"}}]}
+
+                data: {"id":"gen-123","object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":1,"total_tokens":13}}
+
+                data: [DONE]
+        "400":
+          description: "Bad JSON, missing `model`, or unknown model."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Invalid or unknown token.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "402":
+          description: Balance below admit floor or wallet not active.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Rate limit exceeded (per-token or per-IP).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502":
+          description: Upstream error.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Inference not configured.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /webhooks/apple/appstore:
+    post:
+      operationId: appleAppStoreWebhook
+      summary: App Store Server Notifications V2
+      description: |
+        `REFUND` zeroes the balance and marks the wallet `refunded`. All other types are acknowledged without action. Always returns 200. Deduplicates by `notificationUUID`.
+
+        Register at: `https://relay.eigin.ai/webhooks/apple/appstore`
+      tags: [Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookRequest" }
+      responses:
+        "200":
+          description: Acknowledged.

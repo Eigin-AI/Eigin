@@ -14,37 +14,87 @@ pub enum AppError {
     Unauthorized,
     /// Malformed request or missing parameters (400).
     BadRequest(String),
-    /// Rate limit exceeded for client IP (429).
+    /// Request validation failed — well-formed but semantically invalid (422).
+    UnprocessableEntity(String),
+    /// Insufficient credits to process the request (402).
+    InsufficientCredits,
+    /// Rate limit exceeded for client IP or token (429).
     RateLimited,
     /// Monthly search quota exhausted (429).
     PoolExhausted,
+    /// Upstream service unavailable or not configured (503).
+    ServiceUnavailable(String),
     /// Upstream search service error (502).
     Upstream(String),
     /// Internal server error (500).
     Internal(String),
 }
 
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unauthorized => write!(f, "unauthorized"),
+            Self::BadRequest(msg) => write!(f, "bad request: {msg}"),
+            Self::UnprocessableEntity(msg) => write!(f, "unprocessable entity: {msg}"),
+            Self::InsufficientCredits => write!(f, "insufficient credits"),
+            Self::RateLimited => write!(f, "rate limited"),
+            Self::PoolExhausted => write!(f, "pool exhausted"),
+            Self::ServiceUnavailable(msg) => write!(f, "service unavailable: {msg}"),
+            Self::Upstream(msg) => write!(f, "upstream error: {msg}"),
+            Self::Internal(msg) => write!(f, "internal error: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match self {
+        let (status, message, error_type) = match self {
             Self::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
                 "invalid or missing API key".into(),
+                "authentication_error",
             ),
-            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg, "invalid_request_error"),
+            Self::UnprocessableEntity(msg) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                msg,
+                "invalid_request_error",
+            ),
+            Self::InsufficientCredits => (
+                StatusCode::PAYMENT_REQUIRED,
+                "insufficient credits".into(),
+                "insufficient_credits",
+            ),
             Self::RateLimited => (
                 StatusCode::TOO_MANY_REQUESTS,
                 "rate limited — try again shortly".into(),
+                "rate_limit_error",
             ),
             Self::PoolExhausted => (
                 StatusCode::TOO_MANY_REQUESTS,
                 "monthly search quota exhausted".into(),
+                "rate_limit_error",
             ),
-            Self::Upstream(msg) => (StatusCode::BAD_GATEWAY, format!("upstream error: {msg}")),
-            Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            Self::ServiceUnavailable(msg) => {
+                (StatusCode::SERVICE_UNAVAILABLE, msg, "service_unavailable")
+            }
+            Self::Upstream(msg) => (
+                StatusCode::BAD_GATEWAY,
+                format!("upstream error: {msg}"),
+                "upstream_error",
+            ),
+            Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg, "internal_error"),
         };
 
-        let body = axum::Json(json!({ "error": message }));
+        // Use OpenAI-compatible error format so existing inference clients handle errors correctly.
+        let body = axum::Json(json!({
+            "error": {
+                "message": message,
+                "type": error_type,
+            }
+        }));
         (status, body).into_response()
     }
 }
@@ -67,7 +117,7 @@ mod tests {
         let response = AppError::Unauthorized.into_response();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "invalid or missing API key");
+        assert_eq!(json["error"]["message"], "invalid or missing API key");
     }
 
     #[tokio::test]
@@ -75,7 +125,15 @@ mod tests {
         let response = AppError::BadRequest("test error".into()).into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "test error");
+        assert_eq!(json["error"]["message"], "test error");
+    }
+
+    #[tokio::test]
+    async fn insufficient_credits_returns_402() {
+        let response = AppError::InsufficientCredits.into_response();
+        assert_eq!(response.status(), StatusCode::PAYMENT_REQUIRED);
+        let json = extract_json(response).await;
+        assert_eq!(json["error"]["type"], "insufficient_credits");
     }
 
     #[tokio::test]
@@ -83,7 +141,7 @@ mod tests {
         let response = AppError::RateLimited.into_response();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "rate limited — try again shortly");
+        assert_eq!(json["error"]["message"], "rate limited — try again shortly");
     }
 
     #[tokio::test]
@@ -91,7 +149,7 @@ mod tests {
         let response = AppError::PoolExhausted.into_response();
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "monthly search quota exhausted");
+        assert_eq!(json["error"]["message"], "monthly search quota exhausted");
     }
 
     #[tokio::test]
@@ -99,7 +157,10 @@ mod tests {
         let response = AppError::Upstream("connection refused".into()).into_response();
         assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "upstream error: connection refused");
+        assert_eq!(
+            json["error"]["message"],
+            "upstream error: connection refused"
+        );
     }
 
     #[tokio::test]
@@ -107,6 +168,6 @@ mod tests {
         let response = AppError::Internal("something went wrong".into()).into_response();
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
         let json = extract_json(response).await;
-        assert_eq!(json["error"], "something went wrong");
+        assert_eq!(json["error"]["message"], "something went wrong");
     }
 }

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -6,7 +7,7 @@ use axum::body::to_bytes;
 use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode};
 use axum::middleware;
-use axum::routing::get;
+use axum::routing::{get, post};
 use tower::util::ServiceExt;
 
 mod mock_client {
@@ -52,24 +53,46 @@ mod mock_client {
     }
 }
 
+mod fakes;
+use fakes::apple::FakeVerifier;
+use fakes::grant::FakeGrantVerifier;
+use fakes::upstream::NoopUpstream;
+
 use mock_client::MockClient;
 
 async fn test_state(
     pool_max: u64,
     client: impl eigin_relay::SearchClient + 'static,
 ) -> Arc<eigin_relay::AppState> {
+    use eigin_relay::credits::InMemoryLedger;
+
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(client),
         mojeek_api_key: "test-api-key".to_string(),
         eigin_relay_key: "test-relay-key".to_string(),
         pool: eigin_relay::Pool::load(pool_max, eigin_relay::PoolConfig::InMemory).await,
-        rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
+        ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
+        ledger: Arc::new(InMemoryLedger::default()),
+        apple_verifier: Arc::new(FakeVerifier::failing()),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits: HashMap::new(),
+        token_encryption_key: [0u8; 32],
+        upstream_client: Arc::new(NoopUpstream),
+        upstream_api_key: None,
+        model_rates: HashMap::new(),
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: eigin_relay::RateLimiter::new(20, Duration::from_secs(60)),
     })
 }
 
 fn router(state: Arc<eigin_relay::AppState>) -> axum::Router {
     let authed = Router::new()
         .route("/search", get(eigin_relay::search::handle))
+        .route("/v1/search", get(eigin_relay::search::handle))
+        .route(
+            "/v1/credits/redeem",
+            post(eigin_relay::credits::redeem::handle),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             eigin_relay::require_eigin_key,
@@ -77,6 +100,10 @@ fn router(state: Arc<eigin_relay::AppState>) -> axum::Router {
 
     Router::new()
         .route("/health", get(eigin_relay::health))
+        .route(
+            "/webhooks/apple/appstore",
+            post(eigin_relay::credits::apple::webhook::handle),
+        )
         .merge(authed)
         .with_state(state)
 }
@@ -99,6 +126,8 @@ async fn call(app: &axum::Router, uri: &str, key: Option<&str>) -> axum::respons
 
     app.clone().oneshot(req).await.unwrap()
 }
+
+// --- Search tests (unchanged behaviour) ---
 
 #[tokio::test]
 async fn health_returns_ok() {
@@ -124,7 +153,8 @@ async fn search_without_key_returns_401() {
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["error"], "invalid or missing API key");
+    // Error is now OpenAI-compatible: { "error": { "message": "..." } }
+    assert_eq!(json["error"]["message"], "invalid or missing API key");
 }
 
 #[tokio::test]
@@ -149,7 +179,7 @@ async fn search_without_query_returns_400() {
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["error"], "missing 'q' parameter");
+    assert_eq!(json["error"]["message"], "missing 'q' parameter");
 }
 
 #[tokio::test]
@@ -198,7 +228,12 @@ async fn search_upstream_error_returns_502() {
     assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert!(json["error"].as_str().unwrap().contains("upstream error"));
+    assert!(
+        json["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("upstream error")
+    );
 }
 
 #[tokio::test]
@@ -208,18 +243,13 @@ async fn search_rate_limited_after_10_requests() {
     let app = router(state);
 
     for i in 0..11 {
-        let response = call(
-            &app,
-            &format!("/search?q=test{}", i),
-            Some("test-relay-key"),
-        )
-        .await;
+        let response = call(&app, &format!("/search?q=test{i}"), Some("test-relay-key")).await;
 
         if i >= 10 {
             assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
             let body = to_bytes(response.into_body(), 1024).await.unwrap();
             let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-            assert_eq!(json["error"], "rate limited — try again shortly");
+            assert_eq!(json["error"]["message"], "rate limited — try again shortly");
         }
     }
 }

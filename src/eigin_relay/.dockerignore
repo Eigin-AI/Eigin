@@ -1,2 +1,4 @@
 target/
 .git/
+# Grant keys are environment-specific and injected at runtime, never baked in.
+config/grant/

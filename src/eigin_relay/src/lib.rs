@@ -1,11 +1,15 @@
-//! Eigin Relay - A lightweight search API proxy with rate limiting and quota management.
+//! Eigin Relay — search proxy, rate limiting, quota management, and inference proxy.
 //!
-//! This crate provides a relay service that sits between clients and a search API (e.g., Mojeek).
-//! It handles authentication, rate limiting per-IP, and monthly quota enforcement.
+//! Provides:
+//! - Anonymous search proxy with a shared monthly community pool.
+//! - Anonymous inference proxy with a per-wallet credit ledger.
 
-mod auth;
+pub mod auth;
+pub mod credits;
+pub mod docs;
 mod error;
 mod health;
+pub mod inference;
 mod rate_limit;
 pub mod search;
 mod state;
