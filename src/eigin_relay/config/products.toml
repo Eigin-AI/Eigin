@@ -18,6 +18,6 @@
 # TODO: pin product IDs and credit amounts to store listings before launch.
 
 [products]
-"eigin.credits.v1.apple.500" = 500_000
+"eigin.credits.v2.apple.500" = 500_000 # bumped to v2 because we deleted the v1 in App Store Connect
 "eigin.credits.v1.apple.dev.500" = 500_000
 "eigin.credits.v1.grant.500" = 500_000
