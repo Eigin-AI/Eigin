@@ -10,7 +10,6 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
-use crate::auth::WalletBearer;
 use crate::error::AppError;
 
 /// A single model entry in models.toml.
@@ -73,8 +72,6 @@ pub struct ModelEntry {
 
 pub async fn handle_list(
     State(state): State<Arc<AppState>>,
-    // Any valid wallet can list models (even empty/closed), so just validate the bearer.
-    WalletBearer(_wallet): WalletBearer,
 ) -> Result<impl IntoResponse, AppError> {
     let mut data: Vec<ModelEntry> = state
         .model_rates

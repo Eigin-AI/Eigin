@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 
 struct WebSearchTool: Tool {
@@ -69,9 +70,10 @@ struct WebSearchTool: Tool {
         }
 
         // Try the relay first (background HTTP, no WebView needed)
-        let relayResult = await RelaySearchClient.search(query: query)
-        if case .success(let search) = relayResult {
-            var content = search.json
+        if let json = try? await Container.shared.relayClient().search(query: query),
+           !json.isEmpty
+        {
+            var content = json
             var warnings: [String] = []
 
             if content.count > HTMLSanitizer.maxOutputLength {

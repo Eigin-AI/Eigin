@@ -2026,6 +2026,133 @@ enum Localized {
             }
         }
 
+        enum Eigin {
+            /// Body of the privacy blurb card
+            static var blurbBody: String {
+                Localized.get("provider.eigin.blurbBody")
+            }
+
+            /// Headline of the privacy blurb card
+            static var blurbTitle: String {
+                Localized.get("provider.eigin.blurbTitle")
+            }
+
+            /// Button to buy a credit option
+            static var buy: String {
+                Localized.get("provider.eigin.buy")
+            }
+
+            /// A purchase option's credit amount. The argument is the number of credits.
+            static func creditAmount(_ p1: String) -> String {
+                String(format: Localized.get("provider.eigin.creditAmount"), p1)
+            }
+
+            /// Info section: what a credit is (body)
+            static var creditBody: String {
+                Localized.get("provider.eigin.creditBody")
+            }
+
+            /// Info section: what a credit is (title)
+            static var creditTitle: String {
+                Localized.get("provider.eigin.creditTitle")
+            }
+
+            /// Caption under the credit balance on the Eigin screen
+            static var creditsCaption: String {
+                Localized.get("provider.eigin.creditsCaption")
+            }
+
+            /// Chat recovery card body shown after credits are added, prompting the user to resend
+            static var creditsReadyBody: String {
+                Localized.get("provider.eigin.creditsReadyBody")
+            }
+
+            /// Chat recovery card title shown after credits are added
+            static var creditsReadyTitle: String {
+                Localized.get("provider.eigin.creditsReadyTitle")
+            }
+
+            /// Info section: European hosting (body)
+            static var europeBody: String {
+                Localized.get("provider.eigin.europeBody")
+            }
+
+            /// Info section: European hosting (title)
+            static var europeTitle: String {
+                Localized.get("provider.eigin.europeTitle")
+            }
+
+            /// Description under the purchase sheet title, framing what credits are for
+            static var getCreditsDescription: String {
+                Localized.get("provider.eigin.getCreditsDescription")
+            }
+
+            /// Title of the purchase sheet
+            static var getCreditsTitle: String {
+                Localized.get("provider.eigin.getCreditsTitle")
+            }
+
+            /// Button that opens the purchase sheet
+            static var getMoreCredits: String {
+                Localized.get("provider.eigin.getMoreCredits")
+            }
+
+            /// High-level description shown under the information sheet title
+            static var infoDescription: String {
+                Localized.get("provider.eigin.infoDescription")
+            }
+
+            /// Title of the information sheet
+            static var infoTitle: String {
+                Localized.get("provider.eigin.infoTitle")
+            }
+
+            /// Button that opens the information sheet
+            static var learnHowItWorks: String {
+                Localized.get("provider.eigin.learnHowItWorks")
+            }
+
+            /// Info section: curated models (body)
+            static var modelsBody: String {
+                Localized.get("provider.eigin.modelsBody")
+            }
+
+            /// Info section: curated models (title)
+            static var modelsTitle: String {
+                Localized.get("provider.eigin.modelsTitle")
+            }
+
+            /// Shown when no purchase options can be loaded
+            static var noProducts: String {
+                Localized.get("provider.eigin.noProducts")
+            }
+
+            /// Chat error suggestion shown when the Eigin relay has no credits left
+            static var outOfCreditsBody: String {
+                Localized.get("provider.eigin.outOfCreditsBody")
+            }
+
+            /// Chat error title shown when the Eigin relay has no credits left
+            static var outOfCreditsTitle: String {
+                Localized.get("provider.eigin.outOfCreditsTitle")
+            }
+
+            /// Info section: privacy (body)
+            static var privacyBody: String {
+                Localized.get("provider.eigin.privacyBody")
+            }
+
+            /// Info section: privacy (title)
+            static var privacyTitle: String {
+                Localized.get("provider.eigin.privacyTitle")
+            }
+
+            /// Subtitle on the Eigin provider row in the connections list
+            static var rowSubtitle: String {
+                Localized.get("provider.eigin.rowSubtitle")
+            }
+        }
+
         enum EmptyState {
             /// A description text displayed below the title of a view that instructs the user to
             /// add a provider in the settings to get started.

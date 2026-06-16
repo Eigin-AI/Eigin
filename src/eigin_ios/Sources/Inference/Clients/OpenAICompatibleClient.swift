@@ -6,12 +6,27 @@ import Foundation
 struct OpenAICompatibleClient: LLMClient {
     let baseURL: String
     let apiToken: String
+    /// Extra headers applied to every request (e.g. the relay's `X-Eigin-Key`).
+    let extraHeaders: [String: String]
     let session: URLSession
 
-    init(baseURL: String, apiToken: String, session: URLSession = .shared) {
+    init(
+        baseURL: String,
+        apiToken: String,
+        extraHeaders: [String: String] = [:],
+        session: URLSession = .shared
+    ) {
         self.baseURL = baseURL
         self.apiToken = apiToken
+        self.extraHeaders = extraHeaders
         self.session = session
+    }
+
+    /// Applies the configured extra headers to a request.
+    private func applyExtraHeaders(to request: inout URLRequest) {
+        for (field, value) in extraHeaders {
+            request.setValue(value, forHTTPHeaderField: field)
+        }
     }
 
     /// Resolves the provider adapter for a specific model, using both the base URL
@@ -25,6 +40,7 @@ struct OpenAICompatibleClient: LLMClient {
         let url = try buildURL(path: "/models")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        applyExtraHeaders(to: &request)
 
         let (data, response) = try await session.data(for: request)
         try validateResponse(response)
@@ -44,6 +60,7 @@ struct OpenAICompatibleClient: LLMClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyExtraHeaders(to: &request)
 
         var body = ChatCompletionRequest(
             model: model,
@@ -75,6 +92,7 @@ struct OpenAICompatibleClient: LLMClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyExtraHeaders(to: &request)
 
         let body = ChatCompletionRequest(
             model: model,
@@ -143,6 +161,7 @@ struct OpenAICompatibleClient: LLMClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        applyExtraHeaders(to: &request)
 
         var body = ChatCompletionRequest(
             model: model,

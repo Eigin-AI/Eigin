@@ -80,6 +80,10 @@ fn build_router(state: Arc<AppState>) -> Router {
             "/v1/credits/redeem",
             post(eigin_relay::credits::redeem::handle),
         )
+        .route(
+            "/v1/credits/products",
+            get(eigin_relay::credits::products::handle),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             eigin_relay::require_eigin_key,
@@ -199,7 +203,47 @@ async fn webhook_refund(app: &Router, original_tx_id: &str, uuid: &str) -> Statu
     app.clone().oneshot(req).await.unwrap().status()
 }
 
+async fn products(app: &Router) -> serde_json::Value {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .uri("/v1/credits/products")
+        .header("x-eigin-key", "relay-key")
+        .extension(connect_info)
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let bytes = to_bytes(resp.into_body(), 4096).await.unwrap();
+    serde_json::from_slice(&bytes).unwrap()
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn products_lists_catalog_as_whole_credits_sorted_by_id() {
+    let mut product_credits = HashMap::new();
+    product_credits.insert("ai.eigin.credits.500".into(), 500_000i64);
+    product_credits.insert("ai.eigin.credits.100".into(), 100_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-001", "ai.eigin.credits.500");
+    let state = make_state(
+        verifier,
+        product_credits,
+        FakeUpstream::with_usage(0, 0),
+        0,
+        50_000,
+    )
+    .await;
+    let app = build_router(state);
+
+    let json = products(&app).await;
+    let items = json["products"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+    // Sorted by id: …100 before …500.
+    assert_eq!(items[0]["id"], "ai.eigin.credits.100");
+    assert_eq!(items[0]["credits"], 100);
+    assert_eq!(items[1]["id"], "ai.eigin.credits.500");
+    assert_eq!(items[1]["credits"], 500);
+}
 
 #[tokio::test]
 async fn redeem_mints_wallet_and_returns_token() {

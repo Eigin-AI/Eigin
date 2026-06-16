@@ -115,6 +115,35 @@ extension Container {
         self { DefaultHealthService() }.singleton
     }
 
+    // MARK: - Relay & Credits
+
+    var relayClient: Factory<any RelayClient> {
+        self { DefaultRelayClient() }.singleton
+    }
+
+    var storeKitPurchaseService: Factory<any StoreKitPurchaseService> {
+        self { DefaultStoreKitPurchaseService() }.singleton
+    }
+
+    var creditWalletManager: Factory<any CreditWalletManager> {
+        self {
+            DefaultCreditWalletManager(
+                relayClient: self.relayClient(),
+                keychain: self.keychainService()
+            )
+        }.singleton
+    }
+
+    var creditsService: Factory<any CreditsService> {
+        self {
+            DefaultCreditsService(
+                relayClient: self.relayClient(),
+                purchaseService: self.storeKitPurchaseService(),
+                walletManager: self.creditWalletManager()
+            )
+        }.singleton
+    }
+
     // MARK: - MCP
 
     var mcpOAuthService: Factory<any MCPOAuthService> {

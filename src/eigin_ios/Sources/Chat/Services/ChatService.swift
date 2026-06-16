@@ -29,7 +29,8 @@ struct DefaultChatService: ChatService {
         model: String
     ) async throws -> AsyncThrowingStream<String, Error> {
         let apiKey: String
-        if ProviderPreset.isLocal(baseURL) {
+        if ProviderPreset.isLocal(baseURL) || ProviderPreset.isRelay(baseURL) {
+            // Neither on-device nor the relay use a keychain API key.
             apiKey = ""
         } else {
             guard let key = keychainService.read(key: keychainService.providerKey(for: providerID))
@@ -56,7 +57,8 @@ struct DefaultChatService: ChatService {
         tools: [ToolDefinition]?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let apiKey: String
-        if ProviderPreset.isLocal(baseURL) {
+        if ProviderPreset.isLocal(baseURL) || ProviderPreset.isRelay(baseURL) {
+            // Neither on-device nor the relay use a keychain API key.
             apiKey = ""
         } else {
             guard let key = keychainService.read(key: keychainService.providerKey(for: providerID))

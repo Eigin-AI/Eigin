@@ -23,7 +23,8 @@ struct ConnectionsView: View {
     }
 
     private var cloudProviders: [Provider] {
-        providers.filter { !ProviderPreset.isLocal($0.baseURL) }
+        providers
+            .filter { !ProviderPreset.isLocal($0.baseURL) && !ProviderPreset.isRelay($0.baseURL) }
     }
 
     private var connectSheetTitle: String {
@@ -95,6 +96,14 @@ struct ConnectionsView: View {
 
     private var providersSection: some View {
         Section {
+            NavigationLink {
+                EiginProviderView()
+                    .hidesTabBar()
+            } label: {
+                eiginRow
+            }
+            .listRowBackground(colors.surface.standard.alternative)
+
             ForEach(cloudProviders) { provider in
                 NavigationLink {
                     EditProvider(provider: provider)
@@ -124,6 +133,16 @@ struct ConnectionsView: View {
         } header: {
             Text(Localized.Ui.providers)
                 .typography(Typography.miniLabel)
+        }
+    }
+
+    private var eiginRow: some View {
+        VStack(alignment: .leading) {
+            Text(verbatim: "Eigin")
+                .typography(Typography.navTab)
+            Text(Localized.Provider.Eigin.rowSubtitle)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
     }
 

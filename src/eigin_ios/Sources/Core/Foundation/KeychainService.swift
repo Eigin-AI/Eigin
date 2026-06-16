@@ -13,6 +13,8 @@ protocol KeychainService: Sendable {
     func providerKey(for providerID: UUID) -> String
     /// Returns the canonical keychain key for an MCP server credential.
     func mcpKey(for serverID: UUID, suffix: String) -> String
+    /// The keychain key under which the credit-wallet collection is stored as a JSON blob.
+    var creditWalletsKey: String { get }
 }
 
 /// Implementation of ``KeychainService`` backed by the iOS Keychain (Security framework).
@@ -77,5 +79,9 @@ struct DefaultKeychainService: KeychainService {
 
     func mcpKey(for serverID: UUID, suffix: String) -> String {
         "\(serviceKey).mcp.\(serverID.uuidString).\(suffix)"
+    }
+
+    var creditWalletsKey: String {
+        "\(serviceKey).credits.wallets"
     }
 }

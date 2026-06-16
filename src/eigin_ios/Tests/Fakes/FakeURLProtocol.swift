@@ -4,6 +4,22 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     private static let lock = NSLock()
     private nonisolated(unsafe) static var _responseMap: [String: (Data, HTTPURLResponse)] = [:]
     private nonisolated(unsafe) static var _errorMap: [String: Error] = [:]
+    private nonisolated(unsafe) static var _responseQueues: [String: [(Data, HTTPURLResponse)]] =
+        [:]
+
+    /// Queue a response for a URL. Queued responses are consumed in FIFO order across successive
+    /// requests to the same URL, letting one endpoint return e.g. 402 then 200 to exercise
+    /// failover.
+    /// Takes precedence over `stubResponse` while the queue is non-empty.
+    static func enqueueResponse(for url: String, data: Data, statusCode: Int) {
+        let response = HTTPURLResponse(
+            url: URL(string: url)!,
+            statusCode: statusCode,
+            httpVersion: nil,
+            headerFields: nil
+        )!
+        lock.withLock { _responseQueues[url, default: []].append((data, response)) }
+    }
 
     static func stubResponse(for url: String, data: Data, statusCode: Int) {
         let response = HTTPURLResponse(
@@ -36,12 +52,29 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     override func startLoading() {
         let urlString = request.url?.absoluteString ?? ""
 
-        let (error, entry) = Self.lock.withLock {
-            (Self._errorMap[urlString], Self._responseMap[urlString])
+        let error: Error?
+        let queued: (Data, HTTPURLResponse)?
+        let entry: (Data, HTTPURLResponse)?
+        Self.lock.lock()
+        error = Self._errorMap[urlString]
+        entry = Self._responseMap[urlString]
+        if var queue = Self._responseQueues[urlString], !queue.isEmpty {
+            queued = queue.removeFirst()
+            Self._responseQueues[urlString] = queue
+        } else {
+            queued = nil
         }
+        Self.lock.unlock()
 
         if let error {
             client?.urlProtocol(self, didFailWithError: error)
+            return
+        }
+
+        if let (data, response) = queued {
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
             return
         }
 

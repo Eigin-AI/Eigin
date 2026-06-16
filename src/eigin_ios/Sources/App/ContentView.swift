@@ -6,6 +6,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.themeManager) private var themeManager
     @Injected(\.languageManager) private var languageManager
+    @Injected(\.relayClient) private var relayClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
@@ -35,6 +36,7 @@ struct ContentView: View {
         }
         .task {
             ensureBackgroundSchedule()
+            ensureEiginProvider()
             GemmaModelManager.shared.prewarmIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
@@ -64,6 +66,31 @@ struct ContentView: View {
         }
         Task {
             await BackgroundPromptScheduler.scheduleIfNeeded(for: agent.proactivity)
+        }
+    }
+
+    /// Ensures the always-present Eigin relay provider exists and keeps its curated model list
+    /// fresh.
+    ///
+    /// Mirrors how On-Device is created in code rather than through the add-provider sheet. The
+    /// model
+    /// catalog is public, so it refreshes on every launch without needing credits.
+    private func ensureEiginProvider() {
+        let providers = (try? modelContext.fetch(FetchDescriptor<Provider>())) ?? []
+        let provider: Provider
+        if let existing = providers.first(where: { ProviderPreset.isRelay($0.baseURL) }) {
+            provider = existing
+        } else {
+            provider = Provider(name: "Eigin", baseURL: "eigin-relay://")
+            modelContext.insert(provider)
+        }
+        Task { @MainActor in
+            guard let models = try? await relayClient.models(), !models.isEmpty else { return }
+            provider.availableModels = models
+            if provider.enabledModels.isEmpty {
+                provider.enabledModels = [KnownModelCatalog.bestModel(from: models) ?? ""]
+                    .filter { !$0.isEmpty }
+            }
         }
     }
 }
