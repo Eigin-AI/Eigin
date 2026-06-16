@@ -8,16 +8,26 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
     @ViewBuilder let header: () -> Header
     @ViewBuilder let primary: () -> Primary
     @ViewBuilder let secondary: () -> Secondary
+    /// When set, reports the sheet's intrinsic height (header + content) so the presenter can size
+    /// a
+    /// detent to fit. Independent of the available height, so it never feeds back through the
+    /// detent.
+    var intrinsicHeight: Binding<CGFloat>?
 
     init(
         header: @escaping () -> Header,
         @ViewBuilder primary: @escaping () -> Primary,
-        @ViewBuilder secondary: @escaping () -> Secondary = { EmptyView() }
+        @ViewBuilder secondary: @escaping () -> Secondary = { EmptyView() },
+        intrinsicHeight: Binding<CGFloat>? = nil
     ) {
         self.header = header
         self.primary = primary
         self.secondary = secondary
+        self.intrinsicHeight = intrinsicHeight
     }
+
+    @State private var headerHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
 
     private var hasSecondary: Bool {
         Secondary.self != EmptyView.self
@@ -26,6 +36,10 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
     var body: some View {
         VStack(spacing: Sizing.PageLayout.pyTop) {
             header()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    headerHeight = $0
+                    reportIntrinsicHeight()
+                }
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
                     primary()
@@ -34,11 +48,24 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
                     }
                 }
                 .padding(.bottom, Sizing.PageLayout.pyBottom)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    contentHeight = $0
+                    reportIntrinsicHeight()
+                }
             }
             .scrollBounceBehavior(.basedOnSize)
         }
         .padding(.top, Sizing.PageLayout.pyTop)
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private func reportIntrinsicHeight() {
+        guard let intrinsicHeight else { return }
+        // Outer top padding + header + the VStack's header/content spacing + content.
+        let total = Sizing.PageLayout.pyTop + headerHeight + Sizing.PageLayout.pyTop + contentHeight
+        if abs(intrinsicHeight.wrappedValue - total) > 0.5 {
+            intrinsicHeight.wrappedValue = total
+        }
     }
 }
 
@@ -51,29 +78,68 @@ extension View {
         label: String? = nil,
         description: String? = nil,
         detents: Set<PresentationDetent> = [.medium, .large],
+        fitsContent: Bool = false,
         showsDismissButton: Bool = true,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder primary: @escaping () -> some View,
         @ViewBuilder secondary: @escaping () -> some View = { EmptyView() }
     ) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
-            AppSheet {
+            AppSheetContainer(
+                label: label,
+                title: title,
+                description: description,
+                detents: detents,
+                fitsContent: fitsContent,
+                onDismiss: showsDismissButton ? { isPresented.wrappedValue = false } : nil,
+                primary: primary,
+                secondary: secondary
+            )
+        }
+    }
+}
+
+/// Presents an ``AppSheet`` and resolves its detents. With `fitsContent`, it sizes a single detent
+/// to
+/// the measured content height so the sheet hugs its content and only scrolls when it would
+/// overflow.
+private struct AppSheetContainer<Primary: View, Secondary: View>: View {
+    let label: String?
+    let title: String
+    let description: String?
+    let detents: Set<PresentationDetent>
+    let fitsContent: Bool
+    let onDismiss: (() -> Void)?
+    @ViewBuilder let primary: () -> Primary
+    @ViewBuilder let secondary: () -> Secondary
+
+    @State private var fittedHeight: CGFloat = 0
+
+    private var resolvedDetents: Set<PresentationDetent> {
+        if fitsContent, fittedHeight > 0 {
+            return [.height(fittedHeight)]
+        }
+        return detents
+    }
+
+    var body: some View {
+        AppSheet(
+            header: {
                 AppSheetHeader(
                     label: label,
                     title: title,
                     description: description,
-                    onDismiss: showsDismissButton ? { isPresented.wrappedValue = false } : nil
+                    onDismiss: onDismiss
                 )
-            } primary: {
-                primary()
-            } secondary: {
-                secondary()
-            }
-            .presentationDetents(detents)
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(Radius.card)
-            .presentationBackground { SheetBackground() }
-        }
+            },
+            primary: primary,
+            secondary: secondary,
+            intrinsicHeight: fitsContent ? $fittedHeight : nil
+        )
+        .presentationDetents(resolvedDetents)
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(Radius.card)
+        .presentationBackground { SheetBackground() }
     }
 }
 

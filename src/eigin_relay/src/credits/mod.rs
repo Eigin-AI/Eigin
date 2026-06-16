@@ -6,6 +6,7 @@ pub mod grant;
 pub mod ledger;
 pub mod memory;
 pub mod postgres;
+pub mod products;
 pub mod redeem;
 pub mod token;
 

@@ -6,17 +6,26 @@ struct AppCard: View {
     let explainer: String
     let image: Image?
     let height: CGFloat
+    /// Card width. `nil` uses the size's fixed default; pass `.infinity` to fill the available
+    /// width.
+    let width: CGFloat?
     let action: (() -> Void)?
 
     @Environment(\.colors) private var colors
 
     /// Compact card — no image
-    init(_ headline: String, explainer: String, action: (() -> Void)? = nil) {
+    init(
+        _ headline: String,
+        explainer: String,
+        width: CGFloat? = nil,
+        action: (() -> Void)? = nil
+    ) {
         size = .compact
         self.headline = headline
         self.explainer = explainer
         height = 0
         image = nil
+        self.width = width
         self.action = action
     }
 
@@ -26,6 +35,7 @@ struct AppCard: View {
         explainer: String,
         size: AppCardSize,
         image: Image,
+        width: CGFloat? = nil,
         height: CGFloat? = nil,
         action: (() -> Void)? = nil
     ) {
@@ -33,6 +43,7 @@ struct AppCard: View {
         self.headline = headline
         self.explainer = explainer
         self.image = image
+        self.width = width
         self.action = action
         switch size {
         case .large: self.height = height ?? 330
@@ -98,7 +109,7 @@ struct AppCard: View {
             .padding(.top, Sizing.Card.Gap.imageText)
             .padding(.bottom, Sizing.Card.Py.bottom)
         }
-        .frame(width: 280, height: height, alignment: .top)
+        .modifier(CardWidth(width: width, default: 280, height: height, alignment: .top))
         .padding(.horizontal, Sizing.Card.Px.small)
         .padding(.top, Sizing.Card.Py.top)
         .background(colors.surface.standard.elevated)
@@ -136,7 +147,7 @@ struct AppCard: View {
                     .padding(.vertical, Sizing.Card.Px.small)
             }
         }
-        .frame(width: 350, height: height)
+        .modifier(CardWidth(width: width, default: 350, height: height, alignment: .center))
         .background(colors.surface.standard.elevated)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
     }
@@ -145,7 +156,7 @@ struct AppCard: View {
 
     private var compactBody: some View {
         textContent(headlineStyle: Typography.titleXS, gap: visualTextGapCompact)
-            .frame(width: 280, alignment: .leading)
+            .modifier(CardWidth(width: width, default: 280, height: nil, alignment: .leading))
             .padding(.top, Sizing.Card.Py.compact)
             .padding(.bottom, Sizing.Card.Py.compact)
             .padding(.leading, Sizing.Card.Gap.text + Sizing.Card.Px.small)
@@ -177,6 +188,26 @@ struct AppCard: View {
             Text(explainer)
                 .typography(Typography.description)
                 .foregroundStyle(colors.text.standard.base)
+        }
+    }
+}
+
+/// Sizes a card body to either its fixed default width or, when `width` is `.infinity`, the full
+/// available width. Padding placed after this modifier still insets correctly because it is
+/// subtracted from the proposed size before reaching the frame.
+private struct CardWidth: ViewModifier {
+    let width: CGFloat?
+    let `default`: CGFloat
+    let height: CGFloat?
+    let alignment: Alignment
+
+    func body(content: Content) -> some View {
+        if width == .infinity {
+            content
+                .frame(maxWidth: .infinity, alignment: alignment)
+                .frame(height: height)
+        } else {
+            content.frame(width: width ?? `default`, height: height, alignment: alignment)
         }
     }
 }
@@ -249,6 +280,11 @@ struct AppCard: View {
             AppCard(
                 "System update",
                 explainer: "Version 3.2 is now available with security fixes."
+            )
+            AppCard(
+                "Full width",
+                explainer: "Pass width: .infinity to fill the available width.",
+                width: .infinity
             )
         }
     }

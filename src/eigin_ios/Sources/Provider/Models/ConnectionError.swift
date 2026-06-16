@@ -2,17 +2,39 @@ import Foundation
 
 /// A user-friendly representation of an error encountered while connecting to a provider.
 struct ConnectionError: Equatable {
+    /// An in-place way for the user to resolve the error, surfaced as a primary action on the
+    /// error card.
+    enum Recovery: Equatable {
+        /// The Eigin relay has no spendable credits; offer to buy more.
+        case purchaseEiginRelayCredits
+    }
+
     let title: String
     let suggestion: String
     let rawDescription: String?
+    /// Set when the error has a direct in-app remedy (e.g. buying credits). `nil` otherwise.
+    var recovery: Recovery?
 
-    init(title: String, suggestion: String, rawDescription: String? = nil) {
+    init(
+        title: String,
+        suggestion: String,
+        rawDescription: String? = nil,
+        recovery: Recovery? = nil
+    ) {
         self.title = title
         self.suggestion = suggestion
         self.rawDescription = rawDescription
+        self.recovery = recovery
     }
 
     init(from error: Error) {
+        if let creditsError = error as? CreditsError, case .noCreditsRemaining = creditsError {
+            title = Localized.Provider.Eigin.outOfCreditsTitle
+            suggestion = Localized.Provider.Eigin.outOfCreditsBody
+            rawDescription = error.localizedDescription
+            recovery = .purchaseEiginRelayCredits
+            return
+        }
         if let localError = error as? LocalClientError {
             switch localError {
             case .deviceUnsupported(let detail):

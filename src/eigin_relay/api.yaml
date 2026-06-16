@@ -9,7 +9,7 @@ info:
     ## Auth
 
     - `EiginKey` - `x-eigin-key` header. Required on all routes except `/health`, `/docs`, and the Apple webhook.
-    - `BearerToken` - `Authorization: Bearer <token>`. Credit token from `POST /v1/credits/redeem`. Required on balance and inference routes, in addition to `EiginKey`.
+    - `BearerToken` - `Authorization: Bearer <token>`. Credit token from `POST /v1/credits/redeem`. Required on the balance and chat-completion routes, in addition to `EiginKey`. The product catalog and model list need only `EiginKey`.
 
     ## Errors
 
@@ -138,6 +138,29 @@ components:
           example: 342
         status:
           $ref: "#/components/schemas/WalletStatus"
+
+    ProductsResponse:
+      type: object
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductInfo"
+
+    ProductInfo:
+      type: object
+      required: [id, credits]
+      properties:
+        id:
+          type: string
+          description: |
+            Store product ID. Resolved against the store (StoreKit/Play) for live price and display name.
+          example: "eigin.credits.v1.apple.500"
+        credits:
+          type: integer
+          description: Whole credits granted on redemption (1 credit ≈ €0.01).
+          example: 500
 
     ModelsListResponse:
       type: object
@@ -299,6 +322,30 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /v1/credits/products:
+    get:
+      operationId: listCreditProducts
+      summary: List credit products
+      description: |
+        Catalog of purchasable credit products and the credits each grants. Fetched before any wallet exists, so no bearer token is required. The client resolves each `id` against the store (StoreKit/Play) for live price and display name.
+      tags: [Credits]
+      security:
+        - EiginKey: []
+      responses:
+        "200":
+          description: Available products.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductsResponse" }
+              example:
+                products:
+                  - { id: "eigin.credits.v1.apple.500", credits: 500 }
+        "401":
+          description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /v1/credits/redeem:
     post:
       operationId: redeemCredits
@@ -382,11 +429,10 @@ paths:
     get:
       operationId: listModels
       summary: List available models
-      description: Accepted regardless of balance.
+      description: Public model catalog. Needs only the relay key, not a wallet or balance.
       tags: [Inference]
       security:
         - EiginKey: []
-          BearerToken: []
       responses:
         "200":
           description: Available models.
@@ -402,7 +448,7 @@ paths:
                       owned_by: "eigin",
                     }
         "401":
-          description: Invalid or unknown token.
+          description: "Invalid `x-eigin-key`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }

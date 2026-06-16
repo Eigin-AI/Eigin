@@ -299,6 +299,15 @@ fn build_router(state: Arc<AppState>) -> Router {
             "/v1/credits/redeem",
             post(eigin_relay::credits::redeem::handle),
         )
+        .route(
+            "/v1/credits/products",
+            get(eigin_relay::credits::products::handle),
+        )
+        // The model catalog is static and free to read, so it needs no wallet — only the relay key.
+        .route(
+            "/v1/models",
+            get(eigin_relay::inference::catalog::handle_list),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             require_eigin_key,
@@ -309,10 +318,6 @@ fn build_router(state: Arc<AppState>) -> Router {
         .route(
             "/v1/credits/balance",
             get(eigin_relay::credits::balance::handle),
-        )
-        .route(
-            "/v1/models",
-            get(eigin_relay::inference::catalog::handle_list),
         )
         .route(
             "/v1/chat/completions",

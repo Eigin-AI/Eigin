@@ -75,7 +75,23 @@ struct ProviderPreset: Identifiable, Hashable {
         baseURL.hasPrefix("local://")
     }
 
+    /// Whether this provider routes inference through the Eigin relay (authorized by credits, not a
+    /// keychain API key).
+    static func isRelay(_ baseURL: String) -> Bool {
+        baseURL.hasPrefix("eigin-relay://")
+    }
+
     static let all: [ProviderPreset] = [
+        ProviderPreset(
+            id: "eigin",
+            name: "Eigin",
+            baseURL: "eigin-relay://",
+            helpText: Localized.Provider.Eigin.rowSubtitle,
+            apiKeyURL: nil,
+            systemImage: "sparkles",
+            authMethod: .none,
+            region: .europe
+        ),
         ProviderPreset(
             id: "local",
             name: Localized.Provider.onDevice,

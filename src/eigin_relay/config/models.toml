@@ -15,3 +15,21 @@ id = "mistralai/Mistral-Medium-3.5-128B"
 input_millicredits_per_1m_tokens = 150_000
 cached_input_millicredits_per_1m_tokens = 0
 output_millicredits_per_1m_tokens = 500_000
+
+[[models]]
+id = "moonshotai/Kimi-K2.6"
+input_millicredits_per_1m_tokens = 75_000
+cached_input_millicredits_per_1m_tokens = 0
+output_millicredits_per_1m_tokens = 350_000
+
+[[models]]
+id = "zai-org/GLM-4.7-FP8"
+input_millicredits_per_1m_tokens = 70_000
+cached_input_millicredits_per_1m_tokens = 0
+output_millicredits_per_1m_tokens = 250_000
+
+[[models]]
+id = "google/gemma-4-31B-it"
+input_millicredits_per_1m_tokens = 25_000
+cached_input_millicredits_per_1m_tokens = 0
+output_millicredits_per_1m_tokens = 50_000

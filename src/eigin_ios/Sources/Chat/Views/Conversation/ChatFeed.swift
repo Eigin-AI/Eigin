@@ -450,12 +450,17 @@ struct ChatFeed: View {
             }
             .padding(.horizontal, breakpoint.inner)
         case .error(_, let error):
-            AppCard(
-                error.title,
-                explainer: error.suggestion,
-                action: { selectedError = error }
-            )
-            .padding(.horizontal, breakpoint.inner)
+            if error.recovery == .purchaseEiginRelayCredits {
+                CreditsRecoveryCard(error: error)
+                    .padding(.horizontal, breakpoint.inner)
+            } else {
+                AppCard(
+                    error.title,
+                    explainer: error.suggestion,
+                    action: { selectedError = error }
+                )
+                .padding(.horizontal, breakpoint.inner)
+            }
         case .toolGroup(_, let tools):
             ToolGroupView(tools: tools)
                 .padding(.horizontal, breakpoint.inner)

@@ -17,6 +17,10 @@ struct PreviewKeychainService: KeychainService {
     func mcpKey(for serverID: UUID, suffix: String) -> String {
         "fake.mcp.\(serverID).\(suffix)"
     }
+
+    var creditWalletsKey: String {
+        "fake.credits.wallets"
+    }
 }
 
 /// A fake OAuth service for previews.
@@ -36,6 +40,71 @@ struct PreviewMCPOAuthService: MCPOAuthService {
     func clearTokens(for serverID: UUID) {}
 }
 
+/// A credit wallet manager for previews that holds one sample wallet and never hits the relay.
+struct PreviewCreditWalletManager: CreditWalletManager {
+    func wallets() -> [CreditWallet] {
+        [
+            CreditWallet(
+                token: "eict_preview",
+                credits: 1240,
+                status: .active,
+                productID: nil,
+                updatedAt: Date()
+            ),
+        ]
+    }
+
+    func add(_ wallet: CreditWallet) {}
+    func spendableWallet() -> CreditWallet? {
+        wallets().first
+    }
+
+    func evictEmpty() {}
+    func refreshBalances() async {}
+
+    func withCredits<T: Sendable>(
+        _ operation: @Sendable (String) async throws -> T
+    ) async throws -> T {
+        try await operation("eict_preview")
+    }
+}
+
+/// A credits service for previews that vends a sample catalog without StoreKit or the relay.
+struct PreviewCreditsService: CreditsService {
+    func availableProducts() async throws -> [PurchasableCredit] {
+        [
+            PurchasableCredit(
+                id: "eigin.credits.v1.apple.500",
+                credits: 500,
+                displayName: "500 Credits",
+                displayPrice: "€5.49"
+            ),
+            PurchasableCredit(
+                id: "eigin.credits.v1.apple.1200",
+                credits: 1200,
+                displayName: "1,200 Credits",
+                displayPrice: "€12.99"
+            ),
+            PurchasableCredit(
+                id: "eigin.credits.v1.apple.3000",
+                credits: 3000,
+                displayName: "3,000 Credits",
+                displayPrice: "€29.99"
+            ),
+        ]
+    }
+
+    func purchaseCredits(productID: String) async throws -> CreditWallet {
+        CreditWallet(
+            token: "eict_preview",
+            credits: 500,
+            status: .active,
+            productID: productID,
+            updatedAt: Date()
+        )
+    }
+}
+
 /// View modifier that sets up a complete preview environment with fake services
 /// and a sample provider in an in-memory SwiftData store.
 struct PreviewEnvironment: ViewModifier {
@@ -53,6 +122,8 @@ struct PreviewEnvironment: ViewModifier {
                 oauthService: PreviewMCPOAuthService()
             )
         }
+        Container.shared.creditWalletManager.register { PreviewCreditWalletManager() }
+        Container.shared.creditsService.register { PreviewCreditsService() }
 
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(

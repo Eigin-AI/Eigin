@@ -154,6 +154,17 @@ struct DevelopmentMenu: View {
                 }
             }
 
+            Section("Credits") {
+                NavigationLink {
+                    CreditsDebug()
+                } label: {
+                    HStack(spacing: Spacing.n8) {
+                        SettingsIcon(systemName: "creditcard", color: .green)
+                        Text("Credits")
+                    }
+                }
+            }
+
             Section("Firm FFI") {
                 Button {
                     firmResult = runFirmSanityCheck()

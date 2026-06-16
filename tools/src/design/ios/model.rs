@@ -30,6 +30,7 @@ pub const SPACING_FIELDS: &[&str] = &[
 /// to caption text. When adding a token to design/tokens.json, add the key
 /// here too.
 pub const TYPOGRAPHY_FIELDS: &[&str] = &[
+    "display",
     "titleXl",
     "titleL",
     "titleM",
