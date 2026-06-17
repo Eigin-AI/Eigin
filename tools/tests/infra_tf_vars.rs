@@ -62,16 +62,18 @@ fn looks_up_env_suffixed_key() {
     let path = dir.path().join(".env");
     fs::write(
         &path,
-        "export EIGIN_RELAY_KEY_STAGING=stg-key\nexport EIGIN_RELAY_KEY_PRODUCTION=prod-key\n",
+        "export EIGIN_RELAY_PRIMARY_KEY_STAGING=stg-key\nexport EIGIN_RELAY_PRIMARY_KEY_PRODUCTION=prod-key\n",
     )
     .unwrap();
     let map = parse_dot_env(path.to_str().unwrap());
     assert_eq!(
-        map.get("EIGIN_RELAY_KEY_STAGING").map(String::as_str),
+        map.get("EIGIN_RELAY_PRIMARY_KEY_STAGING")
+            .map(String::as_str),
         Some("stg-key")
     );
     assert_eq!(
-        map.get("EIGIN_RELAY_KEY_PRODUCTION").map(String::as_str),
+        map.get("EIGIN_RELAY_PRIMARY_KEY_PRODUCTION")
+            .map(String::as_str),
         Some("prod-key")
     );
 }
@@ -85,7 +87,7 @@ fn missing_file_returns_empty_map() {
 // --- CLI integration test ---
 
 #[test]
-fn tf_vars_prints_four_export_lines() {
+fn tf_vars_prints_all_export_lines() {
     let dir = TempDir::new().unwrap();
     let env_file = dir.path().join(".env");
     fs::write(
@@ -109,5 +111,6 @@ fn tf_vars_prints_four_export_lines() {
     assert!(stdout.contains("export TF_VAR_image_tag="));
     assert!(stdout.contains("export TF_VAR_mojeek_api_key="));
     assert!(stdout.contains("export TF_VAR_upstream_api_key="));
-    assert_eq!(stdout.lines().count(), 4);
+    assert!(stdout.contains("export TF_VAR_eigin_relay_secondary_key="));
+    assert_eq!(stdout.lines().count(), 5);
 }

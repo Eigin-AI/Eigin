@@ -12,7 +12,7 @@ src/
   main.rs         — server setup, env config, router
   lib.rs          — public API
   auth/           — authentication and request identity
-    key.rs        — EIGIN_RELAY_KEY middleware
+    key.rs        — x-eigin-key middleware (accepts primary + optional secondary key)
     bearer.rs     — Bearer-token extractor (credit token → wallet lookup)
   rate_limit.rs   — sliding window rate limiter, generic over key type (IpAddr or Uuid)
   state.rs        — shared AppState (Arc)
@@ -67,7 +67,8 @@ All configuration is via environment variables:
 | Variable | Default | Description |
 |---|---|---|
 | `MOJEEK_API_KEY` | required | Upstream search API key |
-| `EIGIN_RELAY_KEY` | required | Shared auth key expected from Eigin clients |
+| `EIGIN_RELAY_PRIMARY_KEY` | required | Shared auth key expected from Eigin clients (the key the app bakes in) |
+| `EIGIN_RELAY_SECONDARY_KEY` | — | Optional second accepted key. Holds the previous key during a rotation so already-shipped app builds keep working; clear it once they retire. |
 | `SEARCH_API_URL` | `https://api.mojeek.com` | Upstream search base URL |
 | `RATE_LIMIT_REQUESTS` | `10` | Max requests per window per IP |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window duration |
@@ -119,7 +120,7 @@ file so a deploy picks up changes automatically.
 
 - **Shared state**: `AppState` is wrapped in `Arc` and passed to all handlers via Axum's `.with_state()`
 - **Quota pool**: The monthly search quota is tracked in `Pool` and persisted via a `PoolBackend`. In production this is S3 with ETag-based optimistic locking; locally it can be a file or in-memory.
-- **Auth**: All routes except `/health` require the `EIGIN_RELAY_KEY` header, enforced via Tower middleware
+- **Auth**: All routes except `/health` require a valid `x-eigin-key` header (matching the configured primary or secondary key), enforced via Tower middleware
 - **Tests**: Integration tests mock the upstream search API with `httpmock`; quota tests use `InMemoryQuota` (Postgres quota tests are `#[ignore]`, gated on `DATABASE_URL`) — no env var mutation
 
 ## Deployment

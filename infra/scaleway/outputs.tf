@@ -19,8 +19,8 @@ output "grant_private_key_pem" {
   sensitive   = true
 }
 
-output "eigin_relay_key" {
-  description = "Generated x-eigin-key for this environment; configure clients with it"
-  value       = module.relay.eigin_relay_key
+output "eigin_relay_primary_key" {
+  description = "Generated primary x-eigin-key for this environment; configure clients with it"
+  value       = module.relay.eigin_relay_primary_key
   sensitive   = true
 }

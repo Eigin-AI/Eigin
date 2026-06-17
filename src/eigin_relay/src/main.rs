@@ -26,7 +26,6 @@ use sqlx::PgPool;
 struct SearchConfig {
     client: Arc<dyn eigin_relay::search::SearchClient>,
     mojeek_api_key: String,
-    eigin_relay_key: String,
     pool_max: u64,
     window: Duration,
     rate_limiter: RateLimiter,
@@ -68,6 +67,7 @@ async fn main() {
     // One database pool, shared by the ledger and the quota (or none in dev).
     let db_pool = configure_database().await;
 
+    let eigin_relay_keys = configure_relay_keys();
     let search = configure_search().await;
     let credits = configure_credits(db_pool.clone()).await;
     let quota = configure_quota(db_pool.clone());
@@ -76,7 +76,7 @@ async fn main() {
     let state = Arc::new(AppState {
         search_client: search.client,
         mojeek_api_key: search.mojeek_api_key,
-        eigin_relay_key: search.eigin_relay_key,
+        eigin_relay_keys,
         ip_rate_limiter: search.rate_limiter,
         search_pool_max: search.pool_max,
         search_window: search.window,
@@ -111,9 +111,23 @@ async fn main() {
 
 // ── Configuration helpers ─────────────────────────────────────────────────────
 
+/// The keys this relay accepts on the `x-eigin-key` gate (all routes, not just search).
+///
+/// A required generated primary, plus an optional supplied secondary that holds the
+/// previous key during a rotation so already-shipped app builds keep working.
+fn configure_relay_keys() -> Vec<String> {
+    let primary = env::var("EIGIN_RELAY_PRIMARY_KEY").expect("EIGIN_RELAY_PRIMARY_KEY must be set");
+    std::iter::once(primary)
+        .chain(
+            env::var("EIGIN_RELAY_SECONDARY_KEY")
+                .ok()
+                .filter(|v| !v.trim().is_empty()),
+        )
+        .collect()
+}
+
 async fn configure_search() -> SearchConfig {
     let mojeek_api_key = env::var("MOJEEK_API_KEY").expect("MOJEEK_API_KEY must be set");
-    let eigin_relay_key = env::var("EIGIN_RELAY_KEY").expect("EIGIN_RELAY_KEY must be set");
     let search_api_url =
         env::var("SEARCH_API_URL").unwrap_or_else(|_| "https://api.mojeek.com".to_string());
     let rate_limit_requests: u32 = env::var("RATE_LIMIT_REQUESTS")
@@ -142,7 +156,6 @@ async fn configure_search() -> SearchConfig {
     SearchConfig {
         client,
         mojeek_api_key,
-        eigin_relay_key,
         pool_max: pool_size,
         window: Duration::from_secs(window_days * 24 * 60 * 60),
         rate_limiter,

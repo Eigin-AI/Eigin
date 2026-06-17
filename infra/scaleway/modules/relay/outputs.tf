@@ -14,8 +14,8 @@ output "grant_private_key_pem" {
   sensitive   = true
 }
 
-output "eigin_relay_key" {
-  description = "Generated x-eigin-key for this environment; configure clients with it"
+output "eigin_relay_primary_key" {
+  description = "Generated primary x-eigin-key for this environment; configure clients with it"
   value       = random_password.eigin_relay_key.result
   sensitive   = true
 }

@@ -23,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>EiginRelayKey</key>
-	<string>$(EIGIN_RELAY_KEY)</string>
+	<string>$(EIGIN_RELAY_PRIMARY_KEY)</string>
 	<key>EiginRelayURL</key>
 	<string>$(EIGIN_RELAY_URL)</string>
 	<key>EiginSupportEmail</key>

@@ -30,7 +30,7 @@ pub async fn require_eigin_key(
         .and_then(|v| v.to_str().ok());
 
     match provided {
-        Some(key) if key == state.eigin_relay_key => Ok(next.run(request).await),
+        Some(key) if state.eigin_relay_keys.iter().any(|k| k == key) => Ok(next.run(request).await),
         _ => Err(AppError::Unauthorized),
     }
 }

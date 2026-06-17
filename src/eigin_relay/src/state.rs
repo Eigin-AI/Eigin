@@ -19,8 +19,11 @@ pub struct AppState {
     pub search_client: Arc<dyn SearchClient>,
     /// API key for the upstream search service (e.g., Mojeek).
     pub mojeek_api_key: String,
-    /// Authentication key for this relay instance (shared client gate).
-    pub eigin_relay_key: String,
+    /// Authentication keys this relay accepts (shared client gate). Normally the
+    /// generated primary key; during a key rotation it also holds the previous
+    /// (secondary) key so in-flight app builds keep working. A request is admitted
+    /// if its `x-eigin-key` matches any of these.
+    pub eigin_relay_keys: Vec<String>,
     /// Per-IP rate limiter (search + inference backstop).
     pub ip_rate_limiter: crate::RateLimiter,
     /// Max searches the community pool allows within `search_window`.
