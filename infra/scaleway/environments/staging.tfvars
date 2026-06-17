@@ -9,9 +9,11 @@ max_scale = 1
 monthly_pool_size = 1000
 
 # Relay: IAP config
-apple_environment  = "Sandbox"
-apple_bundle_id    = "com.42futures.carrel.dev"
-apple_app_apple_id = ""
+# Staging is the internal dev app; all purchases are Sandbox.
+apple_environments            = ["Sandbox"]
+apple_bundle_id               = "com.42futures.carrel.dev"
+apple_app_apple_id            = ""
+sandbox_monthly_credit_budget = 5000
 
 # Relay: Inference config
 upstream_api_url                = "https://api.berget.ai/v1"

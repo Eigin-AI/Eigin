@@ -23,6 +23,7 @@ info:
     | `invalid_request_error` | 400 |
     | `insufficient_credits` | 402 |
     | `rate_limit_error` | 429 |
+    | `sandbox_budget_exhausted` | 429 |
     | `service_unavailable` | 503 |
     | `upstream_error` | 502 |
     | `internal_error` | 500 |
@@ -400,6 +401,11 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422":
           description: Proof verification failed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Sandbox credit-issuance budget exhausted for the current period (`sandbox_budget_exhausted`). Applies only to new Sandbox (TestFlight/App Review) purchases.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }

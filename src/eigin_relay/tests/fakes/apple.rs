@@ -1,6 +1,6 @@
 use eigin_relay::AppError;
 use eigin_relay::credits::apple::{
-    AppleVerifier, NotificationType, VerifiedNotification, VerifiedTransaction,
+    AppleEnvironment, AppleVerifier, NotificationType, VerifiedNotification, VerifiedTransaction,
 };
 
 /// Configurable fake Apple verifier for integration tests.
@@ -11,15 +11,29 @@ pub struct FakeVerifier {
 
 impl FakeVerifier {
     pub fn with_transaction(original_transaction_id: &str, product_id: &str) -> Self {
+        Self::with_transaction_env(
+            original_transaction_id,
+            product_id,
+            AppleEnvironment::Production,
+        )
+    }
+
+    pub fn with_transaction_env(
+        original_transaction_id: &str,
+        product_id: &str,
+        environment: AppleEnvironment,
+    ) -> Self {
         Self {
             transaction_result: Ok(VerifiedTransaction {
                 original_transaction_id: original_transaction_id.to_owned(),
                 product_id: product_id.to_owned(),
+                environment,
             }),
             notification_result: Ok(VerifiedNotification {
                 notification_uuid: "test-uuid".to_owned(),
                 notification_type: NotificationType::Other("INITIAL_BUY".into()),
                 original_transaction_id: None,
+                environment,
             }),
         }
     }
@@ -28,12 +42,25 @@ impl FakeVerifier {
         original_transaction_id: &str,
         notification_uuid: &str,
     ) -> Self {
+        Self::with_refund_notification_env(
+            original_transaction_id,
+            notification_uuid,
+            AppleEnvironment::Production,
+        )
+    }
+
+    pub fn with_refund_notification_env(
+        original_transaction_id: &str,
+        notification_uuid: &str,
+        environment: AppleEnvironment,
+    ) -> Self {
         Self {
             transaction_result: Err("no transaction in refund verifier".into()),
             notification_result: Ok(VerifiedNotification {
                 notification_uuid: notification_uuid.to_owned(),
                 notification_type: NotificationType::Refund,
                 original_transaction_id: Some(original_transaction_id.to_owned()),
+                environment,
             }),
         }
     }

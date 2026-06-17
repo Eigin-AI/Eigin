@@ -18,20 +18,20 @@ src/
   state.rs        — shared AppState (Arc)
   health.rs       — health check handler
   error.rs        — AppError type (OpenAI-compatible JSON error body)
-  search/         — search proxy (client, handler, pool, connection pool)
-    pool/
-      backend.rs  — PoolBackend trait, PoolState, BackendError
-      file.rs     — local file backend (dev / single-instance)
-      s3.rs       — S3-compatible backend with SigV4 signing + ETag optimistic locking
-      state.rs    — Pool, PoolConfig, PoolConfig::from_env()
+  search/         — search proxy (client, handler)
+  quota/          — shared rolling-window flow cap (search pool + sandbox budget)
+    mod.rs        — Quota trait + QuotaError
+    bucket.rs     — day-bucket window math
+    memory.rs     — InMemoryQuota (tests / dev)
+    postgres.rs   — PostgresQuota (per-key daily buckets, advisory-locked upsert)
   credits/        — credit system (tokens, ledger, Apple verification, HTTP handlers)
     mod.rs        — public exports
     token.rs      — token generation (eict_ prefix), SHA-256 hashing, AEAD at-rest encryption
     ledger.rs     — CreditLedger trait + types (Wallet, WalletOrigin, WalletStatus)
     memory.rs     — InMemoryLedger (tests / dev)
-    postgres.rs   — PostgresLedger (sqlx, runs migrations on startup)
-    apple.rs      — AppleVerifier trait + AppStoreVerifier (app-store-server-library) + fake module
-    redeem.rs     — POST /credits/redeem (purchase + idempotent restore)
+    postgres.rs   — PostgresLedger + connect_and_migrate (sqlx, shared pool)
+    apple/        — AppleVerifier trait, AppStoreVerifier + MultiEnvironmentVerifier, webhook
+    redeem.rs     — POST /credits/redeem (purchase + idempotent restore, sandbox budget gate)
     balance.rs    — GET /credits/balance
     webhook.rs    — POST /webhooks/apple/appstore (App Store Server Notifications V2)
   inference/      — OpenAI-compatible inference proxy with credit metering
@@ -44,6 +44,7 @@ src/
 migrations/
   0001_create_wallets.sql
   0002_create_processed_notifications.sql
+  0003_create_quota_buckets.sql
 config/
   models.toml     — curated model catalog + credit rates (TODO: pin to provider)
   products.toml   — IAP product credit tiers (TODO: pin to App Store products before launch)
@@ -70,16 +71,11 @@ All configuration is via environment variables:
 | `SEARCH_API_URL` | `https://api.mojeek.com` | Upstream search base URL |
 | `RATE_LIMIT_REQUESTS` | `10` | Max requests per window per IP |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window duration |
-| `MONTHLY_POOL_SIZE` | `5000` | Monthly quota cap |
-| `POOL_FILE_PATH` | — | Path to a local JSON file for pool state (single-instance only) |
-| `POOL_BUCKET` | — | S3 bucket name for pool state (takes precedence over `POOL_FILE_PATH`) |
-| `POOL_OBJECT_KEY` | `pool.json` | Object key within the S3 bucket |
-| `S3_ENDPOINT` | required if `POOL_BUCKET` set | S3-compatible endpoint URL |
-| `S3_ACCESS_KEY` | required if `POOL_BUCKET` set | S3 access key |
-| `S3_SECRET_KEY` | required if `POOL_BUCKET` set | S3 secret key |
+| `MONTHLY_POOL_SIZE` | `5000` | Max searches the community pool allows per rolling window |
+| `SEARCH_POOL_WINDOW_DAYS` | `30` | Trailing window over which the search pool is measured |
 | `PORT` | `8080` | Listen port |
 
-If neither `POOL_BUCKET` nor `POOL_FILE_PATH` is set, the pool runs in-memory (resets on restart).
+The search pool is backed by the shared rolling-window quota in Postgres (see Credits and inference). When `DATABASE_URL` is unset, the quota runs in-memory (resets on restart, dev only).
 
 ### Credits and inference
 
@@ -90,8 +86,10 @@ If neither `POOL_BUCKET` nor `POOL_FILE_PATH` is set, the pool runs in-memory (r
 | `UPSTREAM_API_URL` | — | Base URL of the upstream inference provider. If unset, inference routes return 503. |
 | `UPSTREAM_API_KEY` | — | API key for the upstream inference provider. |
 | `APPLE_BUNDLE_ID` | — | App bundle ID, e.g. `ai.eigin.app`. |
-| `APPLE_ENVIRONMENT` | `Sandbox` | `Sandbox` (staging) or `Production`. |
+| `APPLE_ENVIRONMENTS` | `Sandbox` | Comma-separated environments to accept, e.g. `Sandbox` (staging) or `Production,Sandbox` (production accepts TestFlight/App-Review sandbox purchases). Terraform models this as a `list(string)` and joins it for this var. |
 | `APPLE_APP_APPLE_ID` | — | Numeric App Store app ID. Required in Production. |
+| `SANDBOX_MONTHLY_CREDIT_BUDGET` | `25000` | Max credits issued to Sandbox purchases per rolling window. Bounds free-credit abuse cost. |
+| `SANDBOX_BUDGET_WINDOW_DAYS` | `30` | Trailing window over which the sandbox issuance budget is measured. |
 | `MODELS_CONFIG_PATH` | `config/models.toml` | Path to the model catalog TOML. |
 | `PRODUCTS_CONFIG_PATH` | `config/products.toml` | Path to the IAP product credit tiers TOML. |
 | `ADMIT_FLOOR_CREDITS` | `50` | Minimum credits required to admit an inference request (≈ €0.50). |
@@ -122,7 +120,7 @@ file so a deploy picks up changes automatically.
 - **Shared state**: `AppState` is wrapped in `Arc` and passed to all handlers via Axum's `.with_state()`
 - **Quota pool**: The monthly search quota is tracked in `Pool` and persisted via a `PoolBackend`. In production this is S3 with ETag-based optimistic locking; locally it can be a file or in-memory.
 - **Auth**: All routes except `/health` require the `EIGIN_RELAY_KEY` header, enforced via Tower middleware
-- **Tests**: Integration tests mock the upstream search API with `httpmock`; pool tests use `PoolConfig::LocalFile(tempdir)` directly — no env var mutation
+- **Tests**: Integration tests mock the upstream search API with `httpmock`; quota tests use `InMemoryQuota` (Postgres quota tests are `#[ignore]`, gated on `DATABASE_URL`) — no env var mutation
 
 ## Deployment
 

@@ -2,13 +2,15 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::credits::CreditLedger;
 use crate::credits::apple::AppleVerifier;
 use crate::credits::grant::GrantVerifier;
 use crate::inference::catalog::ModelConfig;
 use crate::inference::upstream::UpstreamClient;
-use crate::search::{Pool, SearchClient};
+use crate::quota::Quota;
+use crate::search::SearchClient;
 
 /// Application state shared across all requests.
 pub struct AppState {
@@ -19,10 +21,16 @@ pub struct AppState {
     pub mojeek_api_key: String,
     /// Authentication key for this relay instance (shared client gate).
     pub eigin_relay_key: String,
-    /// Monthly quota pool tracking remaining searches.
-    pub pool: Pool,
     /// Per-IP rate limiter (search + inference backstop).
     pub ip_rate_limiter: crate::RateLimiter,
+    /// Max searches the community pool allows within `search_window`.
+    pub search_pool_max: u64,
+    /// Trailing window over which the search community pool is measured.
+    pub search_window: Duration,
+
+    // --- Quota ---
+    /// Rolling-window usage quota backing the search pool and sandbox budget.
+    pub quota: Arc<dyn Quota>,
 
     // --- Credits ---
     /// The credit ledger. `InMemoryLedger` in dev/tests, `PostgresLedger` in production.
@@ -36,6 +44,11 @@ pub struct AppState {
     pub product_credits: HashMap<String, i64>,
     /// 32-byte AEAD key for encrypting tokens at rest.
     pub token_encryption_key: [u8; 32],
+    /// Max sandbox credits this relay will issue within `sandbox_budget_window`.
+    /// Bounds the cost of free TestFlight/App-Review (Sandbox) purchases.
+    pub sandbox_budget_credits: u64,
+    /// Trailing window over which the sandbox issuance budget is measured.
+    pub sandbox_budget_window: Duration,
 
     // --- Inference ---
     /// Upstream inference client.

@@ -18,7 +18,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 
-use super::NotificationType;
+use super::{AppleEnvironment, NotificationType};
 use crate::AppState;
 use crate::credits::ledger::{WalletOrigin, WalletStatus};
 use crate::credits::token;
@@ -66,6 +66,7 @@ pub async fn handle(
                 &state,
                 &notification.notification_uuid,
                 notification.original_transaction_id,
+                notification.environment,
             )
             .await;
         }
@@ -83,6 +84,7 @@ async fn close_wallet_for_refund(
     state: &AppState,
     notification_uuid: &str,
     original_transaction_id: Option<String>,
+    environment: AppleEnvironment,
 ) {
     let Some(original_tx_id) = original_transaction_id else {
         tracing::warn!(
@@ -93,7 +95,12 @@ async fn close_wallet_for_refund(
     };
 
     let fingerprint = token::hash(&original_tx_id);
-    let origin = WalletOrigin::AppleAppStore;
+    // Scope the lookup to the same environment the wallet was minted under, so a
+    // sandbox refund closes the sandbox wallet and not a production one.
+    let origin = match environment {
+        AppleEnvironment::Production => WalletOrigin::AppleAppStore,
+        AppleEnvironment::Sandbox => WalletOrigin::AppleAppStoreSandbox,
+    };
 
     match state
         .ledger

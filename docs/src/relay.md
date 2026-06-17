@@ -6,7 +6,7 @@ Using the relay is anonymous. There are no user accounts.
 
 ## Search
 
-When the agent searches the web, the query goes to the relay, which forwards it to [Mojeek](https://www.mojeek.com), a privacy-respecting independent search engine, and returns the results. Search draws from a shared monthly pool; if it is exhausted, the app falls back to on-device search.
+When the agent searches the web, the query goes to the relay, which forwards it to [Mojeek](https://www.mojeek.com), a privacy-respecting independent search engine, and returns the results. Search draws from a shared usage pool; if it is exhausted, the app falls back to on-device search.
 
 ## Inference
 

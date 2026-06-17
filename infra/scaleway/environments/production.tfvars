@@ -9,9 +9,12 @@ max_scale = 3
 monthly_pool_size = 5000
 
 # Relay: IAP config
-apple_environment  = "Production"
-apple_bundle_id    = "com.42futures.carrel"
-apple_app_apple_id = ""
+# Production accepts Sandbox too: TestFlight and App Review of the production app
+# always operate in Sandbox. Free Sandbox issuance is bounded by the budget below.
+apple_environments            = ["Production", "Sandbox"]
+apple_bundle_id               = "com.42futures.carrel"
+apple_app_apple_id            = ""
+sandbox_monthly_credit_budget = 25000
 
 # Relay: Inference config
 upstream_api_url                = "https://api.berget.ai/v1"

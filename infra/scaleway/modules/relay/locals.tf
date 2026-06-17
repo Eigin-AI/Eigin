@@ -10,6 +10,5 @@ locals {
     filesha1("${var.relay_src_dir}/Cargo.toml"),
     filesha1("${var.relay_src_dir}/api.yaml"),
   ])), 0, 16)
-  image_ref   = "${local.image_name}:${local.image_tag}"
-  s3_endpoint = "https://s3.${var.scw_region}.scw.cloud"
+  image_ref = "${local.image_name}:${local.image_tag}"
 }

@@ -64,16 +64,27 @@ variable "apple_bundle_id" {
   default     = ""
 }
 
-variable "apple_environment" {
-  description = "Apple StoreKit environment: Sandbox or Production"
-  type        = string
-  default     = "Sandbox"
+variable "apple_environments" {
+  description = "Apple StoreKit environments to accept, e.g. [\"Sandbox\"] or [\"Production\", \"Sandbox\"]"
+  type        = list(string)
+  default     = ["Sandbox"]
+
+  validation {
+    condition     = length(var.apple_environments) > 0 && alltrue([for e in var.apple_environments : contains(["Production", "Sandbox"], e)])
+    error_message = "apple_environments must be a non-empty list of \"Production\" and/or \"Sandbox\"."
+  }
 }
 
 variable "apple_app_apple_id" {
   description = "Numeric Apple app ID (required in Production)"
   type        = string
   default     = ""
+}
+
+variable "sandbox_monthly_credit_budget" {
+  description = "Max credits issued to Sandbox (TestFlight/App Review) purchases per rolling window. Bounds free-credit abuse cost."
+  type        = number
+  default     = 25000
 }
 
 variable "grant_issuer" {
