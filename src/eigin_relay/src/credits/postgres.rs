@@ -17,12 +17,26 @@ pub struct PostgresLedger {
     pool: PgPool,
 }
 
+/// Connect to the database and run any pending migrations, returning the pool.
+///
+/// The pool is shared across components that talk to the same database (the
+/// ledger and the quota), so it is built once here and handed to each.
+pub async fn connect_and_migrate(database_url: &str) -> Result<PgPool, sqlx::Error> {
+    let pool = PgPool::connect(database_url).await?;
+    sqlx::migrate!("./migrations").run(&pool).await?;
+    Ok(pool)
+}
+
 impl PostgresLedger {
     /// Connect to the database and run any pending migrations.
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
-        let pool = PgPool::connect(database_url).await?;
-        sqlx::migrate!("./migrations").run(&pool).await?;
-        Ok(Self { pool })
+        let pool = connect_and_migrate(database_url).await?;
+        Ok(Self::from_pool(pool))
+    }
+
+    /// Build a ledger over an existing (already-migrated) pool.
+    pub fn from_pool(pool: PgPool) -> Self {
+        Self { pool }
     }
 }
 

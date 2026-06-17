@@ -13,8 +13,10 @@ use uuid::Uuid;
 /// independently issue IDs using the same scheme.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WalletOrigin {
-    /// Credits granted from an Apple App Store purchase
+    /// Credits granted from an Apple App Store purchase in the Production environment
     AppleAppStore,
+    /// Credits granted from an Apple Sandbox purchase (TestFlight / App Review).
+    AppleAppStoreSandbox,
     /// Credits granted directly by a trusted issuer (not via a store)
     Grant,
 }
@@ -23,6 +25,7 @@ impl WalletOrigin {
     pub fn as_str(&self) -> &'static str {
         match self {
             WalletOrigin::AppleAppStore => "apple_app_store",
+            WalletOrigin::AppleAppStoreSandbox => "apple_app_store_sandbox",
             WalletOrigin::Grant => "grant",
         }
     }
@@ -40,6 +43,7 @@ impl TryFrom<&str> for WalletOrigin {
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
             "apple_app_store" => Ok(WalletOrigin::AppleAppStore),
+            "apple_app_store_sandbox" => Ok(WalletOrigin::AppleAppStoreSandbox),
             "grant" => Ok(WalletOrigin::Grant),
             other => Err(LedgerError::Internal(format!(
                 "unknown wallet origin: {other}"

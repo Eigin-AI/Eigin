@@ -10,6 +10,9 @@ use serde::Deserialize;
 use crate::AppState;
 use crate::error::AppError;
 
+/// Quota key for the shared search community pool.
+const SEARCH_QUOTA_KEY: &str = "search";
+
 /// Query parameters for the search endpoint.
 #[derive(Deserialize)]
 pub struct SearchParams {
@@ -34,7 +37,20 @@ pub async fn handle(
     let ip = addr.ip();
 
     state.ip_rate_limiter.check(ip)?;
-    state.pool.try_consume().await?;
+    match state
+        .quota
+        .try_consume(
+            SEARCH_QUOTA_KEY,
+            1,
+            state.search_pool_max,
+            state.search_window,
+        )
+        .await
+    {
+        Ok(()) => {}
+        Err(crate::quota::QuotaError::Exhausted) => return Err(AppError::PoolExhausted),
+        Err(crate::quota::QuotaError::Internal(msg)) => return Err(AppError::Internal(msg)),
+    }
 
     let body = state
         .search_client

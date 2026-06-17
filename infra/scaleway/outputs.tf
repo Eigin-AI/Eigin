@@ -13,11 +13,6 @@ output "registry_endpoint" {
   value       = module.relay.registry_endpoint
 }
 
-output "pool_bucket" {
-  description = "S3 bucket name used for pool state"
-  value       = module.relay.pool_bucket
-}
-
 output "grant_private_key_pem" {
   description = "Ed25519 private key (PEM) for signing credit grants in this environment"
   value       = module.relay.grant_private_key_pem

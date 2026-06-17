@@ -176,11 +176,16 @@ run target env="staging":
             # Non-secret config comes from the environment's tfvars (single source of truth).
             tfvars="{{ infra_dir }}/environments/{{ env }}.tfvars"
             get_tfvar() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=[[:space:]]*"?([^"]*)"?.*/\1/'; }
+            # List-valued tfvars (e.g. ["Production", "Sandbox"]) flatten to the
+            # comma-separated string the relay parses: strip brackets/quotes/spaces.
+            get_tfvar_csv() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=//' | tr -d '[]" '; }
             export UPSTREAM_API_URL="$(get_tfvar upstream_api_url)"
             export APPLE_BUNDLE_ID="$(get_tfvar apple_bundle_id)"
             export APPLE_APP_APPLE_ID="$(get_tfvar apple_app_apple_id)"
-            apple_env="$(get_tfvar apple_environment)"
-            export APPLE_ENVIRONMENT="${apple_env:-Sandbox}"
+            apple_envs="$(get_tfvar_csv apple_environments)"
+            export APPLE_ENVIRONMENTS="${apple_envs:-Sandbox}"
+            sandbox_budget="$(get_tfvar sandbox_monthly_credit_budget)"
+            export SANDBOX_MONTHLY_CREDIT_BUDGET="${sandbox_budget:-25000}"
 
             grant_key_file="{{ relay_dir }}/config/grant/grant_public.pem"
             [ -f "$grant_key_file" ] && export GRANT_PUBLIC_KEY="$(cat "$grant_key_file")"

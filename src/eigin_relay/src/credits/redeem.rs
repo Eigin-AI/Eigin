@@ -21,9 +21,14 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
+use crate::credits::apple::AppleEnvironment;
 use crate::credits::ledger::{LedgerError, WalletOrigin};
 use crate::credits::token;
 use crate::error::AppError;
+use crate::quota::QuotaError;
+
+/// Quota key for the Apple Sandbox credit-issuance budget.
+const SANDBOX_QUOTA_KEY: &str = "apple_sandbox_credits";
 
 #[derive(Deserialize)]
 pub struct RedeemRequest {
@@ -103,8 +108,12 @@ pub async fn handle(
     let (origin, fingerprint, product_id) = match req.r#type.as_str() {
         "apple_iap" => {
             let tx = state.apple_verifier.verify_transaction(&req.proof)?;
+            let origin = match tx.environment {
+                AppleEnvironment::Production => WalletOrigin::AppleAppStore,
+                AppleEnvironment::Sandbox => WalletOrigin::AppleAppStoreSandbox,
+            };
             (
-                WalletOrigin::AppleAppStore,
+                origin,
                 token::hash(&tx.original_transaction_id),
                 tx.product_id,
             )
@@ -131,7 +140,33 @@ pub async fn handle(
         .copied()
         .ok_or_else(|| AppError::BadRequest(format!("unknown productId: {product_id}")))?;
 
-    // 3. Mint or restore.
+    // 3. Check quota for Apple Sandbox purchases.
+    if origin == WalletOrigin::AppleAppStoreSandbox
+        && state
+            .ledger
+            .find_by_fingerprint(&origin, &fingerprint)
+            .await
+            .map_err(|e| AppError::Internal(format!("ledger error: {e}")))?
+            .is_none()
+    {
+        let credits = (millicredits / 1000).max(0) as u64;
+        match state
+            .quota
+            .try_consume(
+                SANDBOX_QUOTA_KEY,
+                credits,
+                state.sandbox_budget_credits,
+                state.sandbox_budget_window,
+            )
+            .await
+        {
+            Ok(()) => {}
+            Err(QuotaError::Exhausted) => return Err(AppError::SandboxBudgetExhausted),
+            Err(QuotaError::Internal(msg)) => return Err(AppError::Internal(msg)),
+        }
+    }
+
+    // 4. Mint or restore.
     let (resolved_token, wallet) =
         mint_or_restore(&state, &origin, &fingerprint, &product_id, millicredits).await?;
 

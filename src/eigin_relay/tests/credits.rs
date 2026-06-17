@@ -59,13 +59,17 @@ async fn make_state(
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
         eigin_relay_key: "relay-key".into(),
-        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        search_pool_max: 1000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
         ledger: Arc::new(InMemoryLedger::default()),
         apple_verifier: Arc::new(verifier),
         grant_verifier: Arc::new(FakeGrantVerifier::failing()),
         product_credits,
         token_encryption_key: [0u8; 32],
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
         upstream_client: Arc::new(upstream),
         upstream_api_key: Some("test-key".into()),
         model_rates,
@@ -321,13 +325,17 @@ async fn make_state_with_ledger(
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
         eigin_relay_key: "relay-key".into(),
-        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        search_pool_max: 1000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
         ledger,
         apple_verifier: Arc::new(verifier),
         grant_verifier: Arc::new(FakeGrantVerifier::failing()),
         product_credits,
         token_encryption_key: [0u8; 32],
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
         upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
         upstream_api_key: Some("test-key".into()),
         model_rates,
@@ -348,13 +356,17 @@ async fn make_grant_state(
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
         eigin_relay_key: "relay-key".into(),
-        pool: eigin_relay::Pool::load(1000, eigin_relay::PoolConfig::InMemory).await,
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        search_pool_max: 1000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
         ledger,
         apple_verifier: Arc::new(FakeVerifier::failing()),
         grant_verifier: Arc::new(grant_verifier),
         product_credits,
         token_encryption_key: [0u8; 32],
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
         upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
         upstream_api_key: Some("test-key".into()),
         model_rates,
@@ -700,4 +712,230 @@ async fn chat_after_refund_returns_402() {
     // Attempting to chat with the refunded wallet must fail with 402.
     let status = chat(&app, &token, "test-model").await;
     assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+}
+
+// ── Sandbox issuance budget ─────────────────────────────────────────────────────
+
+use eigin_relay::Quota;
+use eigin_relay::credits::apple::AppleEnvironment;
+
+/// State sharing a ledger + quota across redeems, with a configurable sandbox budget.
+async fn make_sandbox_state(
+    verifier: FakeVerifier,
+    product_credits: HashMap<String, i64>,
+    ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
+    quota: Arc<dyn Quota>,
+    sandbox_budget_credits: u64,
+) -> Arc<AppState> {
+    Arc::new(AppState {
+        search_client: Arc::new(NoopSearch),
+        mojeek_api_key: String::new(),
+        eigin_relay_key: "relay-key".into(),
+        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        search_pool_max: 1000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota,
+        ledger,
+        apple_verifier: Arc::new(verifier),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits,
+        token_encryption_key: [0u8; 32],
+        sandbox_budget_credits,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
+        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
+        upstream_api_key: Some("test-key".into()),
+        model_rates: HashMap::new(),
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+    })
+}
+
+fn credits_500() -> HashMap<String, i64> {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    products
+}
+
+async fn redeem_status(app: &Router) -> StatusCode {
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/credits/redeem")
+        .header("x-eigin-key", "relay-key")
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(
+            serde_json::json!({ "type": "apple_iap", "proof": "fake-jws" }).to_string(),
+        ))
+        .unwrap();
+    app.clone().oneshot(req).await.unwrap().status()
+}
+
+#[tokio::test]
+async fn sandbox_redeems_until_budget_then_rejected() {
+    use eigin_relay::quota::InMemoryQuota;
+
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+    let quota: Arc<dyn Quota> = Arc::new(InMemoryQuota::default());
+
+    // Budget of 1000 credits admits exactly two 500-credit sandbox wallets.
+    for tx in ["sb-a", "sb-b"] {
+        let state = make_sandbox_state(
+            FakeVerifier::with_transaction_env(
+                tx,
+                "ai.eigin.credits.500",
+                AppleEnvironment::Sandbox,
+            ),
+            credits_500(),
+            Arc::clone(&ledger),
+            Arc::clone(&quota),
+            1000,
+        )
+        .await;
+        assert_eq!(redeem_status(&build_router(state)).await, StatusCode::OK);
+    }
+
+    // A third distinct sandbox purchase would exceed the budget.
+    let state = make_sandbox_state(
+        FakeVerifier::with_transaction_env(
+            "sb-c",
+            "ai.eigin.credits.500",
+            AppleEnvironment::Sandbox,
+        ),
+        credits_500(),
+        Arc::clone(&ledger),
+        Arc::clone(&quota),
+        1000,
+    )
+    .await;
+    assert_eq!(
+        redeem_status(&build_router(state)).await,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+}
+
+#[tokio::test]
+async fn sandbox_restore_does_not_consume_budget() {
+    use eigin_relay::quota::InMemoryQuota;
+
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+    let quota: Arc<dyn Quota> = Arc::new(InMemoryQuota::default());
+
+    // Budget of exactly one 500-credit wallet.
+    let mint = |tx: &'static str| {
+        let ledger = Arc::clone(&ledger);
+        let quota = Arc::clone(&quota);
+        async move {
+            let state = make_sandbox_state(
+                FakeVerifier::with_transaction_env(
+                    tx,
+                    "ai.eigin.credits.500",
+                    AppleEnvironment::Sandbox,
+                ),
+                credits_500(),
+                ledger,
+                quota,
+                500,
+            )
+            .await;
+            redeem_status(&build_router(state)).await
+        }
+    };
+
+    // First mint consumes the whole budget.
+    assert_eq!(mint("sb-restore").await, StatusCode::OK);
+    // Re-redeeming the SAME transaction restores without drawing budget again.
+    assert_eq!(mint("sb-restore").await, StatusCode::OK);
+    // A different transaction is now over budget.
+    assert_eq!(mint("sb-other").await, StatusCode::TOO_MANY_REQUESTS);
+}
+
+#[tokio::test]
+async fn sandbox_refund_closes_only_the_sandbox_wallet() {
+    use eigin_relay::quota::InMemoryQuota;
+
+    // Same originalTransactionId in both environments — they are distinct wallets.
+    let tx_id = "tx-shared-id";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+    let quota: Arc<dyn Quota> = Arc::new(InMemoryQuota::default());
+
+    // Mint a production wallet.
+    let prod_state = make_sandbox_state(
+        FakeVerifier::with_transaction_env(
+            tx_id,
+            "ai.eigin.credits.500",
+            AppleEnvironment::Production,
+        ),
+        credits_500(),
+        Arc::clone(&ledger),
+        Arc::clone(&quota),
+        25_000,
+    )
+    .await;
+    let prod_app = build_router(prod_state);
+    let prod_token = redeem(&prod_app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // Mint a sandbox wallet with the same transaction id.
+    let sb_state = make_sandbox_state(
+        FakeVerifier::with_transaction_env(
+            tx_id,
+            "ai.eigin.credits.500",
+            AppleEnvironment::Sandbox,
+        ),
+        credits_500(),
+        Arc::clone(&ledger),
+        Arc::clone(&quota),
+        25_000,
+    )
+    .await;
+    let sb_app = build_router(sb_state);
+    let sb_token = redeem(&sb_app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // A sandbox refund notification arrives.
+    let refund_state = make_sandbox_state(
+        FakeVerifier::with_refund_notification_env(tx_id, "notif-sb", AppleEnvironment::Sandbox),
+        credits_500(),
+        Arc::clone(&ledger),
+        Arc::clone(&quota),
+        25_000,
+    )
+    .await;
+    webhook_refund(&build_router(refund_state), tx_id, "notif-sb").await;
+
+    // Sandbox wallet is refunded; production wallet is untouched.
+    let (_, sb_bal) = balance(&sb_app, &sb_token).await;
+    assert_eq!(sb_bal["status"], "refunded");
+    let (_, prod_bal) = balance(&prod_app, &prod_token).await;
+    assert_eq!(prod_bal["status"], "active");
+}
+
+#[tokio::test]
+async fn production_redeem_is_never_budget_gated() {
+    use eigin_relay::quota::InMemoryQuota;
+
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+    let quota: Arc<dyn Quota> = Arc::new(InMemoryQuota::default());
+
+    // Budget of zero would block any sandbox redeem, but production is exempt.
+    for tx in ["prod-a", "prod-b", "prod-c"] {
+        let state = make_sandbox_state(
+            FakeVerifier::with_transaction_env(
+                tx,
+                "ai.eigin.credits.500",
+                AppleEnvironment::Production,
+            ),
+            credits_500(),
+            Arc::clone(&ledger),
+            Arc::clone(&quota),
+            0,
+        )
+        .await;
+        assert_eq!(redeem_status(&build_router(state)).await, StatusCode::OK);
+    }
 }

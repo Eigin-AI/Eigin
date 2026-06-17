@@ -22,6 +22,8 @@ pub enum AppError {
     RateLimited,
     /// Monthly search quota exhausted (429).
     PoolExhausted,
+    /// Sandbox credit-issuance budget exhausted for the current period (429).
+    SandboxBudgetExhausted,
     /// Upstream service unavailable or not configured (503).
     ServiceUnavailable(String),
     /// Upstream search service error (502).
@@ -39,6 +41,7 @@ impl std::fmt::Display for AppError {
             Self::InsufficientCredits => write!(f, "insufficient credits"),
             Self::RateLimited => write!(f, "rate limited"),
             Self::PoolExhausted => write!(f, "pool exhausted"),
+            Self::SandboxBudgetExhausted => write!(f, "sandbox budget exhausted"),
             Self::ServiceUnavailable(msg) => write!(f, "service unavailable: {msg}"),
             Self::Upstream(msg) => write!(f, "upstream error: {msg}"),
             Self::Internal(msg) => write!(f, "internal error: {msg}"),
@@ -76,6 +79,11 @@ impl IntoResponse for AppError {
                 StatusCode::TOO_MANY_REQUESTS,
                 "monthly search quota exhausted".into(),
                 "rate_limit_error",
+            ),
+            Self::SandboxBudgetExhausted => (
+                StatusCode::TOO_MANY_REQUESTS,
+                "sandbox credit budget exhausted — try again later".into(),
+                "sandbox_budget_exhausted",
             ),
             Self::ServiceUnavailable(msg) => {
                 (StatusCode::SERVICE_UNAVAILABLE, msg, "service_unavailable")
@@ -150,6 +158,14 @@ mod tests {
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         let json = extract_json(response).await;
         assert_eq!(json["error"]["message"], "monthly search quota exhausted");
+    }
+
+    #[tokio::test]
+    async fn sandbox_budget_exhausted_returns_429() {
+        let response = AppError::SandboxBudgetExhausted.into_response();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        let json = extract_json(response).await;
+        assert_eq!(json["error"]["type"], "sandbox_budget_exhausted");
     }
 
     #[tokio::test]

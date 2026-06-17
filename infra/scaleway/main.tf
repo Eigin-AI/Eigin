@@ -18,8 +18,9 @@ module "relay" {
   upstream_api_key                = var.upstream_api_key
   upstream_api_url                = var.upstream_api_url
   apple_bundle_id                 = var.apple_bundle_id
-  apple_environment               = var.apple_environment
+  apple_environments              = var.apple_environments
   apple_app_apple_id              = var.apple_app_apple_id
+  sandbox_monthly_credit_budget   = var.sandbox_monthly_credit_budget
   grant_issuer                    = var.grant_issuer
   admit_floor_credits             = var.admit_floor_credits
   token_rate_limit_requests       = var.token_rate_limit_requests

@@ -10,15 +10,16 @@ use axum::routing::{get, post};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
-use eigin_relay::credits::apple::{AppStoreVerifier, load_root_certs};
+use eigin_relay::credits::apple::{AppStoreVerifier, MultiEnvironmentVerifier, load_root_certs};
 use eigin_relay::credits::grant::{Ed25519GrantVerifier, GrantVerifier, RejectingGrantVerifier};
+use eigin_relay::credits::postgres::connect_and_migrate;
 use eigin_relay::credits::token::parse_encryption_key;
 use eigin_relay::credits::{CreditLedger, InMemoryLedger, PostgresLedger};
 use eigin_relay::inference::catalog::{ModelConfig, ModelsConfig, ProductsConfig};
 use eigin_relay::inference::upstream::{ReqwestUpstreamClient, UpstreamClient};
-use eigin_relay::{
-    AppState, Pool, PoolConfig, RateLimiter, create_client, health, require_eigin_key, search,
-};
+use eigin_relay::quota::{InMemoryQuota, PostgresQuota, Quota};
+use eigin_relay::{AppState, RateLimiter, create_client, health, require_eigin_key, search};
+use sqlx::PgPool;
 
 // ── Config structs ────────────────────────────────────────────────────────────
 
@@ -26,7 +27,8 @@ struct SearchConfig {
     client: Arc<dyn eigin_relay::search::SearchClient>,
     mojeek_api_key: String,
     eigin_relay_key: String,
-    pool: Pool,
+    pool_max: u64,
+    window: Duration,
     rate_limiter: RateLimiter,
 }
 
@@ -36,6 +38,8 @@ struct CreditsConfig {
     apple_verifier: Arc<dyn eigin_relay::credits::apple::AppleVerifier>,
     grant_verifier: Arc<dyn eigin_relay::credits::grant::GrantVerifier>,
     product_credits: HashMap<String, i64>,
+    sandbox_budget_credits: u64,
+    sandbox_budget_window: Duration,
 }
 
 struct InferenceConfig {
@@ -61,21 +65,29 @@ async fn main() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(8080);
 
+    // One database pool, shared by the ledger and the quota (or none in dev).
+    let db_pool = configure_database().await;
+
     let search = configure_search().await;
-    let credits = configure_credits().await;
+    let credits = configure_credits(db_pool.clone()).await;
+    let quota = configure_quota(db_pool.clone());
     let inference = configure_inference();
 
     let state = Arc::new(AppState {
         search_client: search.client,
         mojeek_api_key: search.mojeek_api_key,
         eigin_relay_key: search.eigin_relay_key,
-        pool: search.pool,
         ip_rate_limiter: search.rate_limiter,
+        search_pool_max: search.pool_max,
+        search_window: search.window,
+        quota,
         ledger: credits.ledger,
         apple_verifier: credits.apple_verifier,
         grant_verifier: credits.grant_verifier,
         product_credits: credits.product_credits,
         token_encryption_key: credits.token_encryption_key,
+        sandbox_budget_credits: credits.sandbox_budget_credits,
+        sandbox_budget_window: credits.sandbox_budget_window,
         upstream_client: inference.upstream_client,
         upstream_api_key: inference.upstream_api_key,
         model_rates: inference.model_rates,
@@ -116,10 +128,12 @@ async fn configure_search() -> SearchConfig {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(5000);
+    let window_days: u64 = env::var("SEARCH_POOL_WINDOW_DAYS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(30);
 
     let client = create_client(reqwest::Client::new(), &search_api_url);
-    let pool_config = PoolConfig::from_env().expect("failed to load pool configuration");
-    let pool = Pool::load(pool_size, pool_config).await;
     let rate_limiter = RateLimiter::new(
         rate_limit_requests,
         Duration::from_secs(rate_limit_window_secs),
@@ -129,25 +143,46 @@ async fn configure_search() -> SearchConfig {
         client,
         mojeek_api_key,
         eigin_relay_key,
-        pool,
+        pool_max: pool_size,
+        window: Duration::from_secs(window_days * 24 * 60 * 60),
         rate_limiter,
     }
 }
 
-async fn configure_credits() -> CreditsConfig {
-    let ledger: Arc<dyn CreditLedger> = match env::var("DATABASE_URL") {
-        Ok(url) => {
+/// Build the shared database pool (running migrations) if `DATABASE_URL` is set.
+/// Returns `None` in dev, where in-memory ledger and quota are used instead.
+async fn configure_database() -> Option<PgPool> {
+    match env::var("DATABASE_URL") {
+        Ok(url) if !url.trim().is_empty() => Some(
+            connect_and_migrate(&url)
+                .await
+                .expect("failed to connect to database"),
+        ),
+        _ => {
+            tracing::warn!("DATABASE_URL not set — using in-memory ledger and quota (dev only)");
+            None
+        }
+    }
+}
+
+/// Build the rolling-window quota over the shared pool, or in-memory in dev.
+fn configure_quota(db_pool: Option<PgPool>) -> Arc<dyn Quota> {
+    match db_pool {
+        Some(pool) => {
+            tracing::info!("using PostgresQuota");
+            Arc::new(PostgresQuota::from_pool(pool))
+        }
+        None => Arc::new(InMemoryQuota::default()),
+    }
+}
+
+async fn configure_credits(db_pool: Option<PgPool>) -> CreditsConfig {
+    let ledger: Arc<dyn CreditLedger> = match db_pool {
+        Some(pool) => {
             tracing::info!("using PostgresLedger");
-            Arc::new(
-                PostgresLedger::new(&url)
-                    .await
-                    .expect("failed to connect to database"),
-            )
+            Arc::new(PostgresLedger::from_pool(pool))
         }
-        Err(_) => {
-            tracing::warn!("DATABASE_URL not set — using InMemoryLedger (dev only)");
-            Arc::new(InMemoryLedger::default())
-        }
+        None => Arc::new(InMemoryLedger::default()),
     };
 
     // Treat an empty value as unset: `just run relay` exports the var unconditionally, so
@@ -174,47 +209,76 @@ async fn configure_credits() -> CreditsConfig {
             HashMap::new()
         });
 
+    let sandbox_budget_credits: u64 = env::var("SANDBOX_MONTHLY_CREDIT_BUDGET")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(25_000);
+    let sandbox_window_days: u64 = env::var("SANDBOX_BUDGET_WINDOW_DAYS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(30);
+
     CreditsConfig {
         ledger,
         token_encryption_key,
         apple_verifier,
         grant_verifier,
         product_credits,
+        sandbox_budget_credits,
+        sandbox_budget_window: Duration::from_secs(sandbox_window_days * 24 * 60 * 60),
     }
 }
 
 fn configure_apple_verifier() -> Arc<dyn eigin_relay::credits::apple::AppleVerifier> {
     let apple_bundle_id = env::var("APPLE_BUNDLE_ID").unwrap_or_default();
-    let apple_environment = env::var("APPLE_ENVIRONMENT").unwrap_or_else(|_| "Sandbox".into());
     let apple_app_apple_id: Option<i64> = env::var("APPLE_APP_APPLE_ID")
         .ok()
         .and_then(|v| v.parse().ok());
     let root_certs = load_root_certs("config/apple");
 
-    if apple_bundle_id.is_empty() {
+    // A relay can accept more than one Apple environment. The production relay
+    // accepts both `Production` (the live App Store) and `Sandbox` (TestFlight
+    // and App Review, which always operate in sandbox); staging accepts only
+    // `Sandbox`. Each environment gets its own pinned verifier; the bundle ID is
+    // shared since it differs per relay, not per environment.
+    let environments = env::var("APPLE_ENVIRONMENTS").unwrap_or_else(|_| "Sandbox".into());
+
+    let (bundle_id, warn_missing) = if apple_bundle_id.is_empty() {
         tracing::warn!(
             "APPLE_BUNDLE_ID not set — Apple verification will fail for real transactions"
         );
-        Arc::new(
-            AppStoreVerifier::new(
-                root_certs,
-                "dev.placeholder".into(),
-                None,
-                &apple_environment,
-            )
-            .expect("failed to create placeholder Apple verifier"),
-        )
+        ("dev.placeholder".to_string(), true)
     } else {
-        Arc::new(
-            AppStoreVerifier::new(
-                root_certs,
-                apple_bundle_id,
-                apple_app_apple_id,
-                &apple_environment,
+        (apple_bundle_id, false)
+    };
+    let app_apple_id = if warn_missing {
+        None
+    } else {
+        apple_app_apple_id
+    };
+
+    let verifiers: Vec<Box<dyn eigin_relay::credits::apple::AppleVerifier>> = environments
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|environment| {
+            let verifier = AppStoreVerifier::new(
+                root_certs.clone(),
+                bundle_id.clone(),
+                app_apple_id,
+                environment,
             )
-            .expect("failed to create Apple verifier"),
-        )
-    }
+            .unwrap_or_else(|e| panic!("failed to create Apple verifier: {e}"));
+            Box::new(verifier) as Box<dyn eigin_relay::credits::apple::AppleVerifier>
+        })
+        .collect();
+
+    assert!(
+        !verifiers.is_empty(),
+        "APPLE_ENVIRONMENTS must list at least one environment"
+    );
+
+    Arc::new(MultiEnvironmentVerifier::new(verifiers))
 }
 
 fn configure_grant_verifier() -> Arc<dyn GrantVerifier> {

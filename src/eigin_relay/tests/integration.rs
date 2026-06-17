@@ -65,18 +65,23 @@ async fn test_state(
     client: impl eigin_relay::SearchClient + 'static,
 ) -> Arc<eigin_relay::AppState> {
     use eigin_relay::credits::InMemoryLedger;
+    use eigin_relay::quota::InMemoryQuota;
 
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(client),
         mojeek_api_key: "test-api-key".to_string(),
         eigin_relay_key: "test-relay-key".to_string(),
-        pool: eigin_relay::Pool::load(pool_max, eigin_relay::PoolConfig::InMemory).await,
         ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
+        search_pool_max: pool_max,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(InMemoryQuota::default()),
         ledger: Arc::new(InMemoryLedger::default()),
         apple_verifier: Arc::new(FakeVerifier::failing()),
         grant_verifier: Arc::new(FakeGrantVerifier::failing()),
         product_credits: HashMap::new(),
         token_encryption_key: [0u8; 32],
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
         upstream_client: Arc::new(NoopUpstream),
         upstream_api_key: None,
         model_rates: HashMap::new(),
@@ -255,14 +260,21 @@ async fn search_rate_limited_after_10_requests() {
 }
 
 #[tokio::test]
-async fn search_with_file_backend_pool() {
-    let tmp = tempfile::TempDir::new().unwrap();
-    let path = tmp.path().join("pool.json");
-    let pool = eigin_relay::Pool::load(100, eigin_relay::PoolConfig::LocalFile(path.clone())).await;
-    assert_eq!(pool.remaining(), 100);
+async fn search_pool_exhausts_after_quota_reached() {
+    // Pool of 2 searches; the IP limiter is high enough not to interfere.
+    let mock = MockClient::new(b"{}".to_vec());
+    let state = test_state(2, mock).await;
+    let app = router(state);
 
-    for _ in 0..5 {
-        pool.try_consume().await.unwrap();
+    for _ in 0..2 {
+        let response = call(&app, "/v1/search?q=test", Some("test-relay-key")).await;
+        assert_eq!(response.status(), StatusCode::OK);
     }
-    assert_eq!(pool.remaining(), 95);
+
+    // Third search exceeds the community pool quota.
+    let response = call(&app, "/v1/search?q=test", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["error"]["message"], "monthly search quota exhausted");
 }
