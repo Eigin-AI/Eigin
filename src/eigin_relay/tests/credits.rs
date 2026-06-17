@@ -58,7 +58,7 @@ async fn make_state(
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
-        eigin_relay_key: "relay-key".into(),
+        eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -324,7 +324,7 @@ async fn make_state_with_ledger(
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
-        eigin_relay_key: "relay-key".into(),
+        eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -355,7 +355,7 @@ async fn make_grant_state(
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
-        eigin_relay_key: "relay-key".into(),
+        eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -730,7 +730,7 @@ async fn make_sandbox_state(
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
         mojeek_api_key: String::new(),
-        eigin_relay_key: "relay-key".into(),
+        eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),

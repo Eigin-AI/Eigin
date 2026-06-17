@@ -37,13 +37,19 @@ resource "scaleway_container" "relay" {
     PRODUCTS_CONFIG_PATH            = "/config/products.toml"
   }
 
-  secret_environment_variables = {
-    MOJEEK_API_KEY       = var.mojeek_api_key
-    UPSTREAM_API_KEY     = var.upstream_api_key
-    EIGIN_RELAY_KEY      = random_password.eigin_relay_key.result
-    TOKEN_ENCRYPTION_KEY = random_bytes.token_encryption_key.base64
-    DATABASE_URL         = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
-  }
+  # The relay always has a Terraform-generated primary key. A secondary key is
+  # injected only during a rotation (when supplied) so already-shipped app builds
+  # carrying the previous key keep working; omit it otherwise to avoid an empty secret.
+  secret_environment_variables = merge(
+    {
+      MOJEEK_API_KEY          = var.mojeek_api_key
+      UPSTREAM_API_KEY        = var.upstream_api_key
+      EIGIN_RELAY_PRIMARY_KEY = random_password.eigin_relay_key.result
+      TOKEN_ENCRYPTION_KEY    = random_bytes.token_encryption_key.base64
+      DATABASE_URL            = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
+    },
+    var.eigin_relay_secondary_key != "" ? { EIGIN_RELAY_SECONDARY_KEY = var.eigin_relay_secondary_key } : {},
+  )
 
   depends_on = [
     docker_registry_image.relay,

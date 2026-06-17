@@ -83,6 +83,13 @@ variable "apple_app_apple_id" {
   default     = ""
 }
 
+variable "eigin_relay_secondary_key" {
+  description = "Optional previous relay key to keep accepting during a rotation. Empty disables it. Supplied (not generated) — sourced from .env via tf-vars."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "sandbox_monthly_credit_budget" {
   description = "Max credits issued to Sandbox (TestFlight/App Review) purchases per rolling window. Bounds free-credit abuse cost."
   type        = number

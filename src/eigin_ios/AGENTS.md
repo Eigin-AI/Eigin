@@ -34,7 +34,7 @@ Two build targets, each hardwired to a relay environment:
 | `Eigin` | `relay.eigin.ai` (production) | `${BUNDLE_ID}` |
 | `EiginDev` | `staging.relay.eigin.ai` (staging) | `${BUNDLE_ID}.dev` |
 
-Both apps can be installed on the same device simultaneously. The relay URL and key come from `.env` via `_STAGING` / `_PRODUCTION` suffix labels (e.g. `EIGIN_RELAY_URL_STAGING`, `EIGIN_RELAY_KEY_PRODUCTION`). Build with `just build ios` for production or `just build ios staging` for staging.
+Both apps can be installed on the same device simultaneously. The relay URL and key come from `.env` via `_STAGING` / `_PRODUCTION` suffix labels (e.g. `EIGIN_RELAY_URL_STAGING`, `EIGIN_RELAY_PRIMARY_KEY_PRODUCTION`). Build with `just build ios` for production or `just build ios staging` for staging.
 
 ## Project generation
 

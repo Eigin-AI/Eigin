@@ -72,7 +72,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers:
           - $(PRODUCT_BUNDLE_IDENTIFIER).backgroundprompt
         EiginRelayURL: $(EIGIN_RELAY_URL)
-        EiginRelayKey: $(EIGIN_RELAY_KEY)
+        EiginRelayKey: $(EIGIN_RELAY_PRIMARY_KEY)
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
         NSUserActivityTypes:
           - INSendMessageIntent
@@ -98,7 +98,7 @@ targets:
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
-        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_PRODUCTION}
+        EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_PRODUCTION}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements
@@ -140,7 +140,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers:
           - $(PRODUCT_BUNDLE_IDENTIFIER).backgroundprompt
         EiginRelayURL: $(EIGIN_RELAY_URL)
-        EiginRelayKey: $(EIGIN_RELAY_KEY)
+        EiginRelayKey: $(EIGIN_RELAY_PRIMARY_KEY)
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
         NSUserActivityTypes:
           - INSendMessageIntent
@@ -169,7 +169,7 @@ targets:
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
-        EIGIN_RELAY_KEY: ${EIGIN_RELAY_KEY_STAGING}
+        EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_STAGING}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements

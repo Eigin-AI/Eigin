@@ -167,10 +167,12 @@ run target env="staging":
 
             # Secrets come from .env, per environment (suffixed).
             mojeek_key="MOJEEK_API_KEY_${suffix}"
-            relay_key="EIGIN_RELAY_KEY_${suffix}"
+            relay_primary_key="EIGIN_RELAY_PRIMARY_KEY_${suffix}"
+            relay_secondary_key="EIGIN_RELAY_SECONDARY_KEY_${suffix}"
             upstream_api_key="UPSTREAM_API_KEY_${suffix}"
             export MOJEEK_API_KEY="${!mojeek_key}"
-            export EIGIN_RELAY_KEY="${!relay_key}"
+            export EIGIN_RELAY_PRIMARY_KEY="${!relay_primary_key}"
+            export EIGIN_RELAY_SECONDARY_KEY="${!relay_secondary_key:-}"
             export UPSTREAM_API_KEY="${!upstream_api_key}"
 
             # Non-secret config comes from the environment's tfvars (single source of truth).

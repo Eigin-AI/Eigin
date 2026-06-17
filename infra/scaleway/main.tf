@@ -21,6 +21,7 @@ module "relay" {
   apple_environments              = var.apple_environments
   apple_app_apple_id              = var.apple_app_apple_id
   sandbox_monthly_credit_budget   = var.sandbox_monthly_credit_budget
+  eigin_relay_secondary_key       = var.eigin_relay_secondary_key
   grant_issuer                    = var.grant_issuer
   admit_floor_credits             = var.admit_floor_credits
   token_rate_limit_requests       = var.token_rate_limit_requests

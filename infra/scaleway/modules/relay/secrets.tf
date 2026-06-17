@@ -8,8 +8,9 @@ resource "random_bytes" "token_encryption_key" {
   length = 32
 }
 
-# Relay API key — the shared `x-eigin-key` gate. Read it for clients with:
-#   terraform output -raw eigin_relay_key
+# Relay primary API key — the shared `x-eigin-key` gate. Read it for clients with:
+#   terraform output -raw eigin_relay_primary_key
+# A previous key can be kept accepted during rotation via var.eigin_relay_secondary_key.
 resource "random_password" "eigin_relay_key" {
   length  = 32
   special = false

@@ -87,6 +87,13 @@ variable "sandbox_monthly_credit_budget" {
   default     = 25000
 }
 
+variable "eigin_relay_secondary_key" {
+  description = "Optional previous relay key to keep accepting during a rotation. Empty disables it. Supplied via .env (EIGIN_RELAY_SECONDARY_KEY_<ENV>) through tf-vars."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "grant_issuer" {
   description = "Expected issuer (iss) for credit grant tokens"
   type        = string

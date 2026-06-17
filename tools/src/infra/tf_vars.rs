@@ -32,6 +32,13 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("");
 
+    // Optional previous relay key, kept accepted during a rotation. Empty when unset;
+    // Terraform omits the secret env var in that case.
+    let eigin_relay_secondary_key = dot_env
+        .get(&format!("EIGIN_RELAY_SECONDARY_KEY_{env_upper}"))
+        .map(String::as_str)
+        .unwrap_or("");
+
     let scw_secret = scw_secret_key().unwrap_or_default();
     let image_tag = git_short_head().unwrap_or_default();
 
@@ -39,6 +46,7 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
     println!("export TF_VAR_image_tag=\"{image_tag}\"");
     println!("export TF_VAR_mojeek_api_key=\"{mojeek_key}\"");
     println!("export TF_VAR_upstream_api_key=\"{upstream_api_key}\"");
+    println!("export TF_VAR_eigin_relay_secondary_key=\"{eigin_relay_secondary_key}\"");
 
     Ok(())
 }

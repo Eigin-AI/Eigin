@@ -58,7 +58,7 @@ components:
       in: header
       name: x-eigin-key
       description: |
-        Shared secret for Eigin clients. Set via `EIGIN_RELAY_KEY`.
+        Shared secret for Eigin clients.
 
     BearerToken:
       type: http

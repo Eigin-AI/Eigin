@@ -64,13 +64,21 @@ async fn test_state(
     pool_max: u64,
     client: impl eigin_relay::SearchClient + 'static,
 ) -> Arc<eigin_relay::AppState> {
+    test_state_with_keys(pool_max, client, vec!["test-relay-key".to_string()]).await
+}
+
+async fn test_state_with_keys(
+    pool_max: u64,
+    client: impl eigin_relay::SearchClient + 'static,
+    eigin_relay_keys: Vec<String>,
+) -> Arc<eigin_relay::AppState> {
     use eigin_relay::credits::InMemoryLedger;
     use eigin_relay::quota::InMemoryQuota;
 
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(client),
         mojeek_api_key: "test-api-key".to_string(),
-        eigin_relay_key: "test-relay-key".to_string(),
+        eigin_relay_keys,
         ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
         search_pool_max: pool_max,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -171,6 +179,42 @@ async fn search_with_wrong_key_returns_401() {
     let response = call(&app, "/search?q=test", Some("wrong-key")).await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+// When two keys are configured (primary + secondary during a rotation), either one
+// authenticates and an unconfigured key is still rejected. This is the property
+// that lets a key be rotated without breaking already-shipped app builds.
+#[tokio::test]
+async fn search_accepts_either_configured_key_and_rejects_others() {
+    let make = || async {
+        router(
+            test_state_with_keys(
+                1000,
+                MockClient::new(b"{}".to_vec()),
+                vec!["primary-key".to_string(), "secondary-key".to_string()],
+            )
+            .await,
+        )
+    };
+
+    assert_eq!(
+        call(&make().await, "/search?q=test", Some("primary-key"))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        call(&make().await, "/search?q=test", Some("secondary-key"))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        call(&make().await, "/search?q=test", Some("retired-key"))
+            .await
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
 }
 
 #[tokio::test]
