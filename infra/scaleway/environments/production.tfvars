@@ -3,7 +3,9 @@ project_name = "eigin-production"
 scw_region   = "fr-par"
 
 # Relay: General config
-max_scale = 3
+max_scale                    = 3
+ip_rate_limit_requests       = 500
+ip_rate_limit_window_seconds = 60
 
 # Relay: Search config
 monthly_pool_size = 5000
@@ -18,8 +20,8 @@ sandbox_monthly_credit_budget = 25000
 
 # Relay: Inference config
 upstream_api_url                = "https://api.berget.ai/v1"
-admit_floor_credits             = 50
-token_rate_limit_requests       = 20
+admit_floor_credits             = 25
+token_rate_limit_requests       = 100
 token_rate_limit_window_seconds = 60
 
 # Relay: Grants config

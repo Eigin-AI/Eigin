@@ -33,6 +33,8 @@ resource "scaleway_container" "relay" {
     ADMIT_FLOOR_CREDITS             = tostring(var.admit_floor_credits)
     TOKEN_RATE_LIMIT_REQUESTS       = tostring(var.token_rate_limit_requests)
     TOKEN_RATE_LIMIT_WINDOW_SECONDS = tostring(var.token_rate_limit_window_seconds)
+    RATE_LIMIT_REQUESTS             = tostring(var.ip_rate_limit_requests)
+    RATE_LIMIT_WINDOW_SECONDS       = tostring(var.ip_rate_limit_window_seconds)
     MODELS_CONFIG_PATH              = "/config/models.toml"
     PRODUCTS_CONFIG_PATH            = "/config/products.toml"
   }

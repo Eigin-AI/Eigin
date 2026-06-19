@@ -26,4 +26,6 @@ module "relay" {
   admit_floor_credits             = var.admit_floor_credits
   token_rate_limit_requests       = var.token_rate_limit_requests
   token_rate_limit_window_seconds = var.token_rate_limit_window_seconds
+  ip_rate_limit_requests          = var.ip_rate_limit_requests
+  ip_rate_limit_window_seconds    = var.ip_rate_limit_window_seconds
 }

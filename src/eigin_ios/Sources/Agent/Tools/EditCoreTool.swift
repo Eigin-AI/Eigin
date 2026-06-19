@@ -28,7 +28,7 @@ struct EditCoreTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Edit one of your core texts by replacing a specific string.",
+            description: "Edit one of your core texts by replacing a specific string. If the core text is currently empty, new_string becomes its initial content.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -39,7 +39,7 @@ struct EditCoreTool: Tool {
                     ),
                     "old_string": .init(
                         type: "string",
-                        description: "The exact string to find and replace. Read the core text first to see its current content."
+                        description: "The exact string to find and replace. Read the core text first to see its current content. Leave empty when the core text is empty and you are writing its first content."
                     ),
                     "new_string": .init(
                         type: "string",
@@ -99,7 +99,11 @@ struct EditCoreTool: Tool {
         let updated: String
         var warnings: [String]?
 
-        if oldString.isEmpty {
+        if current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Nothing meaningful to find and replace yet (empty or whitespace
+            // only): the first write simply sets new_string as the content.
+            updated = newString
+        } else if oldString.isEmpty {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: [

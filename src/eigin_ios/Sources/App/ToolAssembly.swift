@@ -113,6 +113,42 @@ extension ToolRegistry {
         return ToolRegistry(tools: tools)
     }
 
+    /// Onboarding conversation tool set.
+    ///
+    /// The agent gets to know the user, records what it learns into its core
+    /// documents, proposes its own identity, and signals completion. Restricted:
+    /// no web, skills, intents, spaces, or scheduling.
+    @MainActor
+    static func onboarding(
+        agentID: UUID,
+        onDone: (@Sendable () -> Void)? = nil
+    ) -> ToolRegistry {
+        let voiceService = Container.shared.voiceService()
+        let knowledgeService = Container.shared.knowledgeService()
+        let tools: [any Tool] = [
+            ReadCoreTool(),
+            EditCoreTool(),
+            SetPresentationTool(
+                voiceService: voiceService,
+                voiceNames: [],
+                knowledgeService: knowledgeService,
+                agentID: agentID
+            ),
+            SearchKnowledgeTool(
+                knowledgeService: knowledgeService,
+                spaceID: nil,
+                agentID: agentID
+            ),
+            GetKnowledgeTool(
+                knowledgeService: knowledgeService,
+                spaceID: nil,
+                agentID: agentID
+            ),
+            DoneTool(onDone: onDone),
+        ]
+        return ToolRegistry(tools: tools)
+    }
+
     /// Background prompt tool set.
     @MainActor
     static func background(

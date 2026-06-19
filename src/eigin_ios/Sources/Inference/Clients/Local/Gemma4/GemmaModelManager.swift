@@ -90,6 +90,14 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     // MARK: - Device requirements
 
+    /// Whether this device meets the minimum hardware requirements to run the local model.
+    ///
+    /// RAM is fixed hardware so this is safe to use as a permanent visibility gate.
+    /// Disk space is dynamic and is checked separately at download time.
+    var isSupported: Bool {
+        hasRequiredRAM()
+    }
+
     static func minimumRequiredFreeSpaceBytes(
         for model: GemmaModelDownloader.ModelInfo
     ) -> Int64 {
@@ -256,14 +264,9 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     func compile() async {
         guard state == .downloaded else { return }
 
-        let modelSize = GemmaModelDownloader.expectedFileSizeBytes(for: localModelInfo)
-        guard let freeSpace = deviceInfo.freeDiskSpaceBytes(), freeSpace >= modelSize else {
-            let requiredGB = Double(modelSize) / 1_000_000_000
-            transient = .failed(
-                Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB))
-            )
-            return
-        }
+        // Storage was already verified at download time. Rechecking here would
+        // incorrectly fail on devices where free space is tight but the weights
+        // are already on disk and taking up that space.
 
         transient = .compiling(0)
 

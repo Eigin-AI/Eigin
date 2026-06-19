@@ -37,6 +37,16 @@ final class ActiveIntentsSource: SystemHintSource {
             if let cue = IntentDigest.summary(for: intent) {
                 line += " (\(cue))"
             }
+            let pending = intent.tasks.filter { !$0.completed }
+            if !pending.isEmpty {
+                let taskLines = pending.map { task -> String in
+                    let label = task.content.count > 50
+                        ? task.content.prefix(50) + "…"
+                        : Substring(task.content)
+                    return "  • \(label)"
+                }
+                line += "\n" + taskLines.joined(separator: "\n")
+            }
             return line
         }
 

@@ -70,6 +70,15 @@ enum BackgroundPrompt {
                     detail += ", \(cue)"
                 }
                 content += "\n- \"\(intent.content)\" (\(detail))"
+                let pending = intent.tasks.filter { !$0.completed }
+                if !pending.isEmpty {
+                    for task in pending {
+                        let label = task.content.count > 50
+                            ? task.content.prefix(50) + "…"
+                            : Substring(task.content)
+                        content += "\n  • \(label)"
+                    }
+                }
             }
         }
 
