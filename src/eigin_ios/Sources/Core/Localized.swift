@@ -1415,6 +1415,11 @@ enum Localized {
                 Localized.get("onboarding.chat.choiceExplanation")
             }
 
+            /// Title of the first chat created at the end of onboarding.
+            static var firstChatTitle: String {
+                Localized.get("onboarding.chat.firstChatTitle")
+            }
+
             /// The onboarding greeting shown as the first message in the guided conversation.
             static var initialGreeting: String {
                 Localized.get("onboarding.chat.initialGreeting")
@@ -1545,6 +1550,128 @@ enum Localized {
             }
         }
 
+        enum Flow {
+            enum Inference {
+                /// Avatar speech body on the inference screen.
+                static var text: String {
+                    Localized.get("onboarding.flow.inference.text")
+                }
+
+                /// Avatar speech title on the inference screen.
+                static var title: String {
+                    Localized.get("onboarding.flow.inference.title")
+                }
+            }
+
+            enum Initiative {
+                /// Avatar speech body on the initiative screen.
+                static var text: String {
+                    Localized.get("onboarding.flow.initiative.text")
+                }
+
+                /// Avatar speech title on the initiative screen.
+                static var title: String {
+                    Localized.get("onboarding.flow.initiative.title")
+                }
+            }
+
+            enum Name {
+                /// Avatar speech body on the name screen.
+                static var text: String {
+                    Localized.get("onboarding.flow.name.text")
+                }
+
+                /// Avatar speech title on the name screen.
+                static var title: String {
+                    Localized.get("onboarding.flow.name.title")
+                }
+            }
+
+            enum Priority {
+                /// Avatar speech body on the priority screen.
+                static var text: String {
+                    Localized.get("onboarding.flow.priority.text")
+                }
+
+                /// Avatar speech title on the priority screen when no name is known.
+                static var title: String {
+                    Localized.get("onboarding.flow.priority.title")
+                }
+
+                /// Avatar speech title on the priority screen when the user’s name is known. %@ is
+                /// the name.
+                static func titleWithName(_ p1: String) -> String {
+                    String(format: Localized.get("onboarding.flow.priority.titleWithName"), p1)
+                }
+            }
+
+            enum Welcome {
+                /// Avatar speech body on the welcome screen.
+                static var text: String {
+                    Localized.get("onboarding.flow.welcome.text")
+                }
+
+                /// Avatar speech title on the welcome screen.
+                static var title: String {
+                    Localized.get("onboarding.flow.welcome.title")
+                }
+            }
+        }
+
+        enum Inference {
+            /// Secondary button label to connect a custom inference provider.
+            static var connectOwnButton: String {
+                Localized.get("onboarding.inference.connectOwnButton")
+            }
+
+            /// Button to dismiss the offline sheet after download has started.
+            static var continueButton: String {
+                Localized.get("onboarding.inference.continueButton")
+            }
+
+            /// Body text in the offline model sheet while the model is already downloading.
+            static var offlineDownloadingText: String {
+                Localized.get("onboarding.inference.offlineDownloadingText")
+            }
+
+            /// Link text to open the offline model download sheet.
+            static var offlineLink: String {
+                Localized.get("onboarding.inference.offlineLink")
+            }
+
+            /// Body text in the offline model sheet when the model has not yet been downloaded.
+            static var offlineSheetText: String {
+                Localized.get("onboarding.inference.offlineSheetText")
+            }
+
+            /// Title of the offline model download sheet.
+            static var offlineSheetTitle: String {
+                Localized.get("onboarding.inference.offlineSheetTitle")
+            }
+
+            /// Button to start downloading the offline model.
+            static var startDownloadButton: String {
+                Localized.get("onboarding.inference.startDownloadButton")
+            }
+
+            /// Primary button label to use the Eigin cloud provider.
+            static var useEiginButton: String {
+                Localized.get("onboarding.inference.useEiginButton")
+            }
+        }
+
+        enum Initiative {
+            /// Button to allow the agent to work in the background.
+            static var backgroundButton: String {
+                Localized.get("onboarding.initiative.backgroundButton")
+            }
+
+            /// Button to keep the agent reactive (only responds when asked).
+            static var reactiveButton: String {
+                Localized.get("onboarding.initiative.reactiveButton")
+            }
+        }
+
         enum LocalModel {
             /// Explanation of the local model option shown on the provider choice screen
             static var description: String {
@@ -1627,6 +1754,83 @@ enum Localized {
             }
         }
 
+        enum Name {
+            /// Button label to proceed past the name screen.
+            static var continueButton: String {
+                Localized.get("onboarding.name.continueButton")
+            }
+
+            /// Label for the name input field.
+            static var fieldLabel: String {
+                Localized.get("onboarding.name.fieldLabel")
+            }
+
+            /// Link text asking why the app needs the user’s name.
+            static var privacyLink: String {
+                Localized.get("onboarding.name.privacyLink")
+            }
+
+            /// Body text in the privacy explanation sheet on the name screen.
+            static var privacySheetText: String {
+                Localized.get("onboarding.name.privacySheetText")
+            }
+
+            /// Sheet title for the privacy explanation on the name screen.
+            static var privacySheetTitle: String {
+                Localized.get("onboarding.name.privacySheetTitle")
+            }
+        }
+
+        enum Priority {
+            enum Clarity {
+                /// Explainer on the ‘think out loud’ priority card.
+                static var explainer: String {
+                    Localized.get("onboarding.priority.clarity.explainer")
+                }
+
+                /// Title on the ‘think out loud’ priority card.
+                static var title: String {
+                    Localized.get("onboarding.priority.clarity.title")
+                }
+            }
+
+            enum People {
+                /// Explainer on the ‘keep in touch’ priority card.
+                static var explainer: String {
+                    Localized.get("onboarding.priority.people.explainer")
+                }
+
+                /// Title on the ‘keep in touch’ priority card.
+                static var title: String {
+                    Localized.get("onboarding.priority.people.title")
+                }
+            }
+
+            enum SomethingElse {
+                /// Explainer on the ‘something else’ priority card.
+                static var explainer: String {
+                    Localized.get("onboarding.priority.somethingElse.explainer")
+                }
+
+                /// Title on the ‘something else’ priority card.
+                static var title: String {
+                    Localized.get("onboarding.priority.somethingElse.title")
+                }
+            }
+
+            enum StayOnTop {
+                /// Explainer on the ‘stay on top of life’ priority card.
+                static var explainer: String {
+                    Localized.get("onboarding.priority.stayOnTop.explainer")
+                }
+
+                /// Title on the ‘stay on top of life’ priority card.
+                static var title: String {
+                    Localized.get("onboarding.priority.stayOnTop.title")
+                }
+            }
+        }
+
         enum Provider {
             /// Button label to add credits on provider website
             static func addCreditsLabel(_ p1: String) -> String {
@@ -1689,7 +1893,19 @@ enum Localized {
             }
         }
 
+        enum Reveal {
+            /// Avatar speech title in the reveal overlay. %@ is the agent’s name.
+            static func title(_ p1: String) -> String {
+                String(format: Localized.get("onboarding.reveal.title"), p1)
+            }
+        }
+
         enum Welcome {
+            /// Button label to begin onboarding from the welcome screen.
+            static var beginButton: String {
+                Localized.get("onboarding.welcome.beginButton")
+            }
+
             /// Fallback hero text shown when model generation fails.
             static var description: String {
                 Localized.get("onboarding.welcome.description")

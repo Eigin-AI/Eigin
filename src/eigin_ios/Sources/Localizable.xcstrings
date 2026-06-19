@@ -4246,6 +4246,23 @@
         }
       }
     },
+    "onboarding.chat.firstChatTitle" : {
+      "comment" : "Title of the first chat created at the end of onboarding.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vores første samtale"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Our first chat"
+          }
+        }
+      }
+    },
     "onboarding.chat.initialGreeting" : {
       "comment" : "The onboarding greeting shown as the first message in the guided conversation.",
       "localizations" : {
@@ -4637,6 +4654,363 @@
         }
       }
     },
+    "onboarding.flow.inference.text" : {
+      "comment" : "Avatar speech body on the inference screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg kan tænke med kraftfuld AI i skyen, hostet i Europa.\n\nEller kan jeg køre på din enhed. Du kan ændre dette når som helst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I can think with powerful AI in the cloud, hosted in Europe.\n\nOr I can run on your device. You can change this anytime."
+          }
+        }
+      }
+    },
+    "onboarding.flow.inference.title" : {
+      "comment" : "Avatar speech title on the inference screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nu skal jeg have en hjerne."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now, let’s give me a brain."
+          }
+        }
+      }
+    },
+    "onboarding.flow.initiative.text" : {
+      "comment" : "Avatar speech body on the initiative screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg kan blive ved med at arbejde, når du er væk, lede efter ting der er din opmærksomhed værd og række ud af og til.\n\nEller kan jeg være stille og kun hjælpe, når du spørger. Det er op til dig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I can keep working when you’re away, looking for things worth your attention and reaching out now and then.\n\nOr I can stay quiet and only help when you ask. Your call."
+          }
+        }
+      }
+    },
+    "onboarding.flow.initiative.title" : {
+      "comment" : "Avatar speech title on the initiative screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En sidste ting."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One more thing."
+          }
+        }
+      }
+    },
+    "onboarding.flow.name.text" : {
+      "comment" : "Avatar speech body on the name screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvad skal jeg kalde dig?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What should I call you?"
+          }
+        }
+      }
+    },
+    "onboarding.flow.name.title" : {
+      "comment" : "Avatar speech title on the name screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frisk start."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First things first."
+          }
+        }
+      }
+    },
+    "onboarding.flow.priority.text" : {
+      "comment" : "Avatar speech body on the priority screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvad vil du bruge din personlige AI til?\n\nJeg kan forme mig efter det."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What are you hoping to do with your personal AI?\n\nI can shape myself around that."
+          }
+        }
+      }
+    },
+    "onboarding.flow.priority.title" : {
+      "comment" : "Avatar speech title on the priority screen when no name is known.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godt at møde dig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nice to meet you."
+          }
+        }
+      }
+    },
+    "onboarding.flow.priority.titleWithName" : {
+      "comment" : "Avatar speech title on the priority screen when the user’s name is known. %@ is the name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godt at møde dig, %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nice to meet you, %@."
+          }
+        }
+      }
+    },
+    "onboarding.flow.welcome.text" : {
+      "comment" : "Avatar speech body on the welcome screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg er Eigin, din personlige AI.\n\nJeg bor på din enhed, jeg svarer kun til dig, og ingen andre lytter.\n\nFør vi begynder, vil jeg gerne lære dig at kende."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I’m Eigin, your personal AI.\n\nI live on your device, I answer to you, and no one else is listening.\n\nBefore we begin, I’d like to get to know you."
+          }
+        }
+      }
+    },
+    "onboarding.flow.welcome.title" : {
+      "comment" : "Avatar speech title on the welcome screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hej."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hi there."
+          }
+        }
+      }
+    },
+    "onboarding.inference.connectOwnButton" : {
+      "comment" : "Secondary button label to connect a custom inference provider.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbind din egen udbyder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect your own provider"
+          }
+        }
+      }
+    },
+    "onboarding.inference.continueButton" : {
+      "comment" : "Button to dismiss the offline sheet after download has started.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fortsæt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "onboarding.inference.offlineDownloadingText" : {
+      "comment" : "Body text in the offline model sheet while the model is already downloading.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloader nu. Den er klar lidt senere. Vælg foreløbig, hvordan du vil køre denne første samtale."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading now. It’ll be ready a bit later. For now, pick how you want to run this first conversation."
+          }
+        }
+      }
+    },
+    "onboarding.inference.offlineLink" : {
+      "comment" : "Link text to open the offline model download sheet.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opsæt en offlinemodel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up an offline model"
+          }
+        }
+      }
+    },
+    "onboarding.inference.offlineSheetText" : {
+      "comment" : "Body text in the offline model sheet when the model has not yet been downloaded.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kør en model på din enhed, uden internet og uden at noget forlader din telefon. Den downloades i baggrunden mens du kommer i gang, og du kan begynde at bruge den, når den er klar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Run a model on your device, with no internet and nothing leaving your phone. It downloads in the background while you get started, and you can start using it once it’s ready."
+          }
+        }
+      }
+    },
+    "onboarding.inference.offlineSheetTitle" : {
+      "comment" : "Title of the offline model download sheet.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brug Eigin offline"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Eigin offline"
+          }
+        }
+      }
+    },
+    "onboarding.inference.startDownloadButton" : {
+      "comment" : "Button to start downloading the offline model.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start download"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start download"
+          }
+        }
+      }
+    },
+    "onboarding.inference.useEiginButton" : {
+      "comment" : "Primary button label to use the Eigin cloud provider.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brug Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Eigin"
+          }
+        }
+      }
+    },
+    "onboarding.initiative.backgroundButton" : {
+      "comment" : "Button to allow the agent to work in the background.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arbejd i baggrunden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work in the background"
+          }
+        }
+      }
+    },
+    "onboarding.initiative.reactiveButton" : {
+      "comment" : "Button to keep the agent reactive (only responds when asked).",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kun når jeg spørger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only when I ask"
+          }
+        }
+      }
+    },
     "onboarding.localModel.description" : {
       "comment" : "Explanation of the local model option shown on the provider choice screen",
       "localizations" : {
@@ -4875,6 +5249,227 @@
         }
       }
     },
+    "onboarding.name.continueButton" : {
+      "comment" : "Button label to proceed past the name screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fortsæt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "onboarding.name.fieldLabel" : {
+      "comment" : "Label for the name input field.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit navn"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your name"
+          }
+        }
+      }
+    },
+    "onboarding.name.privacyLink" : {
+      "comment" : "Link text asking why the app needs the user’s name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor skal du bruge mit navn?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Why do you need my name?"
+          }
+        }
+      }
+    },
+    "onboarding.name.privacySheetText" : {
+      "comment" : "Body text in the privacy explanation sheet on the name screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alt du fortæller mig, gemmes på din enhed og ingen andre steder. \n\nHvis du ikke vil dele dit rigtige navn, er det også fint. Brug et kælenavn, et initial, eller skriv bare „Anonym“. Det er op til dig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything you tell me is stored on your device, and nowhere else. \n\nIf you’d rather not share your real name, that’s also okay. Use a nickname, an initial, or just write “Anonymous”. It’s up to you."
+          }
+        }
+      }
+    },
+    "onboarding.name.privacySheetTitle" : {
+      "comment" : "Sheet title for the privacy explanation on the name screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det her er dit sted"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is your space"
+          }
+        }
+      }
+    },
+    "onboarding.priority.clarity.explainer" : {
+      "comment" : "Explainer on the ‘think out loud’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tal noget igennem, overvej en beslutning, bliv klar i hovedet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Talk something out, weigh a decision, clear your head."
+          }
+        }
+      }
+    },
+    "onboarding.priority.clarity.title" : {
+      "comment" : "Title on the ‘think out loud’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tænk højt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Think out loud"
+          }
+        }
+      }
+    },
+    "onboarding.priority.people.explainer" : {
+      "comment" : "Explainer on the ‘keep in touch’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De mennesker der betyder noget for dig og hvad der sker i deres liv."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The people who matter to you and what’s going on in their lives."
+          }
+        }
+      }
+    },
+    "onboarding.priority.people.title" : {
+      "comment" : "Title on the ‘keep in touch’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold kontakten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep in touch"
+          }
+        }
+      }
+    },
+    "onboarding.priority.somethingElse.explainer" : {
+      "comment" : "Explainer on the ‘something else’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ramte de ikke helt rigtigt? Vi finder ud af det efterhånden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not quite any of these? We’ll figure it out as we talk."
+          }
+        }
+      }
+    },
+    "onboarding.priority.somethingElse.title" : {
+      "comment" : "Title on the ‘something else’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noget andet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something else"
+          }
+        }
+      }
+    },
+    "onboarding.priority.stayOnTop.explainer" : {
+      "comment" : "Explainer on the ‘stay on top of life’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Din kalender, dagen foran dig, og de små ting der hober sig op."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your schedule, the day ahead, and the small stuff that piles up."
+          }
+        }
+      }
+    },
+    "onboarding.priority.stayOnTop.title" : {
+      "comment" : "Title on the ‘stay on top of life’ priority card.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold styr på livet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay on top of life"
+          }
+        }
+      }
+    },
     "onboarding.provider.addCreditsLabel" : {
       "comment" : "Button label to add credits on provider website",
       "localizations" : {
@@ -5075,6 +5670,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connect Cloud AI to offload heavy thinking to high-speed servers, keeping %@'s responses fast."
+          }
+        }
+      }
+    },
+    "onboarding.reveal.title" : {
+      "comment" : "Avatar speech title in the reveal overlay. %@ is the agent’s name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg er %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I am %@."
+          }
+        }
+      }
+    },
+    "onboarding.welcome.beginButton" : {
+      "comment" : "Button label to begin onboarding from the welcome screen.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begynd"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begin"
           }
         }
       }
@@ -6014,6 +6643,40 @@
         }
       }
     },
+    "provider.eigin.creditsReadyBody" : {
+      "comment" : "Chat recovery card body shown after credits are added, prompting the user to resend",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Credits tilføjet. Send din besked for at fortsætte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credits added. Send your message to continue."
+          }
+        }
+      }
+    },
+    "provider.eigin.creditsReadyTitle" : {
+      "comment" : "Chat recovery card title shown after credits are added",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du er klar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're good to go"
+          }
+        }
+      }
+    },
     "provider.eigin.creditTitle" : {
       "comment" : "Info section: what a credit is (title)",
       "localizations" : {
@@ -6299,40 +6962,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Private cloud AI"
-          }
-        }
-      }
-    },
-    "provider.eigin.creditsReadyBody" : {
-      "comment" : "Chat recovery card body shown after credits are added, prompting the user to resend",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Credits tilføjet. Send din besked for at fortsætte."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Credits added. Send your message to continue."
-          }
-        }
-      }
-    },
-    "provider.eigin.creditsReadyTitle" : {
-      "comment" : "Chat recovery card title shown after credits are added",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Du er klar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're good to go"
           }
         }
       }

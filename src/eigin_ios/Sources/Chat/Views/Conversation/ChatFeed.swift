@@ -234,6 +234,30 @@ struct ChatFeed: View {
         context.agentName.isEmpty || context.agentName.count > 20 ? "Agent" : context.agentName
     }
 
+    /// The flat item list used when no user turn has been pinned yet.
+    ///
+    /// If the conversation opens with an agent-initiated message (no user
+    /// message first), we apply the same `minHeight` + `.topLeading` frame as
+    /// the pinned-turn block. Without it, `.defaultScrollAnchor(.bottom)`
+    /// pushes a short opening message to the bottom of the viewport.
+    @ViewBuilder private var agentInitiatedBlock: some View {
+        let isAgentOpened: Bool = if case .message(_, let role, _) = items.first { role != "user" }
+        else { true }
+        VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
+            ForEach(items) { item in
+                itemRow(for: item)
+            }
+            AppChatBrandMessage {
+                StreamingContentView(throttler: throttler, splitter: splitter)
+            }
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: isAgentOpened ? viewportHeight : 0,
+            alignment: .topLeading
+        )
+    }
+
     private func dismissBrowsing(result: BrowsingResult) {
         presentedBrowsingRequest = nil
         interactions.onBrowsingComplete?(result)
@@ -285,12 +309,12 @@ struct ChatFeed: View {
                             alignment: .topLeading
                         )
                     } else {
-                        ForEach(items) { item in
-                            itemRow(for: item)
-                        }
-                        AppChatBrandMessage {
-                            StreamingContentView(throttler: throttler, splitter: splitter)
-                        }
+                        // When the conversation opens with an agent-initiated message
+                        // (no user turn yet), apply the same minHeight + topLeading
+                        // treatment as the pinned-turn block. Without it,
+                        // `.defaultScrollAnchor(.bottom)` pushes a short opening
+                        // message to the bottom of the viewport.
+                        agentInitiatedBlock
                     }
 
                     if pagination.hasNewerMessages {

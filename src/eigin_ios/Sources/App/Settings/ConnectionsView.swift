@@ -115,7 +115,7 @@ struct ConnectionsView: View {
             .onDelete(perform: deleteCloudProviders)
             .listRowBackground(colors.surface.standard.alternative)
 
-            if let preset = localPreset {
+            if let preset = localPreset, gemmaManager.isSupported {
                 NavigationLink {
                     LocalProviderView(preset: preset)
                         .hidesTabBar()

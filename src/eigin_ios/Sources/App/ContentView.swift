@@ -11,6 +11,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
     @State private var selectedTab = RootTab.chats
+    @Bindable private var gemmaManager = GemmaModelManager.shared
 
     var body: some View {
         ZStack {
@@ -37,11 +38,23 @@ struct ContentView: View {
         .task {
             ensureBackgroundSchedule()
             ensureEiginProvider()
+            ensureLocalProvider()
             GemmaModelManager.shared.prewarmIfNeeded()
+        }
+        .onChange(of: gemmaManager.state) { _, newState in
+            if newState == .ready || newState == .downloaded {
+                ensureLocalProvider()
+            }
+            // Download completed during this session — kick off prewarm immediately
+            // rather than waiting for the next foreground activation.
+            if newState == .downloaded {
+                GemmaModelManager.shared.prewarmIfNeeded()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 ensureBackgroundSchedule()
+                ensureLocalProvider()
                 GemmaModelManager.shared.prewarmIfNeeded()
             }
             if phase == .background {
@@ -67,6 +80,22 @@ struct ContentView: View {
         Task {
             await BackgroundPromptScheduler.scheduleIfNeeded(for: agent.proactivity)
         }
+    }
+
+    /// Ensures a local provider record exists once the on-device model is ready.
+    ///
+    /// Provider creation was previously tied to `LocalProviderView`'s lifecycle, meaning the
+    /// provider was never created if the model finished compiling while the user wasn't on that
+    /// screen. Running this on every foreground pass closes that gap.
+    private func ensureLocalProvider() {
+        let state = GemmaModelManager.shared.state
+        guard state == .ready || state == .downloaded else { return }
+        let providers = (try? modelContext.fetch(FetchDescriptor<Provider>())) ?? []
+        guard !providers.contains(where: { ProviderPreset.isLocal($0.baseURL) }) else { return }
+        let provider = Provider(name: Localized.Provider.onDevice, baseURL: "local://")
+        provider.availableModels = ["gemma-4-e2b"]
+        provider.enabledModels = ["gemma-4-e2b"]
+        modelContext.insert(provider)
     }
 
     /// Ensures the always-present Eigin relay provider exists and keeps its curated model list

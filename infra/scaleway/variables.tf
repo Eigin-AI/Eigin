@@ -119,3 +119,15 @@ variable "token_rate_limit_window_seconds" {
   default     = 60
 }
 
+variable "ip_rate_limit_requests" {
+  description = "Maximum search + inference requests per IP per window"
+  type        = number
+  default     = 40
+}
+
+variable "ip_rate_limit_window_seconds" {
+  description = "Rate limit window in seconds for per-IP limiting"
+  type        = number
+  default     = 60
+}
+

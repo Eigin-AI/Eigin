@@ -110,6 +110,34 @@ struct ToolExecutorTests {
         #expect(agent.identityCore == "I am a test agent.")
     }
 
+    @Test @MainActor func editCorePopulatesEmptyCore() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        agent.userCore = ""
+        let call = makeCall(
+            name: "edit_core",
+            arguments: "{\"core\":\"user\",\"old_string\":\"\",\"new_string\":\"They are a designer.\"}"
+        )
+        let result = await makeExecutor().execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(agent.userCore == "They are a designer.")
+    }
+
+    @Test @MainActor func editCorePopulatesWhitespaceOnlyCore() async throws {
+        let (agent, _container) = try makeAgent()
+        _ = _container
+        agent.userCore = "  \n  "
+        let call = makeCall(
+            name: "edit_core",
+            arguments: "{\"core\":\"user\",\"old_string\":\"\",\"new_string\":\"They are a designer.\"}"
+        )
+        let result = await makeExecutor().execute(call, agent: agent)
+
+        #expect(!result.isError)
+        #expect(agent.userCore == "They are a designer.")
+    }
+
     @Test @MainActor func editCoreErrorWhenNotFound() async throws {
         let (agent, _container) = try makeAgent()
         _ = _container

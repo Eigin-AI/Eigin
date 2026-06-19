@@ -15,6 +15,7 @@ struct ChatListView: View {
     @Query(sort: \Space.name) private var spaces: [Space]
 
     @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
+    @AppStorage(StorageKey.pendingOnboardingChat) private var pendingOnboardingChat: String?
     private var agent: Agent? {
         agents.first
     }
@@ -104,6 +105,7 @@ struct ChatListView: View {
                 {
                     handlePendingInitiative(requestID: requestID)
                 }
+                openPendingOnboardingChat()
             }
             .onChange(of: pendingInitiativeID) { _, newValue in
                 if let requestIDString = newValue,
@@ -241,6 +243,15 @@ struct ChatListView: View {
         let chat = Chat(agentID: agent.id, spaceID: selectedSpaceID)
         modelContext.insert(chat)
         path.append(chat.id)
+    }
+
+    /// Opens the chat the onboarding conversation became, once, on first load.
+    private func openPendingOnboardingChat() {
+        guard let idString = pendingOnboardingChat,
+              let id = UUID(uuidString: idString)
+        else { return }
+        pendingOnboardingChat = nil
+        path.append(id)
     }
 
     private func handlePendingInitiative(requestID: UUID) {
