@@ -45,4 +45,65 @@ struct OAuthPKCEServiceTests {
         #expect(preset.oAuthAuthorizationURL == "https://api.eurouter.ai/api/v1/auth")
         #expect(preset.oAuthTokenExchangeURL == "https://api.eurouter.ai/api/v1/auth/keys")
     }
+
+    @Test func handleCallbackRejectsMismatchedState() async throws {
+        let service = try DefaultOAuthPKCEService(
+            authorizationURL: #require(URL(string: "https://example.com/auth")),
+            tokenExchangeURL: #require(URL(string: "https://example.com/exchange"))
+        )
+
+        let callback =
+            try #require(URL(string: "eigin://oauth/callback?code=abc123&state=wrong-state"))
+
+        await #expect(throws: OAuthPKCEError.authorizationFailed("State mismatch")) {
+            try await service.handleCallback(
+                callback,
+                codeVerifier: "verifier",
+                expectedState: "expected-state"
+            )
+        }
+    }
+
+    @Test func handleCallbackRejectsErrorParameter() async throws {
+        let service = try DefaultOAuthPKCEService(
+            authorizationURL: #require(URL(string: "https://example.com/auth")),
+            tokenExchangeURL: #require(URL(string: "https://example.com/exchange"))
+        )
+
+        let callback =
+            try #require(
+                URL(string: "eigin://oauth/callback?error=access_denied&state=expected-state")
+            )
+
+        await #expect(throws: OAuthPKCEError.authorizationFailed("access_denied")) {
+            try await service.handleCallback(
+                callback,
+                codeVerifier: "verifier",
+                expectedState: "expected-state"
+            )
+        }
+    }
+
+    @Test func handleCallbackAcceptsMatchingStateAndExchangesCode() async throws {
+        let exchangeURL = "https://example.com/exchange"
+        let session = FakeURLProtocol.fakeSession()
+        let service = try DefaultOAuthPKCEService(
+            authorizationURL: #require(URL(string: "https://example.com/auth")),
+            tokenExchangeURL: #require(URL(string: exchangeURL)),
+            urlSession: session
+        )
+
+        let keyResponse = Data(#"{"key":"test-api-key-123"}"#.utf8)
+        FakeURLProtocol.stubResponse(for: exchangeURL, data: keyResponse, statusCode: 200)
+
+        let callback =
+            try #require(URL(string: "eigin://oauth/callback?code=abc123&state=expected-state"))
+        let key = try await service.handleCallback(
+            callback,
+            codeVerifier: "verifier",
+            expectedState: "expected-state"
+        )
+
+        #expect(key == "test-api-key-123")
+    }
 }
