@@ -36,18 +36,10 @@ struct DefaultOAuthPKCEService: OAuthPKCEService {
         // Generate PKCE pair
         let codeVerifier = PKCEUtilities.generateCodeVerifier()
         let codeChallenge = PKCEUtilities.generateCodeChallenge(from: codeVerifier)
+        let state = PKCEUtilities.generateState()
 
         // Build authorization URL
-        var components = URLComponents(url: authorizationURL, resolvingAgainstBaseURL: false)!
-        components.queryItems = [
-            URLQueryItem(name: "callback_url", value: Self.callbackURL),
-            URLQueryItem(name: "code_challenge", value: codeChallenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
-        ]
-
-        guard let authURL = components.url else {
-            throw OAuthPKCEError.authorizationFailed("Failed to build authorization URL")
-        }
+        let authURL = buildAuthorizationURL(codeChallenge: codeChallenge, state: state)
 
         // Present browser — 42futures.com/eigin/callback redirects to eigin://oauth/callback
         // which ASWebAuthenticationSession intercepts.
@@ -60,21 +52,63 @@ struct DefaultOAuthPKCEService: OAuthPKCEService {
             throw OAuthPKCEError.authorizationFailed(error.localizedDescription)
         }
 
-        // Parse authorization code from callback
+        return try await handleCallback(
+            callbackURL,
+            codeVerifier: codeVerifier,
+            expectedState: state
+        )
+    }
+
+    // MARK: - Internal for Testing
+
+    /// Parses and validates the OAuth callback, then exchanges the code for an API key.
+    func handleCallback(
+        _ url: URL,
+        codeVerifier: String,
+        expectedState: String
+    ) async throws -> String {
         guard let callbackComponents = URLComponents(
-            url: callbackURL,
+            url: url,
             resolvingAgainstBaseURL: false
-        ),
-            let code = callbackComponents.queryItems?.first(where: { $0.name == "code" })?.value
-        else {
+        ) else {
+            throw OAuthPKCEError.authorizationFailed("Invalid callback URL")
+        }
+
+        let params = callbackComponents.queryItems ?? []
+        let returnedState = params.first(where: { $0.name == "state" })?.value
+        let code = params.first(where: { $0.name == "code" })?.value
+        let error = params.first(where: { $0.name == "error" })?.value
+
+        if let error {
+            throw OAuthPKCEError.authorizationFailed(error)
+        }
+
+        guard returnedState == expectedState else {
+            throw OAuthPKCEError.authorizationFailed("State mismatch")
+        }
+
+        guard let code else {
             throw OAuthPKCEError.authorizationFailed("No authorization code received")
         }
 
-        // Exchange code for API key
         return try await exchangeCodeForKey(code: code, codeVerifier: codeVerifier)
     }
 
     // MARK: - Private
+
+    private func buildAuthorizationURL(codeChallenge: String, state: String) -> URL {
+        var components = URLComponents(url: authorizationURL, resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "callback_url", value: Self.callbackURL),
+            URLQueryItem(name: "code_challenge", value: codeChallenge),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "state", value: state),
+        ]
+        guard let url = components.url else {
+            fatalError("Failed to build authorization URL from valid components")
+        }
+        return url
+    }
 
     private func exchangeCodeForKey(code: String, codeVerifier: String) async throws -> String {
         var request = URLRequest(url: tokenExchangeURL)
