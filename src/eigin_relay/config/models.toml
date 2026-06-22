@@ -14,7 +14,7 @@
 #   3. Multiply by 1,000 to get millicredits (460 * 1,000 = 460,000)
 
 [[models]]
-id = "mistral/mistral-medium-3.5"
+id = "mistral/mistral-medium-2604"
 provider = "mistral"
 upstream_id = "mistral-medium-3-5"
 aliases = ["mistral-medium-3-5", "mistralai/Mistral-Medium-3.5-128B", "Mistral-Medium-3.5-128B"]
