@@ -4001,6 +4001,40 @@
         }
       }
     },
+    "model.picker.loading" : {
+      "comment" : "Placeholder shown while the model catalog is being fetched for the first time",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henter modeller…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading models…"
+          }
+        }
+      }
+    },
+    "model.picker.noModels" : {
+      "comment" : "Empty state shown when a provider returns no models at all",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne udbyder har ingen tilgængelige modeller endnu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This provider has no available models yet."
+          }
+        }
+      }
+    },
     "model.picker.noSearchResults" : {
       "comment" : "Empty state when search has no results",
       "localizations" : {

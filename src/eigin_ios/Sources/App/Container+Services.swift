@@ -87,6 +87,13 @@ extension Container {
         self { CatalogModelMetadataService() }.singleton
     }
 
+    @MainActor
+    var providerModelRefresher: Factory<any ProviderModelRefresher> {
+        self { @MainActor in
+            DefaultProviderModelRefresher(keychainService: self.keychainService())
+        }.singleton
+    }
+
     var vocabularyStore: Factory<any VocabularyStore> {
         self { DefaultVocabularyStore() }.singleton
     }

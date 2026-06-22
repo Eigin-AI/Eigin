@@ -154,6 +154,74 @@ struct AgenticChatLoopTests {
         #expect(fakeToolExecutor.calls.count == 2)
     }
 
+    @Test @MainActor func recoversWhenSelectedModelIsRetired() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        agent.model = "retired-model"
+        provider.availableModels = ["retired-model"]
+
+        let refresher = FakeProviderModelRefresher(modelsToReturn: ["claude-sonnet-4-6"])
+        Container.shared.providerModelRefresher.register { refresher }
+        defer { Container.shared.providerModelRefresher.reset() }
+
+        let fakeChatService = FakeChatService()
+        // First attempt fails because the model no longer exists; the retry succeeds.
+        fakeChatService.throwOnEventStream(
+            OpenAICompatibleClientError.httpError(
+                404, body: "The model `retired-model` does not exist"
+            )
+        )
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Recovered!"),
+            .finished(.stop),
+        ])
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: FakeToolExecutor()
+        )
+
+        #expect(refresher.refreshCallCount == 1)
+        #expect(agent.model == "claude-sonnet-4-6")
+        #expect(produced.count == 1)
+        #expect(produced[0].content == "Recovered!")
+    }
+
+    @Test @MainActor func doesNotRecoverOnUnrelatedError() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        agent.model = "test-model"
+
+        let refresher = FakeProviderModelRefresher(modelsToReturn: ["claude-sonnet-4-6"])
+        Container.shared.providerModelRefresher.register { refresher }
+        defer { Container.shared.providerModelRefresher.reset() }
+
+        let fakeChatService = FakeChatService()
+        fakeChatService.throwOnEventStream(
+            OpenAICompatibleClientError.httpError(404, body: "Not Found")
+        )
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        await #expect(throws: OpenAICompatibleClientError.self) {
+            _ = try await loop.run(
+                messages: [ChatMessage(role: "user", content: "Hi")],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: fakeChatService,
+                toolExecutor: FakeToolExecutor()
+            )
+        }
+
+        #expect(refresher.refreshCallCount == 0)
+        #expect(agent.model == "test-model")
+    }
+
     @Test @MainActor func toolCallWithErrorResultContinues() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container

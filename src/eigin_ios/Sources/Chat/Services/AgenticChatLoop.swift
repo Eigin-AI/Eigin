@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import os
 import SwiftUI
@@ -129,6 +130,12 @@ final class AgenticChatLoop {
 
     private var shouldStop = false
 
+    @ObservationIgnored
+    @Injected(\.providerModelRefresher) private var modelRefresher
+
+    /// Guards model-not-found recovery so it is attempted at most once per turn.
+    private var didAttemptModelRecovery = false
+
     /// Block splitter for streaming content.
     private let blockSplitter: StreamingBlockSplitter
 
@@ -185,11 +192,11 @@ final class AgenticChatLoop {
                 category: .chat
             )
 
-            let stream = try await chatService.chatCompletionEventStream(
-                baseURL: provider.baseURL,
-                providerID: provider.id,
+            let stream = try await openStream(
+                chatService: chatService,
+                provider: provider,
+                agent: agent,
                 messages: allMessages,
-                model: agent.model,
                 tools: currentTools,
                 cacheKey: cacheKey
             )
@@ -495,6 +502,7 @@ final class AgenticChatLoop {
         pendingOptions = nil
         isAwaitingUserInteraction = false
         currentMessageID = ""
+        didAttemptModelRecovery = false
     }
 
     /// Resolves a pending permission request from the UI.
@@ -567,6 +575,62 @@ final class AgenticChatLoop {
     }
 
     // MARK: - Private
+
+    /// Opens a chat stream, recovering once if the selected model is no longer known to the
+    /// provider. A retired or renamed model surfaces as a model-not-found error; we refresh the
+    /// provider's catalog, re-pick the best available model, and retry so the turn can proceed
+    /// without the user touching settings.
+    private func openStream(
+        chatService: ChatService,
+        provider: Provider,
+        agent: Agent,
+        messages: [ChatMessage],
+        tools: [ToolDefinition]?,
+        cacheKey: String?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        do {
+            return try await chatService.chatCompletionEventStream(
+                baseURL: provider.baseURL,
+                providerID: provider.id,
+                messages: messages,
+                model: agent.model,
+                tools: tools,
+                cacheKey: cacheKey
+            )
+        } catch {
+            guard !didAttemptModelRecovery,
+                  (error as? OpenAICompatibleClientError)?.isModelNotFound == true,
+                  await recoverModel(provider: provider, agent: agent)
+            else {
+                throw error
+            }
+            return try await chatService.chatCompletionEventStream(
+                baseURL: provider.baseURL,
+                providerID: provider.id,
+                messages: messages,
+                model: agent.model,
+                tools: tools,
+                cacheKey: cacheKey
+            )
+        }
+    }
+
+    /// Refreshes the provider's catalog and re-selects the best model. Returns `true` when a
+    /// different, usable model was chosen (worth retrying). Attempted at most once per turn.
+    private func recoverModel(provider: Provider, agent: Agent) async -> Bool {
+        didAttemptModelRecovery = true
+        let refreshed = await (try? modelRefresher.refresh(provider, apiKeyOverride: nil))
+            ?? provider.availableModels
+        guard let best = KnownModelCatalog.bestModel(from: refreshed), best != agent.model else {
+            return false
+        }
+        AppLogger.warning(
+            "Model \(public: agent.model) not found for provider; recovered to \(public: best)",
+            category: .chat
+        )
+        agent.model = best
+        return true
+    }
 
     private func updateToolEvent(id: String, status: ToolEventStatus) {
         if let index = toolEvents.firstIndex(where: { $0.id == id }) {

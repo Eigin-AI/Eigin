@@ -35,7 +35,8 @@ struct OpenAICompatibleClient: LLMClient {
         ProviderAdapterFactory.adapter(for: baseURL, model: model)
     }
 
-    /// Fetches the list of available model IDs from the provider, returned sorted alphabetically.
+    /// Fetches the list of available model IDs from the provider, deduplicated and returned sorted
+    /// alphabetically. Some providers (e.g. Mistral) list the same model ID more than once.
     func fetchModels() async throws -> [String] {
         let url = try buildURL(path: "/models")
         var request = URLRequest(url: url)
@@ -46,7 +47,7 @@ struct OpenAICompatibleClient: LLMClient {
         try validateResponse(response)
 
         let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
-        return modelsResponse.data.map(\.id).sorted()
+        return Set(modelsResponse.data.map(\.id)).sorted()
     }
 
     /// Validates the API key by making a minimal non-streaming completion request.

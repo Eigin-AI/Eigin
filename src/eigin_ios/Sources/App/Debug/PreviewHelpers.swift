@@ -105,6 +105,25 @@ struct PreviewCreditsService: CreditsService {
     }
 }
 
+/// A model refresher for previews. Behavior is driven entirely by the provider's own cache so it
+/// resolves identically no matter which preview is showing (no cross-preview contamination):
+/// a provider with cached models echoes them instantly, while an empty provider simulates a slow
+/// first-connect that discovers a small catalog — exercising the picker's loading state.
+@MainActor
+struct PreviewProviderModelRefresher: ProviderModelRefresher {
+    @discardableResult
+    func refresh(_ provider: Provider, apiKeyOverride _: String?) async throws -> [String] {
+        if provider.availableModels.isEmpty {
+            try? await Task.sleep(for: .seconds(2))
+            provider.availableModels = ["gpt-5.5", "claude-sonnet-4-6", "gemini-3.5-flash"]
+            provider.updatedAt = .now
+            return provider.availableModels
+        }
+        provider.updatedAt = .now
+        return provider.availableModels
+    }
+}
+
 /// View modifier that sets up a complete preview environment with fake services
 /// and a sample provider in an in-memory SwiftData store.
 struct PreviewEnvironment: ViewModifier {
@@ -115,6 +134,7 @@ struct PreviewEnvironment: ViewModifier {
         Container.shared.keychainService.register { PreviewKeychainService() }
         Container.shared.chatService.register { PreviewChatService() }
         Container.shared.modelMetadataService.register { CatalogModelMetadataService() }
+        Container.shared.providerModelRefresher.register { PreviewProviderModelRefresher() }
         Container.shared.mcpOAuthService.register { PreviewMCPOAuthService() }
         Container.shared.mcpServerManager.register {
             MCPServerManager(

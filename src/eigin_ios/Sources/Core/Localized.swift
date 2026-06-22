@@ -1349,6 +1349,16 @@ enum Localized {
                 Localized.get("model.picker.dotSeparator")
             }
 
+            /// Placeholder shown while the model catalog is being fetched for the first time
+            static var loading: String {
+                Localized.get("model.picker.loading")
+            }
+
+            /// Empty state shown when a provider returns no models at all
+            static var noModels: String {
+                Localized.get("model.picker.noModels")
+            }
+
             /// Empty state when search has no results
             static var noSearchResults: String {
                 Localized.get("model.picker.noSearchResults")
