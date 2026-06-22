@@ -1,35 +1,57 @@
 # Curated model catalog and credit rates.
 #
+# `id` is the canonical client-facing model ID, returned by GET /v1/models.
+# `upstream_id` is the ID sent to the provider; if absent, `id` is used.
+# `aliases` are additional IDs accepted in request bodies, silently mapping
+# back to the canonical `id`. They do not appear in the model list.
+#
 # Rates are raw upstream cost in millicredits per 1M tokens.
-# 1 credit = 1,000 millicredits ≈ €0.01 of inference.
+# 1 credit = 1,000 millicredits €0.01 of inference.
 #
 # To convert a provider's quoted price (e.g. $5.00 / 1M tokens):
-#   1. Convert to euros (e.g. $5.00 ≈ €4.60)
+#   1. Convert to euros (e.g. $5.00 €4.60)
 #   2. Divide by €0.01 to get credits (€4.60 / €0.01 = 460 credits)
-#   3. Multiply by 1,000 to get millicredits (460 × 1,000 = 460,000)
-#
-# TODO: pin model IDs and rates to chosen upstream provider before launch.
+#   3. Multiply by 1,000 to get millicredits (460 * 1,000 = 460,000)
 
 [[models]]
-id = "mistralai/Mistral-Medium-3.5-128B"
+id = "mistral/mistral-medium-3.5"
+provider = "mistral"
+upstream_id = "mistral-medium-3-5"
+aliases = ["mistral-medium-3-5", "mistralai/Mistral-Medium-3.5-128B", "Mistral-Medium-3.5-128B"]
 input_millicredits_per_1m_tokens = 150_000
-cached_input_millicredits_per_1m_tokens = 0
-output_millicredits_per_1m_tokens = 500_000
+cached_input_millicredits_per_1m_tokens = 15_000
+output_millicredits_per_1m_tokens = 650_000
 
 [[models]]
-id = "moonshotai/Kimi-K2.6"
+id = "z-ai/glm-5.2"
+provider = "tensorx"
+aliases = ["zai-org/GLM-4.7-FP8"]
+input_millicredits_per_1m_tokens = 150_000
+cached_input_millicredits_per_1m_tokens = 35_000
+output_millicredits_per_1m_tokens = 400_000
+
+[[models]]
+id = "nvidia/nvidia-nemotron-3-super-120b-a12b"
+provider = "tensorx"
+aliases = []
+input_millicredits_per_1m_tokens = 30_000
+cached_input_millicredits_per_1m_tokens = 10_000
+output_millicredits_per_1m_tokens = 80_000
+
+[[models]]
+id = "moonshotai/kimi-k2.6"
+provider = "berget"
+upstream_id = "moonshotai/Kimi-K2.6"
+aliases = ["moonshotai/Kimi-K2.6", "kimi-k2.6", "kimi-k2-6"]
 input_millicredits_per_1m_tokens = 75_000
 cached_input_millicredits_per_1m_tokens = 0
 output_millicredits_per_1m_tokens = 350_000
 
 [[models]]
-id = "zai-org/GLM-4.7-FP8"
-input_millicredits_per_1m_tokens = 70_000
-cached_input_millicredits_per_1m_tokens = 0
-output_millicredits_per_1m_tokens = 250_000
-
-[[models]]
-id = "google/gemma-4-31B-it"
+id = "google/gemma-4-31b-it"
+provider = "berget"
+upstream_id = "google/gemma-4-31B-it"
+aliases = ["gemma-4", "google/gemma-4-31B-it"]
 input_millicredits_per_1m_tokens = 25_000
 cached_input_millicredits_per_1m_tokens = 0
 output_millicredits_per_1m_tokens = 50_000

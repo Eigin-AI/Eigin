@@ -56,7 +56,6 @@ mod mock_client {
 mod fakes;
 use fakes::apple::FakeVerifier;
 use fakes::grant::FakeGrantVerifier;
-use fakes::upstream::NoopUpstream;
 
 use mock_client::MockClient;
 
@@ -90,9 +89,10 @@ async fn test_state_with_keys(
         token_encryption_key: [0u8; 32],
         sandbox_budget_credits: 25_000,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        upstream_client: Arc::new(NoopUpstream),
-        upstream_api_key: None,
-        model_rates: HashMap::new(),
+        provider_clients: HashMap::new(),
+        provider_keys: HashMap::new(),
+        canonical_models: HashMap::new(),
+        alias_map: HashMap::new(),
         admit_floor_millicredits: 50_000,
         token_rate_limiter: eigin_relay::RateLimiter::new(20, Duration::from_secs(60)),
     })

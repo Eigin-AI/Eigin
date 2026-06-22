@@ -42,20 +42,11 @@ variable "max_scale" {
 
 # --- Inference proxy ---
 
-variable "upstream_api_key" {
-  description = "API key for the upstream inference provider"
-  type        = string
+variable "provider_api_keys" {
+  description = "Map of provider ID -> API key for upstream inference providers"
+  type        = map(string)
   sensitive   = true
-}
-
-variable "upstream_api_url" {
-  description = "Base URL for the upstream inference provider"
-  type        = string
-
-  validation {
-    condition     = startswith(var.upstream_api_url, "https://") || startswith(var.upstream_api_url, "http://")
-    error_message = "upstream_api_url must include an http:// or https:// scheme."
-  }
+  default     = {}
 }
 
 variable "apple_bundle_id" {

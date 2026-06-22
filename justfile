@@ -169,11 +169,14 @@ run target env="staging":
             mojeek_key="MOJEEK_API_KEY_${suffix}"
             relay_primary_key="EIGIN_RELAY_PRIMARY_KEY_${suffix}"
             relay_secondary_key="EIGIN_RELAY_SECONDARY_KEY_${suffix}"
-            upstream_api_key="UPSTREAM_API_KEY_${suffix}"
             export MOJEEK_API_KEY="${!mojeek_key}"
             export EIGIN_RELAY_PRIMARY_KEY="${!relay_primary_key}"
             export EIGIN_RELAY_SECONDARY_KEY="${!relay_secondary_key:-}"
-            export UPSTREAM_API_KEY="${!upstream_api_key}"
+
+            # Export all PROVIDER_*_API_KEY_<ENV> as PROVIDER_*_API_KEY (without suffix).
+            for raw in $(env | grep -E "^PROVIDER_.*_API_KEY_${suffix}=" | cut -d= -f1); do
+                export "${raw%_${suffix}}"="${!raw}"
+            done
 
             # Non-secret config comes from the environment's tfvars (single source of truth).
             tfvars="{{ infra_dir }}/environments/{{ env }}.tfvars"
@@ -181,7 +184,6 @@ run target env="staging":
             # List-valued tfvars (e.g. ["Production", "Sandbox"]) flatten to the
             # comma-separated string the relay parses: strip brackets/quotes/spaces.
             get_tfvar_csv() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=//' | tr -d '[]" '; }
-            export UPSTREAM_API_URL="$(get_tfvar upstream_api_url)"
             export APPLE_BUNDLE_ID="$(get_tfvar apple_bundle_id)"
             export APPLE_APP_APPLE_ID="$(get_tfvar apple_app_apple_id)"
             apple_envs="$(get_tfvar_csv apple_environments)"
