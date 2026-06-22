@@ -24,10 +24,6 @@ struct AgentProfile: View {
         providers.first { $0.id == agent.providerID }
     }
 
-    private var availableModels: [String] {
-        currentProvider?.availableModels ?? []
-    }
-
     private var availableVoices: [SpeechVoice] {
         voiceService.availableSpeechVoices(for: languageManager.currentLanguage)
     }
@@ -224,23 +220,21 @@ struct AgentProfile: View {
                         }
                     }
                 }
-                NavigationLink {
-                    ModelPicker(
-                        providerName: currentProvider?.name ?? "",
-                        availableModels: availableModels,
-                        selectedModel: $agent.model
-                    )
-                    .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "cpu", color: .teal)
-                        Text(Localized.Provider.modelLabel)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                        Spacer()
-                        Text(modelDisplayName(agent.model))
-                            .foregroundStyle(colors.text.standard.muted)
-                            .typography(Typography.body)
+                if let provider = currentProvider {
+                    NavigationLink {
+                        ModelPicker(provider: provider, selectedModel: $agent.model)
+                            .hidesTabBar()
+                    } label: {
+                        HStack(spacing: Spacing.n8) {
+                            SettingsIcon(systemName: "cpu", color: .teal)
+                            Text(Localized.Provider.modelLabel)
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.base)
+                            Spacer()
+                            Text(modelDisplayName(agent.model))
+                                .foregroundStyle(colors.text.standard.muted)
+                                .typography(Typography.body)
+                        }
                     }
                 }
             }

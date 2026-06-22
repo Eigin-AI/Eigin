@@ -5,176 +5,190 @@ import SwiftUI
 ///
 /// Shows the auto-selected model prominently at the top, followed by
 /// "Recommended" (ordered by preference ranking) and "Other" sections.
+///
+/// The provider's catalog is treated as a refreshable cache: the cached list renders instantly,
+/// then a background refresh updates it so newly added models appear and retired ones disappear.
+/// Grouping and sorting are computed once off the render path (not in `body`) so the view stays
+/// responsive even for providers with large catalogs.
 struct ModelPicker: View {
-    let providerName: String
-    let availableModels: [String]
+    let provider: Provider
     @Binding var selectedModel: String
 
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
     @Injected(\.modelMetadataService) private var modelMetadataService
+    @Injected(\.providerModelRefresher) private var refresher
 
     @State private var searchText = ""
     @State private var metadata: [String: ModelMetadata] = [:]
+    @State private var rankedModels: [String] = []
+    @State private var unknownModels: [String] = []
+    @State private var autoSelected: String?
     @State private var isLoaded = false
+    @State private var isRefreshing = false
     @State private var isOtherCollapsed = true
-
-    private var autoSelectedModel: String? {
-        KnownModelCatalog.bestModel(from: availableModels)
-    }
-
-    // MARK: - Filtering & Grouping
-
-    private var knownModels: [String] {
-        let base = availableModels.filter { metadata[$0] != nil }
-        return applySearch(base)
-    }
-
-    private var unknownModels: [String] {
-        let base = availableModels.filter { metadata[$0] == nil }
-        return applySearch(base)
-    }
-
-    /// Known models sorted by preference ranking, excluding the auto-selected model.
-    private var rankedModels: [String] {
-        knownModels
-            .filter { $0 != autoSelectedModel }
-            .sorted { rankIndex($0) < rankIndex($1) }
-    }
-
-    private func rankIndex(_ modelID: String) -> Int {
-        if let idx = KnownModelCatalog.preferenceRanking.firstIndex(where: { pattern in
-            KnownModelCatalog.lookup(modelID)?.pattern == pattern
-        }) {
-            return idx
-        }
-        return Int.max
-    }
-
-    private func applySearch(_ models: [String]) -> [String] {
-        guard !searchText.isEmpty else { return models }
-        let query = searchText.lowercased()
-        return models.filter { id in
-            displayName(for: id).lowercased().contains(query)
-                || id.lowercased().contains(query)
-        }
-    }
 
     // MARK: - Body
 
     var body: some View {
         List {
-            // Auto-selected model — elevated at the top
-            if let auto = autoSelectedModel, searchText.isEmpty {
-                Section {
-                    Button {
-                        selectedModel = auto
-                        dismiss()
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(displayName(for: auto))
-                                    .typography(Typography.titleXS)
-                                    .foregroundStyle(colors.text.standard.base)
-
-                                HStack(spacing: Spacing.n4) {
-                                    Text(Localized.Provider.recommendedForYou)
-                                        .typography(Typography.miniLabel)
-                                        .foregroundStyle(colors.accent)
-
-                                    if let sub = subtitle(for: auto) {
-                                        Text(verbatim: "·")
-                                            .typography(Typography.miniLabel)
-                                            .foregroundStyle(colors.text.standard.muted)
-                                        Text(sub)
-                                            .typography(Typography.miniLabel)
-                                            .foregroundStyle(colors.text.standard.muted)
-                                    }
-                                }
-                            }
-
-                            Spacer()
-
-                            if selectedModel == auto {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(colors.accent)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+            if provider.availableModels.isEmpty {
+                // No cached models: keep the loading state until the background refresh resolves,
+                // then show a genuine empty-catalog message if it still came back empty.
+                if isLoaded, !isRefreshing {
+                    emptyCatalog
+                } else {
+                    loadingPlaceholder
                 }
-            }
-
-            if !rankedModels.isEmpty {
-                Section {
-                    ForEach(rankedModels, id: \.self) { modelID in
-                        modelRow(modelID)
-                    }
-                } header: {
-                    Text(Localized.Model.Picker.otherRecommended)
-                        .typography(Typography.miniLabel)
-                }
-            }
-
-            if !unknownModels.isEmpty {
-                Section {
-                    if !isOtherCollapsed {
-                        ForEach(unknownModels, id: \.self) { modelID in
-                            modelRow(modelID)
-                        }
-                    }
-                } header: {
-                    Button {
-                        withAnimation { isOtherCollapsed.toggle() }
-                    } label: {
-                        HStack(spacing: Spacing.n8) {
-                            Image(systemName: isOtherCollapsed ? "chevron.right" : "chevron.down")
-                                .typography(Typography.miniLabel)
-                                .foregroundStyle(colors.text.standard.muted)
-                            Text(Localized.Model.Picker.allModels)
-                            Text(verbatim: "\(unknownModels.count)")
-                                .typography(Typography.miniLabel)
-                                .foregroundStyle(colors.text.standard.muted)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if rankedModels.isEmpty, unknownModels.isEmpty, autoSelectedModel == nil {
-                Section {
-                    HStack(alignment: .top, spacing: Spacing.n8) {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(colors.text.standard.muted)
-                            .typography(Typography.miniLabel)
-                        Text(Localized.Model.Picker.noSearchResults)
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                    .padding(.vertical, Spacing.n4)
-                }
+            } else {
+                content
             }
         }
         .searchable(text: $searchText, prompt: "Search models")
-        .opacity(isLoaded ? 1 : 0)
-        .animation(.easeIn(duration: 0.25), value: isLoaded)
+        .onChange(of: searchText) { prepare() }
         .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationTitle("Choose Model", style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            let enriched = await modelMetadataService.enrich(
-                modelIDs: availableModels,
-                provider: providerName
-            )
-            metadata = Dictionary(
-                enriched.map { ($0.id, $0) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            isLoaded = true
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if isRefreshing {
+                    ProgressView()
+                }
+            }
         }
+        .task {
+            // Render the cached catalog immediately, then refresh in the background so the list
+            // reflects models the provider has added or retired since it was last fetched.
+            await enrich(models: provider.availableModels)
+            isLoaded = true
+
+            isRefreshing = true
+            let previous = provider.availableModels
+            let refreshed = try? await refresher.refresh(provider, apiKeyOverride: nil)
+            isRefreshing = false
+            if let refreshed, refreshed != previous {
+                await enrich(models: refreshed)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        // Auto-selected model — elevated at the top
+        if let auto = autoSelected, searchText.isEmpty {
+            Section {
+                Button {
+                    selectedModel = auto
+                    dismiss()
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(displayName(for: auto))
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.text.standard.base)
+
+                            HStack(spacing: Spacing.n4) {
+                                Text(Localized.Provider.recommendedForYou)
+                                    .typography(Typography.miniLabel)
+                                    .foregroundStyle(colors.accent)
+
+                                if let sub = subtitle(for: auto) {
+                                    Text(verbatim: "·")
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
+                                    Text(sub)
+                                        .typography(Typography.miniLabel)
+                                        .foregroundStyle(colors.text.standard.muted)
+                                }
+                            }
+                        }
+
+                        Spacer()
+
+                        if selectedModel == auto {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(colors.accent)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+
+        if !rankedModels.isEmpty {
+            Section {
+                ForEach(rankedModels, id: \.self) { modelID in
+                    modelRow(modelID)
+                }
+            } header: {
+                Text(Localized.Model.Picker.otherRecommended)
+                    .typography(Typography.miniLabel)
+            }
+        }
+
+        if !unknownModels.isEmpty {
+            Section {
+                if !isOtherCollapsed {
+                    ForEach(unknownModels, id: \.self) { modelID in
+                        modelRow(modelID)
+                    }
+                }
+            } header: {
+                Button {
+                    withAnimation { isOtherCollapsed.toggle() }
+                } label: {
+                    HStack(spacing: Spacing.n8) {
+                        Image(systemName: isOtherCollapsed ? "chevron.right" : "chevron.down")
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
+                        Text(Localized.Model.Picker.allModels)
+                        Text(verbatim: "\(unknownModels.count)")
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+
+        if !searchText.isEmpty, rankedModels.isEmpty, unknownModels.isEmpty {
+            Section {
+                infoRow(Localized.Model.Picker.noSearchResults)
+            }
+        }
+    }
+
+    private var loadingPlaceholder: some View {
+        Section {
+            HStack(spacing: Spacing.n8) {
+                ProgressView()
+                Text(Localized.Model.Picker.loading)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.muted)
+            }
+            .padding(.vertical, Spacing.n4)
+        }
+    }
+
+    private var emptyCatalog: some View {
+        Section {
+            infoRow(Localized.Model.Picker.noModels)
+        }
+    }
+
+    private func infoRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.n8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(colors.text.standard.muted)
+                .typography(Typography.miniLabel)
+            Text(text)
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
+        }
+        .padding(.vertical, Spacing.n4)
     }
 
     // MARK: - Model Row
@@ -187,7 +201,7 @@ struct ModelPicker: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayName(for: modelID))
-                        .typography(Typography.body)
+                        .typography(Typography.navTab)
                         .foregroundStyle(colors.text.standard.base)
 
                     if let subtitle = subtitle(for: modelID) {
@@ -207,6 +221,61 @@ struct ModelPicker: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Preparation
+
+    /// Enriches the given model IDs with catalog metadata, then rebuilds the grouped lists.
+    private func enrich(models: [String]) async {
+        let enriched = await modelMetadataService.enrich(
+            modelIDs: models,
+            provider: provider.name
+        )
+        metadata = Dictionary(
+            enriched.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        prepare()
+    }
+
+    /// Filters, groups, and sorts the catalog once into stored state so `body` only renders
+    /// prepared arrays. A precomputed rank map avoids repeating catalog lookups per comparison.
+    private func prepare() {
+        // Deduplicate defensively: a cached list (or a provider that lists a model twice) would
+        // otherwise crash the rank-map build and yield non-unique `ForEach` ids.
+        var seen = Set<String>()
+        let all = provider.availableModels.filter { seen.insert($0).inserted }
+        autoSelected = KnownModelCatalog.bestModel(from: all)
+
+        let known = all.filter { metadata[$0] != nil && matchesSearch($0) }
+        let unknown = all.filter { metadata[$0] == nil && matchesSearch($0) }
+
+        let patternIndex = Dictionary(
+            uniqueKeysWithValues: KnownModelCatalog.preferenceRanking.enumerated()
+                .map { ($0.element, $0.offset) }
+        )
+        let rankByModel: [String: Int] = Dictionary(
+            uniqueKeysWithValues: known.map { id in
+                guard let pattern = KnownModelCatalog.lookup(id)?.pattern,
+                      let rank = patternIndex[pattern]
+                else {
+                    return (id, Int.max)
+                }
+                return (id, rank)
+            }
+        )
+
+        rankedModels = known
+            .filter { $0 != autoSelected }
+            .sorted { (rankByModel[$0] ?? .max) < (rankByModel[$1] ?? .max) }
+        unknownModels = unknown
+    }
+
+    private func matchesSearch(_ id: String) -> Bool {
+        guard !searchText.isEmpty else { return true }
+        let query = searchText.lowercased()
+        return displayName(for: id).lowercased().contains(query)
+            || id.lowercased().contains(query)
     }
 
     // MARK: - Helpers
@@ -248,4 +317,50 @@ struct ModelPicker: View {
         let k = Int((Double(tokens) / 1000).rounded())
         return "\(k)K context"
     }
+}
+
+// MARK: - Previews
+
+private func previewProvider(name: String, models: [String]) -> Provider {
+    let provider = Provider(name: name, baseURL: "https://fake.local")
+    provider.availableModels = models
+    return provider
+}
+
+#Preview("Typical catalog") {
+    @Previewable @State var selected = "gpt-5.5"
+    let provider = previewProvider(
+        name: "OpenAI",
+        models: [
+            "gpt-5.5", "gpt-5.4", "gpt-5.4-mini",
+            "claude-sonnet-4-6", "gemini-3.5-flash",
+            "o3-mini", "text-embedding-3-large", "whisper-1",
+        ]
+    )
+    return NavigationStack {
+        ModelPicker(provider: provider, selectedModel: $selected)
+    }
+    .previewEnvironment()
+}
+
+#Preview("Large catalog") {
+    @Previewable @State var selected = "claude-sonnet-4-6"
+    let known = ["claude-sonnet-4-6", "gpt-5.5", "gpt-5.4", "gemini-3.5-flash"]
+    let unknown = (1 ... 140).map { "vendor/experimental-model-\($0)" }
+    let provider = previewProvider(name: "OpenRouter", models: known + unknown)
+    return NavigationStack {
+        ModelPicker(provider: provider, selectedModel: $selected)
+    }
+    .previewEnvironment()
+}
+
+#Preview("First connect (loading)") {
+    @Previewable @State var selected = ""
+    // Empty cache: the preview refresher simulates a slow first-connect, so this shows the
+    // "Loading models…" state for ~2s and then populates as the catalog is discovered.
+    let provider = previewProvider(name: "New Provider", models: [])
+    return NavigationStack {
+        ModelPicker(provider: provider, selectedModel: $selected)
+    }
+    .previewEnvironment()
 }
