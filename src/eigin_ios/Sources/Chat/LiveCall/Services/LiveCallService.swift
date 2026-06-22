@@ -544,7 +544,8 @@ final class LiveCallService: @unchecked Sendable {
                     messages: apiMessages,
                     tools: turn.registry.definitions,
                     agent: agent, provider: provider,
-                    chatService: chatService, toolExecutor: turn.registry
+                    chatService: chatService, toolExecutor: turn.registry,
+                    cacheKey: chatID?.uuidString
                 )
                 messages.append(contentsOf: produced)
                 onPersist?(produced)

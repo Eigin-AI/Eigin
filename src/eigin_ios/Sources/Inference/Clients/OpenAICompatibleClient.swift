@@ -154,7 +154,8 @@ struct OpenAICompatibleClient: LLMClient {
     func chatCompletionEventStream(
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]? = nil
+        tools: [ToolDefinition]? = nil,
+        cacheKey: String? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let url = try buildURL(path: "/chat/completions")
         var request = URLRequest(url: url)
@@ -163,14 +164,15 @@ struct OpenAICompatibleClient: LLMClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         applyExtraHeaders(to: &request)
 
+        let resolvedAdapter = adapter(for: model)
         var body = ChatCompletionRequest(
             model: model,
             messages: messages,
             stream: true
         )
         body.tools = tools
+        body.promptCacheKey = resolvedAdapter.usesPromptCacheKey ? cacheKey : nil
         let encoded = try JSONEncoder().encode(body)
-        let resolvedAdapter = adapter(for: model)
         request.httpBody = try resolvedAdapter.processRequestBody(encoded, messages: messages)
 
         AppLogger.debug(

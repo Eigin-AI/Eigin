@@ -14,7 +14,8 @@ protocol ChatService: Sendable {
         providerID: UUID,
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
 }
 
@@ -54,7 +55,8 @@ struct DefaultChatService: ChatService {
         providerID: UUID,
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let apiKey: String
         if ProviderPreset.isLocal(baseURL) || ProviderPreset.isRelay(baseURL) {
@@ -76,7 +78,8 @@ struct DefaultChatService: ChatService {
             try await client.chatCompletionEventStream(
                 messages: messages,
                 model: model,
-                tools: tools
+                tools: tools,
+                cacheKey: cacheKey
             )
         }
     }
@@ -159,7 +162,8 @@ struct PreviewChatService: ChatService {
         providerID: UUID,
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey _: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let words = cannedResponse.split(separator: " ")
         return AsyncThrowingStream { continuation in
@@ -212,7 +216,8 @@ struct ScriptedChatService: ChatService {
         providerID: UUID,
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey _: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let words = text.split(separator: " ")
         return AsyncThrowingStream { continuation in

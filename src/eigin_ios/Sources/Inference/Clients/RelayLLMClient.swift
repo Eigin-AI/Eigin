@@ -53,12 +53,18 @@ struct RelayLLMClient: LLMClient {
     func chatCompletionEventStream(
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey: String? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         try await walletManager.withCredits { token in
             do {
                 return try await client(token: token)
-                    .chatCompletionEventStream(messages: messages, model: model, tools: tools)
+                    .chatCompletionEventStream(
+                        messages: messages,
+                        model: model,
+                        tools: tools,
+                        cacheKey: cacheKey
+                    )
             } catch OpenAICompatibleClientError.httpError(402, _) {
                 // Translate the relay's payment-required response so `withCredits` fails over.
                 throw RelayClientError.insufficientCredits(nil)

@@ -82,7 +82,8 @@ struct AnthropicClient: LLMClient {
     func chatCompletionEventStream(
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey _: String? = nil // TODO: Use instead of ephemeral cache
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         try await rawEventStream(messages: messages, model: model, tools: tools)
     }

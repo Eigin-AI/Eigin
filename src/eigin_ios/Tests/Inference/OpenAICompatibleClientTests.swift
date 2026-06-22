@@ -69,6 +69,53 @@ struct OpenAICompatibleClientTests {
         }
     }
 
+    private func sentBody(for url: String) throws -> [String: Any] {
+        let data = try #require(FakeURLProtocol.lastRequestBody(for: url))
+        return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    @Test func includesPromptCacheKeyForOpenAICompatibleProvider() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let url = "https://api.example.com/v1/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+        _ = try await client.chatCompletionEventStream(
+            messages: [ChatMessage(role: "user", content: "hi")],
+            model: "gpt-4o",
+            tools: nil,
+            cacheKey: "chat-123"
+        )
+
+        let body = try sentBody(for: url)
+        #expect(body["prompt_cache_key"] as? String == "chat-123")
+    }
+
+    @Test func omitsPromptCacheKeyForGemini() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+
+        let client = OpenAICompatibleClient(
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
+            apiToken: "token",
+            session: session
+        )
+        _ = try await client.chatCompletionEventStream(
+            messages: [ChatMessage(role: "user", content: "hi")],
+            model: "gemini-2.0-flash",
+            tools: nil,
+            cacheKey: "chat-123"
+        )
+
+        let body = try sentBody(for: url)
+        #expect(body["prompt_cache_key"] == nil)
+    }
+
     @Test func trailingSlashBaseURLHandled() async throws {
         let session = FakeURLProtocol.fakeSession()
         let url = "https://api.example.com/v1/models"

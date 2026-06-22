@@ -16,10 +16,12 @@ struct ChatCompletionRequest: Encodable {
     let stream: Bool
     var maxTokens: Int?
     var tools: [ToolDefinition]?
+    var promptCacheKey: String?
 
     enum CodingKeys: String, CodingKey {
         case model, messages, stream, tools
         case maxTokens = "max_tokens"
+        case promptCacheKey = "prompt_cache_key"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -29,6 +31,7 @@ struct ChatCompletionRequest: Encodable {
         try container.encode(stream, forKey: .stream)
         try container.encodeIfPresent(maxTokens, forKey: .maxTokens)
         try container.encodeIfPresent(tools, forKey: .tools)
+        try container.encodeIfPresent(promptCacheKey, forKey: .promptCacheKey)
     }
 }
 

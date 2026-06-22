@@ -163,7 +163,8 @@ final class AgenticChatLoop {
         agent: Agent,
         provider: Provider,
         chatService: ChatService,
-        toolExecutor: ToolExecutor
+        toolExecutor: ToolExecutor,
+        cacheKey: String? = nil
     ) async throws -> [ChatMessage] {
         reset()
         shouldStop = false
@@ -189,7 +190,8 @@ final class AgenticChatLoop {
                 providerID: provider.id,
                 messages: allMessages,
                 model: agent.model,
-                tools: currentTools
+                tools: currentTools,
+                cacheKey: cacheKey
             )
 
             contentBuffer = ""
