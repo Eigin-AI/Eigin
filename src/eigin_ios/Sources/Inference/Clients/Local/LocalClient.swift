@@ -40,7 +40,8 @@ struct LocalClient: LLMClient {
     func chatCompletionEventStream(
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey _: String? = nil // Local models currently don't use cache keys.
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         if isApplePath(model: model) {
             try await appleEventStream(messages: messages, model: model, tools: tools)

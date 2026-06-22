@@ -271,7 +271,8 @@ final class ChatViewModel {
                     agent: agent,
                     provider: provider,
                     chatService: Container.shared.chatService(),
-                    toolExecutor: registry
+                    toolExecutor: registry,
+                    cacheKey: chatID.uuidString
                 )
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)

@@ -6,6 +6,12 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     private nonisolated(unsafe) static var _errorMap: [String: Error] = [:]
     private nonisolated(unsafe) static var _responseQueues: [String: [(Data, HTTPURLResponse)]] =
         [:]
+    private nonisolated(unsafe) static var _capturedBodies: [String: Data] = [:]
+
+    /// The most recent request body sent to `url`, for asserting what the client serialized.
+    static func lastRequestBody(for url: String) -> Data? {
+        lock.withLock { _capturedBodies[url] }
+    }
 
     /// Queue a response for a URL. Queued responses are consumed in FIFO order across successive
     /// requests to the same URL, letting one endpoint return e.g. 402 then 200 to exercise
@@ -52,6 +58,10 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     override func startLoading() {
         let urlString = request.url?.absoluteString ?? ""
 
+        if let body = Self.readBody(from: request) {
+            Self.lock.withLock { Self._capturedBodies[urlString] = body }
+        }
+
         let error: Error?
         let queued: (Data, HTTPURLResponse)?
         let entry: (Data, HTTPURLResponse)?
@@ -97,4 +107,22 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+
+    /// URLSession often moves `httpBody` into `httpBodyStream` before a URLProtocol sees it,
+    /// so fall back to draining the stream when the body isn't set directly.
+    private static func readBody(from request: URLRequest) -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        let bufferSize = 4096
+        var buffer = [UInt8](repeating: 0, count: bufferSize)
+        while stream.hasBytesAvailable {
+            let read = stream.read(&buffer, maxLength: bufferSize)
+            if read <= 0 { break }
+            data.append(buffer, count: read)
+        }
+        return data.isEmpty ? nil : data
+    }
 }

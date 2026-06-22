@@ -97,7 +97,8 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         providerID: UUID,
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey _: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         if let thrown: Error = lock.withLock({
             let e = _eventStreamThrow

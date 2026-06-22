@@ -13,7 +13,8 @@ protocol LLMClient: Sendable {
     func chatCompletionEventStream(
         messages: [ChatMessage],
         model: String,
-        tools: [ToolDefinition]?
+        tools: [ToolDefinition]?,
+        cacheKey: String?
     ) async throws
         -> AsyncThrowingStream<ChatStreamEvent, Error>
 }

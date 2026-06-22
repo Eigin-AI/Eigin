@@ -31,7 +31,7 @@ mod fakes;
 use fakes::apple::FakeVerifier;
 use fakes::grant::FakeGrantVerifier;
 use fakes::search::NoopSearch;
-use fakes::upstream::{BufferUpstream, FakeUpstream};
+use fakes::upstream::{BufferUpstream, CapturingUpstream, FakeUpstream};
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -569,6 +569,45 @@ async fn chat_debits_balance_after_stream() {
     let (_, bal) = balance(&app, &token).await;
     // 500,000 - 20 = 499,980 millicredits = 499 whole credits (floor division).
     assert_eq!(bal["credits"].as_i64().unwrap(), 499);
+}
+
+#[tokio::test]
+async fn chat_forwards_prompt_cache_key_to_upstream() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-cache-key", "ai.eigin.credits.500");
+    let upstream = CapturingUpstream::default();
+    let state = make_state(verifier, products, upstream.clone(), 0, 50_000).await;
+    let app = build_router(state);
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    // Send a request carrying the OpenAI-style prompt_cache_key.
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": "test-model",
+        "stream": true,
+        "prompt_cache_key": "chat-abc",
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let _ = to_bytes(resp.into_body(), 65536).await.unwrap();
+
+    // The relay re-serializes the body; the unknown field must survive to the upstream.
+    let forwarded = upstream.captured_body().expect("upstream received a body");
+    let forwarded: serde_json::Value = serde_json::from_slice(&forwarded).unwrap();
+    assert_eq!(forwarded["prompt_cache_key"], "chat-abc");
 }
 
 #[tokio::test]

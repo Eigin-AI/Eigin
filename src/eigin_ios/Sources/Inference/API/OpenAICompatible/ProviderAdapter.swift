@@ -8,6 +8,11 @@ protocol ProviderAdapter: Sendable {
 
     /// Whether this provider sends "stop" as finish reason even when tool calls are present.
     var treatsStopAsToolCalls: Bool { get }
+
+    /// Whether this provider reads the OpenAI-style `prompt_cache_key` request field.
+    /// This is about which field carries the key, not whether the provider caches at all:
+    /// Anthropic caches via `cache_control` and so returns `false` here.
+    var usesPromptCacheKey: Bool { get }
 }
 
 /// No-op adapter for standard OpenAI-compatible providers.
@@ -19,6 +24,10 @@ struct DefaultAdapter: ProviderAdapter {
     var treatsStopAsToolCalls: Bool {
         false
     }
+
+    var usesPromptCacheKey: Bool {
+        true
+    }
 }
 
 /// Adapter for Google Gemini via its OpenAI-compatible endpoint.
@@ -29,6 +38,11 @@ struct DefaultAdapter: ProviderAdapter {
 struct GeminiAdapter: ProviderAdapter {
     var treatsStopAsToolCalls: Bool {
         true
+    }
+
+    /// Gemini's OpenAI-compatible endpoint does not read `prompt_cache_key`.
+    var usesPromptCacheKey: Bool {
+        false
     }
 
     func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
@@ -74,6 +88,10 @@ struct GeminiAdapter: ProviderAdapter {
 struct MistralAdapter: ProviderAdapter {
     var treatsStopAsToolCalls: Bool {
         false
+    }
+
+    var usesPromptCacheKey: Bool {
+        true
     }
 
     func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
@@ -128,6 +146,11 @@ struct MistralAdapter: ProviderAdapter {
 /// OpenRouter passes the caching hint through to the Anthropic API.
 struct AnthropicAdapter: ProviderAdapter {
     var treatsStopAsToolCalls: Bool {
+        false
+    }
+
+    /// Anthropic caches via the top-level `cache_control` hint, not `prompt_cache_key`.
+    var usesPromptCacheKey: Bool {
         false
     }
 
