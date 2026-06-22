@@ -14,9 +14,9 @@ module "relay" {
   monthly_pool_size = var.monthly_pool_size
   max_scale         = var.max_scale
 
-  # Inference proxy — set real values in .env / tfvars before deploying
-  upstream_api_key                = var.upstream_api_key
-  upstream_api_url                = var.upstream_api_url
+  # Inference proxy — provider API keys map provider IDs to their keys
+  provider_api_keys               = var.provider_api_keys
+
   apple_bundle_id                 = var.apple_bundle_id
   apple_environments              = var.apple_environments
   apple_app_apple_id              = var.apple_app_apple_id

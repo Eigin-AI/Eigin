@@ -27,7 +27,6 @@ resource "scaleway_container" "relay" {
     APPLE_APP_APPLE_ID              = var.apple_app_apple_id
     APPLE_BUNDLE_ID                 = var.apple_bundle_id
     SANDBOX_MONTHLY_CREDIT_BUDGET   = tostring(var.sandbox_monthly_credit_budget)
-    UPSTREAM_API_URL                = var.upstream_api_url
     GRANT_PUBLIC_KEY                = tls_private_key.grant.public_key_pem
     GRANT_ISSUER                    = var.grant_issuer
     ADMIT_FLOOR_CREDITS             = tostring(var.admit_floor_credits)
@@ -37,6 +36,7 @@ resource "scaleway_container" "relay" {
     RATE_LIMIT_WINDOW_SECONDS       = tostring(var.ip_rate_limit_window_seconds)
     MODELS_CONFIG_PATH              = "/config/models.toml"
     PRODUCTS_CONFIG_PATH            = "/config/products.toml"
+    PROVIDERS_CONFIG_PATH           = "/config/providers.toml"
   }
 
   # The relay always has a Terraform-generated primary key. A secondary key is
@@ -45,12 +45,15 @@ resource "scaleway_container" "relay" {
   secret_environment_variables = merge(
     {
       MOJEEK_API_KEY          = var.mojeek_api_key
-      UPSTREAM_API_KEY        = var.upstream_api_key
       EIGIN_RELAY_PRIMARY_KEY = random_password.eigin_relay_key.result
       TOKEN_ENCRYPTION_KEY    = random_bytes.token_encryption_key.base64
       DATABASE_URL            = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
     },
     var.eigin_relay_secondary_key != "" ? { EIGIN_RELAY_SECONDARY_KEY = var.eigin_relay_secondary_key } : {},
+    {
+      for name, key in var.provider_api_keys :
+      "PROVIDER_${upper(name)}_API_KEY" => key
+    }
   )
 
   depends_on = [

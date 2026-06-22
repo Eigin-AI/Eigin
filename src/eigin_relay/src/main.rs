@@ -15,7 +15,9 @@ use eigin_relay::credits::grant::{Ed25519GrantVerifier, GrantVerifier, Rejecting
 use eigin_relay::credits::postgres::connect_and_migrate;
 use eigin_relay::credits::token::parse_encryption_key;
 use eigin_relay::credits::{CreditLedger, InMemoryLedger, PostgresLedger};
-use eigin_relay::inference::catalog::{ModelConfig, ModelsConfig, ProductsConfig};
+use eigin_relay::inference::catalog::{
+    ModelsConfig, ProductsConfig, ProvidersConfig, ResolvedCatalog,
+};
 use eigin_relay::inference::upstream::{ReqwestUpstreamClient, UpstreamClient};
 use eigin_relay::quota::{InMemoryQuota, PostgresQuota, Quota};
 use eigin_relay::{AppState, RateLimiter, create_client, health, require_eigin_key, search};
@@ -42,9 +44,9 @@ struct CreditsConfig {
 }
 
 struct InferenceConfig {
-    upstream_client: Arc<dyn UpstreamClient>,
-    upstream_api_key: Option<String>,
-    model_rates: HashMap<String, ModelConfig>,
+    provider_clients: HashMap<String, Arc<dyn UpstreamClient>>,
+    provider_keys: HashMap<String, String>,
+    resolved_catalog: ResolvedCatalog,
     admit_floor_millicredits: i64,
     token_rate_limiter: RateLimiter<uuid::Uuid>,
 }
@@ -88,9 +90,10 @@ async fn main() {
         token_encryption_key: credits.token_encryption_key,
         sandbox_budget_credits: credits.sandbox_budget_credits,
         sandbox_budget_window: credits.sandbox_budget_window,
-        upstream_client: inference.upstream_client,
-        upstream_api_key: inference.upstream_api_key,
-        model_rates: inference.model_rates,
+        provider_clients: inference.provider_clients,
+        provider_keys: inference.provider_keys,
+        canonical_models: inference.resolved_catalog.canonical_models,
+        alias_map: inference.resolved_catalog.alias_map,
         admit_floor_millicredits: inference.admit_floor_millicredits,
         token_rate_limiter: inference.token_rate_limiter,
     });
@@ -312,16 +315,6 @@ fn configure_grant_verifier() -> Arc<dyn GrantVerifier> {
 }
 
 fn configure_inference() -> InferenceConfig {
-    let upstream_api_url = env::var("UPSTREAM_API_URL").ok();
-    let upstream_api_key = env::var("UPSTREAM_API_KEY").ok();
-
-    if upstream_api_url.is_none() {
-        tracing::warn!("UPSTREAM_API_URL not set — inference routes will return 503");
-    }
-    if upstream_api_key.is_none() {
-        tracing::warn!("UPSTREAM_API_KEY not set — inference routes will return 503");
-    }
-
     let admit_floor_credits: i64 = env::var("ADMIT_FLOOR_CREDITS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -339,17 +332,59 @@ fn configure_inference() -> InferenceConfig {
 
     let models_config_path =
         env::var("MODELS_CONFIG_PATH").unwrap_or_else(|_| "config/models.toml".into());
-    let model_rates = ModelsConfig::load(&models_config_path)
-        .map(|c| c.into_rate_map())
+    let resolved_catalog = ModelsConfig::load(&models_config_path)
+        .and_then(|c| c.into_resolved())
         .unwrap_or_else(|e| {
             tracing::warn!("{e} — no models available");
-            HashMap::new()
+            ResolvedCatalog {
+                canonical_models: HashMap::new(),
+                alias_map: HashMap::new(),
+            }
         });
 
-    let upstream_client = Arc::new(ReqwestUpstreamClient::new(
-        reqwest::Client::new(),
-        upstream_api_url.unwrap_or_default(),
-    ));
+    let mut provider_clients: HashMap<String, Arc<dyn UpstreamClient>> = HashMap::new();
+    let mut provider_keys: HashMap<String, String> = HashMap::new();
+
+    let providers_config_path =
+        env::var("PROVIDERS_CONFIG_PATH").unwrap_or_else(|_| "config/providers.toml".into());
+
+    match ProvidersConfig::load(&providers_config_path) {
+        Ok(providers_config) => {
+            for provider in providers_config.providers {
+                let env_key = format!("PROVIDER_{}_API_KEY", provider.id.to_uppercase());
+                match env::var(&env_key) {
+                    Ok(key) if !key.trim().is_empty() => {
+                        let id = provider.id;
+                        tracing::info!(
+                            provider_id = %id,
+                            base_url = %provider.base_url,
+                            "configured upstream provider"
+                        );
+                        let client = Arc::new(ReqwestUpstreamClient::new(
+                            reqwest::Client::new(),
+                            provider.base_url,
+                        )) as Arc<dyn UpstreamClient>;
+                        provider_clients.insert(id.clone(), client);
+                        provider_keys.insert(id, key);
+                    }
+                    _ => {
+                        tracing::error!(
+                            provider_id = %provider.id,
+                            env_key = %env_key,
+                            "provider configured but no API key found — inference for this provider will fail"
+                        );
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("{e} — no providers configured");
+        }
+    }
+
+    if provider_clients.is_empty() {
+        tracing::warn!("no upstream providers configured — inference routes will return 503");
+    }
 
     let token_rate_limiter = RateLimiter::new(
         token_rate_limit_requests,
@@ -357,9 +392,9 @@ fn configure_inference() -> InferenceConfig {
     );
 
     InferenceConfig {
-        upstream_client,
-        upstream_api_key,
-        model_rates,
+        provider_clients,
+        provider_keys,
+        resolved_catalog,
         admit_floor_millicredits,
         token_rate_limiter,
     }

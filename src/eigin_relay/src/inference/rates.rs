@@ -32,6 +32,9 @@ mod tests {
     fn model(input: u64, cached: u64, output: u64) -> ModelConfig {
         ModelConfig {
             id: "test-model".into(),
+            provider: "default".into(),
+            upstream_id: None,
+            aliases: vec![],
             input_millicredits_per_1m_tokens: input,
             cached_input_millicredits_per_1m_tokens: cached,
             output_millicredits_per_1m_tokens: output,

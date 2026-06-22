@@ -38,6 +38,9 @@ use fakes::upstream::{BufferUpstream, FakeUpstream};
 fn test_model() -> ModelConfig {
     ModelConfig {
         id: "test-model".into(),
+        provider: "default".into(),
+        upstream_id: None,
+        aliases: vec![],
         // 10_000mc per 1M input tokens, 20_000mc per 1M output tokens
         input_millicredits_per_1m_tokens: 10_000u64,
         cached_input_millicredits_per_1m_tokens: 0u64,
@@ -52,8 +55,18 @@ async fn make_state(
     _initial_balance_millicredits: i64,
     admit_floor_millicredits: i64,
 ) -> Arc<AppState> {
-    let mut model_rates = HashMap::new();
-    model_rates.insert("test-model".to_string(), test_model());
+    let mut canonical_models = HashMap::new();
+    canonical_models.insert("test-model".to_string(), test_model());
+    let mut alias_map = HashMap::new();
+    alias_map.insert("test-model".to_string(), "test-model".to_string());
+
+    let mut provider_clients = HashMap::new();
+    provider_clients.insert(
+        "default".to_string(),
+        Arc::new(upstream) as Arc<dyn UpstreamClient>,
+    );
+    let mut provider_keys = HashMap::new();
+    provider_keys.insert("default".to_string(), "test-key".to_string());
 
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
@@ -70,9 +83,10 @@ async fn make_state(
         token_encryption_key: [0u8; 32],
         sandbox_budget_credits: 25_000,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        upstream_client: Arc::new(upstream),
-        upstream_api_key: Some("test-key".into()),
-        model_rates,
+        provider_clients,
+        provider_keys,
+        canonical_models,
+        alias_map,
         admit_floor_millicredits,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
     })
@@ -318,8 +332,18 @@ async fn make_state_with_ledger(
     product_credits: HashMap<String, i64>,
     ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
 ) -> Arc<AppState> {
-    let mut model_rates = HashMap::new();
-    model_rates.insert("test-model".to_string(), test_model());
+    let mut canonical_models = HashMap::new();
+    canonical_models.insert("test-model".to_string(), test_model());
+    let mut alias_map = HashMap::new();
+    alias_map.insert("test-model".to_string(), "test-model".to_string());
+
+    let mut provider_clients = HashMap::new();
+    provider_clients.insert(
+        "default".to_string(),
+        Arc::new(FakeUpstream::with_usage(0, 0)) as Arc<dyn UpstreamClient>,
+    );
+    let mut provider_keys = HashMap::new();
+    provider_keys.insert("default".to_string(), "test-key".to_string());
 
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
@@ -336,9 +360,10 @@ async fn make_state_with_ledger(
         token_encryption_key: [0u8; 32],
         sandbox_budget_credits: 25_000,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
-        upstream_api_key: Some("test-key".into()),
-        model_rates,
+        provider_clients,
+        provider_keys,
+        canonical_models,
+        alias_map,
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
     })
@@ -349,8 +374,18 @@ async fn make_grant_state(
     product_credits: HashMap<String, i64>,
     ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
 ) -> Arc<AppState> {
-    let mut model_rates = HashMap::new();
-    model_rates.insert("test-model".to_string(), test_model());
+    let mut canonical_models = HashMap::new();
+    canonical_models.insert("test-model".to_string(), test_model());
+    let mut alias_map = HashMap::new();
+    alias_map.insert("test-model".to_string(), "test-model".to_string());
+
+    let mut provider_clients = HashMap::new();
+    provider_clients.insert(
+        "default".to_string(),
+        Arc::new(FakeUpstream::with_usage(0, 0)) as Arc<dyn UpstreamClient>,
+    );
+    let mut provider_keys = HashMap::new();
+    provider_keys.insert("default".to_string(), "test-key".to_string());
 
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
@@ -367,9 +402,10 @@ async fn make_grant_state(
         token_encryption_key: [0u8; 32],
         sandbox_budget_credits: 25_000,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
-        upstream_api_key: Some("test-key".into()),
-        model_rates,
+        provider_clients,
+        provider_keys,
+        canonical_models,
+        alias_map,
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
     })
@@ -742,9 +778,10 @@ async fn make_sandbox_state(
         token_encryption_key: [0u8; 32],
         sandbox_budget_credits,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        upstream_client: Arc::new(FakeUpstream::with_usage(0, 0)),
-        upstream_api_key: Some("test-key".into()),
-        model_rates: HashMap::new(),
+        provider_clients: HashMap::new(),
+        provider_keys: HashMap::new(),
+        canonical_models: HashMap::new(),
+        alias_map: HashMap::new(),
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
     })

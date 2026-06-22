@@ -54,12 +54,14 @@ pub struct AppState {
     pub sandbox_budget_window: Duration,
 
     // --- Inference ---
-    /// Upstream inference client.
-    pub upstream_client: Arc<dyn UpstreamClient>,
-    /// API key for the upstream provider.
-    pub upstream_api_key: Option<String>,
-    /// Model rate map loaded from models.toml.
-    pub model_rates: HashMap<String, ModelConfig>,
+    /// Map of provider ID -> upstream client.
+    pub provider_clients: HashMap<String, Arc<dyn UpstreamClient>>,
+    /// Map of provider ID -> API key.
+    pub provider_keys: HashMap<String, String>,
+    /// Canonical model ID -> model config (rates, provider, upstream_id).
+    pub canonical_models: HashMap<String, ModelConfig>,
+    /// All accepted IDs (canonical + aliases) -> canonical ID.
+    pub alias_map: HashMap<String, String>,
     /// Admit floor in millicredits — reject if balance < this.
     pub admit_floor_millicredits: i64,
     /// Per-token rate limiter (keyed by wallet UUID).

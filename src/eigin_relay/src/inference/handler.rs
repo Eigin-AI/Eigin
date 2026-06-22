@@ -46,16 +46,18 @@ pub async fn handle(
     // Parse body to extract `model` and `stream`. Don't log the prompts.
     let (model_config, forwarded_body, estimated_usage) = prepare_body(body, &state)?;
 
-    let upstream_key = state
-        .upstream_api_key
-        .as_deref()
-        .ok_or_else(|| AppError::ServiceUnavailable("inference not configured".into()))?;
+    let provider_id = &model_config.provider;
+
+    let client = state.provider_clients.get(provider_id).ok_or_else(|| {
+        AppError::ServiceUnavailable(format!("provider {provider_id} not configured"))
+    })?;
+
+    let api_key = state.provider_keys.get(provider_id).ok_or_else(|| {
+        AppError::ServiceUnavailable(format!("provider {provider_id} has no key"))
+    })?;
 
     // Forward to upstream.
-    let upstream_response = state
-        .upstream_client
-        .chat_completions(forwarded_body, upstream_key)
-        .await?;
+    let upstream_response = client.chat_completions(forwarded_body, api_key).await?;
 
     match upstream_response {
         UpstreamResponse::Stream(stream) => {
@@ -79,9 +81,14 @@ fn admit(state: &AppState, wallet: &Wallet, addr: SocketAddr) -> Result<(), AppE
     Ok(())
 }
 
-/// Parse the request body, look up the model, and inject `stream_options` if streaming.
-/// Returns the model config, the re-serialized body to forward upstream, and a usage
-/// estimate derived from message lengths (used as fallback if upstream returns no usage).
+/// Parse the request body, resolve model aliases, look up the model config, and inject
+/// `stream_options` if streaming. Returns the resolved model config, the re-serialized
+/// body to forward upstream (with model ID rewritten to `upstream_id`), and a usage
+/// estimate derived from message lengths.
+///
+/// Alias resolution: if the client sends an alias, it is silently mapped to the
+/// canonical model before lookup. The forwarded body uses the provider's expected
+/// `upstream_id`, not the canonical or alias ID.
 fn prepare_body(
     body: Bytes,
     state: &AppState,
@@ -89,17 +96,24 @@ fn prepare_body(
     let mut json: Value = serde_json::from_slice(&body)
         .map_err(|_| AppError::BadRequest("invalid JSON body".into()))?;
 
-    let model_id = json
+    let request_model_id = json
         .get("model")
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::BadRequest("missing 'model' field".into()))?
         .to_owned();
 
-    let model_config = state
-        .model_rates
-        .get(&model_id)
+    // Resolve alias -> canonical ID.
+    let canonical_id = state
+        .alias_map
+        .get(&request_model_id)
         .cloned()
-        .ok_or_else(|| AppError::BadRequest(format!("unknown model: {model_id}")))?;
+        .ok_or_else(|| AppError::BadRequest(format!("unknown model: {request_model_id}")))?;
+
+    let model_config = state
+        .canonical_models
+        .get(&canonical_id)
+        .cloned()
+        .ok_or_else(|| AppError::Internal(format!("canonical model missing: {canonical_id}")))?;
 
     let is_stream = json
         .get("stream")
@@ -110,6 +124,9 @@ fn prepare_body(
     if is_stream {
         json["stream_options"] = serde_json::json!({ "include_usage": true });
     }
+
+    // Rewrite model to upstream_id before forwarding.
+    json["model"] = serde_json::Value::String(model_config.upstream_id().to_string());
 
     let estimated_usage = estimate::estimate_usage(&json);
 
