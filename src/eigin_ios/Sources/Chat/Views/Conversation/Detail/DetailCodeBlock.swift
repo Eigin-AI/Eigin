@@ -5,6 +5,10 @@ import Textual
 struct DetailCodeBlock: View {
     let code: String
     var language: String?
+    /// When false, uses the `.plain` highlighter theme, which skips the syntax
+    /// tokenizer entirely. Set false while the block is still streaming so we don't
+    /// re-tokenize on every chunk.
+    var highlightSyntax: Bool = true
 
     @Environment(\.colors) private var colors
 
@@ -20,7 +24,6 @@ struct DetailCodeBlock: View {
             .tint(colors.accent)
             .textual.inlineStyle(.eigin(colors: colors))
             .textual.headingStyle(EiginHeadingStyle())
-            .textual.highlighterTheme(.default)
-            .textual.textSelection(.enabled)
+            .textual.highlighterTheme(highlightSyntax ? .default : .plain)
     }
 }
