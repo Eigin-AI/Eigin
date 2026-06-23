@@ -532,13 +532,16 @@ private struct StreamingContentView: View {
     {
         let blocks = splitter.allBlocks
 
-        // Show all blocks - the last one is the active one being streamed
+        // Show all blocks. Only the last block is actively streaming; earlier
+        // blocks are already sealed, so they render normally even mid-stream.
+        let activeBlockID = phase == .streaming ? blocks.last?.id : nil
         if (phase == .streaming || phase == .done) && !blocks.isEmpty {
-            ElasticContainer(isActive: phase == .streaming) {
-                VStack(alignment: .leading, spacing: Spacing.n16) {
-                    ForEach(blocks) { block in
-                        ContentBlockView(block: block)
-                    }
+            VStack(alignment: .leading, spacing: Spacing.n16) {
+                ForEach(blocks) { block in
+                    ContentBlockView(
+                        block: block,
+                        isActivelyStreaming: block.id == activeBlockID
+                    )
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
