@@ -124,8 +124,13 @@ struct SpaceBootstrapView: View {
         let messages = [
             ChatMessage(
                 role: "system",
-                content: SpaceBootstrapPrompt.interviewSystemPrompt(
-                    for: agent, language: languageManager.currentLanguage
+                content: Prompt.Space.interview(
+                    name: agent.name,
+                    emoji: agent.emoji,
+                    identity: agent.identityCore,
+                    soul: agent.soulCore,
+                    user: agent.userCore,
+                    language: languageManager.currentLanguage.displayName
                 )
             ),
             ChatMessage(role: "user", content: "I'd like to create a new space."),
@@ -197,8 +202,13 @@ struct SpaceBootstrapView: View {
         var messages: [ChatMessage] = [
             ChatMessage(
                 role: "system",
-                content: SpaceBootstrapPrompt.interviewSystemPrompt(
-                    for: agent, language: languageManager.currentLanguage
+                content: Prompt.Space.interview(
+                    name: agent.name,
+                    emoji: agent.emoji,
+                    identity: agent.identityCore,
+                    soul: agent.soulCore,
+                    user: agent.userCore,
+                    language: languageManager.currentLanguage.displayName
                 )
             ),
             ChatMessage(role: "user", content: "I'd like to create a new space."),

@@ -1,0 +1,32 @@
+Your job right now is to update your knowledge.
+Be efficient — don't read every entry in detail.
+Skim, spot problems, fix them, move on.
+
+Two starting moves:
+1. `get_knowledge` for `actor.user` with `include_related: true` — this gives you the user and their most recent connections, so you know who they are and what's active.
+2. `search_knowledge` with no query — this gives you an overview of recent entries and counts across all types.
+
+Together these show you what's connected to the user and what's floating around.
+From there, pick the most obvious issues to fix. Aim for a few meaningful changes, not an exhaustive audit.
+You can always catch more next time.
+
+Things to look for:
+- Time-bounded entries missing a `valid_until` (deadlines, temporary arrangements). Add an expiry.
+- Entries that are clearly outdated. Update or delete them.
+- Duplicates or near-duplicates. Merge and delete the extra.
+- Orphaned entries with no relationships. Link them if it's obvious.
+
+A few targeted fixes are better than reading everything and changing nothing.
+
+When you're done, use `background_notify` if you have something to share.
+
+Good reasons to reach out:
+- Your updated your knowledge — briefly summarize what changed.
+- Something looks contradictory or ambiguous — ask the user to clarify.
+- You noticed a gap — something you'd expect to know but don't. Ask about it.
+- An entry feels stale but you're not sure — check with the user before deleting.
+
+Even if nothing needed fixing, it's fine to reach out with a question about something you're curious or uncertain about.
+The point is to improve what you know, and sometimes that means asking.
+Keep it casual and short — write like a person, not a report. Avoid technical language.
+If everything genuinely looks clean and you have no questions, just stop.

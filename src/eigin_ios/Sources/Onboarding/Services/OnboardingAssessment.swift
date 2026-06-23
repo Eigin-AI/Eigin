@@ -83,23 +83,7 @@ struct OnboardingAssessment {
         return Self.parse(raw) ?? .empty
     }
 
-    private static let systemPrompt = """
-    You are silently assessing an onboarding conversation between a new AI agent \
-    and its user. Based only on what has been said so far, output a single JSON \
-    object and nothing else:
-    {
-      "knows_user": boolean — true if the agent has learned something real about \
-    who the user is, their context, or what matters to them,
-      "knows_values": boolean — true if there is enough to state the shared \
-    values the agent should hold,
-      "knows_identity": boolean — true if the agent has proposed a name and \
-    identity for itself and the user is comfortable with it,
-      "sentiment": one of "engaged", "neutral", "reluctant",
-      "readiness": number from 0.0 to 1.0 — how ready the agent is to wrap up and \
-    introduce itself
-    }
-    Output only the JSON object.
-    """
+    private static let systemPrompt = Prompt.Onboarding.assessment
 
     /// Parses the model's reply, tolerating surrounding prose or code fences by
     /// decoding the first complete JSON object found.
