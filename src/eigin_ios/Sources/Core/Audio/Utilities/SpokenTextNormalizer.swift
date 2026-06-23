@@ -22,6 +22,7 @@ enum SpokenTextNormalizer {
         result = processCommonAbbreviations(result, locale: locale)
         result = spellOutWholeNumbers(result, locale: locale)
         result = stripNonSpeechCharacters(result, locale: locale)
+        result = tidyPunctuation(result)
         return result
     }
 
@@ -186,6 +187,9 @@ enum SpokenTextNormalizer {
         result = result.replacingOccurrences(of: "(", with: ", ")
         result = result.replacingOccurrences(of: ")", with: ", ")
         result = result.replacingOccurrences(of: "=", with: " ")
+        // Table cell separators become comma pauses; the tidy pass below trims
+        // the leading/trailing commas left by a row's outer pipes.
+        result = result.replacingOccurrences(of: "|", with: ", ")
         // Strip remaining non-speech characters: keep letters, digits,
         // whitespace, and sentence punctuation (.!?,;:'-).
         result = String(result.unicodeScalars.filter { scalar in
@@ -203,6 +207,65 @@ enum SpokenTextNormalizer {
     }
 
     private static let multiSpaceRegex = try! NSRegularExpression(pattern: #" {2,}"#)
+
+    /// Matches a run of sentence punctuation (optionally separated by spaces),
+    /// plus any whitespace immediately preceding it. Captures the marks so the
+    /// run can be collapsed to a single strongest one.
+    private static let punctuationRunRegex = try! NSRegularExpression(
+        pattern: #"\s*([,.;:!?](?:\s*[,.;:!?])*)"#
+    )
+
+    /// A dangling separator at the very start of the text (e.g. a table row's
+    /// leading outer pipe, now a comma).
+    private static let leadingSeparatorRegex = try! NSRegularExpression(pattern: #"^[\s,;:]+"#)
+    /// A dangling separator at the very end of the text, keeping sentence-ending
+    /// `.!?` but dropping a trailing comma or semicolon.
+    private static let trailingSeparatorRegex = try! NSRegularExpression(pattern: #"[\s,;]+$"#)
+
+    /// Collapse redundant punctuation left behind by earlier rules (notably the
+    /// `(` / `)` -> `, ` conversion). Removes whitespace before punctuation and
+    /// reduces any run of marks to the single strongest one: `.!?` beat `:;`,
+    /// which beat `,`. So `", ,"` -> `","`, `", :"` -> `":"`, `":."` -> `"."`.
+    private static func tidyPunctuation(_ text: String) -> String {
+        let range = NSRange(location: 0, length: text.utf16.count)
+        let matches = punctuationRunRegex.matches(in: text, range: range)
+
+        var result = text
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range, in: result),
+                  let marksRange = Range(match.range(at: 1), in: result)
+            else { continue }
+
+            let marks = result[marksRange].filter { !$0.isWhitespace }
+            let strongest = strongestPunctuation(in: marks)
+            result.replaceSubrange(fullRange, with: String(strongest))
+        }
+
+        // Drop a dangling separator left at the text boundaries (e.g. a table
+        // row's outer pipes, now commas).
+        let fullRange = NSRange(location: 0, length: result.utf16.count)
+        result = leadingSeparatorRegex.stringByReplacingMatches(
+            in: result, range: fullRange, withTemplate: ""
+        )
+        result = trailingSeparatorRegex.stringByReplacingMatches(
+            in: result, range: NSRange(location: 0, length: result.utf16.count), withTemplate: ""
+        )
+        return result
+    }
+
+    /// Returns the strongest punctuation mark in `marks`, ordered
+    /// `.!?` > `:;` > `,`. Falls back to the first mark for anything unranked.
+    private static func strongestPunctuation(in marks: some Sequence<Character>) -> Character {
+        func rank(_ char: Character) -> Int {
+            switch char {
+            case ".", "!", "?": 3
+            case ":", ";": 2
+            case ",": 1
+            default: 0
+            }
+        }
+        return marks.max { rank($0) < rank($1) } ?? ","
+    }
 
     // MARK: - Number Processing
 
@@ -323,7 +386,7 @@ enum SpokenTextNormalizer {
     // MARK: - Decimal Numbers
 
     private static let decimalRegex = try! NSRegularExpression(
-        pattern: #"\b\d*\.\d+(?=\s|[a-zA-Z]|$)"#
+        pattern: #"\b\d*\.\d+(?=\s|[a-zA-Z]|[).,;:!?]|$)"#
     )
 
     private static func processDecimalNumbers(_ text: String, locale: SpokenTextLocale) -> String {
