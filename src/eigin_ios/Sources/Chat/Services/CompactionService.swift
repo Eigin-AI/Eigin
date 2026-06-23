@@ -22,17 +22,7 @@ enum CompactionService {
         let transcript = formatTranscript(messages)
 
         let summaryMessages: [ChatMessage] = [
-            ChatMessage(
-                role: "system",
-                content: """
-                You are a conversation summariser. Produce a detailed summary of the \
-                conversation below. Preserve all important context, decisions, facts, \
-                user preferences, and any ongoing tasks. The summary will replace these \
-                messages in future interactions, so nothing important should be lost. \
-                Write in third person (e.g. "The user asked…", "The agent suggested…"). \
-                Be thorough but concise.
-                """
-            ),
+            ChatMessage(role: "system", content: Prompt.Compaction.main),
             ChatMessage(role: "user", content: transcript),
         ]
 

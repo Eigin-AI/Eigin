@@ -11,6 +11,7 @@ mod hooks;
 mod infra;
 mod lint;
 mod localize;
+mod prompts;
 mod run;
 
 #[derive(Parser)]

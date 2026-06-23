@@ -67,33 +67,14 @@ struct HeroTextGenerationCall {
         soulCore: String,
         language: AppLanguage
     ) -> (system: String, user: String) {
-        let system = """
-        You write short first-person introductions for AI agents. One or two sentences. Direct and personal.
-        """
+        let system = Prompt.Onboarding.heroSystem
 
-        let truncatedIdentity = String(identityCore.prefix(Self.maxCoreLength))
-        let truncatedUser = String(userCore.prefix(Self.maxCoreLength))
-        let truncatedSoul = String(soulCore.prefix(Self.maxCoreLength))
-
-        let user = """
-        Write a short first-person introduction this agent would say about itself.
-        Do NOT mention the agent's name — the name is shown separately.
-
-        Here is an example about a completely different agent — do not copy its topics or phrasing:
-
-        I'm here to help you stay organized and find calm in a busy schedule. I keep track of what matters and remind you before things slip.
-
-        Use these core texts as context (they describe the real agent):
-
-        Identity: \(truncatedIdentity)
-
-        User: \(truncatedUser)
-
-        Soul: \(truncatedSoul)
-
-        Write in \(language
-            .displayName). Use your own words. Respond with the introduction text only.
-        """
+        let user = Prompt.Onboarding.heroUser(
+            identity: String(identityCore.prefix(Self.maxCoreLength)),
+            user: String(userCore.prefix(Self.maxCoreLength)),
+            soul: String(soulCore.prefix(Self.maxCoreLength)),
+            language: language.displayName
+        )
 
         return (system, user)
     }

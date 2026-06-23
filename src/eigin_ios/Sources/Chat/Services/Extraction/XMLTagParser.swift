@@ -1,9 +1,19 @@
 import Foundation
 
+/// Result of a tag extraction attempt.
+enum ExtractionResult: Equatable {
+    /// The tag was found. `reason` is the model's chain-of-thought (nil if not provided).
+    case extracted(value: String, reason: String?)
+    /// The model produced output but the expected tag was not present.
+    case noMatch(rawOutput: String)
+    /// The model produced no output.
+    case empty
+}
+
 /// Parses `<tag reason="...">value</tag>` from model output for structured extraction.
 ///
 /// Not a general XML parser — intentionally limited to the single-tag extraction
-/// pattern used by ``ExtractionCall``.
+/// pattern of `<tag reason="...">value</tag>`.
 enum XMLTagParser {
     /// Extracts the value and optional reason from the last occurrence of the given tag.
     ///

@@ -153,9 +153,15 @@ struct OnboardingChat: View {
         chatLoop.throttler.start()
 
         let language = languageManager.currentLanguage.displayName
-        let systemPrompt = OnboardingChatPrompt.system(
-            name: name,
-            priority: priority,
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let person = trimmedName.isEmpty ? "this person" : trimmedName
+        let priorityLine = priority.map {
+            "When you asked what they're hoping to get from a personal AI, they leaned "
+                + "toward \($0.conversationSeed)."
+        } ?? "They have not said yet what they're hoping to get from a personal AI."
+        let systemPrompt = Prompt.Onboarding.chat(
+            person: person,
+            priorityLine: priorityLine,
             language: language
         )
 
@@ -312,7 +318,7 @@ struct OnboardingChat: View {
         isFinishing = true
 
         if agent.soulCore.isEmpty {
-            agent.soulCore = AgentBootstrapPrompt.soulTemplate
+            agent.soulCore = Prompt.Onboarding.Partials.soulTemplate
         }
         // Carry over the initiative choice the user made during setup; the
         // agent is created reactive by default.

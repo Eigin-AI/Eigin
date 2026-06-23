@@ -4,6 +4,7 @@ use std::process::Command;
 use crate::config;
 use crate::design;
 use crate::localize;
+use crate::prompts;
 
 /// Run all code generation tasks for the project.
 ///
@@ -21,6 +22,7 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     // when xcodegen scans the source directories.
     localize::generate_all(&root)?;
     design::generate_all(&root)?;
+    prompts::generate_all(&root)?;
 
     run_cmd(
         Command::new("xcodegen")
