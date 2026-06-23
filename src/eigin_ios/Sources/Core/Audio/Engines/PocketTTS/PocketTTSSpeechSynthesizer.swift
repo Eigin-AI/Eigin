@@ -91,6 +91,10 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         }
     }
 
+    func prepare() async {
+        try? await modelManager.load()
+    }
+
     func stopSpeaking() {
         generationID += 1
         isGenerationActive = false

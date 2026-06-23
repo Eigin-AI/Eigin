@@ -21,6 +21,13 @@ protocol SpeechSynthesizing: AnyObject {
     /// to flush remaining audio and fire final completion callbacks.
     func finishSpeaking()
     func stopSpeaking()
+
+    /// Warm up the engine ahead of the first `speak()`, e.g. load a model.
+    func prepare() async
+}
+
+extension SpeechSynthesizing {
+    func prepare() async {}
 }
 
 // MARK: - System Implementation

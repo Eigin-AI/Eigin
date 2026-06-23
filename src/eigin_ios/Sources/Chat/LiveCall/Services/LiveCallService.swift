@@ -160,6 +160,9 @@ final class LiveCallService: @unchecked Sendable {
             guard let self, phase == .processing else { return }
             startSpeakingPhase()
         }
+        // Warm up the voice model now so its cold load isn't on the reply path.
+        speech.voiceIdentifier = context.agent.voiceIdentifier
+        speech.prepare()
         error = nil
 
         // Inherit chat permissions — prompting is dynamically gated by isForegrounded
@@ -565,5 +568,16 @@ final class LiveCallService: @unchecked Sendable {
                 startListeningPhase()
             }
         }
+    }
+}
+
+// MARK: - Preview Configuration
+
+extension LiveCallService {
+    /// Configures a freshly-initialized service for canvas preview of a specific phase.
+    /// Only safe for previews — never call after `start(context:)`.
+    func configureForPreview(phase: Phase, transcription: String = "") {
+        self.phase = phase
+        self.transcription = transcription
     }
 }

@@ -162,6 +162,39 @@ struct SpokenTextNormalizerTests {
         #expect(tilde.contains("approximately"))
     }
 
+    @Test func englishPunctuationTidy() {
+        // A closing paren before an existing comma must not double up.
+        let doubled = SpokenTextNormalizer.normalize(
+            "55B active parameters), released June 4",
+            locale: en
+        )
+        #expect(doubled.contains("active parameters, released"))
+        #expect(!doubled.contains(", ,"))
+        #expect(!doubled.contains(" ,"))
+
+        // A parenthetical aside before a colon collapses to just the colon.
+        let beforeColon = SpokenTextNormalizer.normalize(
+            "Multi-token prediction (MTP): Faster",
+            locale: en
+        )
+        #expect(beforeColon.contains("prediction, MTP: Faster"))
+
+        // A leading paren leaves no space before the inserted comma.
+        let leading = SpokenTextNormalizer.normalize("the model (small) here", locale: en)
+        #expect(leading.contains("model, small, here"))
+        #expect(!leading.contains(" ,"))
+
+        // A stray colon-period collapses to a single period.
+        #expect(SpokenTextNormalizer.normalize("Key Features:.", locale: en) == "Key Features.")
+    }
+
+    @Test func englishDecimalBeforePunctuation() {
+        // A decimal immediately followed by a closing paren still spells out.
+        let paren = SpokenTextNormalizer.normalize("Terminal-Bench 2.0)", locale: en)
+        #expect(paren.contains("two point zero"))
+        #expect(!paren.contains("two.zero"))
+    }
+
     @Test func englishVersionNumbers() {
         let semver = SpokenTextNormalizer.normalize("Version 1.3.5 released", locale: en)
         #expect(semver.contains("one point three point five"))
@@ -271,6 +304,22 @@ struct SpokenTextNormalizerTests {
         #expect(result.contains("og så videre"))
     }
 
+    @Test func danishExpandedAbbreviations() {
+        let cases: [(String, String)] = [
+            ("Brug fx en kniv", "for eksempel"),
+            ("Brug f.eks. en kniv", "for eksempel"),
+            ("Det er dyrt, dvs. for meget", "det vil sige"),
+            ("Det er dyrt, d.v.s. for meget", "det vil sige"),
+            ("frugt ol. her", "og lignende"),
+            ("frugt o.l. her", "og lignende"),
+            ("ti styk t.d.", "til dato"),
+            ("100 kr. pr. styk", "per"),
+        ]
+        for (input, expected) in cases {
+            #expect(SpokenTextNormalizer.normalize(input, locale: da).contains(expected))
+        }
+    }
+
     @Test func danishAlphanumericCodes() {
         // Letter + digit codes are spelled character-by-character so the TTS
         // reads them as a code rather than mispronouncing the letter cluster.
@@ -314,6 +363,24 @@ struct SpokenTextNormalizerTests {
         let notADate = SpokenTextNormalizer.normalize("Punkt 9. Det er vigtigt.", locale: da)
         #expect(notADate.contains("ni"))
         #expect(!notADate.contains("niende"))
+    }
+
+    @Test func danishPunctuationTidy() {
+        // Same redundant-punctuation cleanup as English: parenthetical asides
+        // must not leave doubled commas or spaces before punctuation.
+        let doubled = SpokenTextNormalizer.normalize(
+            "55B aktive parametre), udgivet 4. juni",
+            locale: da
+        )
+        #expect(doubled.contains("aktive parametre, udgivet"))
+        #expect(!doubled.contains(", ,"))
+        #expect(!doubled.contains(" ,"))
+
+        let beforeColon = SpokenTextNormalizer.normalize(
+            "forudsigelse (MTP): Hurtigere",
+            locale: da
+        )
+        #expect(beforeColon.contains("forudsigelse, MTP: Hurtigere"))
     }
 
     @Test func danishPassthrough() {

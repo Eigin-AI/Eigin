@@ -234,6 +234,24 @@ struct StreamingSpeechServiceTests {
         // stays buffered
     }
 
+    @Test @MainActor func abbreviationsAreNotSplitAtInteriorPeriods() {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        // The first delta ends mid-abbreviation, right after "f.". The interior
+        // period must not be treated as a sentence end, or "f.eks." would be
+        // split across utterances before normalization can expand it.
+        service.feedDelta(String(repeating: "ord ", count: 55) + "brug f.")
+        service.feedDelta("eks. resten her.")
+        service.finish()
+
+        let joined = fake.spokenTexts.joined(separator: " | ")
+        // Language-independent: the abbreviation stays whole (or is expanded),
+        // and no utterance ends at the interior period.
+        #expect(joined.contains("f.eks.") || joined.contains("for eksempel"))
+        #expect(!fake.spokenTexts.contains { $0.hasSuffix(" f.") })
+    }
+
     @Test @MainActor func thirdParagraphFlushedByFinish() {
         let fake = FakeSpeechSynthesizer()
         let service = Self.makeService(fake: fake)
@@ -246,5 +264,64 @@ struct StreamingSpeechServiceTests {
         #expect(fake.spokenTexts[0] == "First paragraph.")
         #expect(fake.spokenTexts[1] == "Second paragraph.")
         #expect(fake.spokenTexts[2] == "Third paragraph.")
+    }
+}
+
+@Suite("DefaultSpeechService — Sanitization")
+struct SanitizeForSpeechTests {
+    @Test func headingEndingInColonGetsNoExtraPeriod() {
+        let result = DefaultSpeechService.sanitizeForSpeech(
+            "### **Key Features:**\n- First item.",
+            language: .english
+        )
+        #expect(!result.contains("Key Features:."))
+        #expect(!result.contains("Features."))
+    }
+
+    @Test func bulletListAfterHeadingHasNoLeadingPeriod() {
+        let result = DefaultSpeechService.sanitizeForSpeech(
+            "### **Key Features:**\n- Hybrid architecture: efficient handling.",
+            language: .english
+        )
+        // The list item must not start with a spurious ". " from the collapsed
+        // newline after the heading.
+        #expect(!result.contains(". Hybrid"))
+        #expect(result.contains("Hybrid architecture"))
+    }
+
+    @Test func horizontalRuleDividersAreStripped() {
+        for divider in ["---", "***", "___", "- - -", "*****"] {
+            let result = DefaultSpeechService.sanitizeForSpeech(
+                "Before.\n\n\(divider)\n\nAfter.",
+                language: .english
+            )
+            #expect(result.contains("Before"))
+            #expect(result.contains("After"))
+            #expect(!result.contains("-"))
+            #expect(!result.contains("*"))
+            #expect(!result.contains("_"))
+        }
+    }
+
+    @Test func tablesReadAsCommaSeparatedCellsWithoutPipesOrDashes() {
+        let table = """
+        | Model | Speed |
+        |-------|-------|
+        | Alpha | Fast |
+        | Beta | Slow |
+        """
+        let result = DefaultSpeechService.sanitizeForSpeech(table, language: .english)
+
+        // No raw table syntax survives.
+        #expect(!result.contains("|"))
+        #expect(!result.contains("-"))
+        // Cell contents are preserved.
+        #expect(result.contains("Model"))
+        #expect(result.contains("Speed"))
+        #expect(result.contains("Alpha"))
+        #expect(result.contains("Slow"))
+        // No leading separator artifact from a row's outer pipe.
+        #expect(!result.hasPrefix(","))
+        #expect(!result.contains(", ,"))
     }
 }

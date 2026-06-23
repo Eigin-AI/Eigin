@@ -29,6 +29,9 @@ protocol SpeechService {
     func finish()
     func cancel()
     func reset()
+
+    /// Warm up the service ahead of the first utterance, e.g. preload a model.
+    func prepare()
 }
 
 /// Unified speech service handling both one-shot and streaming TTS.
@@ -239,6 +242,14 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
         utteranceQueue.removeAll()
     }
 
+    /// Resolves the engine for the current voice and asks its synthesizer to
+    /// warm up. Returns immediately; any model load runs on a background task.
+    func prepare() {
+        refreshSynthesizerIfNeeded()
+        let synth = synthesizer
+        Task { await synth.prepare() }
+    }
+
     /// Zero all state for the next turn.
     func reset() {
         synthesizer.stopSpeaking()
@@ -260,24 +271,41 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
         _ markdown: String,
         language: AppLanguage = LanguageManager().currentLanguage
     ) -> String {
-        // Strip header tags
-        let preprocessed = markdown.replacing(/(?m)^#{1,6}\s+(.+)$/) { match in
-            let heading = match.1
-            let trimmed = heading.dropLast(0)
-            if let last = trimmed.last, ".!?:".contains(last) {
-                return "\(heading)\n\n"
-            }
-            return "\(heading).\n\n"
-        }
+        // Strip horizontal-rule divider lines (---, ***, ___). Hyphen dividers
+        // in particular survive later stages, which keep `-` for compounds.
+        var withoutDividers = markdown.replacing(
+            /(?m)^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$\n?/,
+            with: ""
+        )
+        // Strip table delimiter rows (e.g. `|---|:--:|`): any line made up only
+        // of pipes, dashes, colons, and spaces. Cell pipes themselves become
+        // comma pauses later, in the spoken-text normalizer.
+        withoutDividers = withoutDividers.replacing(
+            /(?m)^(?=[^\n]*\|)[ \t|:\-]+$\n?/,
+            with: ""
+        )
 
-        // Strip other markdown symbols
-        var cleaned: String = if let attributed = try? AttributedString(
-            markdown: preprocessed,
+        // Strip inline markdown symbols (bold, italic, code) first so that
+        // header handling below sees the real trailing character (e.g. a colon)
+        // rather than a leftover `*` marker.
+        let inlineStripped: String = if let attributed = try? AttributedString(
+            markdown: withoutDividers,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         ) {
             String(attributed.characters)
         } else {
-            preprocessed
+            withoutDividers
+        }
+
+        // Strip header tags, ending each heading as its own paragraph. Consume
+        // the heading line's trailing newlines so we emit exactly one paragraph
+        // break rather than stacking onto the original newline.
+        var cleaned = inlineStripped.replacing(/(?m)^#{1,6}[ \t]+(.+?)[ \t]*$\n*/) { match in
+            let heading = match.1
+            if let last = heading.last, ".!?:".contains(last) {
+                return "\(heading)\n\n"
+            }
+            return "\(heading).\n\n"
         }
 
         // Strip list markers (- , * , •, 1. etc.) at the start of lines.
@@ -521,27 +549,41 @@ struct PreviewSpeechService: SpeechService {
     func finish() {}
     func cancel() {}
     func reset() {}
+    func prepare() {}
 }
 
 // MARK: - String Helpers
 
+/// Whether `chars[i]` ends a sentence. A single newline always does. A `.`,
+/// `!`, or `?` does only when followed by whitespace — never at the end of the
+/// buffer, where more streamed text may follow and `finish()` flushes the tail.
+/// This keeps abbreviations (`f.eks.`, `d.v.s.`) and decimals (`2.0`) intact
+/// instead of splitting them at an interior period.
+private func sentenceBoundary(at i: Int, in chars: [Character]) -> Bool {
+    let char = chars[i]
+    if char == "\n" { return true }
+    guard ".!?".contains(char), i + 1 < chars.count else { return false }
+    return chars[i + 1].isWhitespace
+}
+
 private extension String {
-    /// Returns the index *after* the first sentence-ending punctuation
-    /// (`.`, `!`, `?`) or single newline at character offset ≥ `minOffset`.
-    /// Returns `nil` if no qualifying boundary exists.
+    /// Returns the index *after* the first sentence boundary at character
+    /// offset ≥ `minOffset`, or `nil` if none exists. See ``sentenceBoundary``.
     func firstSentenceBoundary(after minOffset: Int) -> String.Index? {
-        for (i, char) in enumerated() where i >= minOffset && ".!?\n".contains(char) {
-            return self.index(self.startIndex, offsetBy: i + 1)
+        let chars = Array(self)
+        for i in chars.indices where i >= minOffset && sentenceBoundary(at: i, in: chars) {
+            return index(startIndex, offsetBy: i + 1)
         }
         return nil
     }
 
-    /// Returns the index *after* the **last** sentence-ending punctuation
-    /// or single newline. Returns `nil` if no boundary is found.
+    /// Returns the index *after* the **last** sentence boundary, or `nil` if
+    /// none is found. See ``sentenceBoundary``.
     func rangeOfLastSentenceBoundary() -> String.Index? {
+        let chars = Array(self)
         var lastBoundary: String.Index?
-        for (i, char) in enumerated() where ".!?\n".contains(char) {
-            lastBoundary = self.index(self.startIndex, offsetBy: i + 1)
+        for i in chars.indices where sentenceBoundary(at: i, in: chars) {
+            lastBoundary = index(startIndex, offsetBy: i + 1)
         }
         return lastBoundary
     }

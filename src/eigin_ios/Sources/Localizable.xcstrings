@@ -6597,7 +6597,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Privat cloud AI"
           }
         },
@@ -6648,7 +6648,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Én credit svarer til cirka én eurocent AI-forbrug. Dit køb dækker platforms-gebyr og en lille tillæg, der holder Eigin kørende."
           }
         },
@@ -6682,7 +6682,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Credits tilføjet. Send din besked for at fortsætte."
           }
         },
@@ -6699,7 +6699,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Du er klar"
           }
         },
@@ -6767,7 +6767,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Credits lader dig bruge privat cloud AI gennem Eigin Relay."
           }
         },
@@ -6869,7 +6869,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Vi har udvalgt de AI modeller der føles rigtige i Eigin."
           }
         },
@@ -6920,7 +6920,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Tilføj flere for at fortsætte med at chatte med Eigin."
           }
         },
@@ -6937,7 +6937,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Du er løbet tør for credits"
           }
         },
@@ -6971,7 +6971,7 @@
       "localizations" : {
         "da" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Altid privat"
           }
         },
