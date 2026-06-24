@@ -8,8 +8,11 @@ struct ChatMessageView: View {
     var messageID: String = ""
     var showFooter: Bool = false
     var animateFooter: Bool = false
+    var showUserMessageFooter: Bool = false
+    var onUserMessageFooterAction: (() -> Void)?
 
     @Environment(\.colors) private var colors
+    @Environment(\.gridBreakpoint) private var breakpoint
     @Injected(\.speechService) private var speechService
     @Injected(\.voiceService) private var voiceService
     @Injected(\.languageManager) private var languageManager
@@ -22,13 +25,17 @@ struct ChatMessageView: View {
         content: String,
         messageID: String = "",
         showFooter: Bool = false,
-        animateFooter: Bool = false
+        animateFooter: Bool = false,
+        showUserMessageFooter: Bool = false,
+        onUserMessageFooterAction: (() -> Void)? = nil
     ) {
         self.role = role
         self.content = content
         self.messageID = messageID
         self.showFooter = showFooter
         self.animateFooter = animateFooter
+        self.showUserMessageFooter = showUserMessageFooter
+        self.onUserMessageFooterAction = onUserMessageFooterAction
     }
 
     private var isUser: Bool {
@@ -67,7 +74,33 @@ struct ChatMessageView: View {
     }
 
     private var userMessageView: some View {
-        AppChatUserMessage(text: content)
+        VStack(alignment: .trailing, spacing: Spacing.n16) {
+            AppChatUserMessage(text: content)
+            if showUserMessageFooter, let action = onUserMessageFooterAction {
+                userMessageFooter(action: action)
+                    .padding(.trailing, breakpoint.outer + Spacing.n4)
+            }
+        }
+        .animation(Animations.smooth, value: showUserMessageFooter)
+    }
+
+    private func userMessageFooter(action: @escaping () -> Void) -> some View {
+        HStack(alignment: .center, spacing: Spacing.n16) {
+            Button {
+                Haptics.light()
+                action()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 14))
+                    .foregroundStyle(colors.text.standard.muted.opacity(0.4))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(width: 16)
+            .accessibilityLabel(Text(Localized.Provider.tryAgain))
+        }
+        .frame(height: 22)
+        .transition(.opacity.combined(with: .scale))
     }
 
     private var assistantMessageView: some View {

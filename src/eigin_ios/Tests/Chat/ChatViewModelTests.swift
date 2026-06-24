@@ -264,6 +264,157 @@ struct ChatViewModelTests {
         #expect(vm.chatError == nil)
     }
 
+    // MARK: - retryLastTurn
+
+    @Test("retryLastTurn re-runs the trailing user message without appending a duplicate")
+    @MainActor
+    func retryLastTurnReRunsUserMessage() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta("Hi back"),
+            .finished(.stop),
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        // Simulate a prior failed turn: a user message sits as the trailing
+        // item with no assistant reply after it.
+        let userMessage = ChatMessage(role: "user", content: "Hello")
+        vm.window.messages = [userMessage]
+        vm.window.isPreloaded = true
+        vm.window.allPersisted = [Message.from(userMessage)]
+        let userCountBefore = vm.window.messages.count(where: { $0.role == "user" })
+
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+        await vm.streamTask?.value
+
+        let userCountAfter = vm.window.messages.count(where: { $0.role == "user" })
+        #expect(userCountAfter == userCountBefore, "retry must not duplicate the user message")
+        #expect(vm.window.messages.last?.role == "assistant")
+        #expect(vm.messageText.isEmpty)
+    }
+
+    @Test("retryLastTurn is a no-op when the last message is from the assistant")
+    @MainActor
+    func retryLastTurnNoOpWhenAssistantLast() throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        vm.window.messages = [
+            ChatMessage(role: "user", content: "Hi"),
+            ChatMessage(role: "assistant", content: "Hello there"),
+        ]
+        let countBefore = vm.window.messages.count
+
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+
+        #expect(vm.window.messages.count == countBefore)
+        #expect(vm.messageText == "Hello", "retry on assistant-last must not touch messageText")
+    }
+
+    @Test("retryLastTurn is a no-op while a turn is in progress")
+    @MainActor
+    func retryLastTurnNoOpWhileStreaming() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        // A long-running stream that we won't await — keeps the turn in progress.
+        service.enqueueEventStream([.contentDelta("…"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.messageText = "Hello"
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+
+        // Turn in progress; retry should bail out without queuing a new turn.
+        // The single user message from `send` is still the last item, and
+        // no second assistant turn should be produced.
+        #expect(vm.isTurnInProgress)
+        let userCountDuringStream = vm.window.messages.count(where: { $0.role == "user" })
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+        #expect(vm.window.messages.count(where: { $0.role == "user" }) == userCountDuringStream)
+
+        // Clean up.
+        vm.handleStop()
+        await vm.streamTask?.value
+    }
+
+    @Test("retryLastTurn cannot be triggered twice in quick succession")
+    @MainActor
+    func retryLastTurnGuardsAgainstRapidRetrigger() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Hi back"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        let userMessage = ChatMessage(role: "user", content: "Hello")
+        vm.window.messages = [userMessage]
+        vm.window.isPreloaded = true
+        vm.window.allPersisted = [Message.from(userMessage)]
+
+        // First retry kicks off a turn (isTurnInProgress becomes true inside
+        // `send`, synchronously, before the run loop yields). A second retry
+        // call before the task completes must be a no-op — no second rewind,
+        // no duplicate user message.
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+        await vm.streamTask?.value
+
+        let userCount = vm.window.messages.count(where: { $0.role == "user" })
+        #expect(userCount == 1, "rapid retrigger must not duplicate the user message")
+    }
+
+    @Test("retryLastTurn clears chatError before re-running")
+    @MainActor
+    func retryLastTurnClearsChatError() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        // First call fails; second succeeds.
+        service.throwOnEventStream(URLError(.cannotConnectToHost))
+        service.enqueueEventStream([.contentDelta("ok"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        vm.messageText = "Hello"
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        #expect(vm.chatError != nil)
+
+        // The trailing message is the user message (send errored before any
+        // assistant content); retry should clear the error and run the turn.
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+        #expect(vm.chatError == nil)
+        await vm.streamTask?.value
+        #expect(vm.window.messages.last?.role == "assistant")
+    }
+
+    @Test("retryLastTurn is a no-op when the trailing user message has empty content")
+    @MainActor
+    func retryLastTurnNoOpOnEmptyContent() throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+
+        vm.window.messages = [ChatMessage(role: "user", content: "   ")]
+        let countBefore = vm.window.messages.count
+
+        vm.retryLastTurn(
+            agent: agent, provider: provider, space: nil, spaces: [], mcpServers: []
+        )
+
+        #expect(vm.window.messages.count == countBefore)
+        #expect(vm.messageText == "Hello", "retry on empty content must not touch messageText")
+    }
+
     // MARK: - moveToSpace
 
     @Test("moveToSpace updates chat spaceID")
