@@ -146,7 +146,19 @@ struct ChatView: View {
                         currentSpaceID: viewModel.chat?.spaceID,
                         onMoveToSpace: { spaceID in viewModel.moveToSpace(spaceID) }
                     ),
-                    lastStreamedItemID: viewModel.lastStreamedItemID
+                    lastStreamedItemID: viewModel.lastStreamedItemID,
+                    onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
+                        ? {
+                            guard let agent, let provider = activeProvider else { return }
+                            viewModel.retryLastTurn(
+                                agent: agent,
+                                provider: provider,
+                                space: space,
+                                spaces: spaces,
+                                mcpServers: mcpServers
+                            )
+                        }
+                        : nil
                 )
             }
         }

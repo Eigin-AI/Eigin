@@ -49,6 +49,9 @@ struct ChatFeed: View {
     let showsInputActions: Bool
     /// Item ID whose footer should fade in (set when a streaming turn just ended).
     var lastStreamedItemID: String?
+    /// Action for the trailing user-message footer (e.g. retry last turn).
+    /// `nil` hides the footer — set while streaming or when retry is unavailable.
+    var onUserMessageFooterAction: (() -> Void)?
 
     @Environment(\.colors) private var colors
     @Environment(\.gridBreakpoint) private var breakpoint
@@ -87,7 +90,8 @@ struct ChatFeed: View {
         interactions: FeedInteractions = FeedInteractions(),
         context: FeedContext = FeedContext(),
         showsInputActions: Bool = true,
-        lastStreamedItemID: String? = nil
+        lastStreamedItemID: String? = nil,
+        onUserMessageFooterAction: (() -> Void)? = nil
     ) {
         self.items = items
         self.throttler = throttler
@@ -101,6 +105,7 @@ struct ChatFeed: View {
         self.context = context
         self.showsInputActions = showsInputActions
         self.lastStreamedItemID = lastStreamedItemID
+        self.onUserMessageFooterAction = onUserMessageFooterAction
     }
 
     var body: some View {
@@ -232,6 +237,10 @@ struct ChatFeed: View {
 
     private var actorName: String {
         context.agentName.isEmpty || context.agentName.count > 20 ? "Agent" : context.agentName
+    }
+
+    private var isStreaming: Bool {
+        throttler.phase == .waiting || throttler.phase == .streaming
     }
 
     /// The flat item list used when no user turn has been pinned yet.
@@ -455,12 +464,19 @@ struct ChatFeed: View {
     private func itemView(for item: ChatItem) -> some View {
         switch item {
         case .message(let id, let role, let content):
+            let showsUserMessageFooter =
+                role == "user"
+                    && id == items.last?.id
+                    && !isStreaming
+                    && onUserMessageFooterAction != nil
             ChatMessageView(
                 role: role,
                 content: content,
                 messageID: id,
                 showFooter: role == "assistant",
-                animateFooter: id == lastStreamedItemID
+                animateFooter: id == lastStreamedItemID,
+                showUserMessageFooter: showsUserMessageFooter,
+                onUserMessageFooterAction: onUserMessageFooterAction
             )
         case .typing:
             TypingIndicator()

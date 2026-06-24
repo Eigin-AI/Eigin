@@ -34,6 +34,11 @@ final class ChatViewModel {
     var streamTask: Task<Void, Never>?
     private(set) var chatError: ConnectionError?
     var isCompacting = false
+    /// True from the moment a turn is kicked off (user send or retry) until the
+    /// stream task completes. Covers the gap before the throttler enters
+    /// `.waiting`, during which `isStreaming` is still false — used to hide the
+    /// retry footer and guard against duplicate retriggers.
+    private(set) var isTurnInProgress = false
     var compactionProgress = ChasingProgress()
     var gatekeeper: Gatekeeper?
     var pendingEmailCompose: (ComposeEmailRequest, CheckedContinuation<ComposeEmailResult, Never>)?
@@ -176,8 +181,12 @@ final class ChatViewModel {
             return
         }
 
+        isTurnInProgress = true
         streamTask = Task {
-            defer { self.endBackgroundGrace() }
+            defer {
+                self.endBackgroundGrace()
+                self.isTurnInProgress = false
+            }
             let msgs =
                 self.window.isPreloaded
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
@@ -305,6 +314,66 @@ final class ChatViewModel {
         chatError = nil
         streamTask?.cancel()
         persistMessages(checkpoint)
+    }
+
+    /// Re-runs the trailing user message as a fresh turn.
+    ///
+    /// Rewinds: removes the last user message from the in-memory window, the
+    /// persisted cache, and SwiftData, then delegates to `send` with the text
+    /// restored to `messageText`. `send` re-appends and re-persists the message
+    /// exactly as if the user had typed it fresh — the turn pipeline runs
+    /// unmodified.
+    ///
+    /// No-op unless the last message is a user message with non-empty content
+    /// and no turn is in progress. If `handleStop` left a partial assistant
+    /// reply as the last message, that message is last — not the user message —
+    /// so this bails out and the footer is hidden (the user sends a new message
+    /// instead).
+    func retryLastTurn(
+        agent: Agent,
+        provider: Provider,
+        space: Space?,
+        spaces: [Space],
+        mcpServers: [MCPServer]
+    ) {
+        guard !isTurnInProgress,
+              let chat,
+              let last = window.messages.last,
+              last.role == "user",
+              let content = last.content?.trimmingCharacters(in: .whitespaces),
+              !content.isEmpty
+        else { return }
+
+        if chatLoop.isAwaitingUserInteraction { handleStop() }
+
+        // Rewind: drop the trailing user message from the in-memory window, the
+        // persisted cache, and SwiftData. `send` will re-append and re-persist it
+        // exactly as if the user had typed it fresh. The persisted counterpart is
+        // `allPersisted.last` when the window is anchored at the bottom
+        // (`!hasNewerMessages`); otherwise leave SwiftData alone — a fresh fetch
+        // on the next send cycle will reconcile. Remove from `allPersisted` first
+        // so that `hasNewerMessages` (derived from counts) doesn't transiently
+        // flip true and cause `send`'s `snapToBottom` to rehydrate the message.
+        if window.isPreloaded, !window.hasNewerMessages,
+           let persisted = window.allPersisted.last, persisted.role == "user"
+        {
+            window.allPersisted.removeLast()
+            modelContext.delete(persisted)
+        }
+        window.messages.removeLast()
+        chat.updatedAt = .now
+
+        if window.hasNewerMessages { window.snapToBottom() }
+        chatError = nil
+
+        messageText = content
+        send(
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers
+        )
     }
 
     // MARK: - Background Grace
