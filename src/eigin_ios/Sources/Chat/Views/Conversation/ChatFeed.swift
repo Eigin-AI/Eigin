@@ -72,6 +72,13 @@ struct ChatFeed: View {
     /// `viewportHeight` as its `minHeight`, which keeps the user message at the
     /// top until the assistant reply naturally exceeds one viewport.
     @State private var pinnedUserMessageID: String?
+    /// Set in `sendMessage` right before `onSend` fires, and consumed by the
+    /// `onChange(of: items.last?.id)` handler. Without this gate, pagination
+    /// appends (e.g. a `loadNewerMessages` batch ending in a user message)
+    /// would be mistaken for a send and pin the message to the top with the
+    /// viewport-sized spacer — producing the "new chat" whitespace in windowed
+    /// views. Only a real send should trigger the pin.
+    @State private var isExpectingSendAppend = false
     /// Measured ScrollView container height. Used as `minHeight` of the
     /// current-turn VStack so the pinned region always fills at least one
     /// viewport.
@@ -417,11 +424,18 @@ struct ChatFeed: View {
                     return
                 }
                 // Pin newly-sent user message to the top of the viewport.
-                guard let last = items.last,
+                // Gated by `isExpectingSendAppend` so pagination appends that
+                // end on a user message don't trigger the viewport-sized spacer.
+                guard isExpectingSendAppend,
+                      let last = items.last,
                       case .message(let id, let role, _) = last,
                       role == "user",
                       id != pinnedUserMessageID
-                else { return }
+                else {
+                    isExpectingSendAppend = false
+                    return
+                }
+                isExpectingSendAppend = false
                 pinnedUserMessageID = id
                 // Defer one runloop tick so the current-turn block (with its
                 // viewport-sized minHeight) is laid out before we scroll —
@@ -444,6 +458,7 @@ struct ChatFeed: View {
                     }
                 } else if phase == .idle {
                     preStreamItemIDs = []
+                    isExpectingSendAppend = false
                 }
             }
         }
@@ -467,8 +482,15 @@ struct ChatFeed: View {
             let showsUserMessageFooter =
                 role == "user"
                     && id == items.last?.id
+                    && !pagination.hasNewerMessages
                     && !isStreaming
                     && onUserMessageFooterAction != nil
+            // Retry re-appends the user message via `send`, so it must set the
+            // send-append flag — otherwise the pin handler would no-op and the
+            // retried message wouldn't anchor to the top of the viewport.
+            let retryAction: (() -> Void)? = onUserMessageFooterAction.map { action in
+                { isExpectingSendAppend = true; action() }
+            }
             ChatMessageView(
                 role: role,
                 content: content,
@@ -476,7 +498,7 @@ struct ChatFeed: View {
                 showFooter: role == "assistant",
                 animateFooter: id == lastStreamedItemID,
                 showUserMessageFooter: showsUserMessageFooter,
-                onUserMessageFooterAction: onUserMessageFooterAction
+                onUserMessageFooterAction: retryAction
             )
         case .typing:
             TypingIndicator()
@@ -520,6 +542,7 @@ struct ChatFeed: View {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
         isInputFocused = false
+        isExpectingSendAppend = true
         onSend(mode)
     }
 }
