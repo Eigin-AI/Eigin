@@ -106,7 +106,6 @@ struct OnboardingChat: View {
                 }
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
-            .ignoresSafeArea(edges: .top)
 
             if let digest = revealDigest {
                 OnboardingRevealOverlay(

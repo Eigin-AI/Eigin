@@ -75,7 +75,6 @@ struct ChatListView: View {
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .ignoresSafeArea(edges: .top)
             .navigationDestination(for: UUID.self) { chatID in
                 ChatView(chatID: chatID)
                     .hidesTabBar()
