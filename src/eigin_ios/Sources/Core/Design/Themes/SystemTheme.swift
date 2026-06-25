@@ -40,6 +40,19 @@ struct SystemTheme: Theme {
                     spot: .init(base: .green),
                     standard: .init(primary: .orange, secondary: Color(.white).opacity(0.3))
                 ),
+                code: .init(
+                    comment: Color(.secondaryLabel),
+                    deleted: .red,
+                    function: .blue,
+                    inserted: .green,
+                    keyword: .purple,
+                    link: .blue,
+                    number: .orange,
+                    plain: Color(.label),
+                    string: .red,
+                    type: .teal,
+                    variable: Color(.label)
+                ),
                 icon: .init(
                     impact: .init(
                         base: .white,

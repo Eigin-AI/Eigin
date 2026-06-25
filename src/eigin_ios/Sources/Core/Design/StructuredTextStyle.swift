@@ -5,8 +5,27 @@ extension InlineStyle {
     static func eigin(colors: ResolvedColors) -> InlineStyle {
         InlineStyle()
             .strong(.bold)
-            .code(.monospaced, .fontScale(0.8), .foregroundColor(colors.text.standard.muted))
+            .code(
+                .font(Typography.code.font),
+                .foregroundColor(colors.text.standard.muted)
+            )
             .link(.foregroundColor(Color.accentColor))
+    }
+}
+
+extension View {
+    /// Applies Eigin's shared `StructuredText` styling: inline style, headings, the rounded
+    /// ``EiginCodeBlockStyle`` code card, and the ``StructuredText/HighlighterTheme/eigin``
+    /// syntax theme.
+    ///
+    /// - Parameter highlightSyntax: When false, uses the `.plain` highlighter theme, which skips
+    ///   the syntax tokenizer entirely. Set false while a code block is still streaming so we don't
+    ///   re-tokenize on every chunk.
+    func eiginStructuredText(colors: ResolvedColors, highlightSyntax: Bool = true) -> some View {
+        textual.inlineStyle(.eigin(colors: colors))
+            .textual.headingStyle(EiginHeadingStyle())
+            .textual.codeBlockStyle(EiginCodeBlockStyle())
+            .textual.highlighterTheme(highlightSyntax ? .eigin(colors) : .plain)
     }
 }
 

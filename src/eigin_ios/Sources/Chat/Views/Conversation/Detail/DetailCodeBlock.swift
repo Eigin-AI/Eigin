@@ -19,11 +19,9 @@ struct DetailCodeBlock: View {
 
     var body: some View {
         StructuredText(markdown: markdown)
-            .font(Typography.body.font)
+            .font(Typography.code.font)
             .foregroundStyle(colors.text.standard.base)
             .tint(colors.accent)
-            .textual.inlineStyle(.eigin(colors: colors))
-            .textual.headingStyle(EiginHeadingStyle())
-            .textual.highlighterTheme(highlightSyntax ? .default : .plain)
+            .eiginStructuredText(colors: colors, highlightSyntax: highlightSyntax)
     }
 }

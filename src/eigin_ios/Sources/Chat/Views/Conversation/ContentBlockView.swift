@@ -30,9 +30,7 @@ struct ContentBlockView: View {
                 .font(Typography.chatMessage.font)
                 .foregroundStyle(colors.text.standard.base)
                 .tint(colors.accent)
-                .textual.inlineStyle(.eigin(colors: colors))
-                .textual.headingStyle(EiginHeadingStyle())
-                .textual.highlighterTheme(.default)
+                .eiginStructuredText(colors: colors)
                 .textual.tableStyle(.overflow(relativeWidth: 3))
         }
     }
