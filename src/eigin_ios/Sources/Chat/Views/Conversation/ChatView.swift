@@ -163,7 +163,6 @@ struct ChatView: View {
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .ignoresSafeArea(edges: .top)
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(isPresented: $showLiveCall) {
             if let agent, let provider = activeProvider {

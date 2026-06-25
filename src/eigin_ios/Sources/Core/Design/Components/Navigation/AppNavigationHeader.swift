@@ -6,6 +6,13 @@ import SwiftUI
 /// The center slot is bottom-aligned; leading and trailing slots are
 /// vertically centered within the fixed `Spacing.n64` height.
 ///
+/// Owns its own safe-area handling: the surface background extends into the
+/// top safe area so the app background never shows behind the status bar,
+/// and `.safeAreaPadding(.top, Spacing.n4)` ensures a small minimum gap
+/// when the system inset is absent (e.g. landscape). Designed to be placed
+/// inside a `.safeAreaInset(edge: .top, spacing: 0)` slot on the scroll/feed
+/// content so SwiftUI positions it below the status bar automatically.
+///
 /// Only the `leading` slot is required. `center` and `trailing` default to
 /// `EmptyView` and can be omitted for simple back-nav headers.
 struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
@@ -28,10 +35,10 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     var body: some View {
         contentFrame
             .frame(maxWidth: .infinity)
-            .padding(.top, Spacing.n56)
             .padding(.bottom, Spacing.n16)
             .padding(.horizontal, Spacing.n16)
-            .background(colors.surface.standard.base)
+            .background(colors.surface.standard.base.ignoresSafeArea(edges: .top))
+            .safeAreaPadding(.top, Spacing.n4)
     }
 
     private var contentFrame: some View {
