@@ -40,6 +40,7 @@ pub const TYPOGRAPHY_FIELDS: &[&str] = &[
     "authorS",
     "standfirst",
     "body",
+    "code",
     "chatMessage",
     "chatMessageUser",
     "button",
