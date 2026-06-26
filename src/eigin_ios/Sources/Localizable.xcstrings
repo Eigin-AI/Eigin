@@ -17,6 +17,12 @@
         }
       }
     },
+    "🚀" : {
+
+    },
+    "2 CHATS" : {
+
+    },
     "actions.title" : {
       "comment" : "Title of the action sheet shown from the chat input bar.",
       "localizations" : {
@@ -458,6 +464,9 @@
           }
         }
       }
+    },
+    "Any content goes here, with consistent padding." : {
+
     },
     "auth.signingIn" : {
       "comment" : "A loading indicator while waiting for the user to sign in to their provider.",
@@ -9099,6 +9108,23 @@
         }
       }
     },
+    "space.detail.title" : {
+      "comment" : "Navigation title shown while editing a space",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rediger rum"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit Space"
+          }
+        }
+      }
+    },
     "space.emptyState.hint" : {
       "comment" : "A description text displayed when there are no spaces to show. It encourages the user to add a new space.",
       "localizations" : {
@@ -9472,6 +9498,9 @@
           }
         }
       }
+    },
+    "Tappable card" : {
+
     },
     "timestamp.justNow" : {
       "comment" : "Relative timestamp group label for messages sent moments ago",

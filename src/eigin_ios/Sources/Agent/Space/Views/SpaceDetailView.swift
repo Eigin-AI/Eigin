@@ -17,19 +17,42 @@ struct SpaceDetailView: View {
     @Query(sort: \Chat.updatedAt) private var allChats: [Chat]
 
     var body: some View {
-        Form {
-            presentationSection
-            instructionsSection
-            privacySection
-            deleteSection
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Space.Detail.title,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
+            ScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    presentationCard
+
+                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                        instructionsCard
+                        privacyCard
+                    }
+
+                    AppButton(
+                        Localized.Space.Detail.Action.deleteSpace,
+                        variant: .destructive,
+                        size: .large
+                    ) {
+                        showDeleteConfirmation = true
+                    }
+                }
+                .padding(.horizontal, Spacing.n16)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(
-            space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name,
-            style: Typography.titleXl
-        )
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Common.Actions.delete, role: .destructive) {
@@ -43,9 +66,9 @@ struct SpaceDetailView: View {
 
     // MARK: - Presentation
 
-    private var presentationSection: some View {
-        Section {
-            HStack(alignment: .center, spacing: Spacing.n8) {
+    private var presentationCard: some View {
+        AppCardSurface {
+            HStack(alignment: .center, spacing: Spacing.n12) {
                 Button {
                     showEmojiPicker = true
                 } label: {
@@ -87,73 +110,75 @@ struct SpaceDetailView: View {
 
                 Spacer()
             }
-            .listRowBackground(colors.surface.standard.alternative)
         }
     }
 
     // MARK: - Instructions
 
-    private var instructionsSection: some View {
-        Section {
-            NavigationLink {
-                DocumentEditor(
-                    title: Localized.Space.Section.instructions,
-                    text: $space.instructions
-                )
-                .hidesTabBar()
-            } label: {
-                HStack(spacing: Spacing.n8) {
-                    SettingsIcon(systemName: "text.alignleft", color: .blue)
-                    Text(Localized.Space.Section.instructions)
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.base)
-                    Spacer()
-                    Text(space.instructions
-                        .isEmpty ? Localized.Fact.Detail
-                        .notSet : String(space.instructions.prefix(30)) +
-                        "...")
+    private var instructionsCard: some View {
+        NavigationLink {
+            DocumentEditor(
+                title: Localized.Space.Section.instructions,
+                text: $space.instructions
+            )
+            .hidesTabBar()
+        } label: {
+            AppCardSurface {
+                HStack(spacing: Spacing.n16) {
+                    Iconography.Functional.note
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 28, height: 28)
                         .foregroundStyle(colors.text.standard.muted)
-                        .typography(Typography.note)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(Localized.Space.Section.instructions)
+                            .typography(Typography.titleXS)
+                            .foregroundStyle(colors.text.standard.base)
+                        Text(instructionsPreview)
+                            .typography(Typography.tag)
+                            .foregroundStyle(colors.text.standard.muted)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
                 }
             }
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Space.Section.instructions)
-                .typography(Typography.miniLabel)
         }
+        .buttonStyle(.plain)
+    }
+
+    private var instructionsPreview: String {
+        if space.instructions.isEmpty {
+            return Localized.Fact.Detail.notSet
+        }
+        return String(space.instructions.prefix(30)) + "..."
     }
 
     // MARK: - Privacy
 
-    private var privacySection: some View {
-        Section {
-            Toggle(isOn: $space.isPrivate) {
-                HStack(spacing: Spacing.n8) {
-                    SettingsIcon(systemName: "eye.slash", color: .purple)
-                    VStack(alignment: .leading) {
-                        Text(Localized.Space.Detail.Label.private)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                        Text(Localized.Space.Detail.Hint.private)
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
+    private var privacyCard: some View {
+        AppCardSurface {
+            HStack(spacing: Spacing.n16) {
+                Image(systemName: "eye.slash")
+                    .font(.system(size: 17))
+                    .foregroundStyle(colors.text.standard.muted)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Localized.Space.Detail.Label.private)
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(colors.text.standard.base)
+                    Text(Localized.Space.Detail.Hint.private)
+                        .typography(Typography.tag)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+                Spacer()
+                AppSwitch(isOn: space.isPrivate) {
+                    space.isPrivate.toggle()
+                    space.updatedAt = .now
+                    Haptics.light()
                 }
             }
-            .listRowBackground(colors.surface.standard.alternative)
-        }
-    }
-
-    // MARK: - Delete
-
-    private var deleteSection: some View {
-        Section {
-            Button(Localized.Space.Detail.Action.deleteSpace, role: .destructive) {
-                showDeleteConfirmation = true
-            }
-            .typography(Typography.navTab)
-            .listRowBackground(colors.surface.standard.alternative)
         }
     }
 
@@ -189,4 +214,33 @@ struct SpaceDetailView: View {
         modelContext.delete(space)
         dismiss()
     }
+}
+
+// MARK: - Preview
+
+#Preview("Private") {
+    NavigationStack {
+        SpaceDetailView(space: {
+            let space = Space(agentID: UUID())
+            space.name = "42futures"
+            space.emoji = "🚀"
+            space.instructions =
+                "Strategic tech pilots and AI experiments. A space for exploring what's next."
+            space.isPrivate = true
+            return space
+        }())
+    }
+    .previewEnvironment()
+}
+
+#Preview("Empty instructions") {
+    NavigationStack {
+        SpaceDetailView(space: {
+            let space = Space(agentID: UUID())
+            space.name = "The Lab"
+            space.emoji = "🧪"
+            return space
+        }())
+    }
+    .previewEnvironment()
 }
