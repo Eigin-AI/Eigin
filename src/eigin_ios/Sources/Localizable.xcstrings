@@ -465,6 +465,9 @@
         }
       }
     },
+    "Any content folds out here." : {
+
+    },
     "Any content goes here, with consistent padding." : {
 
     },
@@ -535,6 +538,9 @@
           }
         }
       }
+    },
+    "Buttons, lists, options — the disclosure stays agnostic." : {
+
     },
     "chat.alert.deleteTitle" : {
       "comment" : "Alert title for chat deletion confirmation",

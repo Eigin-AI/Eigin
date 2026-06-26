@@ -4,6 +4,7 @@ import SwiftUI
 
 struct IntentsList: View {
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Injected(\.intentService) private var intentService
 
     @Query private var intents: [Intent]
@@ -27,13 +28,26 @@ struct IntentsList: View {
     }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Intents.title,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
             if intents.isEmpty {
                 ContentUnavailableView(
                     Localized.Tools.No.Active.intents,
                     systemImage: "arrow.triangle.branch",
                     description: Text(Localized.Intent.EmptyState.hint)
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(sortedIntents) { intent in
@@ -70,12 +84,12 @@ struct IntentsList: View {
                     }
                 }
                 .animation(Animations.smooth, value: intents.map(\.id))
+                .contentMargins(.top, 0, for: .scrollContent)
                 .scrollContentBackground(.hidden)
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Intents.title, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Ui.dismiss, role: .destructive) {

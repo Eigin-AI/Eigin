@@ -28,7 +28,6 @@ struct AgentView: View {
                 }
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
-            .navigationTitle("Agent", style: Typography.titleXl)
             .tabBarPadding()
         }
         .ignoresSafeArea(.container, edges: .bottom)

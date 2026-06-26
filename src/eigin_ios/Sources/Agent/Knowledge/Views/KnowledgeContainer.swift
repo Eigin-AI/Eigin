@@ -6,6 +6,7 @@ import SwiftUI
 /// User preference for list vs. graph mode is persisted via `@AppStorage`.
 struct KnowledgeContainer: View {
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Injected(\.knowledgeService) private var knowledgeService
 
     let agentID: UUID?
@@ -14,37 +15,51 @@ struct KnowledgeContainer: View {
     @State private var graphViewModel: KnowledgeGraphViewModel?
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Knowledge.sectionTitle,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                },
+                trailing: {
+                    AppActionButton(
+                        icon: Image(systemName: viewMode == .list
+                            ? "point.3.connected.trianglepath.dotted"
+                            : "list.bullet"),
+                        variant: .open,
+                        size: .medium,
+                        action: {
+                            withAnimation(Animations.snap) {
+                                viewMode = viewMode == .list ? .graph : .list
+                            }
+                            if viewMode == .graph, graphViewModel == nil {
+                                Task { await loadGraph() }
+                            }
+                        }
+                    )
+                }
+            )
+
             switch viewMode {
             case .list:
                 FactsList(agentID: agentID)
             case .graph:
                 if let vm = graphViewModel {
                     KnowledgeGraph(viewModel: vm, agentID: agentID)
-                        .navigationTitle("Knowledge", style: Typography.titleXl)
-                        .navigationBarTitleDisplayMode(.inline)
                 } else {
                     ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .task { await loadGraph() }
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    withAnimation(Animations.snap) {
-                        viewMode = viewMode == .list ? .graph : .list
-                    }
-                    if viewMode == .graph, graphViewModel == nil {
-                        Task { await loadGraph() }
-                    }
-                } label: {
-                    Image(systemName: viewMode == .list ? "point.3.connected.trianglepath.dotted" :
-                        "list.bullet")
-                        .foregroundStyle(colors.accent)
-                }
-            }
-        }
+        .background(colors.surface.standard.base.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func loadGraph() async {

@@ -63,8 +63,6 @@ struct FactsList: View {
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Knowledge.sectionTitle, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
         .task { await loadFacts() }
         .refreshable { await loadFacts() }
         .alert(Localized.Common.Actions.delete, isPresented: $showDeleteConfirmation) {

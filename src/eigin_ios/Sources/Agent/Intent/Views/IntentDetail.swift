@@ -11,69 +11,84 @@ struct IntentDetail: View {
     @State private var showDismissConfirmation = false
 
     var body: some View {
-        List {
-            Section {
-                Text(intent.content)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.base)
-            }
-
-            if !intent.tasks.isEmpty {
-                Section(Localized.Intent.tasks) {
-                    ForEach(intent.tasks) { task in
-                        taskRow(task)
-                    }
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Ui.intent,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                },
+                trailing: {
+                    AppActionButton(
+                        icon: Image(systemName: "xmark"),
+                        variant: .open,
+                        size: .medium,
+                        action: { showDismissConfirmation = true }
+                    )
                 }
-            }
+            )
 
-            if !intent.events.isEmpty {
-                Section(Localized.Intent.events) {
-                    ForEach(intent.events) { event in
-                        LabeledContent(event.content) {
-                            Text(LocalDateFormatter.string(from: event.at))
-                                .typography(Typography.note)
-                                .foregroundStyle(colors.text.standard.muted)
+            List {
+                Section {
+                    Text(intent.content)
+                        .typography(Typography.body)
+                        .foregroundStyle(colors.text.standard.base)
+                }
+
+                if !intent.tasks.isEmpty {
+                    Section(Localized.Intent.tasks) {
+                        ForEach(intent.tasks) { task in
+                            taskRow(task)
                         }
                     }
                 }
-            }
 
-            if !intent.schedules.isEmpty {
-                Section(Localized.Intent.schedules) {
-                    ForEach(intent.schedules) { schedule in
-                        LabeledContent(schedule.content) {
-                            Text(scheduleSummary(schedule))
-                                .typography(Typography.note)
-                                .foregroundStyle(colors.text.standard.muted)
+                if !intent.events.isEmpty {
+                    Section(Localized.Intent.events) {
+                        ForEach(intent.events) { event in
+                            LabeledContent(event.content) {
+                                Text(LocalDateFormatter.string(from: event.at))
+                                    .typography(Typography.note)
+                                    .foregroundStyle(colors.text.standard.muted)
+                            }
                         }
                     }
                 }
-            }
 
-            Section(Localized.Ui.details) {
-                LabeledContent(Localized.Ui.created) {
-                    Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
+                if !intent.schedules.isEmpty {
+                    Section(Localized.Intent.schedules) {
+                        ForEach(intent.schedules) { schedule in
+                            LabeledContent(schedule.content) {
+                                Text(scheduleSummary(schedule))
+                                    .typography(Typography.note)
+                                    .foregroundStyle(colors.text.standard.muted)
+                            }
+                        }
+                    }
                 }
-                LabeledContent(Localized.Tools.Last.updated) {
-                    Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
+
+                Section(Localized.Ui.details) {
+                    LabeledContent(Localized.Ui.created) {
+                        Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .typography(Typography.note)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
+                    LabeledContent(Localized.Tools.Last.updated) {
+                        Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                            .typography(Typography.note)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
                 }
             }
+            .contentMargins(.top, 0, for: .scrollContent)
+            .scrollContentBackground(.hidden)
         }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Ui.intent, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .destructiveAction) {
-                Button(Localized.Ui.dismiss, role: .destructive) {
-                    showDismissConfirmation = true
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Ui.dismiss, role: .destructive) {
