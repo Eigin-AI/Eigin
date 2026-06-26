@@ -31,32 +31,46 @@ struct ModelPicker: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            if provider.availableModels.isEmpty {
-                // No cached models: keep the loading state until the background refresh resolves,
-                // then show a genuine empty-catalog message if it still came back empty.
-                if isLoaded, !isRefreshing {
-                    emptyCatalog
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Model.Picker.title,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                },
+                trailing: {
+                    if isRefreshing {
+                        ProgressView()
+                            .padding(.trailing, Spacing.n4)
+                    }
+                }
+            )
+
+            List {
+                if provider.availableModels.isEmpty {
+                    // No cached models: keep the loading state until the background refresh
+                    // resolves,
+                    // then show a genuine empty-catalog message if it still came back empty.
+                    if isLoaded, !isRefreshing {
+                        emptyCatalog
+                    } else {
+                        loadingPlaceholder
+                    }
                 } else {
-                    loadingPlaceholder
+                    content
                 }
-            } else {
-                content
             }
+            .searchable(text: $searchText, prompt: "Search models")
+            .onChange(of: searchText) { prepare() }
+            .contentMargins(.top, 0, for: .scrollContent)
+            .scrollContentBackground(.hidden)
         }
-        .searchable(text: $searchText, prompt: "Search models")
-        .onChange(of: searchText) { prepare() }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle("Choose Model", style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if isRefreshing {
-                    ProgressView()
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             // Render the cached catalog immediately, then refresh in the background so the list
             // reflects models the provider has added or retired since it was last fetched.
