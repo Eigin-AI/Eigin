@@ -3,8 +3,10 @@ import SwiftUI
 /// A custom top navigation header with three configurable slots.
 ///
 /// Displays leading, center, and trailing views separated by spacers.
-/// The center slot is bottom-aligned; leading and trailing slots are
-/// vertically centered within the fixed `Spacing.n64` height.
+/// Leading and trailing slots are vertically centered within the fixed
+/// `Spacing.n64` height. The center slot defaults to bottom alignment so the
+/// brand avatar sits grounded against the action buttons; pass a `title:`
+/// instead to render a vertically-centered text title.
 ///
 /// Owns its own safe-area handling: the surface background extends into the
 /// top safe area so the app background never shows behind the status bar,
@@ -19,6 +21,7 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     @ViewBuilder let leading: () -> Leading
     @ViewBuilder let center: () -> Center
     @ViewBuilder let trailing: () -> Trailing
+    let centerAlignment: VerticalAlignment
 
     @Environment(\.colors) private var colors
 
@@ -30,6 +33,21 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
         self.leading = leading
         self.center = center
         self.trailing = trailing
+        centerAlignment = .bottom
+    }
+
+    /// Convenience header with a vertically-centered text title in the center
+    /// slot, styled consistently. Use for simple titled screens that don't show
+    /// the brand avatar.
+    init(
+        title: String,
+        @ViewBuilder leading: @escaping () -> Leading,
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
+    ) where Center == HeaderTitle {
+        self.leading = leading
+        center = { HeaderTitle(title: title) }
+        self.trailing = trailing
+        centerAlignment = .center
     }
 
     var body: some View {
@@ -42,9 +60,13 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     }
 
     private var contentFrame: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             center()
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: Alignment(horizontal: .center, vertical: centerAlignment)
+                )
 
             HStack(spacing: 0) {
                 leading()
@@ -54,6 +76,24 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
             .frame(maxHeight: .infinity, alignment: .center)
         }
         .frame(height: Spacing.n64)
+    }
+}
+
+/// The standardized title rendered by `AppNavigationHeader(title:)`. Horizontal
+/// padding reserves room for the edge action buttons so a long title truncates
+/// rather than sliding underneath them.
+struct HeaderTitle: View {
+    let title: String
+
+    @Environment(\.colors) private var colors
+
+    var body: some View {
+        Text(title)
+            .typography(Typography.titleXS)
+            .foregroundStyle(colors.text.standard.base)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, Spacing.n64)
     }
 }
 
@@ -77,6 +117,17 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
 
 #Preview("Leading Only Dark") {
     HeaderLeadingPreview()
+        .resolveTheme()
+        .environment(\.colorScheme, .dark)
+}
+
+#Preview("Titled Light") {
+    HeaderTitledPreview()
+        .resolveTheme()
+}
+
+#Preview("Titled Dark") {
+    HeaderTitledPreview()
         .resolveTheme()
         .environment(\.colorScheme, .dark)
 }
@@ -167,6 +218,38 @@ private struct HeaderLeadingPreview: View {
                 .padding(.horizontal, Spacing.n16)
                 .padding(.top, Spacing.n24)
             }
+        }
+        .ignoresSafeArea(.container, edges: .top)
+        .background(colors.surface.standard.base)
+    }
+}
+
+private struct HeaderTitledPreview: View {
+    @Environment(\.colors) private var colors
+
+    var body: some View {
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: "Spaces",
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: {}
+                    )
+                },
+                trailing: {
+                    AppActionButton(
+                        icon: Iconography.Functional.plus,
+                        variant: .open,
+                        size: .medium,
+                        action: {}
+                    )
+                }
+            )
+
+            Spacer()
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(colors.surface.standard.base)

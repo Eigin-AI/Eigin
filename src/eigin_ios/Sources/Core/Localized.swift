@@ -3010,6 +3010,11 @@ enum Localized {
         }
 
         enum Detail {
+            /// Navigation title shown while editing a space
+            static var title: String {
+                Localized.get("space.detail.title")
+            }
+
             enum Action {
                 /// Destructive action button to delete a space
                 static var deleteSpace: String {

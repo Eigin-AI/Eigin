@@ -2,8 +2,8 @@ import SwiftData
 import SwiftUI
 
 struct SpaceListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Space.name) private var spaces: [Space]
     @Query(filter: #Predicate<Agent> { $0.bootstrapComplete })
     private var agents: [Agent]
@@ -20,12 +20,32 @@ struct SpaceListView: View {
 
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
 
-    @State private var spaceToDelete: Space?
-    @State private var showDeleteConfirmation = false
+    @State private var selectedSpace: Space?
     @State private var showBootstrap = false
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Space.title,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                },
+                trailing: {
+                    AppActionButton(
+                        icon: Iconography.Functional.plus,
+                        variant: .open,
+                        size: .medium,
+                        action: { showBootstrap = true }
+                    )
+                    .disabled(agent == nil || activeProvider == nil)
+                }
+            )
+
             if spaces.isEmpty {
                 ContentUnavailableView(
                     Localized.Space.title,
@@ -33,44 +53,14 @@ struct SpaceListView: View {
                     description: Text(Localized.Space.EmptyState.hint)
                 )
             } else {
-                List {
-                    ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                        NavigationLink {
-                            SpaceDetailView(space: space)
-                                .hidesTabBar()
-                        } label: {
-                            spaceRow(for: space)
-                        }
-                        .listRowSeparator(.visible, edges: .bottom)
-                        .listRowSeparator(index == 0 ? .hidden : .visible, edges: .top)
-                        .listRowBackground(Color.clear)
-                        .swipeActions(edge: .trailing) {
-                            Button {
-                                spaceToDelete = space
-                                showDeleteConfirmation = true
-                            } label: {
-                                Label(Localized.Common.Actions.delete, systemImage: "trash")
-                            }
-                            .tint(.red)
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
+                spaceList
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Space.title, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showBootstrap = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .disabled(agent == nil || activeProvider == nil)
-            }
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(item: $selectedSpace) { space in
+            SpaceDetailView(space: space)
+                .hidesTabBar()
         }
         .navigationDestination(isPresented: $showBootstrap) {
             if let agent, let provider = activeProvider {
@@ -78,30 +68,35 @@ struct SpaceListView: View {
                     .hidesTabBar()
             }
         }
-        .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {
-            Button(Localized.Common.Actions.cancel, role: .cancel) {}
-            Button(Localized.Common.Actions.delete, role: .destructive) {
-                Haptics.error()
-                if let space = spaceToDelete {
-                    deleteSpace(space)
+    }
+
+    private var spaceList: some View {
+        ScrollView {
+            LazyVStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                ForEach(spaces) { space in
+                    AppCardSurface(padding: Spacing.n16, action: { selectedSpace = space }) {
+                        spaceRow(for: space)
+                    }
                 }
             }
-        } message: {
-            Text(Localized.Space.deleteWarning)
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
         }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func spaceRow(for space: Space) -> some View {
-        HStack(spacing: Spacing.n8) {
+        HStack(spacing: Spacing.n12) {
             Text(space.emoji)
-                .font(.system(size: 24))
+                .font(.system(size: 32))
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
                     .typography(Typography.titleXS)
                     .foregroundStyle(colors.text.standard.base)
+                    .lineLimit(1)
                 let count = chatCount(for: space)
                 Text(Localized.Space.List.chatsCount("\(count)"))
-                    .typography(Typography.miniLabel)
+                    .typography(Typography.tag)
                     .foregroundStyle(colors.text.standard.muted)
             }
             Spacer()
@@ -110,29 +105,79 @@ struct SpaceListView: View {
                     .typography(Typography.miniLabel)
                     .foregroundStyle(colors.text.standard.muted)
             }
+            Image(systemName: "chevron.right")
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
     }
 
     private func chatCount(for space: Space) -> Int {
         allChats.count(where: { $0.spaceID == space.id })
     }
+}
 
-    private func deleteSpace(_ space: Space) {
-        let spaceID = space.id
-        for chat in allChats where chat.spaceID == spaceID {
-            chat.spaceID = nil
-        }
-        if let context = agent?.modelContext {
-            let agentID = agent!.id
-            let descriptor = FetchDescriptor<FirmSource>(
-                predicate: #Predicate { $0.agentID == agentID && $0.spaceID == spaceID }
-            )
-            if let sources = try? context.fetch(descriptor) {
-                for source in sources {
-                    source.spaceID = nil
-                }
+// MARK: - Preview
+
+#Preview("Spaces") {
+    NavigationStack {
+        SpaceListView()
+    }
+    .modelContainer({ () -> ModelContainer in
+        let container = try! ModelContainer(
+            for: Schema(SchemaV2.models, version: SchemaV2.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+
+        let provider = Provider(name: "Preview Provider", baseURL: "https://fake.local")
+        context.insert(provider)
+        let agent = Agent(name: "Eigin", providerID: provider.id, model: "gpt-4o")
+        agent.bootstrapComplete = true
+        context.insert(agent)
+
+        let samples: [(emoji: String, name: String, chats: Int, isPrivate: Bool)] = [
+            ("🚀", "42futures", 2, false),
+            ("👨‍🍳", "Chef Coach", 1, false),
+            ("🎙️", "Content Interviews and LinkedIn", 7, false),
+            ("🔥", "Eigin", 12, false),
+            ("🧪", "The Lab", 3, true),
+        ]
+        for sample in samples {
+            let space = Space(agentID: agent.id)
+            space.emoji = sample.emoji
+            space.name = sample.name
+            space.isPrivate = sample.isPrivate
+            space.bootstrapComplete = true
+            context.insert(space)
+            for _ in 0 ..< sample.chats {
+                let chat = Chat(agentID: agent.id)
+                chat.spaceID = space.id
+                context.insert(chat)
             }
         }
-        modelContext.delete(space)
+
+        return container
+    }())
+    .resolveTheme()
+    .environment(\.themeManager, ThemeManager())
+}
+
+#Preview("Empty") {
+    NavigationStack {
+        SpaceListView()
     }
+    .modelContainer({ () -> ModelContainer in
+        let container = try! ModelContainer(
+            for: Schema(SchemaV2.models, version: SchemaV2.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let provider = Provider(name: "Preview Provider", baseURL: "https://fake.local")
+        container.mainContext.insert(provider)
+        let agent = Agent(name: "Eigin", providerID: provider.id, model: "gpt-4o")
+        agent.bootstrapComplete = true
+        container.mainContext.insert(agent)
+        return container
+    }())
+    .resolveTheme()
+    .environment(\.themeManager, ThemeManager())
 }
