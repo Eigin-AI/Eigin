@@ -80,10 +80,14 @@ enum BackgroundPromptService {
             return silentResult
         }
 
-        // Verify API key exists (DefaultChatService will read it itself).
+        // Verify the provider has usable credentials (DefaultChatService will resolve them itself).
+        // Relay and on-device providers carry no keychain API key, so this resolves to an empty
+        // token and the turn proceeds; relay is authorized per-request via the credit wallet.
         let keychain = DefaultKeychainService(serviceKey: AppKeys.keychainServiceName)
-        guard keychain.read(key: keychain.providerKey(for: provider.id)) != nil else {
-            AppLogger.warning("API key not found", category: .backgroundPrompt)
+        guard ProviderCredentials.apiToken(
+            baseURL: provider.baseURL, providerID: provider.id, keychain: keychain
+        ) != nil else {
+            AppLogger.warning("Provider credentials not available", category: .backgroundPrompt)
             return silentResult
         }
 
