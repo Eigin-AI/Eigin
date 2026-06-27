@@ -29,20 +29,14 @@ struct DefaultChatService: ChatService {
         messages: [ChatMessage],
         model: String
     ) async throws -> AsyncThrowingStream<String, Error> {
-        let apiKey: String
-        if ProviderPreset.isLocal(baseURL) || ProviderPreset.isRelay(baseURL) {
-            // Neither on-device nor the relay use a keychain API key.
-            apiKey = ""
-        } else {
-            guard let key = keychainService.read(key: keychainService.providerKey(for: providerID))
-            else {
-                AppLogger.error(
-                    "API key not found for provider \(public: providerID)",
-                    category: .chat
-                )
-                throw ChatServiceError.apiKeyNotFound
-            }
-            apiKey = key
+        guard let apiKey = ProviderCredentials.apiToken(
+            baseURL: baseURL, providerID: providerID, keychain: keychainService
+        ) else {
+            AppLogger.error(
+                "API key not found for provider \(public: providerID)",
+                category: .chat
+            )
+            throw ChatServiceError.apiKeyNotFound
         }
         let client = LLMClientFactory.client(baseURL: baseURL, apiToken: apiKey)
         return try await withRetry {
@@ -58,20 +52,14 @@ struct DefaultChatService: ChatService {
         tools: [ToolDefinition]?,
         cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        let apiKey: String
-        if ProviderPreset.isLocal(baseURL) || ProviderPreset.isRelay(baseURL) {
-            // Neither on-device nor the relay use a keychain API key.
-            apiKey = ""
-        } else {
-            guard let key = keychainService.read(key: keychainService.providerKey(for: providerID))
-            else {
-                AppLogger.error(
-                    "API key not found for provider \(public: providerID)",
-                    category: .chat
-                )
-                throw ChatServiceError.apiKeyNotFound
-            }
-            apiKey = key
+        guard let apiKey = ProviderCredentials.apiToken(
+            baseURL: baseURL, providerID: providerID, keychain: keychainService
+        ) else {
+            AppLogger.error(
+                "API key not found for provider \(public: providerID)",
+                category: .chat
+            )
+            throw ChatServiceError.apiKeyNotFound
         }
         let client = LLMClientFactory.client(baseURL: baseURL, apiToken: apiKey)
         return try await withRetry {
