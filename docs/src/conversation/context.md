@@ -22,6 +22,12 @@ The current interaction mode is injected each turn:
 
 Each turn, the gatekeeper searches for [knowledge](../agents/knowledge.md) related to the user's message. If anything relevant surfaces, a compact summary is included in the hint block as a starting point for the agent.
 
+## Seasonal awareness
+
+The gatekeeper gives the agent a sense of what time of year it is for the user, so it can speak into the season and warmly offer help around the holidays and breaks that matter. The user's region is deduced from ambient signals (locale and timezone) with no location prompt; when no known region resolves, nothing is injected rather than guessing. Each season carries a short lead-up so the agent can raise something just before it arrives.
+
+Today this covers the most widespread seasons and traditions in Denmark, from summer holiday to Christmas. The system is built to extend to more times and dates, and to other regions with their own traditions.
+
 ## Hints
 
 Hints are nudges from the app to the agent: things worth thinking about or acting on that aid the user journey. Hint delivery is gated by the agent's [proactivity level](../agents/initiative.md). Reactive agents never receive hints; balanced and proactive agents do.

@@ -20,6 +20,12 @@ enum LocalDateFormatter {
         dateTimeOutput.string(from: date)
     }
 
+    /// Format a date as `"Monday, 2026-03-23 09:00"` in the device's local
+    /// timezone, naming the weekday in English.
+    static func stringWithWeekday(from date: Date) -> String {
+        "\(weekdayOutput.string(from: date)), \(dateTimeOutput.string(from: date))"
+    }
+
     /// Format a date as `"2026-03-23"` in the device's local timezone.
     static func dateOnlyString(from date: Date) -> String {
         dateOnlyOutput.string(from: date)
@@ -63,6 +69,14 @@ enum LocalDateFormatter {
     private static let dateTimeOutput: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm"
+        f.timeZone = .current
+        return f
+    }()
+
+    private static let weekdayOutput: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = .current
         return f
     }()
