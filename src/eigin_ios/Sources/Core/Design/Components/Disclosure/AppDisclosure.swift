@@ -1,15 +1,30 @@
 import SwiftUI
 
-/// A fold-out card: a titled surface that hides configurable content until
-/// tapped, then grows to reveal it. The title names the disclosure and an
-/// optional description summarises the current choice (for example the picked
-/// option). Content is a `@ViewBuilder` slot, so a disclosure makes no
-/// assumptions about what it holds.
+/// Controls whether ``AppDisclosure`` draws its own card surface.
+///
+/// - `.card`: the default — renders a rounded, filled background.
+///   Use when the disclosure stands alone.
+/// - `.open`: no background or clip. Use when embedding inside an
+///   ``AppCardSurface`` alongside other rows separated by dividers.
+enum AppDisclosureVariant {
+    case card
+    case open
+}
+
+/// A fold-out: a titled row that hides configurable content until tapped,
+/// then grows to reveal it. The title names the disclosure and an optional
+/// description summarises the current choice (for example the picked option).
+/// Content is a `@ViewBuilder` slot, so a disclosure makes no assumptions
+/// about what it holds.
 ///
 /// Expansion is self-managed; seed the opening state with `initiallyExpanded`.
+///
+/// Pass `variant: .open` to embed the disclosure inside an ``AppCardSurface``
+/// without double-wrapping backgrounds.
 struct AppDisclosure<Content: View>: View {
     let title: String
     let description: String?
+    let variant: AppDisclosureVariant
     @ViewBuilder let content: () -> Content
 
     @State private var isExpanded: Bool
@@ -18,11 +33,13 @@ struct AppDisclosure<Content: View>: View {
     init(
         _ title: String,
         description: String? = nil,
+        variant: AppDisclosureVariant = .card,
         initiallyExpanded: Bool = false,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
         self.description = description
+        self.variant = variant
         self.content = content
         _isExpanded = State(initialValue: initiallyExpanded)
     }
@@ -32,7 +49,7 @@ struct AppDisclosure<Content: View>: View {
             header
 
             if isExpanded {
-                divider
+                contentDivider
                 content()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Spacing.n24)
@@ -40,14 +57,14 @@ struct AppDisclosure<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.surface.standard.alternative)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        .background(variant == .card ? colors.surface.standard.alternative : .clear)
+        .clipShape(RoundedRectangle(cornerRadius: variant == .card ? Radius.card : 0))
     }
 
     // MARK: - Header
 
     /// The always-visible, tappable row. It is the only toggle target so taps
-    /// inside the revealed content never collapse the card.
+    /// inside the revealed content never collapse the disclosure.
     private var header: some View {
         HStack(spacing: Spacing.n16) {
             VStack(alignment: .leading, spacing: Spacing.n4) {
@@ -66,7 +83,8 @@ struct AppDisclosure<Content: View>: View {
 
             PlusMinusIndicator(isExpanded: isExpanded)
         }
-        .padding(Spacing.n24)
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(Animations.smooth) { isExpanded.toggle() }
@@ -79,7 +97,7 @@ struct AppDisclosure<Content: View>: View {
 
     /// Hairline separating the header from the revealed content, inset to line
     /// up with the title and content padding.
-    private var divider: some View {
+    private var contentDivider: some View {
         Rectangle()
             .fill(colors.input.standard.inactive)
             .frame(height: 1)
@@ -117,6 +135,19 @@ private struct AppDisclosurePreview: View {
                     initiallyExpanded: true
                 ) {
                     buttonContent
+                }
+
+                // Embedded variant
+                AppCardSurface(padding: 0) {
+                    VStack(spacing: 0) {
+                        AppDisclosure("Embedded row 1", variant: .open) {
+                            placeholderContent
+                        }
+                        Divider().padding(.horizontal, Spacing.n24)
+                        AppDisclosure("Embedded row 2", variant: .open) {
+                            placeholderContent
+                        }
+                    }
                 }
             }
             .padding(Spacing.n24)

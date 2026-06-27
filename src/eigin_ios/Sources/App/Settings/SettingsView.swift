@@ -10,14 +10,23 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                generalSection
-                agentSection
-                systemSection
+            VStack(spacing: 0) {
+                AppNavigationHeader(title: Localized.Ui.settings, leading: { EmptyView() })
+
+                ScrollView {
+                    VStack(spacing: Sizing.PageLayout.gap) {
+                        generalGroup
+                        agentGroup
+                        systemGroup
+                    }
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.top, Spacing.n8)
+                    .padding(.bottom, Spacing.n32)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollContentBackground(.hidden)
             .background(colors.surface.standard.base.ignoresSafeArea())
-            .navigationTitle(Localized.Ui.settings, style: Typography.titleXl)
+            .toolbar(.hidden, for: .navigationBar)
             .tabBarPadding()
         }
         .ignoresSafeArea(.container, edges: .bottom)
@@ -31,28 +40,83 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Groups
 
-    private var generalSection: some View {
-        Section {
-            Group {
+    private var generalGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Settings.Section.general)
+
+            VStack(spacing: 0) {
                 languagePicker
-
-                Button { showFeedbackSheet = true } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "envelope.fill", color: .green)
-                        Text(Localized.Settings.Feedback.sendFeedback)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
+                Divider().padding(.leading, Spacing.n24)
+                feedbackRow
             }
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Settings.Section.general)
-                .typography(Typography.miniLabel)
+            .background(colors.surface.standard.alternative)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
         }
     }
+
+    private var agentGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Settings.Section.agent)
+
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    if let agent = agents.first {
+                        NavigationLink {
+                            ToolPermissions(agent: agent)
+                                .hidesTabBar()
+                        } label: {
+                            chevronRow(Localized.Settings.Label.permissions)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, Spacing.n24)
+                    }
+
+                    NavigationLink {
+                        ConnectionsView()
+                            .hidesTabBar()
+                    } label: {
+                        chevronRow(Localized.Ui.connections)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var systemGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Settings.Section.system)
+
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    NavigationLink {
+                        AdvancedSettings()
+                            .hidesTabBar()
+                    } label: {
+                        chevronRow(Localized.Settings.Section.advanced)
+                    }
+                    .buttonStyle(.plain)
+
+#if DEBUG
+                    Divider().padding(.leading, Spacing.n24)
+
+                    NavigationLink {
+                        DevelopmentMenu()
+                            .hidesTabBar()
+                    } label: {
+                        chevronRow(Localized.Settings.Section.development)
+                    }
+                    .buttonStyle(.plain)
+#endif
+                }
+            }
+        }
+    }
+
+    // MARK: - Rows
 
     private var languagePicker: some View {
         let binding = Binding(
@@ -60,83 +124,51 @@ struct SettingsView: View {
             set: { languageManager.setLanguage($0) }
         )
 
-        return Picker(Localized.Ui.language, selection: binding) {
-            ForEach(AppLanguage.allCases, id: \.self) { language in
-                Text(language.displayName).tag(language)
-            }
-        }
+        return AppOptionPicker(
+            title: Localized.Ui.language,
+            options: AppLanguage.allCases.map { AppOption($0.displayName, value: $0) },
+            selection: binding.wrappedValue
+        ) { binding.wrappedValue = $0 }
     }
 
-    private var agentSection: some View {
-        Section {
-            Group {
-                if let agent = agents.first {
-                    NavigationLink {
-                        ToolPermissions(agent: agent)
-                            .hidesTabBar()
-                    } label: {
-                        HStack(spacing: Spacing.n8) {
-                            SettingsIcon(systemName: "lock.fill", color: .cyan)
-                            Text(Localized.Settings.Label.permissions)
-                                .typography(Typography.navTab)
-                                .foregroundStyle(colors.text.standard.base)
-                        }
-                    }
-                }
-
-                NavigationLink {
-                    ConnectionsView()
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "link", color: .blue)
-                        Text(Localized.Ui.connections)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
+    private var feedbackRow: some View {
+        Button { showFeedbackSheet = true } label: {
+            HStack(spacing: Spacing.n16) {
+                Text(Localized.Settings.Feedback.sendFeedback)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
+                Spacer()
             }
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Settings.Section.agent)
-                .typography(Typography.miniLabel)
+            .padding(.horizontal, Spacing.n24)
+            .padding(.vertical, Spacing.n16)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
-    private var systemSection: some View {
-        Section {
-            Group {
-                NavigationLink {
-                    AdvancedSettings()
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "gearshape.2.fill", color: .gray)
-                        Text(Localized.Settings.Section.advanced)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
+    // MARK: - Helpers
 
-#if DEBUG
-                NavigationLink {
-                    DevelopmentMenu()
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "hammer.fill", color: .orange)
-                        Text(Localized.Settings.Section.development)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
-                }
-#endif
-            }
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Settings.Section.system)
+    private func chevronRow(_ title: String) -> some View {
+        HStack(spacing: Spacing.n16) {
+            Text(title)
+                .typography(Typography.titleXS)
+                .foregroundStyle(colors.text.standard.base)
+            Spacer()
+            Image(systemName: "chevron.right")
                 .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+        .contentShape(Rectangle())
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n8)
     }
 }
 

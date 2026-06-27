@@ -3574,6 +3574,23 @@
         }
       }
     },
+    "mcp.removeWarning" : {
+      "comment" : "Confirmation message before removing an MCP server",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren og dens autentifikationstokens fjernes. Du kan tilføje den igen når som helst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server and its authentication tokens will be removed. You can add it again at any time."
+          }
+        }
+      }
+    },
     "mcp.section.status" : {
       "comment" : "Section header for MCP server status",
       "localizations" : {
@@ -6590,6 +6607,23 @@
         }
       }
     },
+    "provider.edit.removeWarning" : {
+      "comment" : "Confirmation message before removing a provider",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udbyderen og dens API-nøgle fjernes. Du kan tilføje den igen når som helst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This provider and its API key will be removed. You can add it again at any time."
+          }
+        }
+      }
+    },
     "provider.eigin.blurbBody" : {
       "comment" : "Body of the privacy blurb card",
       "localizations" : {
@@ -8498,6 +8532,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Log to File"
+          }
+        }
+      }
+    },
+    "settings.logging.minimumLevel" : {
+      "comment" : "Picker label for the minimum log level in advanced settings",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimumsniveau"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum Level"
           }
         }
       }

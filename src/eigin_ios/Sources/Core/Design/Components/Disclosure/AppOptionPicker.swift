@@ -27,21 +27,35 @@ struct AppOption<Value: Hashable>: Identifiable {
 /// leaving state to the caller.
 struct AppOptionPicker<Value: Hashable>: View {
     let title: String
+    let description: String?
     let options: [AppOption<Value>]
     let selection: Value
     let onSelect: (Value) -> Void
 
     @Environment(\.colors) private var colors
 
-    /// Label of the currently selected option, surfaced as the disclosure's
-    /// summary. Falls back to nil so the header simply omits the summary when
-    /// the selection matches no option.
-    private var selectedLabel: String? {
-        options.first { $0.value == selection }?.label
+    init(
+        title: String,
+        description: String? = nil,
+        options: [AppOption<Value>],
+        selection: Value,
+        onSelect: @escaping (Value) -> Void
+    ) {
+        self.title = title
+        self.description = description
+        self.options = options
+        self.selection = selection
+        self.onSelect = onSelect
+    }
+
+    /// Text shown as the disclosure summary: the explicit description if
+    /// provided, otherwise the label of the currently selected option.
+    private var summaryText: String? {
+        description ?? options.first { $0.value == selection }?.label
     }
 
     var body: some View {
-        AppDisclosure(title, description: selectedLabel) {
+        AppDisclosure(title, description: summaryText) {
             VStack(spacing: Spacing.n16) {
                 ForEach(options) { option in
                     row(option)

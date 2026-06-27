@@ -3,78 +3,147 @@ import SwiftUI
 
 /// Configuration screen for per-agent tool permission levels.
 ///
-/// Displays each ``ToolCapability`` grouped by category with a picker
-/// to set the permission level (Always / Ask / Never).
-/// MCP servers get their own sections with per-tool overrides.
+/// Displays all capability categories and MCP servers as ``AppDisclosure``
+/// foldouts in a single card. Each capability and MCP tool uses an
+/// ``AppOptionPicker`` to select its permission level.
 struct ToolPermissions: View {
     let agent: Agent
 
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
     @State private var builtInLevels: [String: ToolPermissionLevel] = [:]
     @State private var discoveredLevels: [String: ToolPermissionLevel] = [:]
 
-    var body: some View {
-        Form {
-            // Built-in capabilities grouped by category
-            ForEach(ToolCapability.Category.allCases, id: \.self) { category in
-                Section {
-                    ForEach(ToolRegistry.capabilities(for: category), id: \.key) { capability in
-                        Picker(capability.displayName, selection: binding(for: capability)) {
-                            ForEach(ToolPermissionLevel.allCases, id: \.self) { level in
-                                Text(level.displayName).tag(level)
-                            }
-                        }
-                    }
-                    .listRowBackground(colors.surface.standard.alternative)
-                } header: {
-                    Label(category.displayName, systemImage: category.systemImage)
-                        .typography(Typography.miniLabel)
-                }
-            }
+    private var permissionOptions: [AppOption<ToolPermissionLevel>] {
+        ToolPermissionLevel.allCases.map { AppOption($0.displayName, value: $0) }
+    }
 
-            // MCP per-tool overrides
-            if !enabledServers.isEmpty {
-                Section {
-                    ForEach(enabledServers) { server in
-                        DisclosureGroup {
-                            ForEach(server.cachedToolNames, id: \.self) { toolName in
-                                let fullName = Self.mcpToolName(server: server.name, tool: toolName)
-                                Picker(
-                                    toolName.titleCased,
-                                    selection: mcpToolBinding(fullName: fullName)
-                                ) {
-                                    Text(Localized.Settings.Permissions.defaultLabel)
-                                        .tag(ToolPermissionLevel?.none)
-                                    ForEach(ToolPermissionLevel.allCases, id: \.self) { level in
-                                        Text(level.displayName)
-                                            .tag(ToolPermissionLevel?.some(level))
+    var body: some View {
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Settings.Permissions.title,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
+            ScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    // All built-in capability categories in one card
+                    let categories = ToolCapability.Category.allCases
+                        .filter { !ToolRegistry.capabilities(for: $0).isEmpty }
+
+                    if !categories.isEmpty {
+                        AppCardSurface(padding: 0) {
+                            VStack(spacing: 0) {
+                                ForEach(
+                                    Array(categories.enumerated()),
+                                    id: \.element
+                                ) { index, category in
+                                    let capabilities = ToolRegistry.capabilities(for: category)
+
+                                    if index > 0 {
+                                        Divider().padding(.horizontal, Spacing.n24)
+                                    }
+
+                                    AppDisclosure(category.displayName, variant: .open) {
+                                        VStack(spacing: Spacing.n16) {
+                                            ForEach(capabilities, id: \.key) { capability in
+                                                AppOptionPicker(
+                                                    title: capability.displayName,
+                                                    options: permissionOptions,
+                                                    selection: builtInLevels[capability.key]
+                                                        ?? capability.defaultPermissionLevel
+                                                ) { newLevel in
+                                                    builtInLevels[capability.key] = newLevel
+                                                    persistGrant(
+                                                        capability: capability,
+                                                        level: newLevel
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            .onAppear { loadGrants() }
-                        } label: {
-                            Label(server.name, systemImage: "server.rack")
-                                .typography(Typography.navTab)
                         }
                     }
-                    .listRowBackground(colors.surface.standard.alternative)
-                } header: {
-                    Label(Localized.Settings.Permissions.mcpServers, systemImage: "server.rack")
-                        .typography(Typography.miniLabel)
+
+                    // MCP per-server overrides in one card
+                    if !enabledServers.isEmpty {
+                        AppCardSurface(padding: 0) {
+                            VStack(spacing: 0) {
+                                ForEach(
+                                    Array(enabledServers.enumerated()),
+                                    id: \.element.id
+                                ) { index, server in
+                                    if index > 0 {
+                                        Divider().padding(.horizontal, Spacing.n24)
+                                    }
+
+                                    AppDisclosure(server.name, variant: .open) {
+                                        if server.cachedToolNames.isEmpty {
+                                            Text(Localized.Mcp.noToolsDiscovered)
+                                                .typography(Typography.tag)
+                                                .foregroundStyle(colors.text.standard.muted)
+                                        } else {
+                                            VStack(spacing: Spacing.n16) {
+                                                ForEach(
+                                                    server.cachedToolNames,
+                                                    id: \.self
+                                                ) { toolName in
+                                                    mcpToolPicker(
+                                                        server: server,
+                                                        toolName: toolName
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .onAppear { loadGrants() }
+                                }
+                            }
+                        }
+                    }
                 }
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Settings.Permissions.title, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear { loadGrants() }
     }
 
-    private var enabledServers: [MCPServer] {
-        mcpServers.filter(\.isEnabled)
+    // MARK: - MCP Tool Picker
+
+    private func mcpToolPicker(server: MCPServer, toolName: String) -> some View {
+        let fullName = Self.mcpToolName(server: server.name, tool: toolName)
+        let currentValue = discoveredLevels[fullName]
+
+        let options: [AppOption<ToolPermissionLevel?>] = [
+            AppOption(Localized.Settings.Permissions.defaultLabel, value: nil),
+        ] + ToolPermissionLevel.allCases.map {
+            AppOption($0.displayName, value: Optional($0))
+        }
+
+        return AppOptionPicker(
+            title: toolName.titleCased,
+            options: options,
+            selection: currentValue
+        ) { newLevel in
+            discoveredLevels[fullName] = newLevel
+            persistDiscoveredGrant(toolName: fullName, level: newLevel)
+        }
     }
 
     // MARK: - MCP Tool Name
@@ -90,24 +159,8 @@ struct ToolPermissions: View {
 
     // MARK: - Data
 
-    private func binding(for capability: ToolCapability) -> Binding<ToolPermissionLevel> {
-        Binding(
-            get: { builtInLevels[capability.key] ?? capability.defaultPermissionLevel },
-            set: { newLevel in
-                builtInLevels[capability.key] = newLevel
-                persistGrant(capability: capability, level: newLevel)
-            }
-        )
-    }
-
-    private func mcpToolBinding(fullName: String) -> Binding<ToolPermissionLevel?> {
-        Binding(
-            get: { discoveredLevels[fullName] },
-            set: { newLevel in
-                discoveredLevels[fullName] = newLevel
-                persistDiscoveredGrant(toolName: fullName, level: newLevel)
-            }
-        )
+    private var enabledServers: [MCPServer] {
+        mcpServers.filter(\.isEnabled)
     }
 
     private func loadGrants() {
@@ -135,7 +188,6 @@ struct ToolPermissions: View {
         let existingByKind = existing?.filter { $0.kind == capability.kind }
 
         if level == capability.defaultPermissionLevel {
-            // Remove override — default applies
             if let row = existingByKind?.first {
                 modelContext.delete(row)
             }
@@ -168,7 +220,6 @@ struct ToolPermissions: View {
                 modelContext.insert(grant)
             }
         } else {
-            // nil = "Default" — remove the override
             if let row = existingDiscovered?.first {
                 modelContext.delete(row)
             }

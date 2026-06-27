@@ -1151,6 +1151,11 @@ enum Localized {
             Localized.get("mcp.reAuthorize")
         }
 
+        /// Confirmation message before removing an MCP server
+        static var removeWarning: String {
+            Localized.get("mcp.removeWarning")
+        }
+
         /// Section header for MCP server tools
         static var tools: String {
             Localized.get("mcp.tools")
@@ -2236,6 +2241,11 @@ enum Localized {
         }
 
         enum Edit {
+            /// Confirmation message before removing a provider
+            static var removeWarning: String {
+                Localized.get("provider.edit.removeWarning")
+            }
+
             /// Button to save provider changes
             static var saveButton: String {
                 Localized.get("provider.edit.saveButton")
@@ -2853,6 +2863,11 @@ enum Localized {
             /// Toggle label for file logging
             static var logToFile: String {
                 Localized.get("settings.logging.logToFile")
+            }
+
+            /// Picker label for the minimum log level in advanced settings
+            static var minimumLevel: String {
+                Localized.get("settings.logging.minimumLevel")
             }
 
             /// Section header for logging settings
