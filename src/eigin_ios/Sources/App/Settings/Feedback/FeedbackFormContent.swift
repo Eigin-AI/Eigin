@@ -40,17 +40,11 @@ struct FeedbackFormContent: View {
     // MARK: - Subviews
 
     private var typeSection: some View {
-        Picker("", selection: $feedbackType) {
-            ForEach(FeedbackType.allCases) { type in
-                Text(type.displayName).tag(type)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, Sizing.Input.Px.left)
-        .frame(height: Sizing.Input.height)
-        .background(colors.surface.standard.alternative)
-        .clipShape(Capsule())
-        .padding(.horizontal, contentPx)
+        AppSegmentedControl(
+            segments: FeedbackType.allCases.map { AppSegment($0.displayName, value: $0) },
+            selection: feedbackType
+        ) { feedbackType = $0 }
+            .padding(.horizontal, contentPx)
     }
 
     private var descriptionField: some View {
@@ -88,10 +82,14 @@ struct FeedbackFormContent: View {
     }
 
     private var logsToggle: some View {
-        Toggle(Localized.Settings.Feedback.includeLogs, isOn: $includeLogs)
-            .typography(Typography.description)
-            .foregroundStyle(colors.text.standard.base)
-            .padding(.horizontal, contentPx + Spacing.n8)
+        HStack(spacing: Spacing.n16) {
+            Text(Localized.Settings.Feedback.includeLogs)
+                .typography(Typography.description)
+                .foregroundStyle(colors.text.standard.base)
+            Spacer()
+            AppSwitch(isOn: includeLogs) { includeLogs.toggle() }
+        }
+        .padding(.horizontal, contentPx + Spacing.n8)
     }
 }
 

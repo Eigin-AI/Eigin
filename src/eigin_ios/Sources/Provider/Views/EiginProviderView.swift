@@ -7,12 +7,25 @@ import SwiftUI
 /// ``LocalProviderView``.
 struct EiginProviderView: View {
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @State private var model = EiginCreditsModel()
     @State private var showPurchase = false
     @State private var showInfo = false
 
     var body: some View {
         VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: "Eigin",
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
             Spacer(minLength: Spacing.n40)
             balance
             Spacer(minLength: Spacing.n40)
@@ -22,8 +35,7 @@ struct EiginProviderView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle("Eigin", style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .task { await model.onAppear() }
         .appSheet(
             isPresented: $showPurchase,

@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ConnectionsView: View {
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Injected(\.keychainService) private var keychainService
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
@@ -44,13 +45,32 @@ struct ConnectionsView: View {
     }
 
     var body: some View {
-        List {
-            providersSection
-            mcpServersSection
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Ui.connections,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
+            ScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    providersGroup
+                    mcpServersGroup
+                }
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Ui.connections, style: Typography.titleXl)
+        .toolbar(.hidden, for: .navigationBar)
         .appSheet(
             isPresented: $showSelectSheet,
             title: Localized.Provider.typeLabel,
@@ -94,138 +114,213 @@ struct ConnectionsView: View {
         }
     }
 
-    private var providersSection: some View {
-        Section {
-            NavigationLink {
-                EiginProviderView()
-                    .hidesTabBar()
-            } label: {
-                eiginRow
-            }
-            .listRowBackground(colors.surface.standard.alternative)
+    // MARK: - Providers
 
-            ForEach(cloudProviders) { provider in
-                NavigationLink {
-                    EditProvider(provider: provider)
-                        .hidesTabBar()
-                } label: {
-                    providerRow(provider)
+    private var providersGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Ui.providers)
+
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    // Eigin relay
+                    NavigationLink {
+                        EiginProviderView()
+                            .hidesTabBar()
+                    } label: {
+                        providerRow(
+                            name: "Eigin",
+                            detail: Localized.Provider.Eigin.rowSubtitle
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // Cloud providers
+                    ForEach(cloudProviders) { provider in
+                        Divider().padding(.leading, Spacing.n24)
+
+                        NavigationLink {
+                            EditProvider(provider: provider)
+                                .hidesTabBar()
+                        } label: {
+                            let count = provider.availableModels
+                                .count(where: { KnownModelCatalog.lookup($0) != nil })
+                            providerRow(
+                                name: provider.name,
+                                detail: Localized.Settings.Info.modelsAvailable("\(count)")
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // On-device model
+                    if let preset = localPreset, gemmaManager.isSupported {
+                        Divider().padding(.leading, Spacing.n24)
+
+                        NavigationLink {
+                            LocalProviderView(preset: preset)
+                                .hidesTabBar()
+                        } label: {
+                            onDeviceRow
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Divider().padding(.leading, Spacing.n24)
+
+                    // Add provider action
+                    Button { showSelectSheet = true } label: {
+                        HStack(spacing: Spacing.n16) {
+                            Text(Localized.Settings.Action.addProvider)
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.accent)
+                            Spacer()
+                            Image(systemName: "plus")
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.accent)
+                        }
+                        .padding(.horizontal, Spacing.n24)
+                        .padding(.vertical, Spacing.n16)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .onDelete(perform: deleteCloudProviders)
-            .listRowBackground(colors.surface.standard.alternative)
-
-            if let preset = localPreset, gemmaManager.isSupported {
-                NavigationLink {
-                    LocalProviderView(preset: preset)
-                        .hidesTabBar()
-                } label: {
-                    onDeviceRow
-                }
-                .listRowBackground(colors.surface.standard.alternative)
-            }
-
-            Button(Localized.Settings.Action.addProvider) {
-                showSelectSheet = true
-            }
-            .typography(Typography.navTab)
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Ui.providers)
-                .typography(Typography.miniLabel)
         }
     }
 
-    private var eiginRow: some View {
-        VStack(alignment: .leading) {
-            Text(verbatim: "Eigin")
-                .typography(Typography.navTab)
-            Text(Localized.Provider.Eigin.rowSubtitle)
+    private func providerRow(name: String, detail: String) -> some View {
+        HStack(spacing: Spacing.n16) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
+                Text(name)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
+                Text(detail)
+                    .typography(Typography.tag)
+                    .foregroundStyle(colors.text.standard.muted)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
                 .typography(Typography.miniLabel)
                 .foregroundStyle(colors.text.standard.muted)
         }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+        .contentShape(Rectangle())
     }
 
     private var onDeviceRow: some View {
-        HStack(spacing: Spacing.n8) {
-            VStack(alignment: .leading) {
+        HStack(spacing: Spacing.n16) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
                 Text(Localized.Provider.Picker.onDeviceModel)
-                    .typography(Typography.navTab)
-                switch gemmaManager.state {
-                case .notDownloaded, .failed:
-                    Text(Localized.Settings.Info.modelNotDownloaded)
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                case .downloading:
-                    Text(Localized.Settings.Info.modelDownloading)
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                case .downloaded, .compiling:
-                    Text(Localized.Settings.Info.modelDownloaded)
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                case .ready:
-                    let count = localProvider?.availableModels.count ?? 0
-                    Text(Localized.Settings.Info.modelsAvailable("\(count)"))
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
+                Group {
+                    switch gemmaManager.state {
+                    case .notDownloaded, .failed:
+                        Text(Localized.Settings.Info.modelNotDownloaded)
+                    case .downloading:
+                        Text(Localized.Settings.Info.modelDownloading)
+                    case .downloaded, .compiling:
+                        Text(Localized.Settings.Info.modelDownloaded)
+                    case .ready:
+                        let count = localProvider?.availableModels.count ?? 0
+                        Text(Localized.Settings.Info.modelsAvailable("\(count)"))
+                    }
                 }
+                .typography(Typography.tag)
+                .foregroundStyle(colors.text.standard.muted)
             }
-        }
-    }
-
-    private func providerRow(_ provider: Provider) -> some View {
-        VStack(alignment: .leading) {
-            Text(provider.name)
-                .typography(Typography.navTab)
-            let count = provider.availableModels
-                .count(where: { KnownModelCatalog.lookup($0) != nil })
-            Text(Localized.Settings.Info.modelsAvailable("\(count)"))
+            Spacer()
+            Image(systemName: "chevron.right")
                 .typography(Typography.miniLabel)
                 .foregroundStyle(colors.text.standard.muted)
         }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+        .contentShape(Rectangle())
     }
 
-    private var mcpServersSection: some View {
-        Section {
-            ForEach(mcpServers) { server in
-                NavigationLink {
-                    MCPServerDetail(server: server)
-                        .hidesTabBar()
-                } label: {
-                    MCPServerRow(server: server)
+    // MARK: - MCP Servers
+
+    private var mcpServersGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Ui.mcpServers)
+
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(mcpServers.enumerated()), id: \.element.id) { index, server in
+                        if index > 0 {
+                            Divider().padding(.leading, Spacing.n24)
+                        }
+
+                        NavigationLink {
+                            MCPServerDetail(server: server)
+                                .hidesTabBar()
+                        } label: {
+                            mcpServerRow(server)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if !mcpServers.isEmpty {
+                        Divider().padding(.leading, Spacing.n24)
+                    }
+
+                    // Add MCP server action
+                    Button { showingAddMCPServer = true } label: {
+                        HStack(spacing: Spacing.n16) {
+                            Text(Localized.Settings.Action.addMcpServer)
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.accent)
+                            Spacer()
+                            Image(systemName: "plus")
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.accent)
+                        }
+                        .padding(.horizontal, Spacing.n24)
+                        .padding(.vertical, Spacing.n16)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .onDelete(perform: deleteMCPServers)
-            .listRowBackground(colors.surface.standard.alternative)
+        }
+    }
 
-            Button(Localized.Settings.Action.addMcpServer) {
-                showingAddMCPServer = true
+    private func mcpServerRow(_ server: MCPServer) -> some View {
+        HStack(spacing: Spacing.n16) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
+                Text(server.name)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
+                if !server.cachedToolNames.isEmpty {
+                    Text(verbatim: "\(server.cachedToolNames.count) \(Localized.Mcp.tools)")
+                        .typography(Typography.tag)
+                        .foregroundStyle(colors.text.standard.muted)
+                } else {
+                    Text(server.url)
+                        .typography(Typography.tag)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .lineLimit(1)
+                }
             }
-            .typography(Typography.navTab)
-            .listRowBackground(colors.surface.standard.alternative)
-        } header: {
-            Text(Localized.Ui.mcpServers)
+            Spacer()
+            Image(systemName: "chevron.right")
                 .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
         }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+        .contentShape(Rectangle())
     }
 
-    private func deleteCloudProviders(at offsets: IndexSet) {
-        let targets = cloudProviders
-        for index in offsets {
-            let provider = targets[index]
-            keychainService.delete(key: keychainService.providerKey(for: provider.id))
-            modelContext.delete(provider)
-        }
-    }
+    // MARK: - Helpers
 
-    private func deleteMCPServers(at offsets: IndexSet) {
-        for index in offsets {
-            let server = mcpServers[index]
-            for suffix in MCPServer.keychainSuffixes {
-                keychainService.delete(key: keychainService.mcpKey(for: server.id, suffix: suffix))
-            }
-            modelContext.delete(server)
-        }
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n8)
     }
 }

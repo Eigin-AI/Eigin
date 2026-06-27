@@ -23,18 +23,33 @@ struct LocalProviderView: View {
         gemmaManager.state == .downloaded || gemmaManager.state.isCompiling
     }
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-            stateContent
-            Spacer()
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Provider.Picker.onDeviceModel,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                }
+            )
+
+            VStack(spacing: Spacing.n32) {
+                Spacer()
+                stateContent
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.n24)
+            .padding(.bottom, Spacing.n32)
         }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(Localized.Provider.Picker.onDeviceModel, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .keepScreenAwake(isPreparing)
         .task {
             if gemmaManager.state == .downloaded {

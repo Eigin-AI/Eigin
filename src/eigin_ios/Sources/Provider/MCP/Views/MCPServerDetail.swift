@@ -1,4 +1,5 @@
 import Factory
+import SwiftData
 import SwiftUI
 
 /// Detail view for an MCP server showing connection status and discovered tools.
@@ -6,10 +7,13 @@ struct MCPServerDetail: View {
     let server: MCPServer
     @Injected(\.mcpServerManager) private var mcpServerManager
     @Injected(\.mcpOAuthService) private var mcpOAuthService
+    @Injected(\.keychainService) private var keychainService
     @Environment(\.colors) private var colors
-    @State private var statusExpanded = false
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var isReauthorizing = false
     @State private var reauthorizeError: String?
+    @State private var showRemoveConfirmation = false
 
     private var status: ConnectionStatus {
         if !server.isEnabled {
@@ -24,77 +28,78 @@ struct MCPServerDetail: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                Group {
-                    LabeledContent(Localized.Mcp.Label.url, value: server.url)
-                    LabeledContent(
-                        Localized.Mcp.authentication,
-                        value: server.authType.displayName
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: server.name,
+                leading: {
+                    AppActionButton(
+                        icon: Iconography.Functional.Arrow.left,
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
                     )
                 }
-                .listRowBackground(colors.surface.standard.alternative)
-            }
+            )
 
-            Section {
-                DisclosureGroup(isExpanded: $statusExpanded) {
-                    statusDetail
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        statusIndicator
-                        Text(status.label)
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
-                    }
+            ScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    infoCard
+                    statusCard
+                    toolsCard
+                    removeCard
                 }
-                .listRowBackground(colors.surface.standard.alternative)
-            } header: {
-                Text(Localized.Mcp.Section.status)
-                    .typography(Typography.miniLabel)
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
             }
-
-            Section {
-                Group {
-                    if server.cachedToolNames.isEmpty {
-                        Text(Localized.Mcp.noToolsDiscovered)
-                            .foregroundStyle(colors.text.standard.muted)
-                    } else {
-                        ForEach(server.cachedToolNames, id: \.self) { toolName in
-                            Label(toolName.titleCased, systemImage: "wrench")
-                                .typography(Typography.navTab)
-                                .foregroundStyle(colors.text.standard.base)
-                        }
-                    }
-                }
-                .listRowBackground(colors.surface.standard.alternative)
-            } header: {
-                Text(Localized.Mcp.tools)
-                    .typography(Typography.miniLabel)
-            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollContentBackground(.hidden)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .navigationTitle(server.name, style: Typography.titleXl)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .alert(server.name, isPresented: $showRemoveConfirmation) {
+            Button(Localized.Ui.remove, role: .destructive) { removeServer() }
+            Button(Localized.Common.Actions.cancel, role: .cancel) {}
+        } message: {
+            Text(Localized.Mcp.removeWarning)
+        }
     }
 
-    // MARK: - Status
+    // MARK: - Info Card
 
-    @ViewBuilder
-    private var statusIndicator: some View {
-        switch status {
-        case .idle, .disabled:
-            Image(systemName: "circle")
+    private var infoCard: some View {
+        AppCardSurface(padding: 0) {
+            VStack(spacing: 0) {
+                infoRow(label: Localized.Mcp.Label.url, value: server.url)
+                Divider().padding(.leading, Spacing.n24)
+                infoRow(
+                    label: Localized.Mcp.authentication,
+                    value: server.authType.displayName
+                )
+            }
+        }
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack(spacing: Spacing.n16) {
+            Text(label)
+                .typography(Typography.titleXS)
+                .foregroundStyle(colors.text.standard.base)
+            Spacer()
+            Text(value)
+                .typography(Typography.tag)
                 .foregroundStyle(colors.text.standard.muted)
-                .font(.caption2)
-        case .connected:
-            Image(systemName: "circle.fill")
-                .foregroundStyle(.green)
-                .font(.caption2)
-        case .error:
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(colors.text.standard.error)
-                .font(.caption2)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+    }
+
+    // MARK: - Status Card
+
+    private var statusCard: some View {
+        AppDisclosure(Localized.Mcp.Section.status, description: status.label) {
+            statusDetail
         }
     }
 
@@ -103,16 +108,21 @@ struct MCPServerDetail: View {
         switch status {
         case .idle:
             Text(Localized.Mcp.autoConnectHint)
-                .typography(Typography.miniLabel)
+                .typography(Typography.tag)
                 .foregroundStyle(colors.text.standard.muted)
         case .connected:
-            Text(Localized.Mcp.Status.connectionActive)
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
+            HStack(spacing: Spacing.n8) {
+                Image(systemName: "circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.caption2)
+                Text(Localized.Mcp.Status.connectionActive)
+                    .typography(Typography.tag)
+                    .foregroundStyle(colors.text.standard.muted)
+            }
         case .error(let message):
-            VStack(alignment: .leading, spacing: Spacing.n8) {
+            VStack(alignment: .leading, spacing: Spacing.n12) {
                 Text(message)
-                    .typography(Typography.miniLabel)
+                    .typography(Typography.tag)
                     .foregroundStyle(colors.text.standard.error)
 
                 if server.authType == .oauth {
@@ -123,21 +133,71 @@ struct MCPServerDetail: View {
                             ProgressView()
                         } else {
                             Label(Localized.Mcp.reAuthorize, systemImage: "arrow.clockwise")
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.accent)
                         }
                     }
                     .disabled(isReauthorizing)
 
                     if let reauthorizeError {
                         Text(reauthorizeError)
-                            .typography(Typography.miniLabel)
+                            .typography(Typography.tag)
                             .foregroundStyle(colors.text.standard.error)
                     }
                 }
             }
         case .disabled:
             Text(Localized.Mcp.Status.disabledHint)
-                .typography(Typography.miniLabel)
+                .typography(Typography.tag)
                 .foregroundStyle(colors.text.standard.muted)
+        }
+    }
+
+    // MARK: - Tools Card
+
+    private var toolsCard: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Mcp.tools)
+
+            AppCardSurface(padding: 0) {
+                if server.cachedToolNames.isEmpty {
+                    HStack {
+                        Text(Localized.Mcp.noToolsDiscovered)
+                            .typography(Typography.tag)
+                            .foregroundStyle(colors.text.standard.muted)
+                        Spacer()
+                    }
+                    .padding(.horizontal, Spacing.n24)
+                    .padding(.vertical, Spacing.n16)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(
+                            Array(server.cachedToolNames.enumerated()),
+                            id: \.element
+                        ) { index, toolName in
+                            if index > 0 {
+                                Divider().padding(.leading, Spacing.n24)
+                            }
+                            HStack {
+                                Text(toolName.titleCased)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
+                                Spacer()
+                            }
+                            .padding(.horizontal, Spacing.n24)
+                            .padding(.vertical, Spacing.n16)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Remove Card
+
+    private var removeCard: some View {
+        AppButton(Localized.Ui.remove, variant: .destructive) {
+            showRemoveConfirmation = true
         }
     }
 
@@ -173,6 +233,18 @@ struct MCPServerDetail: View {
         }
     }
 
+    // MARK: - Remove Server
+
+    private func removeServer() {
+        for suffix in MCPServer.keychainSuffixes {
+            keychainService.delete(key: keychainService.mcpKey(for: server.id, suffix: suffix))
+        }
+        modelContext.delete(server)
+        dismiss()
+    }
+
+    // MARK: - Status
+
     private enum ConnectionStatus {
         case idle
         case connected
@@ -187,5 +259,15 @@ struct MCPServerDetail: View {
             case .disabled: Localized.Mcp.Status.disabled
             }
         }
+    }
+
+    // MARK: - Helpers
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n8)
     }
 }

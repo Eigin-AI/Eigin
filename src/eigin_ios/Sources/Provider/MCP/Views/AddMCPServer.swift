@@ -37,138 +37,241 @@ struct AddMCPServer: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField(Localized.Common.Fields.name, text: $name)
-                        .autocorrectionDisabled()
-
-                    TextField(Localized.Common.Fields.serverUrl, text: $url)
-                        .keyboardType(.URL)
-                        .textContentType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                } footer: {
-                    HStack(alignment: .top, spacing: Spacing.n8) {
-                        Image(systemName: "info.circle")
-                        Text(Localized.Mcp.Setup.requirement)
-                    }
-                    .padding(.top, Spacing.n8)
+        VStack(spacing: 0) {
+            AppNavigationHeader(
+                title: Localized.Settings.Action.addMcpServer,
+                leading: {
+                    AppActionButton(
+                        icon: Image(systemName: "xmark"),
+                        variant: .open,
+                        size: .medium,
+                        action: { dismiss() }
+                    )
+                },
+                trailing: {
+                    trailingAction
                 }
+            )
 
-                statusSection
-
-                if phase == .needsCredentials {
-                    Section {
-                        TextField(Localized.Common.Fields.clientId, text: $clientID)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-
-                        SecureField(Localized.Common.Fields.clientSecret, text: $clientSecret)
-                            .autocorrectionDisabled()
-                    } header: {
-                        Text(Localized.Mcp.Setup.clientCredentials)
-                    } footer: {
-                        Text(Localized.Mcp.Setup.manualCredentialsHint)
-                            .padding(.top, Spacing.n8)
-                    }
-                }
-
-                if !discoveredToolNames.isEmpty || phase == .done {
-                    Section(Localized.Mcp.tools) {
-                        if discoveredToolNames.isEmpty {
-                            Text(Localized.Mcp.noToolsDiscovered)
+            ScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    // Server fields
+                    VStack(spacing: Spacing.n16) {
+                        AppTextInput(
+                            label: Localized.Common.Fields.name,
+                            text: $name
+                        )
+                        AppTextInput(
+                            label: Localized.Common.Fields.serverUrl,
+                            text: $url
+                        )
+                        HStack(alignment: .top, spacing: Spacing.n8) {
+                            Image(systemName: "info.circle")
                                 .foregroundStyle(colors.text.standard.muted)
-                        } else {
-                            ForEach(discoveredToolNames, id: \.self) { toolName in
-                                Label(toolName, systemImage: "wrench")
-                                    .typography(Typography.body)
-                            }
+                                .font(.system(size: 14))
+                            Text(Localized.Mcp.Setup.requirement)
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.text.standard.muted)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.n8)
+                    }
+
+                    // Phase-specific content
+                    phaseContent
+
+                    // Discovered tools
+                    if !discoveredToolNames.isEmpty || phase == .done {
+                        toolsCard
                     }
                 }
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
             }
-            .scrollContentBackground(.hidden)
-            .background(colors.surface.standard.base.ignoresSafeArea())
-            .navigationTitle(Localized.Settings.Action.addMcpServer, style: Typography.titleXl)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(Localized.Common.Actions.cancel) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    toolbarAction
-                }
-            }
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .background(colors.surface.standard.base.ignoresSafeArea())
     }
 
-    // MARK: - Toolbar
+    // MARK: - Trailing Action
 
     @ViewBuilder
-    private var toolbarAction: some View {
+    private var trailingAction: some View {
         switch phase {
         case .probing, .oauthAuthorizing, .connecting:
             ProgressView()
+                .padding(.trailing, Spacing.n4)
         case .done:
-            Button(Localized.Common.Actions.add) { saveServer() }
+            AppActionButton(
+                icon: Image(systemName: "plus"),
+                variant: .open,
+                size: .medium,
+                action: { saveServer() }
+            )
         case .needsCredentials:
-            Button(Localized.Ui.authorize) { continueWithCredentials() }
-                .disabled(!isCredentialsValid)
+            AppActionButton(
+                icon: Image(systemName: "arrow.right"),
+                variant: .open,
+                size: .medium,
+                action: { continueWithCredentials() }
+            )
+            .disabled(!isCredentialsValid)
         default:
-            Button(Localized.Ui.connect) { startConnection() }
-                .disabled(!isFormValid)
+            AppActionButton(
+                icon: Image(systemName: "arrow.right"),
+                variant: .open,
+                size: .medium,
+                action: { startConnection() }
+            )
+            .disabled(!isFormValid)
         }
     }
 
-    // MARK: - Status Section
+    // MARK: - Phase Content
 
     @ViewBuilder
-    private var statusSection: some View {
+    private var phaseContent: some View {
         switch phase {
-        case .idle, .needsCredentials:
+        case .idle:
             EmptyView()
+
         case .probing:
-            Section {
+            statusCard {
                 HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Mcp.Status.checking)
+                        .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                 }
             }
+
         case .oauthAuthorizing:
-            Section {
+            statusCard {
                 HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Auth.waiting)
+                        .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                 }
             }
+
         case .connecting:
-            Section {
+            statusCard {
                 HStack(spacing: Spacing.n8) {
                     ProgressView()
                     Text(Localized.Network.connecting)
+                        .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                 }
             }
+
+        case .needsCredentials:
+            VStack(spacing: Spacing.n16) {
+                sectionLabel(Localized.Mcp.Setup.clientCredentials)
+
+                AppCardSurface(padding: 0) {
+                    VStack(spacing: 0) {
+                        AppTextInput(
+                            label: Localized.Common.Fields.clientId,
+                            text: $clientID
+                        )
+                        .padding(.horizontal, Spacing.n24)
+                        .padding(.top, Spacing.n16)
+                        .padding(.bottom, Spacing.n8)
+
+                        AppTextInput(
+                            label: Localized.Common.Fields.clientSecret,
+                            text: $clientSecret,
+                            isSecure: true
+                        )
+                        .padding(.horizontal, Spacing.n24)
+                        .padding(.top, Spacing.n8)
+                        .padding(.bottom, Spacing.n16)
+                    }
+                }
+
+                Text(Localized.Mcp.Setup.manualCredentialsHint)
+                    .typography(Typography.tag)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.n8)
+            }
+
         case .done:
             EmptyView()
+
         case .error(let message):
-            Section {
+            AppCardSurface {
                 VStack(alignment: .leading, spacing: Spacing.n8) {
                     Label(
                         Localized.Errors.Connection.title,
                         systemImage: "exclamationmark.triangle"
                     )
-                    .foregroundStyle(colors.text.standard.error)
                     .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.error)
                     Text(message)
-                        .typography(Typography.note)
+                        .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                 }
             }
         }
+    }
+
+    // MARK: - Tools Card
+
+    private var toolsCard: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Mcp.tools)
+
+            AppCardSurface(padding: 0) {
+                if discoveredToolNames.isEmpty {
+                    HStack {
+                        Text(Localized.Mcp.noToolsDiscovered)
+                            .typography(Typography.tag)
+                            .foregroundStyle(colors.text.standard.muted)
+                        Spacer()
+                    }
+                    .padding(.horizontal, Spacing.n24)
+                    .padding(.vertical, Spacing.n16)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(
+                            Array(discoveredToolNames.enumerated()),
+                            id: \.element
+                        ) { index, toolName in
+                            if index > 0 {
+                                Divider().padding(.leading, Spacing.n24)
+                            }
+                            HStack {
+                                Text(toolName)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
+                                Spacer()
+                            }
+                            .padding(.horizontal, Spacing.n24)
+                            .padding(.vertical, Spacing.n16)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func statusCard(@ViewBuilder content: @escaping () -> some View) -> some View {
+        AppCardSurface {
+            content()
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n8)
     }
 
     // MARK: - Connection Flow

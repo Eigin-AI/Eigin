@@ -54,15 +54,15 @@ struct AgentProfile: View {
 
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
-                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                        presentationCard
-                        voiceGroup
+                    agentCard
+                    if let asset = upgradeAsset {
+                        voiceUpgradeCard(asset: asset)
                     }
-                    providerGroup
-                    proactivityCard
-                    advancedCard
+                    providerCard
                 }
                 .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
@@ -115,72 +115,106 @@ struct AgentProfile: View {
         }
     }
 
-    // MARK: - Presentation
+    // MARK: - Agent Card (presentation + initiative + advanced)
 
-    private var presentationCard: some View {
-        AppCardSurface {
-            HStack(alignment: .center, spacing: Spacing.n12) {
-                Button {
-                    showEmojiPicker = true
+    private var agentCard: some View {
+        AppCardSurface(padding: 0) {
+            VStack(spacing: 0) {
+                // Presentation row
+                HStack(alignment: .center, spacing: Spacing.n12) {
+                    Button {
+                        showEmojiPicker = true
+                    } label: {
+                        Text(agent.emoji)
+                            .font(.system(size: 40))
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showEmojiPicker) {
+                        EmojiGrid(
+                            selectedEmoji: $agent.emoji,
+                            isPresented: $showEmojiPicker,
+                            colors: colors
+                        )
+                    }
+
+                    if isEditingName {
+                        TextField(Localized.Common.Fields.agentName, text: $editingNameText)
+                            .typography(Typography.titleM)
+                            .focused($isNameFocused)
+                            .onSubmit { commitNameEdit() }
+                            .onChange(of: isNameFocused) { _, focused in
+                                if !focused { commitNameEdit() }
+                            }
+                            .onAppear {
+                                editingNameText = agent.name
+                                isNameFocused = true
+                            }
+                    } else {
+                        Text(agent.name)
+                            .typography(Typography.titleM)
+                            .foregroundStyle(colors.text.standard.base)
+                            .onTapGesture {
+                                editingNameText = agent.name
+                                withAnimation(Animations.snap) {
+                                    isEditingName = true
+                                }
+                            }
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.n24)
+                .padding(.vertical, Spacing.n16)
+
+                Divider().padding(.leading, Spacing.n24)
+
+                // Voice row
+                AppOptionPicker(
+                    title: Localized.Agent.Profile.voice,
+                    options: voiceOptions,
+                    selection: selectedVoiceID
+                ) { newValue in
+                    agent.voiceIdentifier = newValue.isEmpty ? nil : newValue
+                }
+
+                Divider().padding(.leading, Spacing.n24)
+
+                // Initiative row
+                AppOptionPicker(
+                    title: Localized.Agent.Profile.Section.initiative,
+                    description: agent.proactivity.description,
+                    options: ProactivityLevel.allCases.map {
+                        AppOption($0.displayName, value: $0)
+                    },
+                    selection: agent.proactivity
+                ) { agent.proactivity = $0 }
+
+                Divider().padding(.leading, Spacing.n24)
+
+                // Advanced row
+                NavigationLink {
+                    AgentAdvanced(agent: agent)
+                        .hidesTabBar()
                 } label: {
-                    Text(agent.emoji)
-                        .font(.system(size: 40))
+                    HStack(spacing: Spacing.n16) {
+                        Text(Localized.Agent.Profile.Section.advanced)
+                            .typography(Typography.titleXS)
+                            .foregroundStyle(colors.text.standard.base)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
+                    .padding(.horizontal, Spacing.n24)
+                    .padding(.vertical, Spacing.n16)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .popover(isPresented: $showEmojiPicker) {
-                    EmojiGrid(
-                        selectedEmoji: $agent.emoji,
-                        isPresented: $showEmojiPicker,
-                        colors: colors
-                    )
-                }
-
-                if isEditingName {
-                    TextField(Localized.Common.Fields.agentName, text: $editingNameText)
-                        .typography(Typography.titleM)
-                        .focused($isNameFocused)
-                        .onSubmit { commitNameEdit() }
-                        .onChange(of: isNameFocused) { _, focused in
-                            if !focused { commitNameEdit() }
-                        }
-                        .onAppear {
-                            editingNameText = agent.name
-                            isNameFocused = true
-                        }
-                } else {
-                    Text(agent.name)
-                        .typography(Typography.titleM)
-                        .foregroundStyle(colors.text.standard.base)
-                        .onTapGesture {
-                            editingNameText = agent.name
-                            withAnimation(Animations.snap) {
-                                isEditingName = true
-                            }
-                        }
-                }
-
-                Spacer()
             }
         }
     }
 
-    // MARK: - Voice
-
-    private var voiceGroup: some View {
-        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            AppOptionPicker(
-                title: Localized.Agent.Profile.voice,
-                options: voiceOptions,
-                selection: selectedVoiceID
-            ) { newValue in
-                agent.voiceIdentifier = newValue.isEmpty ? nil : newValue
-            }
-
-            if let asset = upgradeAsset {
-                voiceUpgradeCard(asset: asset)
-            }
-        }
-    }
+    // MARK: - Voice Upgrade Card
 
     @ViewBuilder
     private func voiceUpgradeCard(asset: any OnDemandAsset) -> some View {
@@ -218,98 +252,61 @@ struct AgentProfile: View {
         }
     }
 
-    // MARK: - Provider & Model
+    // MARK: - Provider Card (provider picker + model row)
 
-    private var providerGroup: some View {
+    private var providerCard: some View {
         VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            AppOptionPicker(
-                title: Localized.Ui.provider,
-                options: providers.map { AppOption($0.name, value: $0.id) },
-                selection: agent.providerID
-            ) { providerBinding.wrappedValue = $0 }
+            sectionLabel(Localized.Provider.modelLabel)
 
-            if currentProvider != nil {
-                modelCard
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    AppOptionPicker(
+                        title: Localized.Ui.provider,
+                        options: providers.map { AppOption($0.name, value: $0.id) },
+                        selection: agent.providerID
+                    ) { providerBinding.wrappedValue = $0 }
+
+                    if currentProvider != nil {
+                        Divider().padding(.horizontal, Spacing.n24)
+
+                        NavigationLink {
+                            if let provider = currentProvider {
+                                ModelPicker(provider: provider, selectedModel: $agent.model)
+                                    .hidesTabBar()
+                            }
+                        } label: {
+                            HStack(spacing: Spacing.n16) {
+                                Text(Localized.Provider.modelLabel)
+                                    .typography(Typography.titleXS)
+                                    .foregroundStyle(colors.text.standard.base)
+                                Spacer()
+                                Text(modelDisplayName(agent.model))
+                                    .typography(Typography.tag)
+                                    .foregroundStyle(colors.text.standard.muted)
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.right")
+                                    .typography(Typography.miniLabel)
+                                    .foregroundStyle(colors.text.standard.muted)
+                            }
+                            .padding(.horizontal, Spacing.n24)
+                            .padding(.vertical, Spacing.n16)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
     }
 
-    private var modelCard: some View {
-        NavigationLink {
-            if let provider = currentProvider {
-                ModelPicker(provider: provider, selectedModel: $agent.model)
-                    .hidesTabBar()
-            }
-        } label: {
-            AppCardSurface {
-                HStack(spacing: Spacing.n16) {
-                    Text(Localized.Provider.modelLabel)
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(colors.text.standard.base)
-                    Spacer()
-                    Text(modelDisplayName(agent.model))
-                        .typography(Typography.tag)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.right")
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - Helpers
 
-    // MARK: - Proactivity
-
-    private var proactivityCard: some View {
-        AppCardSurface {
-            VStack(alignment: .leading, spacing: Spacing.n16) {
-                Text(Localized.Agent.Profile.Section.initiative)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-
-                AppSegmentedControl(
-                    segments: ProactivityLevel.allCases.map {
-                        AppSegment($0.displayName, value: $0)
-                    },
-                    selection: agent.proactivity
-                ) { agent.proactivity = $0 }
-
-                HStack(alignment: .center, spacing: Spacing.n8) {
-                    Image(systemName: agent.proactivity.systemImage)
-                        .foregroundStyle(colors.icon.standard.muted)
-                        .frame(width: 16)
-                    Text(agent.proactivity.description)
-                        .typography(Typography.tag)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-    }
-
-    // MARK: - Advanced
-
-    private var advancedCard: some View {
-        NavigationLink {
-            AgentAdvanced(agent: agent)
-                .hidesTabBar()
-        } label: {
-            AppCardSurface {
-                HStack(spacing: Spacing.n16) {
-                    Text(Localized.Agent.Profile.Section.advanced)
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(colors.text.standard.base)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
-        }
-        .buttonStyle(.plain)
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n8)
     }
 
     // MARK: - Helpers
