@@ -41,21 +41,16 @@ final class Gatekeeper {
     ) {
         fullSources = [
             GeneralInfoSource(),
+            SeasonalInfoSource(),
             SpaceSource(),
             LanguageSource(),
+            InteractionModeSource(),
             ActiveSkillsSource(),
             AvailableSkillsSource(),
             ActiveIntentsSource(),
-            InteractionModeSource(),
             ChatHintSource(proactivity: proactivity),
             RelevantKnowledgeSource(knowledgeService: knowledgeService),
         ]
-        // Note: AvailableSkillsSource is deliberately excluded for small
-        // context. The native Gemma tool declaration for `activate_skill`
-        // already carries the list of skill IDs in its `enum` parameter,
-        // so duplicating it as a markdown list in the hint just adds
-        // tokens and over-emphasizes skill names in a way that confused
-        // the E2B model's tool call generation.
         smallSources = [
             GeneralInfoSource(),
             LanguageSource(),

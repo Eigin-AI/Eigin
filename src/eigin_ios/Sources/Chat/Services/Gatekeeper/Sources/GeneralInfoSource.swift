@@ -24,7 +24,7 @@ final class GeneralInfoSource: SystemHintSource {
     func render(_ input: SystemHintInput) async -> String? {
         // Small context: just time + model awareness
         if input.isSmallContext {
-            let timeString = LocalDateFormatter.string(from: now())
+            let timeString = LocalDateFormatter.stringWithWeekday(from: now())
             let timeZone = TimeZone.current.abbreviation() ?? "UTC"
             let modelName = KnownModelCatalog.lookup(input.modelID)?.displayName ?? input.modelID
             return "\(timeString) (\(timeZone)). Running locally on \(modelName). The user can add cloud AI providers for more capability."
@@ -32,7 +32,7 @@ final class GeneralInfoSource: SystemHintSource {
 
         guard !input.isSmallContext else { return nil }
 
-        let timeString = LocalDateFormatter.string(from: now())
+        let timeString = LocalDateFormatter.stringWithWeekday(from: now())
         let timeZone = TimeZone.current.abbreviation() ?? "UTC"
 
         let modelName = KnownModelCatalog.lookup(input.modelID)?.displayName ?? input.modelID

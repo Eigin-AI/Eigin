@@ -31,6 +31,14 @@ struct LocalDateFormatterTests {
         #expect(result == "2026-03-23 09:05")
     }
 
+    @Test("stringWithWeekday(from:) prepends the English weekday")
+    func stringWithWeekdayFromDate() {
+        // 2026-03-23 is a Monday.
+        let date = makeDate(year: 2026, month: 3, day: 23, hour: 9, minute: 5)
+        let result = LocalDateFormatter.stringWithWeekday(from: date)
+        #expect(result == "Monday, 2026-03-23 09:05")
+    }
+
     @Test("iso8601String(from:) outputs ISO 8601 with Z suffix in UTC")
     func iso8601StringFromDate() throws {
         // Create a known UTC date via ISO8601DateFormatter to avoid timezone dependence.
