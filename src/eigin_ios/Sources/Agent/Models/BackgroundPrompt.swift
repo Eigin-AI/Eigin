@@ -101,6 +101,7 @@ enum BackgroundPrompt {
         let skills = activeSkills.isEmpty ? BundledSkill.alwaysActive : activeSkills
         for skill in skills {
             prompt += "\n\n" + skill.instruction
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         return prompt

@@ -14,26 +14,22 @@ enum InteractionMode: String {
     /// Full behavioural guidance for this mode — emitted on first turn of a
     /// session, or whenever the mode changes.
     var fullDescription: String {
-        switch self {
-        case .liveCall:
-            "The user is in a live voice call. Keep responses brief and conversational. Avoid formatting that doesn't translate to speech. Prefer short, natural sentences."
-        case .dictation:
-            "The user is dictating via speech-to-text. There may be transcription errors — infer intended meaning from context rather than taking words literally."
-        case .text:
-            "The user is in text chat. You may use formatting, markdown, lists, and code blocks as appropriate."
+        let prompt = switch self {
+        case .liveCall: Prompt.Hints.InteractionMode.liveCall
+        case .dictation: Prompt.Hints.InteractionMode.dictation
+        case .text: Prompt.Hints.InteractionMode.text
         }
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Short reminder emitted once the mode has already been announced in the
     /// current session, to preserve attention without re-describing the mode.
     var shortReminder: String {
-        switch self {
-        case .liveCall:
-            "User is in live voice call — keep it brief and conversational."
-        case .dictation:
-            "User is dictating — expect transcription noise."
-        case .text:
-            "User is in text chat."
+        let prompt = switch self {
+        case .liveCall: Prompt.Hints.InteractionMode.liveCallShort
+        case .dictation: Prompt.Hints.InteractionMode.dictationShort
+        case .text: Prompt.Hints.InteractionMode.textShort
         }
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

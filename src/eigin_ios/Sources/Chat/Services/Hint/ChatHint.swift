@@ -46,7 +46,7 @@ enum ChatHint {
 
         // Record delivery and return the text
         history.recordDelivery(for: best.id, at: now)
-        return best.template(context)
+        return best.template(context).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

@@ -127,26 +127,20 @@ final class RelevantKnowledgeSource: SystemHintSource {
             }.joined(separator: "\n")
         }
 
-        var lines: [String] = []
-        lines.append(
-            "Things you already know that may relate to what the user just said. "
-                + "Use these as a starting point — use search_knowledge or get_knowledge "
-                + "for full details or related context if useful."
-        )
-        lines.append("")
-
+        var entryLines: [String] = []
         for entry in toRender {
-            lines.append("- **\(entry.qualifiedID)** — \(entry.summary)")
+            entryLines.append("- **\(entry.qualifiedID)** — \(entry.summary)")
             if !entry.topRelationships.isEmpty {
                 var related = "  - Related: "
                     + entry.topRelationships.joined(separator: ", ")
                 if entry.moreRelationships > 0 {
                     related += " (+\(entry.moreRelationships) more)"
                 }
-                lines.append(related)
+                entryLines.append(related)
             }
         }
 
-        return lines.joined(separator: "\n")
+        return Prompt.Hints.relevantKnowledge(entries: entryLines.joined(separator: "\n"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
