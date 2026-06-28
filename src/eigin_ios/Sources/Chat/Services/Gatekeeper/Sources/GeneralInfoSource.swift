@@ -27,7 +27,10 @@ final class GeneralInfoSource: SystemHintSource {
             let timeString = LocalDateFormatter.stringWithWeekday(from: now())
             let timeZone = TimeZone.current.abbreviation() ?? "UTC"
             let modelName = KnownModelCatalog.lookup(input.modelID)?.displayName ?? input.modelID
-            return "\(timeString) (\(timeZone)). Running locally on \(modelName). The user can add cloud AI providers for more capability."
+
+            return Prompt.Hints.GeneralInfo.compact(
+                time: timeString, timeZone: timeZone, model: modelName
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         guard !input.isSmallContext else { return nil }
@@ -43,10 +46,11 @@ final class GeneralInfoSource: SystemHintSource {
             input.provider.name
         }
 
-        return """
-        Local time: \(timeString) (\(timeZone))
-        Provider: \(providerLine)
-        Model: \(modelName)
-        """
+        return Prompt.Hints.GeneralInfo.full(
+            time: timeString,
+            timeZone: timeZone,
+            provider: providerLine,
+            model: modelName
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

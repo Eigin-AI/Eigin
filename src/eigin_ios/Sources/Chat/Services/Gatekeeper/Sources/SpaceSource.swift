@@ -12,6 +12,7 @@ final class SpaceSource: SystemHintSource {
         guard !input.isSmallContext else { return nil }
         guard let space = input.space, !space.instructions.isEmpty else { return nil }
 
-        return "You are chatting in the \"\(space.name)\" space.\n\n\(space.instructions)"
+        return Prompt.Hints.space(name: space.name, instructions: space.instructions)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

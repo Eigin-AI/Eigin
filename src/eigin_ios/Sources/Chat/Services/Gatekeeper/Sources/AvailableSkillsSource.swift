@@ -38,16 +38,8 @@ final class AvailableSkillsSource: SystemHintSource {
             return "- \(skill.displayName) (`\(skill.id)`): \(description)"
         }
 
-        var body = lines.joined(separator: "\n")
-        if !input.isSmallContext {
-            // Cloud-backed models do fine with natural-language instructions
-            // like this. Small local models are triggered by the native tool
-            // declarations in the system turn and by the explicit format
-            // instruction in the system prompt — a markdown mention of
-            // `activate_skill` here risks the model emitting it as text
-            // instead of calling it.
-            body += "\n\nUse `activate_skill` to enable a skill when you need its tools."
-        }
-        return body
+        let skillList = lines.joined(separator: "\n")
+        return Prompt.Hints.availableSkills(skills: skillList)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

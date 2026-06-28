@@ -39,14 +39,7 @@ enum HintCatalog {
         cooldown: 3 * 86400, // 3 days
         priority: 5,
         condition: { _ in true },
-        template: { _ in
-            """
-            It might be a good time to revisit what you know about the user and about yourself. \
-            Read through your user core and identity core — is there anything new you've learned \
-            that should be added, or anything that feels outdated? Update them if it feels right. \
-            No rush, and no need to announce it.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.revisitCoreDocs }
     )
 
     /// Nudge the agent to save concrete details from the conversation as knowledge.
@@ -55,14 +48,7 @@ enum HintCatalog {
         cooldown: 86400, // 1 day
         priority: 6,
         condition: { ctx in ctx.messages.count >= 6 },
-        template: { _ in
-            """
-            If the user has mentioned anything concrete in this conversation — a name, preference, \
-            opinion, relationship, job, location, interest, or other specific detail — that isn't \
-            already in your knowledge base, save each detail as its own fact or note linked to the \
-            relevant actor or thing. Prefer creating new entries over updating existing ones.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.collectKnowledge }
     )
 
     /// Suggest the agent check in with the user about their setup preferences.
@@ -71,13 +57,7 @@ enum HintCatalog {
         cooldown: 7 * 86400, // 7 days
         priority: 3,
         condition: { _ in true },
-        template: { _ in
-            """
-            You can configure aspects of yourself — your name, voice, personality, how proactive \
-            you are. If it feels natural, you could check in with the user about whether everything \
-            is working well for them, or if they'd like to adjust anything. Only if it fits the moment.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.selfConfigure }
     )
 
     /// Warn when the conversation is approaching auto-compaction.
@@ -86,13 +66,7 @@ enum HintCatalog {
         cooldown: 0, // no cooldown — fires whenever relevant
         priority: 10,
         condition: { ctx in ctx.needsCompaction },
-        template: { _ in
-            """
-            This conversation is getting long and will be automatically summarised soon. \
-            If there's anything important the user might want you to remember across conversations, \
-            now would be a good time to ask — or save it to your knowledge yourself if you already know.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.compactionWarning }
     )
 
     /// Suggest spaces for users who don't have any yet.
@@ -101,13 +75,7 @@ enum HintCatalog {
         cooldown: 14 * 86400, // 14 days
         priority: 1,
         condition: { ctx in !ctx.hasSpaces },
-        template: { _ in
-            """
-            The user can create focused spaces for different projects or topics, each with their \
-            own context and instructions. If the user seems to have a recurring topic that would \
-            benefit from dedicated context, you could mention this. Only if relevant.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.capabilitySpaces }
     )
 
     /// Prompt the agent to introduce initiative to users who haven't enabled it yet.
@@ -116,13 +84,6 @@ enum HintCatalog {
         cooldown: 3 * 86400, // 3 days
         priority: 4,
         condition: { ctx in ctx.initiative == .reactive },
-        template: { _ in
-            """
-            Initiative is currently off. If it feels natural in the conversation, let the user \
-            know you can take initiative — reach out proactively, surface reminders, and flag \
-            things they might find useful. Mention that enabling it requires notification \
-            permission. Only bring it up if the moment is right.
-            """
-        }
+        template: { _ in Prompt.Hints.Chat.introduceInitiative }
     )
 }

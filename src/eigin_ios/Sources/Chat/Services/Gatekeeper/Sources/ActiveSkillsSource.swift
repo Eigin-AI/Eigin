@@ -16,7 +16,11 @@ final class ActiveSkillsSource: SystemHintSource {
         guard !input.activeSkills.isEmpty else { return nil }
 
         return input.activeSkills
-            .map { "### \($0.displayName)\n\n\($0.instruction)" }
+            .map {
+                let instruction = $0.instruction
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return "### \($0.displayName)\n\n\(instruction)"
+            }
             .joined(separator: "\n\n")
     }
 }

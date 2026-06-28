@@ -16,7 +16,7 @@ enum ChatTitleGenerator {
         retryCount: Int = 0,
         using overrideMessages: [ChatMessage]? = nil
     ) {
-        guard chat.titleOrigin != .generated && chat.titleOrigin != .edited else { return }
+        guard chat.titleOrigin != .generated, chat.titleOrigin != .edited else { return }
 
         let source = overrideMessages ?? messages
         let conversationSummary = source
@@ -26,9 +26,8 @@ enum ChatTitleGenerator {
             .prefix(6)
             .joined(separator: "\n")
 
-        let prompt = retryCount == 0
-            ? "Generate a short 2-4 word title for this conversation. Be extremely concise. Respond with ONLY the title, no quotes or punctuation."
-            : "Title this conversation in 2-4 words. Only output the title. No quotes, no punctuation, no explanation."
+        let prompt = (retryCount == 0 ? Prompt.Title.first : Prompt.Title.retry)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let titleMessages: [ChatMessage] = [
             ChatMessage(role: "system", content: prompt),
