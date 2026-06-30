@@ -261,4 +261,87 @@ struct AgenticChatLoopTests {
         #expect(produced.count == 3)
         #expect(produced[2].content == "I see there was an error.")
     }
+
+    // MARK: - InlineToolRunner (local model path)
+
+    /// Verifies that when a local model executes a tool inline via the
+    /// ``InlineToolRunner``, the loop records the assistant(tool_calls) +
+    /// tool(result) round into `produced` and appends a final assistant message.
+    ///
+    /// The fake chat service acts as the local model: it invokes the runner
+    /// mid-stream, then yields only prose + .finished(.stop), never a
+    /// .toolCall event. The loop must not try a second round.
+    @Test @MainActor func inlineRunnerRecordsToolRoundInProduced() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let call = ToolCall(
+            id: "inline_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+        fakeToolExecutor.setResult(
+            for: "inline_1", content: "{\"result\":\"I am a test agent.\"}"
+        )
+
+        // Queue a tool call to be executed inline by the fake service.
+        fakeChatService.enqueueInlineToolCalls([call])
+
+        // After inline execution, the "model" yields prose + stop.
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Here is what I found."),
+            .finished(.stop),
+        ])
+
+        let loop = AgenticChatLoop(
+            isBootstrap: false,
+            permissionPolicy: AlwaysAllowPolicy()
+        )
+
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Who am I?")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        // Expected: assistant(tool_calls:[inline_1]) + tool(result) + assistant(prose)
+        #expect(produced.count == 3)
+        #expect(produced[0].role == "assistant")
+        #expect(produced[0].toolCalls?.first?.id == "inline_1")
+        #expect(produced[1].role == "tool")
+        #expect(produced[1].toolCallID == "inline_1")
+        #expect(produced[2].role == "assistant")
+        #expect(produced[2].content == "Here is what I found.")
+    }
+
+    /// Verifies that the runner is always passed through to the chat service,
+    /// even for cloud providers (where it will be ignored via the default extension).
+    @Test @MainActor func inlineRunnerIsPassedToServiceEvenForCloudProvider() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Cloud response."),
+            .finished(.stop),
+        ])
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hello")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        // The runner is always built and passed; the fake captures it.
+        #expect(fakeChatService.capturedInlineRunner != nil)
+    }
 }

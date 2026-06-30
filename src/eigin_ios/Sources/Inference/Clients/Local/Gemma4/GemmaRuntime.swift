@@ -1,73 +1,55 @@
-@preconcurrency import CoreML
 import Foundation
-import Tokenizers
+@preconcurrency import LiteRTLM
 
-/// On-device LLM inference using CoreML with ANE optimization.
+/// On-device LLM inference for Gemma 4 E2B via Google's LiteRT-LM runtime
+/// (GPU/Metal backend, QAT mobile quantization, multi-token prediction).
 ///
-/// Supports both monolithic models (single .mlpackage) and chunked SWA models
-/// (Gemma 4 E2B with 4 decode + 4 prefill chunks + external embeddings).
+/// A single LiteRT ``Engine`` is created once at load and reused. Generation
+/// runs through a persistent ``Conversation`` so that prefix caching applies
+/// across turns: when a request simply appends to the conversation we already
+/// hold, only the new turn is sent and the prior KV cache is reused. When the
+/// history diverges (new chat, edit, or regenerate) the conversation is rebuilt.
 ///
 /// ```swift
-/// let llm = try await GemmaRuntime.load(from: modelDirectory)
-///
-/// // Simple single-turn
-/// let answer = try await llm.generate("What is the capital of France?")
-///
-/// // Streaming
-/// for await token in try await llm.stream("Tell me a story") {
-///     print(token, terminator: "")
-/// }
-///
-/// // Multi-turn conversation
-/// let messages: [GemmaRuntime.Message] = [
-///     .init(role: .user, content: "Hi!"),
-///     .init(role: .assistant, content: "Hello!"),
-///     .init(role: .user, content: "What is 2+2?"),
-/// ]
+/// let llm = try await GemmaRuntime.load(modelPath: url, contextWindow: 8192)
 /// for await token in try await llm.stream(messages) {
 ///     print(token, terminator: "")
 /// }
 /// ```
+///
+/// The engine wrapper itself is model-agnostic: the only Gemma-specific detail
+/// is the sampler defaults in ``makeConversation(seeding:)``. Gemma's chat
+/// formatting (tool markers, message conversion, stream filtering) lives outside
+/// this type. This is the natural seam to extract a generic `LiteRTRuntime` from
+/// if a second LiteRT model is ever added.
 public final class GemmaRuntime: @unchecked Sendable {
-    private let tokenizer: any Tokenizer
-    private var config: GemmaModelConfig
+    private let engine: Engine
+    private let contextWindow: Int
 
-    // Engine: exactly one of these is non-nil.
-    private var chunkedEngine: ChunkedEngine?
-    private var monolithicModel: MLModel?
-    private var monolithicState: MLState?
+    /// The live conversation and the message history it already holds (excluding
+    /// the response currently being generated). `nil` until the first turn.
+    private var conversation: Conversation?
+    private var ingested: [Message] = []
 
-    // Token buffers for bench helpers
-    private var lastPromptTokenIDs: [Int32] = []
-    private var lastEmittedTokenIDs: [Int32] = []
+    /// Serializes generation: LiteRT allows only one session per engine, and
+    /// foreground requests preempt background ones.
+    private let gate = LiteRTSessionGate()
 
-    /// MTP speculative decoding
-    private var mtpEngine: MtpSpeculativeEngine?
-    /// Toggle MTP speculation on/off for benchmarking.
-    public var mtpEnabled: Bool = true
-
-    // Generation metrics
-    public private(set) var tokensPerSecond: Double = 0
-    public var mtpAcceptanceRate: Double {
-        mtpEngine?.acceptanceRate ?? 0
-    }
-
-    public var mtpTokensPerRound: Double {
-        mtpEngine?.tokensPerRound ?? 0
-    }
-
-    /// Expose the tokenizer so a harness can re-encode / decode arbitrary
-    /// text without duplicating the swift-transformers wiring.
-    public var tokenizerRef: any Tokenizer {
-        tokenizer
-    }
+    /// Coarse per-turn runaway bound on streamed chunks. This is *not* the
+    /// model's output limit — it spans the entire turn including every tool
+    /// round, because LiteRT re-streams tool rounds through one continuation we
+    /// can't split. Sized well above a single response (worst case: system +
+    /// several tool rounds + final answer at 8k context) so multi-tool turns
+    /// still reach their answer. LiteRT's recurringToolCallLimit is the real
+    /// per-round ceiling.
+    private static let maxTurnChunks = 2048
 
     // MARK: - Public Types
 
     /// A message in a multi-turn conversation.
-    public struct Message: Sendable {
+    public struct Message: Sendable, Equatable {
         public enum Role: String, Sendable {
-            case user, assistant, system
+            case user, assistant, system, tool
         }
 
         public let role: Role
@@ -79,608 +61,477 @@ public final class GemmaRuntime: @unchecked Sendable {
         }
     }
 
-    private init(config: GemmaModelConfig, tokenizer: any Tokenizer) {
-        self.config = config
-        self.tokenizer = tokenizer
+    private init(engine: Engine, contextWindow: Int) {
+        self.engine = engine
+        self.contextWindow = contextWindow
     }
 
-    // MARK: - Public API
+    // MARK: - Loading
 
-    /// Load a model from a local directory.
+    /// Create and initialize a LiteRT engine for the given `.litertlm` model.
     ///
-    /// Auto-detects layout:
-    /// - If `chunk1.mlmodelc` exists → chunked SWA engine (Gemma 4 E2B)
-    /// - Otherwise → monolithic model (`model.mlpackage` / `model.mlmodelc`)
-    ///
-    /// - Parameters:
-    ///   - directory: Folder containing model files, embeddings, config
-    ///   - computeUnits: CoreML compute units (default: `.cpuAndNeuralEngine`)
-    ///   - onProgress: Optional callback for loading status updates
+    /// Multi-token prediction (speculative decoding) is enabled when the build
+    /// supports it; if engine initialization fails with it on, we retry once
+    /// without it so a model lacking MTP heads still loads.
+    /// Directory where LiteRT stores its compiled engine-graph cache. The cache
+    /// can grow to several GB and is never pruned by LiteRT, so callers that
+    /// remove the model (see ``GemmaModelManager/delete()``) must clear this too,
+    /// otherwise the cache is orphaned in `Library/Caches` indefinitely.
+    static var engineCacheDirectory: URL {
+        FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("litert-lm", isDirectory: true)
+    }
+
     public static func load(
-        from directory: URL,
-        computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
-        onProgress: ((String) -> Void)? = nil,
-        onChunkLoaded: (@Sendable (Int, Int) -> Void)? = nil
+        modelPath: URL,
+        contextWindow: Int
     ) async throws -> GemmaRuntime {
-        onProgress?("Reading config...")
-        let config = try GemmaModelConfig.load(from: directory)
-
-        // Tokenizer
-        onProgress?("Loading tokenizer...")
-        let tokDir = directory.appendingPathComponent("hf_model")
-        let tokenizer = try await AutoTokenizer.from(modelFolder: tokDir)
-
-        let llm = GemmaRuntime(config: config, tokenizer: tokenizer)
-
-        // Auto-detect: chunked or monolithic
-        let isChunked = FileManager.default.fileExists(
-            atPath: directory.appendingPathComponent("chunk1.mlmodelc").path
+        let cacheDir = engineCacheDirectory
+        try? FileManager.default.createDirectory(
+            at: cacheDir, withIntermediateDirectories: true
         )
-            || FileManager.default.fileExists(
-                atPath: directory.appendingPathComponent("chunk1.mlpackage").path
-            )
 
-        if isChunked {
-            onProgress?("Loading chunks (first run = ANE compile, can take 1-2 min)...")
-            llm.chunkedEngine = try await ChunkedEngine.load(
-                from: directory, config: config, computeUnits: computeUnits,
-                onChunkLoaded: onChunkLoaded
-            )
-        } else {
-            let mlConfig = MLModelConfiguration()
-            mlConfig.computeUnits = computeUnits
-            let modelURL = directory.appendingPathComponent("model.mlmodelc")
-            if FileManager.default.fileExists(atPath: modelURL.path) {
-                onProgress?("Loading model...")
-                llm.monolithicModel = try MLModel(contentsOf: modelURL, configuration: mlConfig)
+        func makeEngine(speculative: Bool) throws -> Engine {
+            if speculative {
+                ExperimentalFlags.optIntoExperimentalAPIs()
+                ExperimentalFlags.enableSpeculativeDecoding = true
             } else {
-                onProgress?("Compiling model...")
-                let pkgURL = directory.appendingPathComponent("model.mlpackage")
-                let compiled = try await MLModel.compileModel(at: pkgURL)
-                llm.monolithicModel = try MLModel(contentsOf: compiled, configuration: mlConfig)
+                ExperimentalFlags.enableSpeculativeDecoding = false
             }
-            llm.monolithicState = llm.monolithicModel?.makeState()
-        }
-
-        // MTP drafter (optional — enables speculative decoding)
-        let mtpCompiled = directory.appendingPathComponent("mtp_drafter.mlmodelc")
-        let mtpPkg = directory.appendingPathComponent("mtp_drafter.mlpackage")
-        let mtpURL: URL? = FileManager.default.fileExists(atPath: mtpCompiled.path) ? mtpCompiled
-            : FileManager.default.fileExists(atPath: mtpPkg.path) ? mtpPkg : nil
-        if let mtpURL, let engine = llm.chunkedEngine, engine.hasVerify {
-            onProgress?("Loading MTP drafter...")
-            do {
-                let drafterSource = try MtpDraftSource(
-                    modelURL: mtpURL, K: engine.verifyK
-                )
-                llm.mtpEngine = MtpSpeculativeEngine(
-                    engine: engine, drafter: drafterSource
-                )
-                AppLogger.info(
-                    "Gemma: MTP drafter loaded (K=\(public: engine.verifyK))",
-                    category: .chat
-                )
-            } catch {
-                AppLogger.warning(
-                    "Gemma: MTP drafter failed to load: \(public: error.localizedDescription)",
-                    category: .chat
-                )
-            }
-        }
-
-        onProgress?("Ready")
-        return llm
-    }
-
-    /// Download (if needed) and load a model in one call.
-    ///
-    /// ```swift
-    /// let llm = try await LocalLLM.load(model: .gemma4e2b) { print($0) }
-    /// ```
-    ///
-    /// If the model is already downloaded, skips straight to loading.
-    public static func load(
-        model: GemmaModelDownloader.ModelInfo,
-        computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
-        onProgress: ((String) -> Void)? = nil,
-        onChunkLoaded: (@Sendable (Int, Int) -> Void)? = nil
-    ) async throws -> GemmaRuntime {
-        let downloader = GemmaModelDownloader.shared
-        let modelURL: URL
-        if let existing = downloader.localModelURL(for: model) {
-            modelURL = existing
-        } else {
-            onProgress?("Downloading \(model.name)...")
-            modelURL = try await downloader.download(model)
-        }
-        let directory = modelURL.deletingLastPathComponent()
-        return try await load(
-            from: directory,
-            computeUnits: computeUnits,
-            onProgress: onProgress,
-            onChunkLoaded: onChunkLoaded
-        )
-    }
-
-    /// Model name from config.
-    public var modelName: String {
-        config.modelName
-    }
-
-    /// Context length from config.
-    public var contextLength: Int {
-        config.contextLength
-    }
-
-    // MARK: - Single-turn convenience
-
-    /// Generate a complete response from a single prompt.
-    public func generate(
-        _ prompt: String,
-        maxTokens: Int = 2048
-    ) async throws -> String {
-        let messages = [Message(role: .user, content: prompt)]
-        return try await generate(messages, maxTokens: maxTokens)
-    }
-
-    /// Stream tokens from a single prompt.
-    public func stream(
-        _ prompt: String,
-        maxTokens: Int = 2048
-    ) async throws -> AsyncStream<String> {
-        let messages = [Message(role: .user, content: prompt)]
-        return try await stream(messages, maxTokens: maxTokens)
-    }
-
-    // MARK: - Multi-turn API
-
-    /// Generate a complete response from a conversation.
-    public func generate(
-        _ messages: [Message],
-        maxTokens: Int = 2048
-    ) async throws -> String {
-        var result = ""
-        for await token in try await stream(
-            messages,
-            maxTokens: maxTokens
-        ) {
-            result += token
-        }
-        return result
-    }
-
-    /// Stream tokens from a multi-turn conversation.
-    public func stream(
-        _ messages: [Message],
-        maxTokens: Int = 2048
-    ) async throws -> AsyncStream<String> {
-        let tokenIDs: [Int]
-        do {
-            let templateMessages: [[String: any Sendable]] = messages.map { m in
-                ["role": m.role.rawValue, "content": m.content]
-            }
-            tokenIDs = try tokenizer.applyChatTemplate(
-                messages: templateMessages,
-                chatTemplate: GemmaChatTemplate.jinja
+            let config = try EngineConfig(
+                modelPath: modelPath.path,
+                backend: .gpu,
+                maxNumTokens: contextWindow,
+                cacheDir: cacheDir.path
             )
+            return Engine(engineConfig: config)
+        }
+
+        let engine: Engine
+        do {
+            let e = try makeEngine(speculative: true)
+            try await e.initialize()
+            engine = e
+            AppLogger.info("Gemma: LiteRT engine ready (MTP on)", category: .chat)
         } catch {
             AppLogger.warning(
-                "GemmaRuntime: applyChatTemplate failed (\(public: error.localizedDescription)), falling back to manual buildPrompt",
+                "Gemma: LiteRT init with MTP failed (\(public: error.localizedDescription)), retrying without speculative decoding",
                 category: .chat
             )
-            let chatPrompt = buildPrompt(messages)
-            tokenIDs = tokenizer.encode(text: chatPrompt)
+            let e = try makeEngine(speculative: false)
+            try await e.initialize()
+            engine = e
+            AppLogger.info("Gemma: LiteRT engine ready (MTP off)", category: .chat)
         }
 
-        if tokenIDs.count < 3 {
-            AppLogger.error(
-                "GemmaRuntime: tokenIDs too short (\(public: tokenIDs.count)), prompt may be malformed. First few: \(public: tokenIDs.prefix(10))",
-                category: .chat
-            )
-        }
+        return GemmaRuntime(engine: engine, contextWindow: contextWindow)
+    }
 
-        reset()
+    /// Display name for logging.
+    public var modelName: String {
+        "gemma-4-E2B-it"
+    }
 
-        // Clear recording buffers and record the prompt IDs for this turn.
-        lastPromptTokenIDs = tokenIDs.map { Int32($0) }
-        lastEmittedTokenIDs = []
+    /// Maximum total tokens (prompt + generation) the engine is configured for.
+    public var contextLength: Int {
+        contextWindow
+    }
 
-        let mutableSelf = self
-        let tokens = tokenIDs
-        let ctxLimit = config.contextLength
+    // MARK: - Generation
 
-        let (stream, continuation) = AsyncStream<String>.makeStream()
-        Task {
-            do {
-                var nextID = 0
+    /// Stream a response to the latest turn in `messages`.
+    ///
+    /// `messages` is the full conversation history. We diff it against the turns
+    /// already ingested to decide whether to reuse the live conversation (append)
+    /// or rebuild it (divergence), then stream a response to the trailing user
+    /// turn. Streamed chunks are bounded for the whole turn by ``maxTurnChunks``.
+    ///
+    /// Pass `tools` to register bridged LiteRT tools for this turn, and
+    /// `inlineToolRunner` to route their execution to the real Eigin tools. The
+    /// engine handles declaration injection and output parsing natively, and
+    /// calls each tool's `run()` inline as part of this stream; the runner is
+    /// published via ``GemmaToolBridgeRunner`` only while the session gate is
+    /// held, so it can't be clobbered by a concurrent stream.
+    ///
+    /// If the history is too long to fit in the context window, the oldest
+    /// non-system turns are dropped and the conversation is rebuilt until it fits
+    /// or only the final user message remains.
+    func stream(
+        _ messages: [Message],
+        tools: [any LiteRTLM.Tool] = [],
+        inlineToolRunner: InlineToolRunner? = nil
+    ) async throws -> AsyncStream<String> {
+        let (out, continuation) = AsyncStream<String>.makeStream()
 
-                let engine = mutableSelf.chunkedEngine
-
-                if let engine {
-                    let prefillLen = min(tokens.count, engine.prefillN)
-                    let useHybrid = engine.hasPrefill && prefillLen > 0
-
-                    if useHybrid {
-                        try autoreleasepool {
-                            let batch = Array(tokens[0 ..< prefillLen])
-                            nextID = try engine.runPrefill(tokenIDs: batch)
-                        }
-                        engine.currentPosition = prefillLen
-
-                        for step in prefillLen ..< tokens.count {
-                            try autoreleasepool {
-                                nextID = try engine.predictStep(
-                                    tokenID: tokens[step],
-                                    position: step
-                                )
-                            }
-                            engine.currentPosition = step + 1
-                        }
-                    } else {
-                        for (step, tid) in tokens.enumerated() {
-                            try autoreleasepool {
-                                nextID = try engine.predictStep(tokenID: tid, position: step)
-                            }
-                            engine.currentPosition = step + 1
-                        }
-                    }
-
-                    // Decode loop with tok/s tracking
-                    let eosIDs: Set = [1, 106, 151_645]
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    var tokenCount = 0
-                    var consecutivePads = 0
-                    let maxDecode = min(ctxLimit - engine.currentPosition, maxTokens)
-                    let mtpSpec = mutableSelf.mtpEnabled ? mutableSelf.mtpEngine : nil
-                    mtpSpec?.reset()
-
-                    var nid = Int32(nextID)
-                    while tokenCount < maxDecode {
-                        if eosIDs.contains(Int(nid)) { break }
-                        if engine.currentPosition >= ctxLimit { break }
-                        // Safety: stop if we get too many consecutive pad tokens
-                        if nid == 0 {
-                            consecutivePads += 1
-                            if consecutivePads > 10 { break }
-                        } else {
-                            consecutivePads = 0
-                        }
-
-                        if let se = mtpSpec, se.shouldSpeculate {
-                            let emitted = try autoreleasepool {
-                                try se.speculateStep(nextID: &nid)
-                            }
-                            for tok in emitted {
-                                if eosIDs.contains(Int(tok)) {
-                                    nid = tok
-                                    break
-                                }
-                                let text = mutableSelf.tokenizer.decode(tokens: [Int(tok)])
-                                continuation.yield(text)
-                                tokenCount += 1
-                            }
-                        } else {
-                            mutableSelf.lastEmittedTokenIDs.append(nid)
-                            let text = mutableSelf.tokenizer.decode(tokens: [Int(nid)])
-                            continuation.yield(text)
-                            tokenCount += 1
-                            try autoreleasepool {
-                                let next = try engine.predictStep(
-                                    tokenID: Int(nid), position: engine.currentPosition
-                                )
-                                nid = Int32(next)
-                            }
-                            engine.currentPosition += 1
-                        }
-
-                        let elapsed = CFAbsoluteTimeGetCurrent() - startTime
-                        if elapsed >
-                            0 { mutableSelf.tokensPerSecond = Double(tokenCount) / elapsed }
-                    }
-                    nextID = Int(nid)
-                } else {
-                    // Monolithic path
-                    for (step, tid) in tokens.enumerated() {
-                        try autoreleasepool {
-                            nextID = try mutableSelf.predictMonolithic(
-                                tokenID: tid, position: step
-                            )
-                        }
-                    }
-                    let eosIDs: Set = [1, 106, 151_645]
-                    let startTime = CFAbsoluteTimeGetCurrent()
-                    var pos = tokens.count
-                    var tokenCount = 0
-                    for _ in 0 ..< maxTokens {
-                        if eosIDs.contains(nextID) { break }
-                        if pos >= ctxLimit { break }
-                        mutableSelf.lastEmittedTokenIDs.append(Int32(nextID))
-                        let text = mutableSelf.tokenizer.decode(tokens: [nextID])
-                        continuation.yield(text)
-                        tokenCount += 1
-                        let elapsed = CFAbsoluteTimeGetCurrent() - startTime
-                        if elapsed >
-                            0 { mutableSelf.tokensPerSecond = Double(tokenCount) / elapsed }
-                        try autoreleasepool {
-                            nextID = try mutableSelf.predictMonolithic(
-                                tokenID: nextID, position: pos
-                            )
-                        }
-                        pos += 1
-                    }
+        // Generation runs one at a time against the single engine session. We
+        // read the caller's priority here (task-local) and gate the worker so a
+        // foreground send can preempt background work. `box` lets the gate (or a
+        // torn-down consumer) cancel the worker, which stops native decoding.
+        let priority = LocalGeneration.priority
+        let toolBox = BridgedToolBox(tools)
+        let box = CancellationBox()
+        let task = Task { [weak self] in
+            guard let self else {
+                continuation.finish()
+                return
+            }
+            let acquired = await gate.acquire(priority: priority) { box.cancel() }
+            if acquired {
+                // Publish the turn's runner only while we hold the gate so the
+                // bridge's run() (called across LiteRT's C boundary) reaches the
+                // right executor. Setting it inside the gated span is what makes
+                // the single module-global safe: a concurrently-created stream
+                // can't overwrite it while we own the session.
+                GemmaToolBridgeRunner.current = inlineToolRunner
+                if !Task.isCancelled {
+                    await streamInto(
+                        continuation,
+                        messages: messages,
+                        tools: toolBox.tools
+                    )
                 }
-            } catch {
-                AppLogger.error(
-                    "Gemma: generation error: \(private: error.localizedDescription)",
-                    category: .chat
-                )
+                GemmaToolBridgeRunner.current = nil
+                await gate.release()
             }
             continuation.finish()
         }
-        return stream
+        box.task = task
+        continuation.onTermination = { _ in box.cancel() }
+
+        return out
     }
 
-    /// Reset conversation state (clears KV cache).
-    public func reset() {
-        if let engine = chunkedEngine {
-            engine.reset()
-        } else {
-            monolithicState = monolithicModel?.makeState()
-        }
-        mtpEngine?.reset()
-        tokensPerSecond = 0
-    }
+    private func streamInto(
+        _ continuation: AsyncStream<String>.Continuation,
+        messages: [Message],
+        tools: [any LiteRTLM.Tool]
+    ) async {
+        // The caller (`stream`) owns stream termination and session release; this
+        // method only yields chunks. It returns on success, overflow exhaustion,
+        // or failure.
 
-    // MARK: - Bench helpers (offline harness use only; not for production)
-
-    /// Chunked-engine verify K (typically 3). Nil if the monolithic path is
-    /// in use or verify chunks aren't loaded.
-    public var benchVerifyK: Int? {
-        guard let e = chunkedEngine, e.hasVerify else { return nil }
-        return e.verifyK
-    }
-
-    /// Current decode position on the chunked engine, or nil on monolithic.
-    public var benchCurrentPosition: Int? {
-        chunkedEngine?.currentPosition
-    }
-
-    /// Run prefill + sequential `predictStep` for any tokens that didn't fit
-    /// in a prefill chunk. After return, `benchCurrentPosition ==
-    /// promptTokens.count` and `seed` is target's argmax (via `decode_q1`) for
-    /// that position — the token to emit first. Resets engine + spec engines.
-    ///
-    /// Text prompts only; image/audio paths are not handled.
-    public func benchPrefill(_ prompt: String) async throws -> (prompt: [Int32], seed: Int32) {
-        guard let engine = chunkedEngine else {
-            throw GemmaRuntimeError.predictionFailed
-        }
-        let messages = [Message(role: .user, content: prompt)]
-        let chatPrompt = buildPrompt(messages)
-        let tokens = tokenizer.encode(text: chatPrompt)
-        reset()
-        lastPromptTokenIDs = tokens.map { Int32($0) }
-        lastEmittedTokenIDs = []
-
-        var nextID = 0
-        let prefillLen = min(tokens.count, engine.prefillN)
-        let useHybrid = engine.hasPrefill && prefillLen > 0
-        if useHybrid {
-            try autoreleasepool {
-                let batch = Array(tokens[0 ..< prefillLen])
-                nextID = try engine.runPrefill(tokenIDs: batch)
-            }
-            engine.currentPosition = prefillLen
-            for step in prefillLen ..< tokens.count {
-                try autoreleasepool {
-                    nextID = try engine.predictStep(tokenID: tokens[step], position: step)
-                }
-                engine.currentPosition = step + 1
-            }
-        } else {
-            for (step, tid) in tokens.enumerated() {
-                try autoreleasepool {
-                    nextID = try engine.predictStep(tokenID: tid, position: step)
-                }
-                engine.currentPosition = step + 1
-            }
-        }
-        return (tokens.map { Int32($0) }, Int32(nextID))
-    }
-
-    /// Run `verify_qK` at the current decode position. `tokens.count` must
-    /// equal `benchVerifyK`. Returns target's argmax at each of K positions.
-    /// Writes K KV slots starting at `benchCurrentPosition` but does NOT
-    /// advance the position — use `benchAdvance(by:)` to commit.
-    public func benchVerify(_ tokens: [Int32]) throws -> [Int32] {
-        guard let engine = chunkedEngine, engine.hasVerify else {
-            throw GemmaRuntimeError.predictionFailed
-        }
-        return try engine.verifyCandidates(
-            tokens: tokens,
-            startPosition: engine.currentPosition
-        )
-    }
-
-    /// Variant of `benchVerify` that also returns per-position top-`topK`
-    /// `(token_id, logit_fp32)` pairs. Used by the tolerance-based accept
-    /// variant of `accept-rate-bench`.
-    ///
-    /// Throws `GemmaRuntimeError.verifyLogitsNotExposed` until the Track B
-    /// (`feat/c0-verify-requant`) re-export of verify chunk 4 adds a
-    /// `logits_fp16` output. Until that PR merges, callers must fall back to
-    /// argmax-only acceptance via `benchVerify`.
-    public func benchVerifyTopK(_ tokens: [Int32], topK: Int = 3) throws
-        -> [[(Int32, Float)]]
-    {
-        guard let engine = chunkedEngine, engine.hasVerify else {
-            throw GemmaRuntimeError.predictionFailed
-        }
-        let (_, top) = try engine.verifyCandidatesWithLogits(
-            tokens: tokens,
-            startPosition: engine.currentPosition,
-            topK: topK
-        )
-        return top
-    }
-
-    /// Advance `benchCurrentPosition` by `count`.
-    public func benchAdvance(by count: Int) {
-        chunkedEngine?.currentPosition += count
-    }
-
-    // MARK: - Private: monolithic prediction
-
-    private func predictMonolithic(
-        tokenID: Int,
-        position: Int,
-        imageEmbedding: MLMultiArray? = nil
-    ) throws -> Int {
-        guard let model = monolithicModel, let state = monolithicState else {
-            throw GemmaRuntimeError.predictionFailed
-        }
-        let ctx = config.contextLength
-        let hs = config.hiddenSize
-
-        let ids = try MLMultiArray(shape: [1, 1], dataType: .int32)
-        ids[[0, 0] as [NSNumber]] = NSNumber(value: Int32(tokenID))
-        let pos = try MLMultiArray(shape: [1], dataType: .int32)
-        pos[0] = NSNumber(value: Int32(position))
-        let mask = try MLMultiArray(shape: [1, 1, 1, NSNumber(value: ctx)], dataType: .float16)
-        let mp = mask.dataPointer.bindMemory(to: UInt16.self, capacity: ctx)
-        for i in 0 ..< ctx {
-            mp[i] = i <= position ? 0 : 0xFC00
-        }
-        let umask = try MLMultiArray(shape: [1, 1, NSNumber(value: ctx), 1], dataType: .float16)
-        let up = umask.dataPointer.bindMemory(to: UInt16.self, capacity: ctx)
-        memset(up, 0, ctx * MemoryLayout<UInt16>.stride)
-        up[min(position, ctx - 1)] = 0x3C00
-
-        var dict: [String: MLFeatureValue] = [
-            "input_ids": MLFeatureValue(multiArray: ids),
-            "position_ids": MLFeatureValue(multiArray: pos),
-            "causal_mask": MLFeatureValue(multiArray: mask),
-            "update_mask": MLFeatureValue(multiArray: umask),
-        ]
-
-        let inputNames = model.modelDescription.inputDescriptionsByName
-        if inputNames["per_layer_combined"] != nil, let engine = chunkedEngine {
-            let emb = try engine.computePerLayerCombined(
-                tokenID: tokenID,
-                embedding: MLMultiArray(
-                    shape: [1, 1, NSNumber(value: hs)],
-                    dataType: .float16
+        // Retry loop: on context overflow, drop the oldest non-system turn pair
+        // and rebuild until the history fits or we're down to the bare minimum.
+        //
+        // Session ownership: LiteRT allows only one active session per engine.
+        // We ensure the previous Conversation is fully deallocated before calling
+        // makeConversation again by (a) nil-ing self.conversation and (b) keeping
+        // the Conversation reference inside a nested scope so ARC releases it
+        // synchronously before the next await on the engine.
+        var candidates = messages
+        while true {
+            let plan: Plan
+            do {
+                plan = try await makePlan(for: candidates, tools: tools)
+            } catch {
+                AppLogger.error(
+                    "Gemma: failed to create conversation: \(private: error.localizedDescription)",
+                    category: .chat
                 )
+                break
+            }
+
+            // Run generation inside a separate function so the Conversation
+            // reference (read from self.conversation into a local `conv`) is
+            // released when generateOnce returns — before the next loop
+            // iteration calls makeConversation on the engine.
+            let result = await generateOnce(
+                plan: plan,
+                tools: tools,
+                continuation: continuation,
+                candidates: candidates
             )
-            dict["per_layer_combined"] = MLFeatureValue(multiArray: emb)
-        }
-        if inputNames["image_embedding"] != nil {
-            let imgEmb: MLMultiArray
-            if let imageEmbedding { imgEmb = imageEmbedding }
-            else {
-                imgEmb = try MLMultiArray(shape: [1, 1, NSNumber(value: hs)], dataType: .float16)
-                memset(imgEmb.dataPointer, 0, hs * MemoryLayout<UInt16>.stride)
-            }
-            dict["image_embedding"] = MLFeatureValue(multiArray: imgEmb)
-        }
 
-        let output = try model.prediction(
-            from: MLDictionaryFeatureProvider(dictionary: dict),
-            using: state
-        )
-        return output.featureValue(for: "token_id")!.multiArrayValue![0].intValue
+            switch result {
+            case .success(let assistant, let ingestedAfter):
+                ingested = ingestedAfter + [Message(role: .assistant, content: assistant)]
+                return
+            case .overflow(let shorter):
+                // Explicitly close the conversation so the LiteRT session slot is
+                // freed synchronously before makePlan creates the next one.
+                // We cannot rely on ARC/deinit across async suspension points.
+                conversation?.close()
+                conversation = nil
+                ingested = []
+                candidates = shorter
+            case .failure:
+                break
+            }
+
+            if case .failure = result { break }
+        }
     }
 
-    // MARK: - Private: prompt building
-
-    private func buildPrompt(_ messages: [Message]) -> String {
-        buildGemmaPrompt(messages)
+    private enum GenerationResult {
+        case success(assistant: String, ingestedAfter: [Message])
+        case overflow([Message])
+        case failure
     }
 
-    private func buildGemmaPrompt(_ messages: [Message]) -> String {
-        var p = "<bos>"
-        for m in messages {
-            switch m.role {
-            case .system:
-                p += "<|turn>system\n\(m.content)<turn|>\n"
-            case .user:
-                p += "<|turn>user\n\(m.content)<turn|>\n"
-            case .assistant:
-                p += "<|turn>model\n\(m.content)<turn|>\n"
-            }
+    /// Runs a single generation attempt and returns a typed result.
+    /// The Conversation is captured as a local inside this function and released
+    /// when the function returns — before the caller's next loop iteration.
+    private func generateOnce(
+        plan: Plan,
+        tools: [any LiteRTLM.Tool],
+        continuation: AsyncStream<String>.Continuation,
+        candidates: [Message]
+    ) async -> GenerationResult {
+        guard let conv = conversation else {
+            AppLogger.error("Gemma: no active conversation after makePlan", category: .chat)
+            return .failure
         }
-        return p + "<|turn>model\n"
-    }
-}
-
-// MARK: - ANE prewarm
-
-extension GemmaRuntime {
-    /// Touch every `.mlmodelc` bundle once to populate CoreML's ANE
-    /// specialisation cache, then release each model immediately.
-    ///
-    /// This is the low-memory alternative to a full `load()`: it pays the
-    /// minutes-long first-run specialisation cost without keeping the ~4 GB
-    /// model resident. Subsequent `load()` calls against a warm cache complete
-    /// in seconds rather than minutes.
-    ///
-    /// The cache is keyed on each bundle's absolute path + file metadata +
-    /// `MLModelConfiguration` + OS build, so specialisation must be repeated
-    /// after app updates (container UUID path changes), OS updates, and
-    /// storage-pressure evictions. Call this once per app version via
-    /// `GemmaModelManager.prewarmIfNeeded()`.
-    ///
-    /// - Parameters:
-    ///   - directory: Root model directory (same as passed to `load(from:)`).
-    ///   - computeUnits: Must match what `load()` uses so the cache hits.
-    ///   - onProgress: Called with `(done, total)` after each entry is loaded.
-    ///     Suitable for driving a progress indicator.
-    static func prewarm(
-        from directory: URL,
-        computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
-        onProgress: (@Sendable (Int, Int) -> Void)? = nil
-    ) async throws {
-        let entries = GemmaModelLayout.entries(in: directory, computeUnits: computeUnits)
-        let total = entries.count
-        for (index, entry) in entries.enumerated() {
-            try Task.checkCancellation()
-            let start = ContinuousClock.now
-            // Load and immediately discard — we only want the e5rt cache populated.
-            _ = try autoreleasepool {
-                try MLModel(contentsOf: entry.url, configuration: entry.configuration)
+        var assistant = ""
+        // `produced` counts chunks for the whole turn, including every tool
+        // round: LiteRT re-enters sendMessageStream for each round on the *same*
+        // Swift continuation, so this one loop sees them all and there is no
+        // round boundary we can observe to reset on. The cap is therefore a
+        // coarse per-turn runaway bound, deliberately sized well above a single
+        // response so multi-tool turns can still reach their final answer. The
+        // real per-tool-round ceiling is LiteRT's own recurringToolCallLimit.
+        var produced = 0
+        do {
+            // Cancel native decoding when the consuming task is torn down (user
+            // interrupt or navigation). LiteRT's stream does not stop generation
+            // on Swift-task cancellation by itself.
+            try await withTaskCancellationHandler {
+                for try await chunk in conv.sendMessageStream(plan.prompt) {
+                    let text = chunk.toString
+                    if !text.isEmpty {
+                        assistant += text
+                        continuation.yield(text)
+                    }
+                    produced += 1
+                    if produced >= Self.maxTurnChunks { break }
+                }
+            } onCancel: {
+                try? conv.cancel()
             }
-            let elapsed = start.duration(to: .now)
-            let ms = elapsed.components.seconds * 1000
-                + Int64(elapsed.components.attoseconds / 1_000_000_000_000_000)
-            AppLogger.info(
-                "GemmaRuntime: prewarm \(public: entry.name) in \(public: ms)ms",
+        } catch {
+            // conv goes out of scope here (function returns) — ARC releases it.
+            switch LiteRTErrorClassifier.classify(error) {
+            case .contextOverflow:
+                if let shorter = Self.dropOldestTurn(candidates) {
+                    AppLogger.warning(
+                        "Gemma: context overflow, retrying with \(public: shorter.count) messages",
+                        category: .chat
+                    )
+                    return .overflow(shorter)
+                }
+            case .unknownToolCall(let badName):
+                // The model called an invalid or unregistered tool name. The
+                // conversation is now in an error state — close it so the next
+                // round rebuilds cleanly. Yield a synthetic error token so the
+                // user sees something rather than a silent empty response.
+                AppLogger.warning(
+                    "Gemma: unknown tool '\(public: badName)' — resetting conversation",
+                    category: .chat
+                )
+                conversation?.close()
+                conversation = nil
+                ingested = []
+                let known = tools.map { type(of: $0).name }
+                    .filter { !$0.isEmpty }
+                    .joined(separator: ", ")
+                let msg = "I tried to call '\(badName)' but that tool doesn't exist. Available: \(known). Let me try again."
+                continuation.yield(msg)
+                return .success(assistant: msg, ingestedAfter: plan.ingestedAfter)
+            case nil:
+                break
+            }
+            AppLogger.error(
+                "Gemma: generation error: \(private: error.localizedDescription)",
                 category: .chat
             )
-            onProgress?(index + 1, total)
+            return .failure
         }
+        return .success(assistant: assistant, ingestedAfter: plan.ingestedAfter)
+    }
+
+    /// Drop the oldest non-system turn (user + the assistant reply that follows
+    /// it, if present) from `messages`. Returns nil when there is nothing left
+    /// to drop (only system + one pending user turn remain).
+    static func dropOldestTurn(_ messages: [Message]) -> [Message]? {
+        // Find the first user turn that isn't the last message.
+        guard let firstUser = messages.firstIndex(where: { $0.role == .user }),
+              firstUser < messages.count - 1
+        else { return nil }
+
+        var result = messages
+        // Also drop the assistant reply immediately following, if present.
+        if firstUser + 1 < result.count, result[firstUser + 1].role == .assistant {
+            result.remove(at: firstUser + 1)
+        }
+        result.remove(at: firstUser)
+        return result
+    }
+
+    /// Drop conversation state so the next ``stream(_:tools:inlineToolRunner:)`` starts fresh.
+    public func reset() {
+        conversation?.close()
+        conversation = nil
+        ingested = []
+    }
+
+    // MARK: - Conversation planning
+
+    private struct Plan {
+        /// LiteRT-LM message ready to pass to `sendMessageStream`.
+        let prompt: LiteRTLM.Message
+        /// History that will be ingested once generation completes (everything
+        /// in `messages` except the assistant turn being generated).
+        let ingestedAfter: [Message]
+    }
+
+    /// Whether to reuse the live conversation or rebuild it, plus the turn split.
+    struct PlanDecision: Equatable {
+        enum Mode { case reuse, rebuild }
+        let mode: Mode
+        /// Context before the trailing user/tool run (system + prior turns).
+        let priorTurns: [Message]
+        /// The trailing user/tool run we generate a reply to.
+        let pendingTurns: [Message]
+
+        /// The pending turns flattened into a single prompt body.
+        var promptText: String {
+            pendingTurns
+                .map(\.content)
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n\n")
+        }
+    }
+
+    /// Pure prefix-diff: split `messages` at the last assistant turn, then reuse
+    /// the live conversation only when it already holds exactly the prior turns
+    /// (LiteRT retains the assistant turns it generated). Otherwise rebuild.
+    /// Extracted as a static function so the decision is unit-testable without a
+    /// live engine.
+    static func planDecision(
+        messages: [Message],
+        ingested: [Message],
+        hasConversation: Bool
+    ) -> PlanDecision {
+        // Prior context ends after the last assistant, tool-response, or system
+        // turn; the trailing user turn(s) are what we generate a reply to.
+        // Keeping system in the prior turns routes it to the conversation's
+        // system slot rather than the prompt body.
+        let splitIndex = messages
+            .lastIndex { $0.role == .assistant || $0.role == .tool || $0.role == .system }
+            .map { $0 + 1 } ?? 0
+        let priorTurns = Array(messages[..<splitIndex])
+        let pendingTurns = Array(messages[splitIndex...])
+        let mode: PlanDecision.Mode = (hasConversation && ingested == priorTurns)
+            ? .reuse : .rebuild
+        return PlanDecision(mode: mode, priorTurns: priorTurns, pendingTurns: pendingTurns)
+    }
+
+    /// Decide whether to reuse the live conversation or rebuild it, and produce
+    /// the single ``Message`` to stream a response to.
+    ///
+    /// When `tools` change between turns the conversation is always rebuilt so
+    /// the new declarations are injected into the chat template correctly.
+    private func makePlan(
+        for messages: [Message],
+        tools: [any LiteRTLM.Tool]
+    ) async throws -> Plan {
+        let decision = Self.planDecision(
+            messages: messages,
+            ingested: ingested,
+            hasConversation: conversation != nil
+        )
+        let prompt = LiteRTLM.Message(decision.promptText, role: .user)
+
+        // Fast path: the live conversation already holds the prior turns, so we
+        // only send the new pending turns and reuse the cached prefix.
+        // Skip if tools are present — tool declarations must be re-injected via
+        // ConversationConfig on rebuild for correct chat template placement.
+        if decision.mode == .reuse, conversation != nil, tools.isEmpty {
+            return Plan(prompt: prompt, ingestedAfter: messages)
+        }
+
+        // Rebuild path: divergence, tools present, or new chat.
+        conversation?.close()
+        conversation = nil
+        ingested = []
+
+        conversation = try await makeConversation(seeding: decision.priorTurns, tools: tools)
+        return Plan(prompt: prompt, ingestedAfter: messages)
+    }
+
+    private func makeConversation(
+        seeding priorTurns: [Message],
+        tools: [any LiteRTLM.Tool] = []
+    ) async throws -> Conversation {
+        // Pass prior turns as properly-roled LiteRT messages so the engine
+        // applies Gemma's real chat template internally, rather than the
+        // hand-rolled "Conversation so far:" transcript we used before.
+        let systemMessage: LiteRTLM.Message? = priorTurns
+            .filter { $0.role == .system }
+            .map(\.content)
+            .joined(separator: "\n")
+            .nilIfEmpty
+            .map { LiteRTLM.Message($0, role: .system) }
+
+        let initialMessages: [LiteRTLM.Message] = priorTurns
+            .filter { $0.role != .system }
+            .compactMap { msg in
+                guard !msg.content.isEmpty else { return nil }
+                let role: LiteRTLM.Role = switch msg.role {
+                case .assistant: .model
+                case .tool: .tool
+                default: .user
+                }
+                return LiteRTLM.Message(msg.content, role: role)
+            }
+
+        AppLogger.debug(
+            "Gemma: makeConversation with \(public: tools.count) tools: \(public: tools.map { type(of: $0).name })",
+            category: .chat
+        )
+
+        // Enable constrained decoding when tools are active so LiteRT's FST
+        // prevents the model generating invalid tool call syntax.
+        if !tools.isEmpty {
+            ExperimentalFlags.enableConversationConstrainedDecoding = true
+        }
+        defer {
+            ExperimentalFlags.enableConversationConstrainedDecoding = false
+        }
+
+        // Sampler values are Gemma 4's official defaults from Google's model
+        // card (temperature 1.0, top-p 0.95, top-k 64). Do not "tune" these
+        // without a deliberate reason — they are the recommended configuration.
+        let config = try ConversationConfig(
+            systemMessage: systemMessage,
+            initialMessages: initialMessages,
+            tools: tools,
+            samplerConfig: SamplerConfig(topK: 64, topP: 0.95, temperature: 1.0)
+        )
+        return try await engine.createConversation(with: config)
     }
 }
 
-// MARK: - Error types
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
 
-public enum GemmaRuntimeError: LocalizedError {
-    case configNotFound
-    case predictionFailed
-    case modelNotFound(String)
-    case prefillNotAvailable
-    /// The verify-chunk pipeline does not expose a `logits_fp16` output yet.
-    /// Returned by `benchVerifyTopK` / `verifyCandidatesWithLogits` until the
-    /// Track B re-export (`feat/c0-verify-requant`) lands on `main`.
-    case verifyLogitsNotExposed
+/// Holds the worker ``Task`` so the session gate (or a torn-down consumer) can
+/// cancel generation from outside the task. The handle is written once right
+/// after the task is created and only read when cancelling, so a lock keeps the
+/// cross-thread access well-defined.
+private final class CancellationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _task: Task<Void, Never>?
 
-    public var errorDescription: String? {
-        switch self {
-        case .configNotFound: "model_config.json not found"
-        case .predictionFailed: "Model prediction failed"
-        case .modelNotFound(let name): "Model file not found: \(name)"
-        case .prefillNotAvailable: "Prefill chunks not loaded"
-        case .verifyLogitsNotExposed:
-            "verify chunk 4 does not expose `logits_fp16` (Track B re-export pending)"
-        }
+    var task: Task<Void, Never>? {
+        get { lock.withLock { _task } }
+        set { lock.withLock { _task = newValue } }
+    }
+
+    func cancel() {
+        task?.cancel()
     }
 }

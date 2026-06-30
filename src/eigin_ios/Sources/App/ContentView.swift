@@ -39,28 +39,16 @@ struct ContentView: View {
             ensureBackgroundSchedule()
             ensureEiginProvider()
             ensureLocalProvider()
-            GemmaModelManager.shared.prewarmIfNeeded()
         }
         .onChange(of: gemmaManager.state) { _, newState in
             if newState == .ready || newState == .downloaded {
                 ensureLocalProvider()
-            }
-            // Download completed during this session — kick off prewarm immediately
-            // rather than waiting for the next foreground activation.
-            if newState == .downloaded {
-                GemmaModelManager.shared.prewarmIfNeeded()
             }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 ensureBackgroundSchedule()
                 ensureLocalProvider()
-                GemmaModelManager.shared.prewarmIfNeeded()
-            }
-            if phase == .background {
-                // Cancel prewarm: ANE compilation under the background memory
-                // limit risks jetsam. The pass resumes on next foreground.
-                GemmaModelManager.shared.cancelPrewarm()
             }
         }
     }

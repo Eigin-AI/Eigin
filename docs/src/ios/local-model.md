@@ -1,66 +1,95 @@
 # Local model
 
-The local model is Gemma 4 E2B — Google's 2-billion parameter Gemma 4 model,
-converted to CoreML format and optimised to run on Apple's Neural Engine (ANE).
-To fit within the ANE's memory constraints, the model has been split into
-several chunks. Each chunk is small enough to be compiled and executed on the
-Neural Engine, which gives fast, low-power inference without requiring a GPU or
-server connection.
+The local model is Gemma 4 E2B — Google's instruction-tuned Gemma 4 model — run
+fully on device through Google's [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM)
+runtime. Inference uses the GPU/Metal backend with a quantization-aware-trained
+(QAT, 2/4/8-bit) mobile build, giving fast on-device generation with no server
+connection.
 
-## ANE specialisation
+The runtime wrapper is `GemmaRuntime`; it is model-agnostic apart from Gemma's
+sampler defaults and is the natural seam for a future generic LiteRT runtime.
+Gemma's chat formatting lives alongside it: message conversion
+(`GemmaMessageConversion`), the native tool-call wire format (`GemmaToolFormat`),
+and the output filter (`GemmaStreamFilter`).
 
-When the app loads a chunk for the first time, CoreML compiles it into a
-device-specific binary format optimised for the local hardware. This is called
-ANE specialisation. For a model this size it takes several minutes total across
-all chunks.
+## The model file
 
-CoreML caches the result. All subsequent loads of the same chunk on the same
-device return in seconds.
+A single `.litertlm` file (~2.6 GB) is downloaded from the
+[litert-community](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm)
+HuggingFace repo. It is the standard build, which bundles vision and audio
+encoders; the runtime loads those on demand, so they cost nothing while only text
+is used. The app currently uses text only.
 
-## What invalidates the cache?
-
-The cache is tied to the file's location on disk, its metadata, and the OS
-build. It is discarded when:
-
-| Event | Effect |
+| | |
 |---|---|
-| App relaunch / device reboot | Cache survives |
-| New build from Xcode (development) | Always re-specialises |
-| App Store / TestFlight update | Re-specialises (iOS moves the app to a new path) |
-| OS update | Re-specialises (cache is keyed on OS build) |
-| Low-disk eviction | Cache may be purged |
+| Download | `GemmaModelDownloader` — background `URLSession`, resumable, parallel transfers |
+| Location | `~/Documents/Models/gemma4-e2b-litertlm/` |
+| Backup | Excluded from iCloud/iTunes backups (re-downloadable) |
+| Device gate | Requires ≥ 5 GB RAM (iPhone 15 or later); checked before download and load |
 
-## The prewarm pass
+## Engine cache
 
-To avoid blocking the user's first prompt after an update, the app runs a
-prewarm pass in the foreground when the app version changes.
+On first load LiteRT-LM compiles its engine graph and caches it under
+`~/Library/Caches/litert-lm/`. The first load takes a few seconds; subsequent
+loads on the same device return quickly from the cache. The model is loaded
+lazily on the first generation request, not at app startup.
 
-The pass loads and immediately discards each chunk — one at a time, so memory
-stays low. It does not load the tokeniser, embeddings, or KV cache. The goal
-is only to populate CoreML's cache before the user asks a question.
+Multi-token prediction (speculative decoding) is enabled when the build supports
+it; if engine initialization fails with it on, the runtime retries once without
+it so a model lacking MTP heads still loads.
 
-If the user sends a prompt while the prewarm is still running, the app waits
-for it to finish and then loads the model normally — by which point most chunks
-are already cached and the load completes in seconds.
+## Generation
 
-The pass runs only once per app version. If the user backgrounds the app
-mid-pass, it is cancelled and resumes on the next foreground activation —
-chunks already specialised remain in the cache and are skipped on the next run.
+`GemmaRuntime` keeps a persistent LiteRT `Conversation` so prefix caching applies
+across turns: when a request simply appends to the history already held, only the
+new turn is sent and the prior KV cache is reused. When the history diverges (new
+chat, edit, or regenerate) the conversation is rebuilt. If the history is too long
+for the context window, the oldest non-system turns are dropped and the
+conversation rebuilt until it fits.
+
+| Setting | Value |
+|---|---|
+| Context window | 8192 tokens |
+| Max output | 512 tokens |
+| Sampler | temperature 1.0, top-p 0.95, top-k 64 (Gemma 4 model-card defaults) |
+
+Output streams as it is generated. The stream is always finalized on completion
+so the chat layer can commit the message; cancelling the consuming task stops
+native decoding promptly.
+
+LiteRT allows only **one session per engine**, so all generation is serialized
+through `LiteRTSessionGate` — concurrent requests would otherwise fail with
+`A session already exists`. Requests carry a priority (`LocalGeneration.priority`,
+propagated as a task-local): a foreground chat send (`.interactive`) preempts and
+cancels running or queued `.background` work (compaction, title generation) so the
+user is never blocked behind best-effort jobs.
+
+## Memory eviction
+
+The engine weights (~2 GB on the GPU) and the conversation's KV cache stay
+resident only while the model is in use. `GemmaModelManager` tracks in-flight
+generations and, once nothing is running, arms an idle timer (90 s); when it
+fires it fully unloads the engine — freeing both the weights and the KV cache.
+Any generation cancels the timer, so an active chat or live call keeps the model
+loaded. The model reloads lazily (a few seconds) on the next request. The manager
+also unloads immediately on system memory pressure when idle. Without this the
+session would sit in memory for the life of the app and grow with each turn.
+
+## Tool calls
+
+Gemma does not use JSON tool calls. Tools are declared, called, and answered using
+custom markers (`<|tool>`, `<|tool_call>`, `<|tool_response>`) and a custom
+quoting token. `GemmaToolFormat` translates between that format and the app's
+OpenAI-style `ToolCall`/JSON, and `GemmaStreamFilter` holds back any trailing
+characters that might be the start of a marker so partial markers are never shown
+as prose.
 
 ## Observability
 
-Per-chunk timings are logged at the `info` level. A cold chunk (first run after
-an update) takes tens of seconds; a cached chunk takes milliseconds:
+Per-turn throughput is logged at the `info` level. Note the count is of stream
+chunks, not tokens — with multi-token prediction a chunk may carry several
+tokens:
 
 ```
-GemmaRuntime: prewarm chunk1 in 45321ms   ← cold
-GemmaRuntime: prewarm chunk2 in 12ms      ← cached
+Gemma: 128 chunks, 2100ms (61.0 chunks/s)
 ```
-
-The same format is used during a real model load, making it straightforward to
-confirm whether a given load hit the cache.
-
-## iCloud backup
-
-The model directory is excluded from iCloud and iTunes backups. The ~3.8 GB of
-weights are re-downloadable and do not belong in a backup.

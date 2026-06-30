@@ -10,6 +10,10 @@ struct WebSearchTool: Tool {
 
     let name = "web_search"
     var isSmallContext: Bool = false
+
+    /// Maximum content length in small-context mode (~375 tokens).
+    /// Enough for a useful search digest without filling Gemma's 8k window.
+    static let smallContextOutputLength = 1500
     var displayName: String {
         Self.capability.displayName
     }
@@ -76,9 +80,11 @@ struct WebSearchTool: Tool {
             var content = json
             var warnings: [String] = []
 
-            if content.count > HTMLSanitizer.maxOutputLength {
-                content = String(content.prefix(HTMLSanitizer.maxOutputLength))
-                warnings.append("Content truncated to \(HTMLSanitizer.maxOutputLength) characters.")
+            let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
+                .maxOutputLength
+            if content.count > limit {
+                content = String(content.prefix(limit))
+                warnings.append("Content truncated to \(limit) characters.")
             }
 
             let result: [String: Any] = [
@@ -135,9 +141,11 @@ struct WebSearchTool: Tool {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
             }
 
-            if text.count > HTMLSanitizer.maxOutputLength {
-                text = String(text.prefix(HTMLSanitizer.maxOutputLength))
-                warnings.append("Content truncated to \(HTMLSanitizer.maxOutputLength) characters.")
+            let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
+                .maxOutputLength
+            if text.count > limit {
+                text = String(text.prefix(limit))
+                warnings.append("Content truncated to \(limit) characters.")
             }
 
             let result: [String: Any] = [

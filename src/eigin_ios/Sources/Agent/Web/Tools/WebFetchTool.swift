@@ -9,6 +9,10 @@ struct WebFetchTool: Tool {
 
     let name = "web_fetch"
     var isSmallContext: Bool = false
+
+    /// Maximum content length in small-context mode (~500 tokens).
+    /// Enough for a key paragraph or article intro without filling Gemma's 8k window.
+    static let smallContextOutputLength = 2000
     var displayName: String {
         Self.capability.displayName
     }
@@ -86,7 +90,12 @@ struct WebFetchTool: Tool {
         if allowed {
             // Site allows bots — fast background fetch, no UI
             do {
-                let (text, warnings) = try await HTMLSanitizer.fetchAndSanitize(url: url)
+                var (text, warnings) = try await HTMLSanitizer.fetchAndSanitize(url: url)
+                if isSmallContext, text.count > Self.smallContextOutputLength {
+                    text = String(text.prefix(Self.smallContextOutputLength))
+                    warnings
+                        .append("Content truncated to \(Self.smallContextOutputLength) characters.")
+                }
                 let result: [String: Any] = ["url": urlString, "content": text]
                 return ToolResult(
                     toolCallID: id,
@@ -123,11 +132,19 @@ struct WebFetchTool: Tool {
         let browsingResult = await onBrowse(request)
 
         switch browsingResult {
-        case .success(let text):
+        case .success(var text):
+            var warnings: [String] = []
+            if isSmallContext, text.count > Self.smallContextOutputLength {
+                text = String(text.prefix(Self.smallContextOutputLength))
+                warnings.append("Content truncated to \(Self.smallContextOutputLength) characters.")
+            }
             let result: [String: Any] = ["url": urlString, "content": text]
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(result: result),
+                content: ToolHelpers.output(
+                    result: result,
+                    warnings: warnings.isEmpty ? nil : warnings
+                ),
                 isError: false
             )
         case .error(let message):

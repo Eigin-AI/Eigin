@@ -41,9 +41,13 @@ struct ConnectionError: Equatable {
                 title = Localized.Model.deviceUnsupportedTitle
                 suggestion = Localized.Model.deviceUnsupportedSuggestion
                 rawDescription = detail
+            case .modelNotDownloaded:
+                title = Localized.Model.NotDownloaded.title
+                suggestion = Localized.Model.NotDownloaded.suggestion
+                rawDescription = error.localizedDescription
             case .modelNotLoaded:
-                title = Localized.Errors.Connection.failed
-                suggestion = error.localizedDescription
+                title = Localized.Model.NotLoaded.title
+                suggestion = Localized.Model.NotLoaded.suggestion
                 rawDescription = error.localizedDescription
             }
             return

@@ -1,16 +1,16 @@
 import Foundation
 
-/// Manages the Gemma 4 E2B CoreML model lifecycle: download, load, unload.
+/// Manages the Gemma 4 E2B model lifecycle: download, load, unload.
 ///
-/// Wraps ``ModelDownloader`` from the CoreML-LLM package for download
-/// and ``GemmaRuntime`` for inference. Conforms to ``OnDemandAsset`` for
-/// the settings download flow.
+/// Wraps ``GemmaModelDownloader`` for fetching the `.litertlm` model file and
+/// ``GemmaRuntime`` (LiteRT-LM) for inference. Conforms to ``OnDemandAsset``
+/// for the settings download flow.
 @MainActor
 @Observable
 final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     static let shared = GemmaModelManager()
 
-    let id = "coreml-gemma"
+    let id = "litert-gemma"
     let displayName = Localized.Model.Gemma4e2b.name
     let downloadDescription = Localized.Onboarding.LocalModel.description
 
@@ -21,7 +21,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private enum Transient: Equatable {
         case idle
         case downloading(Double)
-        case compiling(Double)
+        case preparing
         case failed(String)
     }
 
@@ -30,7 +30,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     var state: AssetState {
         switch transient {
         case .downloading(let p): .downloading(fractionCompleted: p)
-        case .compiling(let p): .compiling(fractionCompleted: p)
+        case .preparing: .compiling(fractionCompleted: 0)
         case .failed(let m): .failed(m)
         case .idle:
             if llm != nil { .ready }
@@ -45,27 +45,24 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     private var downloadTask: Task<Void, Never>?
     private var loadTask: Task<Void, Error>?
-    private var prewarmTask: Task<Void, Never>?
     private let declinedKey = StorageKey.gemmaDeclined
 
-    /// The model info from the CoreML-LLM library.
+    /// The model info describing the `.litertlm` artifact to fetch.
     private let localModelInfo = GemmaModelDownloader.ModelInfo.default
 
+    /// Minimum device RAM to run the local model. A real session — long-context
+    /// conversation plus a concurrently-loaded voice model — sits around 3 GB of
+    /// resident memory, so a 4 GB device (e.g. iPhone 13) would be fully consumed
+    /// and jetsam-killed. The 5 GB gate keeps the 6 GB iPhone 15 in (its reported
+    /// physicalMemory is comfortably above this) while screening out 4 GB
+    /// devices, leaving headroom for the full workload.
     private static let requiredRAMBytes: UInt64 = 5 * 1_073_741_824
 
     private let deviceInfo: any DeviceInfoService
-    /// Injected so tests can replace the real `GemmaRuntime.prewarm` call.
-    let prewarmRunner: @Sendable (URL, @escaping @Sendable (Int, Int) -> Void) async throws -> Void
 
-    init(
-        deviceInfo: any DeviceInfoService = DefaultDeviceInfoService(),
-        prewarmRunner: (@Sendable (URL, @escaping @Sendable (Int, Int) -> Void) async throws
-            -> Void)? = nil
-    ) {
+    init(deviceInfo: any DeviceInfoService = DefaultDeviceInfoService()) {
         self.deviceInfo = deviceInfo
-        self.prewarmRunner = prewarmRunner ?? { dir, progress in
-            try await GemmaRuntime.prewarm(from: dir, onProgress: progress)
-        }
+        startMemoryPressureMonitor()
     }
 
     var hasBeenDeclined: Bool {
@@ -79,8 +76,8 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     }
 
     /// Multiplier applied to the estimated model size to reserve enough free
-    /// space for both downloading and ANE compilation. Increase if users hit
-    /// storage errors during first-run preparation.
+    /// space for the download plus LiteRT's compiled-graph cache. Increase if
+    /// users hit storage errors during first-run preparation.
     static let storageHeadroomFactor: Double = 2.0
 
     /// Whether the model is fully downloaded and ready to use.
@@ -176,6 +173,14 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
                 try Task.checkCancellation()
 
+                // A freshly downloaded artifact invalidates any previously
+                // compiled engine graph. LiteRT keys its cache and never evicts
+                // stale entries, so clear the cache now to avoid accumulating
+                // multiple GB of orphaned graphs across model updates. The next
+                // load recompiles in a few seconds. The engine is not loaded on
+                // the download path, so nothing holds these files.
+                try? FileManager.default.removeItem(at: GemmaRuntime.engineCacheDirectory)
+
                 transient = .idle
             } catch is CancellationError {
                 transient = .idle
@@ -189,130 +194,34 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
-    // MARK: - Prewarm
+    // MARK: - Prepare
 
-    /// Trigger a low-memory ANE specialisation pass if the running app version
-    /// has not yet been warmed.
-    ///
-    /// Safe to call on every foreground activation — the version guard ensures
-    /// it runs at most once per build. The pass releases each chunk immediately
-    /// after specialisation, so peak memory stays ≈ one chunk (~500 MB) rather
-    /// than the full ~4 GB a real load would require.
-    func prewarmIfNeeded() {
-        // Version guard: skip if this build has already been fully warmed.
-        let currentVersion = deviceInfo.appBuildVersion()
-        let warmedVersion = UserDefaults.standard
-            .string(forKey: StorageKey.gemmaPrewarmedBuild) ?? ""
-        guard currentVersion != warmedVersion else { return }
-
-        // State guards: must be downloaded, idle, and not in use.
-        guard isReady,
-              llm == nil,
-              loadTask == nil,
-              prewarmTask == nil,
-              !state.isDownloading,
-              !state.isCompiling
-        else { return }
-
-        guard let modelDir = GemmaModelDownloader.shared.localModelURL(for: localModelInfo)?
-            .deletingLastPathComponent()
-        else { return }
-
-        transient = .compiling(0)
-
-        let totalChunks = GemmaModelLayout.entries(in: modelDir).count
-
-        prewarmTask = Task {
-            do {
-                try await prewarmRunner(modelDir) { @Sendable [weak self] done, _ in
-                    Task { @MainActor [weak self] in
-                        guard let self else { return }
-                        transient = .compiling(
-                            Double(done) / Double(max(totalChunks, 1))
-                        )
-                    }
-                }
-                // Mark this build as fully warmed.
-                UserDefaults.standard.set(
-                    currentVersion,
-                    forKey: StorageKey.gemmaPrewarmedBuild
-                )
-                AppLogger.info(
-                    "GemmaRuntime: prewarm complete for build \(public: currentVersion)",
-                    category: .chat
-                )
-            } catch is CancellationError {
-                // Interrupted by backgrounding or user action — will retry next foreground.
-            } catch {
-                AppLogger.error(
-                    "GemmaRuntime: prewarm failed: \(private: error.localizedDescription)",
-                    category: .chat
-                )
-            }
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                prewarmTask = nil
-                transient = .idle
-            }
-        }
-    }
-
-    // MARK: - Compile
-
-    /// Load and ANE-compile the downloaded model. First run takes 1-2 minutes;
-    /// subsequent runs use CoreML's cached compilation and complete in seconds.
+    /// Initialize the LiteRT engine for the downloaded model. Triggered when the
+    /// model lands on disk; completes in seconds (LiteRT caches its compiled
+    /// graph under the engine's `cacheDir`).
     func compile() async {
         guard state == .downloaded else { return }
 
-        // Storage was already verified at download time. Rechecking here would
-        // incorrectly fail on devices where free space is tight but the weights
-        // are already on disk and taking up that space.
-
-        transient = .compiling(0)
-
-        URLCache.shared.removeAllCachedResponses()
-
+        transient = .preparing
         do {
-            let info = localModelInfo
-            let compiled = try await GemmaRuntime.load(
-                model: info,
-                onChunkLoaded: { @Sendable [weak self] loaded, total in
-                    Task { @MainActor [weak self] in
-                        self?.transient = .compiling(
-                            Double(loaded) / Double(max(total, 1))
-                        )
-                    }
-                }
-            )
-            compiled.reset()
-            llm = compiled
+            let runtime = try await loadRuntime()
+            runtime.reset()
+            llm = runtime
             transient = .idle
         } catch is CancellationError {
             transient = .idle
         } catch {
             transient = .failed(error.localizedDescription)
             AppLogger.error(
-                "Gemma model compilation failed: \(private: error.localizedDescription)",
+                "Gemma model preparation failed: \(private: error.localizedDescription)",
                 category: .chat
             )
-        }
-    }
-
-    /// Cancel only the prewarm pass. Called when the app moves to the background;
-    /// the pass will resume on the next foreground activation.
-    func cancelPrewarm() {
-        prewarmTask?.cancel()
-        prewarmTask = nil
-        if case .compiling = transient {
-            transient = .idle
         }
     }
 
     func cancel() {
         downloadTask?.cancel()
         downloadTask = nil
-        prewarmTask?.cancel()
-        prewarmTask = nil
         GemmaModelDownloader.shared.cancelDownload()
         transient = .idle
     }
@@ -321,6 +230,11 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         cancel()
         unload()
         try? GemmaModelDownloader.shared.delete(localModelInfo)
+        // LiteRT never prunes its compiled-graph cache (multiple GB). Clear it
+        // here so deleting the model actually reclaims the space rather than
+        // orphaning the cache in Library/Caches. The engine is unloaded above,
+        // so no live handle holds these files.
+        try? FileManager.default.removeItem(at: GemmaRuntime.engineCacheDirectory)
         transient = .idle
     }
 
@@ -331,11 +245,10 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     // MARK: - Memory lifecycle
 
     func load() async throws {
-        // If a prewarm is in flight, wait for it to finish. The model will then
-        // be cached and the real load below completes in seconds.
-        if let warmTask = prewarmTask {
-            await warmTask.value
-        }
+        // Any (re)load is activity — stop a pending idle eviction from firing
+        // while we bring the engine back up.
+        idleEvictionTask?.cancel()
+        idleEvictionTask = nil
 
         if state == .downloaded {
             await compile()
@@ -348,12 +261,8 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
             return
         }
 
-        AppLogger.info(
-            "GemmaRuntime: Starting model load (includes CoreML device-specific compilation on first run after rebuild)",
-            category: .chat
-        )
+        AppLogger.info("GemmaRuntime: starting LiteRT model load", category: .chat)
         isLoading = true
-        let info = localModelInfo
         let task = Task { [weak self] in
             guard let self else { return }
             defer {
@@ -364,11 +273,10 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
             }
 
             let start = ContinuousClock.now
-            let loaded = try await GemmaRuntime.load(model: info)
-            let loadMs = start.duration(to: .now).components.seconds * 1000
-                + Int64(start.duration(to: .now).components.attoseconds / 1_000_000_000_000_000)
+            let loaded = try await loadRuntime()
+            let loadMs = start.duration(to: .now).milliseconds
             AppLogger.info(
-                "GemmaRuntime: Model loaded in \(public: loadMs)ms — \(public: loaded.modelName), \(public: loaded.contextLength) ctx",
+                "GemmaRuntime: model loaded in \(public: loadMs)ms — \(public: loaded.modelName), \(public: loaded.contextLength) ctx",
                 category: .chat
             )
 
@@ -381,12 +289,84 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     }
 
     func unload() {
-        prewarmTask?.cancel()
-        prewarmTask = nil
+        idleEvictionTask?.cancel()
+        idleEvictionTask = nil
         loadTask?.cancel()
         loadTask = nil
         llm?.reset()
         llm = nil
         isLoading = false
+    }
+
+    // MARK: - Idle eviction
+
+    /// Idle period after which the engine is fully unloaded so its weights and KV
+    /// cache stop occupying memory while the user is away. Any generation resets
+    /// this, so an active chat or live call keeps the model resident.
+    private static let idleUnloadSeconds = 90
+
+    /// Number of generations currently running or queued against the engine.
+    /// The engine is only evicted while this is zero.
+    private var activeGenerationCount = 0
+    private var idleEvictionTask: Task<Void, Never>?
+    private var memoryPressureSource: DispatchSourceMemoryPressure?
+
+    /// Mark the start of a generation so idle eviction can't unload the engine
+    /// underneath it. Always pair with ``endGeneration()``.
+    func beginGeneration() {
+        activeGenerationCount += 1
+        idleEvictionTask?.cancel()
+        idleEvictionTask = nil
+    }
+
+    /// Mark the end of a generation; once nothing else is running, arm the idle
+    /// timer that unloads the engine.
+    func endGeneration() {
+        activeGenerationCount = max(0, activeGenerationCount - 1)
+        guard activeGenerationCount == 0 else { return }
+        scheduleIdleEviction()
+    }
+
+    private func scheduleIdleEviction() {
+        idleEvictionTask?.cancel()
+        idleEvictionTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.idleUnloadSeconds))
+            guard let self, !Task.isCancelled else { return }
+            guard activeGenerationCount == 0, llm != nil else { return }
+            AppLogger.info(
+                "Gemma: idle for \(public: Self.idleUnloadSeconds)s — unloading engine",
+                category: .chat
+            )
+            unload()
+        }
+    }
+
+    /// Unload immediately on system memory pressure (when nothing is running).
+    private func startMemoryPressureMonitor() {
+        let source = DispatchSource.makeMemoryPressureSource(
+            eventMask: [.warning, .critical], queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.activeGenerationCount == 0, self.llm != nil else { return }
+                AppLogger.warning("Gemma: memory pressure — unloading engine", category: .chat)
+                self.unload()
+            }
+        }
+        source.resume()
+        memoryPressureSource = source
+    }
+
+    // MARK: - Runtime construction
+
+    /// Build a ``GemmaRuntime`` for the downloaded `.litertlm` file, sized to the
+    /// catalog's context window (the single source of truth feeding
+    /// `EngineConfig.maxNumTokens`).
+    private func loadRuntime() async throws -> GemmaRuntime {
+        guard let modelURL = GemmaModelDownloader.shared.localModelURL(for: localModelInfo) else {
+            throw LocalClientError.modelNotLoaded
+        }
+        let contextWindow = KnownModelCatalog.lookup("gemma-4-e2b")?.contextWindow ?? 8192
+        return try await GemmaRuntime.load(modelPath: modelURL, contextWindow: contextWindow)
     }
 }

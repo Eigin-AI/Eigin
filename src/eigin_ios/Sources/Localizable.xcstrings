@@ -3999,6 +3999,108 @@
         }
       }
     },
+    "model.notDownloaded" : {
+      "comment" : "Error description when the on-device model files are not present on disk.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den lokale model er ikke downloadet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The local model isn't downloaded."
+          }
+        }
+      }
+    },
+    "model.notDownloaded.suggestion" : {
+      "comment" : "Suggestion in the chat error card guiding the user to download the on-device model from settings.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gå til Indstillinger › Forbindelser for at downloade den lokale model, eller skift til en cloud-udbyder for at fortsætte med at chatte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to Settings › Connections to download the local model, or switch to a cloud AI provider to keep chatting."
+          }
+        }
+      }
+    },
+    "model.notDownloaded.title" : {
+      "comment" : "Title of the chat error card shown when the on-device model isn't downloaded.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokal model skal downloades"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local model needs downloading"
+          }
+        }
+      }
+    },
+    "model.notLoaded" : {
+      "comment" : "Error description when the on-device model is present but couldn't be loaded into memory.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den lokale model kunne ikke indlæses."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The local model couldn't be loaded."
+          }
+        }
+      }
+    },
+    "model.notLoaded.suggestion" : {
+      "comment" : "Suggestion in the chat error card when the on-device model failed to load, guiding the user to retry or re-download.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prøv igen. Hvis det fortsætter, så download modellen igen under Indstillinger › Forbindelser."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again. If it keeps happening, re-download the model in Settings › Connections."
+          }
+        }
+      }
+    },
+    "model.notLoaded.title" : {
+      "comment" : "Title of the chat error card shown when the on-device model failed to load.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke indlæse lokal model"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load local model"
+          }
+        }
+      }
+    },
     "model.picker.allModels" : {
       "comment" : "Section header for all models",
       "localizations" : {

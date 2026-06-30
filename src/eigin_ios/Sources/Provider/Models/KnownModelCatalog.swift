@@ -1004,16 +1004,16 @@ enum KnownModelCatalog {
             isRecommended: true
         ),
 
-        // Gemma (CoreML/ANE)
+        // Gemma (LiteRT-LM / GPU)
         KnownModelEntry(
             pattern: "gemma-4-e2b",
             displayName: "Gemma 4 E2B",
             family: .gemma,
-            contextWindow: 1024,
+            contextWindow: 8192,
             maxOutput: 512,
             inputCostPerMillion: nil,
             outputCostPerMillion: nil,
-            supportsToolCall: false, // Model supports this, but is unreliable
+            supportsToolCall: true,
             supportsReasoning: false,
             supportsVision: false, // Model supports this, can add later
             isRecommended: true

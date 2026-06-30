@@ -19,4 +19,18 @@ struct ConnectionErrorTests {
         // render it as a structured field breakdown.
         #expect(error.rawDescription == payload)
     }
+
+    @Test func modelNotDownloadedMapsToActionableCard() {
+        let error = ConnectionError(from: LocalClientError.modelNotDownloaded)
+
+        #expect(error.title == Localized.Model.NotDownloaded.title)
+        #expect(error.suggestion == Localized.Model.NotDownloaded.suggestion)
+    }
+
+    @Test func modelNotLoadedMapsToRetryCard() {
+        let error = ConnectionError(from: LocalClientError.modelNotLoaded)
+
+        #expect(error.title == Localized.Model.NotLoaded.title)
+        #expect(error.suggestion == Localized.Model.NotLoaded.suggestion)
+    }
 }

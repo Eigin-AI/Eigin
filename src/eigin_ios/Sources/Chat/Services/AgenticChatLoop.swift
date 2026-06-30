@@ -184,6 +184,40 @@ final class AgenticChatLoop {
         var currentTools = tools
         var currentExecutor: ToolExecutor = toolExecutor
 
+        // Build an inline runner for local models. The runner executes each tool
+        // call mid-stream (inside LiteRT's loop), records the round into
+        // `produced` so history is persisted, and returns the result to LiteRT
+        // so it can continue generating. For cloud providers the runner is never
+        // invoked — the stream surfaces .toolCall events and the loop below
+        // drives execution after each round.
+        let inlineRunner = InlineToolRunner { [weak self] call in
+            guard let self else {
+                return ToolResult(toolCallID: call.id, content: "{}", isError: true)
+            }
+            let result = await executeToolCall(call, agent: agent, executor: currentExecutor)
+            // Record the assistant turn (with tool calls) and the tool result so
+            // history matches the cloud path and the turn persists on completion.
+            //
+            // Known fidelity tradeoff: the recorded assistant message has
+            // content: nil, while any prose the model emitted *before* this tool
+            // call is accumulated by the throttler into the turn's final
+            // assistant message. So pre-call prose lands after the tool result in
+            // replayed history. This is valid and replayable; we accept it rather
+            // than splitting the throttled prose stream at tool-call boundaries
+            // we can't cleanly observe from inside LiteRT's loop.
+            let assistantMsg = ChatMessage(role: "assistant", content: nil, toolCalls: [call])
+            let toolMsg = ChatMessage(
+                role: "tool",
+                content: result.content,
+                toolCallID: result.toolCallID,
+                name: call.function.name
+            )
+            produced.append(assistantMsg)
+            produced.append(toolMsg)
+            safeProducedCount = produced.count
+            return result
+        }
+
         for round in 0 ..< maxRounds {
             roundsExecuted = round + 1
             if shouldStop { return [] }
@@ -198,7 +232,8 @@ final class AgenticChatLoop {
                 agent: agent,
                 messages: allMessages,
                 tools: currentTools,
-                cacheKey: cacheKey
+                cacheKey: cacheKey,
+                inlineToolRunner: inlineRunner
             )
 
             contentBuffer = ""
@@ -293,102 +328,9 @@ final class AgenticChatLoop {
                 for call in pendingToolCalls {
                     if shouldStop { return [] }
 
-                    let permission = permissionPolicy.permissionLevel(for: call.function.name)
-
-                    let eventID = call.id
-                    let toolName = call.function.name
-                    toolEvents.append(
-                        ToolEvent(
-                            id: eventID, toolName: toolName, status: .executing,
-                            arguments: call.function.arguments
-                        )
+                    let result = await executeToolCall(
+                        call, agent: agent, executor: currentExecutor
                     )
-
-                    let executionMode = currentExecutor.executionMode(for: call.function.name)
-                    let result: ToolResult
-                    switch permission {
-                    case .always:
-                        switch executionMode {
-                        case .interactive:
-                            isAwaitingUserInteraction = true
-                            result = await currentExecutor.execute(call, agent: agent)
-                            isAwaitingUserInteraction = false
-                        case .background:
-                            result = await executeWithTimeout(
-                                call, agent: agent, executor: currentExecutor
-                            )
-                        }
-                    case .never:
-                        result = ToolResult(
-                            toolCallID: call.id,
-                            content: ToolHelpers
-                                .output(errors: [Localized.Permission.toolDeniedByPolicy]),
-                            isError: true
-                        )
-                        updateToolEvent(id: eventID, status: .denied)
-                    case .ask:
-                        if let agentPolicy = permissionPolicy as? AgentPermissionPolicy,
-                           !agentPolicy.canPromptUser
-                        {
-                            result = ToolResult(
-                                toolCallID: call.id,
-                                content: ToolHelpers.output(errors: [
-                                    "Permission required. Ask the user to open the app to grant permission for this action.",
-                                ]),
-                                isError: true
-                            )
-                            updateToolEvent(id: eventID, status: .denied)
-                        } else {
-                            let capabilities = ToolRegistry.capabilities(for: toolName)
-                            pendingPermission = PermissionRequest(
-                                id: call.id,
-                                toolName: toolName,
-                                toolDisplayName: ToolRegistry.displayName(for: toolName)
-                            )
-                            updateToolEvent(id: eventID, status: .awaitingPermission)
-
-                            let response = await withCheckedContinuation {
-                                (continuation: CheckedContinuation<PermissionResponse, Never>) in
-                                self.permissionContinuation = continuation
-                            }
-                            pendingPermission = nil
-
-                            switch response {
-                            case .allowOnce:
-                                result = await executeWithTimeout(
-                                    call, agent: agent, executor: currentExecutor
-                                )
-                            case .allowForChat:
-                                onChatGrant?(capabilities)
-                                if var agentPolicy = permissionPolicy as? AgentPermissionPolicy {
-                                    agentPolicy.grantForChat(capabilities)
-                                    permissionPolicy = agentPolicy
-                                }
-                                result = await executeWithTimeout(
-                                    call, agent: agent, executor: currentExecutor
-                                )
-                            case .deny:
-                                result = ToolResult(
-                                    toolCallID: call.id,
-                                    content: ToolHelpers.output(errors: ["User denied this action."]
-                                    ),
-                                    isError: true
-                                )
-                                updateToolEvent(id: eventID, status: .denied)
-                            }
-                        }
-                    }
-
-                    AppLogger.debug(
-                        "Tool \(public: toolName) result: isError=\(public: result.isError), content=\(private: result.content.prefix(100))",
-                        category: .chat
-                    )
-
-                    if result.isError {
-                        updateToolEvent(id: eventID, status: .error(result.content))
-                    } else {
-                        updateToolEvent(id: eventID, status: .completed)
-                    }
 
                     let toolMessage = ChatMessage(
                         role: "tool",
@@ -580,13 +522,18 @@ final class AgenticChatLoop {
     /// provider. A retired or renamed model surfaces as a model-not-found error; we refresh the
     /// provider's catalog, re-pick the best available model, and retry so the turn can proceed
     /// without the user touching settings.
+    ///
+    /// `inlineToolRunner` is forwarded to local model clients so they can execute
+    /// tools mid-stream. Cloud clients ignore it via the default implementation
+    /// on `ChatService`.
     private func openStream(
         chatService: ChatService,
         provider: Provider,
         agent: Agent,
         messages: [ChatMessage],
         tools: [ToolDefinition]?,
-        cacheKey: String?
+        cacheKey: String?,
+        inlineToolRunner: InlineToolRunner? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         do {
             return try await chatService.chatCompletionEventStream(
@@ -595,7 +542,8 @@ final class AgenticChatLoop {
                 messages: messages,
                 model: agent.model,
                 tools: tools,
-                cacheKey: cacheKey
+                cacheKey: cacheKey,
+                inlineToolRunner: inlineToolRunner
             )
         } catch {
             guard !didAttemptModelRecovery,
@@ -610,7 +558,8 @@ final class AgenticChatLoop {
                 messages: messages,
                 model: agent.model,
                 tools: tools,
-                cacheKey: cacheKey
+                cacheKey: cacheKey,
+                inlineToolRunner: inlineToolRunner
             )
         }
     }
@@ -646,6 +595,108 @@ final class AgenticChatLoop {
             }
             try? await Task.sleep(for: .milliseconds(50))
         }
+    }
+
+    /// Executes a single tool call: resolves permission (prompting the user when
+    /// the policy says `.ask` and prompting is allowed), runs the tool, and
+    /// updates the chat-feed ``ToolEvent``. Returns the result; the caller is
+    /// responsible for appending the resulting tool ``ChatMessage`` to history.
+    ///
+    /// Used by the cloud loop (after each tool-call round) and by the
+    /// ``InlineToolRunner`` closure (for local models, mid-stream).
+    func executeToolCall(
+        _ call: ToolCall, agent: Agent, executor: ToolExecutor
+    ) async -> ToolResult {
+        let permission = permissionPolicy.permissionLevel(for: call.function.name)
+        let eventID = call.id
+        let toolName = call.function.name
+        toolEvents.append(
+            ToolEvent(
+                id: eventID, toolName: toolName, status: .executing,
+                arguments: call.function.arguments
+            )
+        )
+
+        let executionMode = executor.executionMode(for: call.function.name)
+        let result: ToolResult
+        switch permission {
+        case .always:
+            switch executionMode {
+            case .interactive:
+                isAwaitingUserInteraction = true
+                result = await executor.execute(call, agent: agent)
+                isAwaitingUserInteraction = false
+            case .background:
+                result = await executeWithTimeout(call, agent: agent, executor: executor)
+            }
+        case .never:
+            result = ToolResult(
+                toolCallID: call.id,
+                content: ToolHelpers
+                    .output(errors: [Localized.Permission.toolDeniedByPolicy]),
+                isError: true
+            )
+            updateToolEvent(id: eventID, status: .denied)
+        case .ask:
+            if let agentPolicy = permissionPolicy as? AgentPermissionPolicy,
+               !agentPolicy.canPromptUser
+            {
+                result = ToolResult(
+                    toolCallID: call.id,
+                    content: ToolHelpers.output(errors: [
+                        "Permission required. Ask the user to open the app to grant permission for this action.",
+                    ]),
+                    isError: true
+                )
+                updateToolEvent(id: eventID, status: .denied)
+            } else {
+                let capabilities = ToolRegistry.capabilities(for: toolName)
+                pendingPermission = PermissionRequest(
+                    id: call.id,
+                    toolName: toolName,
+                    toolDisplayName: ToolRegistry.displayName(for: toolName)
+                )
+                updateToolEvent(id: eventID, status: .awaitingPermission)
+
+                let response = await withCheckedContinuation {
+                    (continuation: CheckedContinuation<PermissionResponse, Never>) in
+                    self.permissionContinuation = continuation
+                }
+                pendingPermission = nil
+
+                switch response {
+                case .allowOnce:
+                    result = await executeWithTimeout(call, agent: agent, executor: executor)
+                case .allowForChat:
+                    onChatGrant?(capabilities)
+                    if var agentPolicy = permissionPolicy as? AgentPermissionPolicy {
+                        agentPolicy.grantForChat(capabilities)
+                        permissionPolicy = agentPolicy
+                    }
+                    result = await executeWithTimeout(call, agent: agent, executor: executor)
+                case .deny:
+                    result = ToolResult(
+                        toolCallID: call.id,
+                        content: ToolHelpers.output(errors: ["User denied this action."]),
+                        isError: true
+                    )
+                    updateToolEvent(id: eventID, status: .denied)
+                }
+            }
+        }
+
+        AppLogger.debug(
+            "Tool \(public: toolName) result: isError=\(public: result.isError), content=\(private: result.content.prefix(100))",
+            category: .chat
+        )
+
+        if result.isError {
+            updateToolEvent(id: eventID, status: .error(result.content))
+        } else {
+            updateToolEvent(id: eventID, status: .completed)
+        }
+
+        return result
     }
 
     private func executeWithTimeout(

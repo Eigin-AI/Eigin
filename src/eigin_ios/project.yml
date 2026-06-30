@@ -20,6 +20,11 @@ packages:
   Factory:
     url: https://github.com/hmlongco/Factory
     from: "2.4.0"
+  LiteRTLM:
+    url: https://github.com/google-ai-edge/LiteRT-LM
+    # Pinned by revision (v0.12.0): the package ships unsafe build flags, which
+    # SPM only permits for revision/branch dependencies, not versioned ones.
+    revision: ffed38adbc33509480b5340e5173638bc20a68ff
 
 schemes:
   Eigin:
@@ -60,6 +65,7 @@ targets:
       - package: swift-transformers
         product: Tokenizers
       - package: Factory
+      - package: LiteRTLM
       - framework: Frameworks/FirmFFI.xcframework
         embed: false
     info:
@@ -128,6 +134,7 @@ targets:
       - package: swift-transformers
         product: Tokenizers
       - package: Factory
+      - package: LiteRTLM
       - framework: Frameworks/FirmFFI.xcframework
         embed: false
     info:

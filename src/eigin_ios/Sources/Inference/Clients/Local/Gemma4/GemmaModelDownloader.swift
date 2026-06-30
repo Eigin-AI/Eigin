@@ -3,8 +3,9 @@ import Foundation
 import UIKit
 #endif
 
-/// Downloads and caches CoreML models with background URLSession and pause/resume support.
-/// Uses up to 4 concurrent connections for faster HuggingFace downloads.
+/// Downloads and caches the on-device model with a background URLSession and
+/// pause/resume support. Uses up to 4 concurrent connections for faster
+/// HuggingFace downloads.
 @Observable
 public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     public static let shared = GemmaModelDownloader()
@@ -36,6 +37,9 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     private static let sessionIdentifier = AppKeys.downloadSessionIdentifier
 
+    /// The single `.litertlm` artifact that makes up the model.
+    static let modelFileName = "gemma-4-E2B-it.litertlm"
+
     // Parallel download state
     private let maxConcurrentDownloads = 4
     var nextFileIndex = 0
@@ -57,30 +61,28 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         public let size: String
         public let downloadURL: String
         public let folderName: String
-        public let includeMultimodal: Bool
 
         public init(
             id: String,
             name: String,
             size: String,
             downloadURL: String,
-            folderName: String,
-            includeMultimodal: Bool = false
+            folderName: String
         ) {
             self.id = id
             self.name = name
             self.size = size
             self.downloadURL = downloadURL
             self.folderName = folderName
-            self.includeMultimodal = includeMultimodal
         }
 
-        /// Gemma 4 E2B — text-only, ~3.8 GB, ANE-optimized.
+        /// Gemma 4 E2B — QAT (2/4/8-bit) mobile build for LiteRT-LM, ~2.6 GB.
+        /// This is the standard build; its vision/audio encoders are loaded on
+        /// demand by the runtime, so they cost nothing while only text is used.
         public static let gemma4e2b = ModelInfo(
-            id: "gemma4-e2b", name: "Gemma 4 E2B", size: "4 GB",
-            downloadURL: "https://huggingface.co/mlboydaisuke/gemma-4-E2B-coreml/resolve/main",
-            folderName: "gemma4-e2b",
-            includeMultimodal: false
+            id: "gemma4-e2b", name: "Gemma 4 E2B", size: "2.6 GB",
+            downloadURL: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main",
+            folderName: "gemma4-e2b-litertlm"
         )
 
         public static let defaults: [ModelInfo] = [gemma4e2b]
@@ -115,6 +117,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         super.init()
         excludeModelsFromBackup()
         cleanGraveyard()
+        cleanupLegacyCoreMLModel()
         restorePendingDownload()
         let config = URLSessionConfiguration.background(withIdentifier: Self.sessionIdentifier)
         config.isDiscretionary = false
@@ -177,10 +180,6 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     public func isModelComplete(_ model: ModelInfo) -> Bool {
         let dest = modelsDirectory.appendingPathComponent(model.folderName)
         for file in Self.expectedFiles(for: model) {
-            // Files the downloader treats as optional (404 → skipped) must
-            // also be treated as optional here, or a legitimately-complete
-            // download is mis-reported as incomplete forever.
-            if Self.isOptionalMlmodelcFile(file.localPath) { continue }
             let path = dest.appendingPathComponent(file.localPath).path
             guard fileManager.fileExists(atPath: path),
                   let attrs = try? fileManager.attributesOfItem(atPath: path),
@@ -193,64 +192,14 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     }
 
     public func localModelURL(for model: ModelInfo) -> URL? {
-        let dir = modelsDirectory.appendingPathComponent(model.folderName)
-        let chunk1 = dir.appendingPathComponent("chunk1.mlmodelc")
-        if fileManager
-            .fileExists(atPath: chunk1.appendingPathComponent("weights/weight.bin").path)
-        {
-            // Invalidate cache if the chunk's declared ctx doesn't match
-            // model_config.json (e.g., v0.6.0/0.6.1 downloaded 8K chunks but
-            // shipped a 2K model_config). This prevents a load-time error
-            // that would otherwise require the user to manually delete.
-            if isChunkCtxMismatched(modelDir: dir, chunk1Dir: chunk1) {
-                try? fileManager.removeItem(at: dir)
-                return nil
-            }
-            return chunk1
-        }
-        let modelc = dir.appendingPathComponent("model.mlmodelc")
-        if fileManager
-            .fileExists(atPath: modelc.appendingPathComponent("weights/weight.bin").path)
-        {
-            return modelc
-        }
-        let pkg = dir.appendingPathComponent("model.mlpackage")
-        if fileManager
-            .fileExists(atPath: pkg
-                .appendingPathComponent("Data/com.apple.CoreML/weights/weight.bin").path)
-        {
-            return pkg
-        }
-        return nil
-    }
-
-    /// Compare chunk1's declared `causal_mask_full` ctx (from model.mil) against
-    /// model_config.json's context_length. Returns true on mismatch so callers
-    /// can invalidate the cache and force a fresh download.
-    private func isChunkCtxMismatched(modelDir: URL, chunk1Dir: URL) -> Bool {
-        guard let configData = try? Data(contentsOf: modelDir
-            .appendingPathComponent("model_config.json")),
-            let json = try? JSONSerialization.jsonObject(with: configData) as? [String: Any],
-            let expected = json["context_length"] as? Int
-        else {
-            return false // no config to compare against; leave cache alone
-        }
-        let milURL = chunk1Dir.appendingPathComponent("model.mil")
-        guard let mil = try? String(contentsOf: milURL, encoding: .utf8) else {
-            return false
-        }
-        // Look for the causal_mask_full tensor declaration. The shape's last
-        // dimension is ctx: e.g. `tensor<fp16, [1, 1, 1, 2048]> causal_mask_full`.
-        let pattern = #"tensor<fp16,\s*\[\s*1,\s*1,\s*1,\s*(\d+)\s*\]>\s*causal_mask_full"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: mil, range: NSRange(mil.startIndex..., in: mil)),
-              match.numberOfRanges >= 2,
-              let range = Range(match.range(at: 1), in: mil),
-              let actual = Int(mil[range])
-        else {
-            return false
-        }
-        return actual != expected
+        let file = modelsDirectory
+            .appendingPathComponent(model.folderName)
+            .appendingPathComponent(Self.modelFileName)
+        guard fileManager.fileExists(atPath: file.path),
+              let size = (try? fileManager.attributesOfItem(atPath: file.path))?[.size] as? Int64,
+              size > 0
+        else { return nil }
+        return file
     }
 
     /// Download a model, skipping files that already exist on disk.
@@ -287,18 +236,9 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
                 try? fileManager.removeItem(at: dest)
                 try? fileManager.createDirectory(at: dest, withIntermediateDirectories: true)
 
-                if model.downloadURL.contains("huggingface.co") {
-                    buildHuggingFaceFileList(model)
-                } else {
-                    pendingFiles = [DownloadFile(
-                        remotePath: model.downloadURL,
-                        localPath: "__archive.zip",
-                        estimatedSize: 350_000_000
-                    )]
-                    totalBytesForAllFiles = 350_000_000
-                    completedBytes = 0
-                    nextFileIndex = 0
-                }
+                // Models are hosted as individual files on HuggingFace. The
+                // LiteRT-LM model is a single `.litertlm` file fetched directly.
+                buildHuggingFaceFileList(model)
                 fillDownloadSlots()
             }
         }
@@ -403,6 +343,23 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         try? fileManager.removeItem(at: grave) // best-effort; leftovers cleaned next launch
     }
 
+    /// Remove the legacy custom-CoreML Gemma model (chunked `.mlmodelc` engine)
+    /// left by versions before the LiteRT-LM migration. Detected by `chunk1.mlmodelc`
+    /// in the old `gemma4-e2b` folder; evicted via the graveyard so open handles
+    /// from a background session don't block it. The new model lives in a separate
+    /// `gemma4-e2b-litertlm` folder, so this never touches the current download.
+    private func cleanupLegacyCoreMLModel() {
+        let legacyDir = modelsDirectory.appendingPathComponent("gemma4-e2b")
+        let chunk1 = legacyDir.appendingPathComponent("chunk1.mlmodelc")
+        guard fileManager.fileExists(atPath: chunk1.path) else { return }
+        AppLogger.info(
+            "Gemma: removing legacy CoreML model at \(public: legacyDir.lastPathComponent)",
+            category: .chat
+        )
+        try? evictToGraveyard(legacyDir)
+        UserDefaults.standard.removeObject(forKey: StorageKey.gemmaPrewarmedBuild)
+    }
+
     /// Best-effort removal of any graveyard residue from prior sessions.
     /// Called on init — by then the URLSession daemon from the prior app
     /// run has released its file handles, so removeItem usually succeeds.
@@ -440,7 +397,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
             let destFile = dest.appendingPathComponent(file.localPath)
 
             // Skip already-downloaded files
-            if file.localPath != "__archive.zip", fileManager.fileExists(atPath: destFile.path) {
+            if fileManager.fileExists(atPath: destFile.path) {
                 let existingSize = (try? fileManager
                     .attributesOfItem(atPath: destFile.path))?[.size] as? Int64 ?? 0
                 if existingSize > 0 {
@@ -495,20 +452,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     }
 
     private func finishDownload() {
-        guard let model = currentModel, let dest = destDir else { return }
-
-        // Share decode weights with prefill chunks (saves ~1.1 GB)
-        for i in 1 ... 4 {
-            let src = dest.appendingPathComponent("chunk\(i).mlmodelc/weights/weight.bin")
-            let dst = dest.appendingPathComponent("prefill_chunk\(i).mlmodelc/weights/weight.bin")
-            if fileManager.fileExists(atPath: src.path), !fileManager.fileExists(atPath: dst.path) {
-                try? fileManager.createDirectory(
-                    at: dst.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try? fileManager.copyItem(at: src, to: dst)
-            }
-        }
+        guard let model = currentModel else { return }
 
         cleanupPersistedState()
         isDownloading = false
@@ -584,229 +528,14 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
 
     // MARK: - HuggingFace File List
 
-    static func expectedFiles(for model: ModelInfo) -> [DownloadFile] {
-        func mlc(
-            _ remoteDir: String,
-            _ remoteName: String,
-            _ localName: String,
-            weightSize: Int64
-        ) -> [DownloadFile] {
-            [
-                .init(
-                    remotePath: "\(remoteDir)/\(remoteName).mlmodelc/weights/weight.bin",
-                    localPath: "\(localName).mlmodelc/weights/weight.bin",
-                    estimatedSize: weightSize
-                ),
-                .init(
-                    remotePath: "\(remoteDir)/\(remoteName).mlmodelc/coremldata.bin",
-                    localPath: "\(localName).mlmodelc/coremldata.bin",
-                    estimatedSize: 1000
-                ),
-                .init(
-                    remotePath: "\(remoteDir)/\(remoteName).mlmodelc/model.mil",
-                    localPath: "\(localName).mlmodelc/model.mil",
-                    estimatedSize: 450_000
-                ),
-                .init(
-                    remotePath: "\(remoteDir)/\(remoteName).mlmodelc/metadata.json",
-                    localPath: "\(localName).mlmodelc/metadata.json",
-                    estimatedSize: 8000
-                ),
-                .init(
-                    remotePath: "\(remoteDir)/\(remoteName).mlmodelc/analytics/coremldata.bin",
-                    localPath: "\(localName).mlmodelc/analytics/coremldata.bin",
-                    estimatedSize: 250
-                ),
-            ]
-        }
-
-        func prefillMeta(_ remoteName: String, _ localName: String) -> [DownloadFile] {
-            [
-                .init(
-                    remotePath: "prefill/\(remoteName).mlmodelc/coremldata.bin",
-                    localPath: "\(localName).mlmodelc/coremldata.bin",
-                    estimatedSize: 1000
-                ),
-                .init(
-                    remotePath: "prefill/\(remoteName).mlmodelc/model.mil",
-                    localPath: "\(localName).mlmodelc/model.mil",
-                    estimatedSize: 450_000
-                ),
-                .init(
-                    remotePath: "prefill/\(remoteName).mlmodelc/metadata.json",
-                    localPath: "\(localName).mlmodelc/metadata.json",
-                    estimatedSize: 8000
-                ),
-                .init(
-                    remotePath: "prefill/\(remoteName).mlmodelc/analytics/coremldata.bin",
-                    localPath: "\(localName).mlmodelc/analytics/coremldata.bin",
-                    estimatedSize: 250
-                ),
-            ]
-        }
-
-        let chunkFiles = mlc("swa", "chunk1", "chunk1", weightSize: 155_436_864)
-            + mlc("swa", "chunk2", "chunk2", weightSize: 133_963_968)
-            + mlc("swa", "chunk3", "chunk3", weightSize: 325_282_880)
-            + mlc("swa", "chunk4", "chunk4", weightSize: 526_874_880)
-        let prefillFiles = prefillMeta("chunk1", "prefill_chunk1")
-            + prefillMeta("chunk2", "prefill_chunk2")
-            + prefillMeta("chunk3", "prefill_chunk3")
-            + prefillMeta("chunk4", "prefill_chunk4")
-
-        let textFiles: [DownloadFile] = [
+    static func expectedFiles(for _: ModelInfo) -> [DownloadFile] {
+        [
             .init(
-                remotePath: "model_config.json",
-                localPath: "model_config.json",
-                estimatedSize: 500
-            ),
-            .init(
-                remotePath: "hf_model/tokenizer.json",
-                localPath: "hf_model/tokenizer.json",
-                estimatedSize: 30_000_000
-            ),
-            .init(
-                remotePath: "hf_model/tokenizer_config.json",
-                localPath: "hf_model/tokenizer_config.json",
-                estimatedSize: 5000
-            ),
-            .init(
-                remotePath: "hf_model/config.json",
-                localPath: "hf_model/config.json",
-                estimatedSize: 5000
-            ),
-            .init(
-                remotePath: "embed_tokens_q8.bin",
-                localPath: "embed_tokens_q8.bin",
-                estimatedSize: 402_653_184
-            ),
-            .init(
-                remotePath: "embed_tokens_scales.bin",
-                localPath: "embed_tokens_scales.bin",
-                estimatedSize: 524_288
-            ),
-            .init(
-                remotePath: "embed_tokens_per_layer_q8.bin",
-                localPath: "embed_tokens_per_layer_q8.bin",
-                estimatedSize: 2_348_810_240
-            ),
-            .init(
-                remotePath: "embed_tokens_per_layer_scales.bin",
-                localPath: "embed_tokens_per_layer_scales.bin",
-                estimatedSize: 524_288
-            ),
-            .init(
-                remotePath: "per_layer_projection.bin",
-                localPath: "per_layer_projection.bin",
-                estimatedSize: 27_525_120
-            ),
-            .init(
-                remotePath: "per_layer_norm_weight.bin",
-                localPath: "per_layer_norm_weight.bin",
-                estimatedSize: 1024
-            ),
-            .init(
-                remotePath: "swa/cos_sliding.npy",
-                localPath: "cos_sliding.npy",
-                estimatedSize: 4_194_432
-            ),
-            .init(
-                remotePath: "swa/sin_sliding.npy",
-                localPath: "sin_sliding.npy",
-                estimatedSize: 4_194_432
-            ),
-            .init(
-                remotePath: "swa/cos_full.npy",
-                localPath: "cos_full.npy",
-                estimatedSize: 8_388_736
-            ),
-            .init(
-                remotePath: "swa/sin_full.npy",
-                localPath: "sin_full.npy",
-                estimatedSize: 8_388_736
+                remotePath: modelFileName,
+                localPath: modelFileName,
+                estimatedSize: 2_583_691_264
             ),
         ]
-
-        let multimodalFiles: [DownloadFile] = [
-            .init(
-                remotePath: "vision.mlmodelc/weights/weight.bin",
-                localPath: "vision.mlmodelc/weights/weight.bin",
-                estimatedSize: 320_000_000
-            ),
-            .init(
-                remotePath: "vision.mlmodelc/coremldata.bin",
-                localPath: "vision.mlmodelc/coremldata.bin",
-                estimatedSize: 200_000
-            ),
-            .init(
-                remotePath: "vision.mlmodelc/model.mil",
-                localPath: "vision.mlmodelc/model.mil",
-                estimatedSize: 50000
-            ),
-            .init(
-                remotePath: "vision.mlmodelc/metadata.json",
-                localPath: "vision.mlmodelc/metadata.json",
-                estimatedSize: 1000
-            ),
-            .init(
-                remotePath: "vision.mlmodelc/analytics/coremldata.bin",
-                localPath: "vision.mlmodelc/analytics/coremldata.bin",
-                estimatedSize: 1000
-            ),
-            .init(
-                remotePath: "audio.mlmodelc/weights/weight.bin",
-                localPath: "audio.mlmodelc/weights/weight.bin",
-                estimatedSize: 295_373_248
-            ),
-            .init(
-                remotePath: "audio.mlmodelc/coremldata.bin",
-                localPath: "audio.mlmodelc/coremldata.bin",
-                estimatedSize: 1000
-            ),
-            .init(
-                remotePath: "audio.mlmodelc/model.mil",
-                localPath: "audio.mlmodelc/model.mil",
-                estimatedSize: 759_000
-            ),
-            .init(
-                remotePath: "audio.mlmodelc/metadata.json",
-                localPath: "audio.mlmodelc/metadata.json",
-                estimatedSize: 3000
-            ),
-            .init(
-                remotePath: "audio.mlmodelc/analytics/coremldata.bin",
-                localPath: "audio.mlmodelc/analytics/coremldata.bin",
-                estimatedSize: 250
-            ),
-            .init(
-                remotePath: "mel_filterbank.bin",
-                localPath: "mel_filterbank.bin",
-                estimatedSize: 131_584
-            ),
-            .init(
-                remotePath: "audio_config.json",
-                localPath: "audio_config.json",
-                estimatedSize: 500
-            ),
-            .init(
-                remotePath: "output_proj_weight.npy",
-                localPath: "output_proj_weight.npy",
-                estimatedSize: 3_145_856
-            ),
-            .init(
-                remotePath: "output_proj_bias.npy",
-                localPath: "output_proj_bias.npy",
-                estimatedSize: 3200
-            ),
-            .init(
-                remotePath: "embed_proj_weight.npy",
-                localPath: "embed_proj_weight.npy",
-                estimatedSize: 4_718_720
-            ),
-        ]
-
-        let extraFiles = textFiles + (model.includeMultimodal ? multimodalFiles : [])
-        return chunkFiles + prefillFiles + extraFiles
     }
 
     static func expectedFileSizeBytes(for model: ModelInfo) -> Int64 {
@@ -830,82 +559,6 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         totalBytesForAllFiles = pendingFiles.reduce(0) { $0 + $1.estimatedSize }
         completedBytes = 0
         nextFileIndex = 0
-    }
-
-    // MARK: - ZIP
-
-    private func unzipFile(_ zipURL: URL, to destDir: URL) throws {
-#if os(macOS)
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        proc.arguments = ["-xk", zipURL.path, destDir.path]
-        proc.standardOutput = FileHandle.nullDevice
-        proc.standardError = FileHandle.nullDevice
-        try proc.run()
-        proc.waitUntilExit()
-#else
-        try extractZipNative(from: zipURL, to: destDir)
-#endif
-    }
-
-#if !os(macOS)
-    private func extractZipNative(from zipURL: URL, to destDir: URL) throws {
-        let data = try Data(contentsOf: zipURL)
-        guard data.count > 22 else { throw DownloadError.extractionFailed }
-        var eocdOffset = data.count - 22
-        while eocdOffset >= 0 {
-            if data[eocdOffset] == 0x50, data[eocdOffset + 1] == 0x4B,
-               data[eocdOffset + 2] == 0x05, data[eocdOffset + 3] == 0x06 { break }
-            eocdOffset -= 1
-        }
-        guard eocdOffset >= 0 else { throw DownloadError.extractionFailed }
-        let cdOffset = Int(data[eocdOffset + 16 ..< eocdOffset + 20]
-            .withUnsafeBytes { $0.load(as: UInt32.self) })
-        let cdCount = Int(data[eocdOffset + 10 ..< eocdOffset + 12]
-            .withUnsafeBytes { $0.load(as: UInt16.self) })
-        var pos = cdOffset
-        for _ in 0 ..< cdCount {
-            guard data[pos] == 0x50, data[pos + 1] == 0x4B else { break }
-            let uncompSize = Int(data[pos + 24 ..< pos + 28]
-                .withUnsafeBytes { $0.load(as: UInt32.self) })
-            let nameLen = Int(data[pos + 28 ..< pos + 30]
-                .withUnsafeBytes { $0.load(as: UInt16.self) })
-            let extraLen = Int(data[pos + 30 ..< pos + 32]
-                .withUnsafeBytes { $0.load(as: UInt16.self) })
-            let commentLen = Int(data[pos + 32 ..< pos + 34]
-                .withUnsafeBytes { $0.load(as: UInt16.self) })
-            let localOffset = Int(data[pos + 42 ..< pos + 46]
-                .withUnsafeBytes { $0.load(as: UInt32.self) })
-            let name = String(data: data[pos + 46 ..< pos + 46 + nameLen], encoding: .utf8) ?? ""
-            let destPath = destDir.appendingPathComponent(name)
-            if name.hasSuffix("/") {
-                try fileManager.createDirectory(at: destPath, withIntermediateDirectories: true)
-            } else {
-                try fileManager.createDirectory(
-                    at: destPath.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                let lnl = Int(data[localOffset + 26 ..< localOffset + 28]
-                    .withUnsafeBytes { $0.load(as: UInt16.self) })
-                let lel = Int(data[localOffset + 28 ..< localOffset + 30]
-                    .withUnsafeBytes { $0.load(as: UInt16.self) })
-                let ds = localOffset + 30 + lnl + lel
-                try Data(data[ds ..< ds + uncompSize]).write(to: destPath)
-            }
-            pos += 46 + nameLen + extraLen + commentLen
-        }
-    }
-#endif
-
-    /// Files inside an mlmodelc that CoreML doesn't require to load the model.
-    /// A 404 on these shouldn't abort the whole download — the upload process
-    /// for W8A8 has historically produced HF repos missing `coremldata.bin`
-    /// (since fixed) and `metadata.json` (still missing in some uploads); the
-    /// latter is purely descriptive. Keep this list conservative — anything
-    /// not listed here is treated as required.
-    static func isOptionalMlmodelcFile(_ localPath: String) -> Bool {
-        localPath.hasSuffix(".mlmodelc/metadata.json")
-            || localPath.hasSuffix(".mlmodelc/analytics/coremldata.bin")
     }
 
     /// Exclude the Models directory from iCloud and iTunes backups.
@@ -958,21 +611,6 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             let url = downloadTask.originalRequest?.url?.absoluteString ?? "(unknown)"
             let taskId = downloadTask.taskIdentifier
 
-            // Optional files: metadata.json and analytics/coremldata.bin inside
-            // an mlmodelc are descriptive, not functional — CoreML loads fine
-            // without them. Treat 404 on these as non-fatal so a slightly
-            // incomplete HF upload doesn't abort the entire download.
-            if http.statusCode == 404, Self.isOptionalMlmodelcFile(localPath) {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    activeDownloadTasks.removeValue(forKey: taskId)
-                    activeTaskFileIndex.removeValue(forKey: taskId)
-                    activeTaskBytes.removeValue(forKey: taskId)
-                    fillDownloadSlots()
-                }
-                return
-            }
-
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 activeDownloadTasks.removeValue(forKey: taskId)
@@ -1010,7 +648,6 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
 
         let downloadedSize = (try? fileManager
             .attributesOfItem(atPath: destFile.path))?[.size] as? Int64 ?? 0
-        let isZip = localPath == "__archive.zip"
         let taskId = downloadTask.taskIdentifier
 
         DispatchQueue.main.async { [weak self] in
@@ -1021,19 +658,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             activeTaskBytes.removeValue(forKey: taskId)
             completedBytes += downloadedSize
             updateProgress()
-
-            if isZip {
-                status = "Extracting..."
-                DispatchQueue.global(qos: .userInitiated).async {
-                    try? self.unzipFile(destFile, to: dest)
-                    try? self.fileManager.removeItem(at: destFile)
-                    DispatchQueue.main.async {
-                        self.fillDownloadSlots()
-                    }
-                }
-            } else {
-                fillDownloadSlots()
-            }
+            fillDownloadSlots()
         }
     }
 

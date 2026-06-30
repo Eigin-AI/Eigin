@@ -104,7 +104,7 @@ struct RelevantKnowledgeSourceTests {
 
     // MARK: - Skip paths
 
-    @Test func nilWhenCompact() async {
+    @Test func compactRendersMinimalSummary() async {
         let (source, _, hook) = makeSource(returning: [
             entry(qualifiedID: "actor.alice", summary: "Alice", top: []),
         ])
@@ -112,7 +112,8 @@ struct RelevantKnowledgeSourceTests {
             messages: [ChatMessage(role: "user", content: "Talk about Alice")],
             isSmallContext: true
         ))
-        #expect(result == "- actor.alice: Alice")
+        // Compact path: short summary only, no qualified ID or related entries.
+        #expect(result == "- Alice")
         #expect(hook.callCount == 1)
     }
 

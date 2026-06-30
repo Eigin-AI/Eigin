@@ -101,16 +101,16 @@ struct GatekeeperTests {
             isSmallContext: true
         )) ?? ""
 
-        // Small-context uses smallSources: GeneralInfoSource + LanguageSource
+        // Small-context uses smallSources: GeneralInfo, Language, Space,
+        // InteractionMode, ActiveIntents (truncated), RelevantKnowledge.
         #expect(block.contains("## General info"))
-        // Compact path skips intents, skills, interaction mode, space, hint.
-        #expect(!block.contains("## Active intents"))
+        #expect(block.contains("## Interaction mode"))
+        // Active intents render in compact mode (truncated, no IDs/tasks).
+        #expect(block.contains("## Active intents"))
+        // These sources are not in smallSources.
         #expect(!block.contains("## Available skills"))
-        #expect(!block.contains("## Interaction mode"))
-        #expect(!block.contains("## Space"))
         #expect(!block.contains("## Active skills"))
         #expect(!block.contains("## Hint"))
-        #expect(!block.contains("## Related knowledge"))
     }
 
     @Test func compactWithLanguageEmitsLanguageSection() async {

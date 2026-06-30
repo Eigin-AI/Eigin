@@ -24,7 +24,7 @@ struct ToolRegistry: ToolExecutor {
     }
 
     /// Maximum characters for tool result content in small-context mode.
-    private static let smallContextResultLimit = 300
+    private static let smallContextResultLimit = 2000
 
     func executionMode(for toolName: String) -> ToolExecutionMode {
         toolsByName[toolName]?.executionMode ?? .background

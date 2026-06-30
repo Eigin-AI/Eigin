@@ -227,12 +227,24 @@ struct SystemHintSourcesTests {
         #expect(body == nil)
     }
 
-    @Test func spaceNilInCompact() async {
+    @Test func spaceTruncatesInCompact() async throws {
+        let longInstructions = String(repeating: "x", count: 200)
+        let body = await SpaceSource().render(input(
+            space: SpaceSnapshot(id: UUID(), name: "Work", instructions: longInstructions),
+            isSmallContext: true
+        ))
+        // Compact mode renders the space but truncates long instructions.
+        #expect(body != nil)
+        #expect(try #require(body?.contains("Work")))
+        #expect(try #require(body?.count) < longInstructions.count)
+    }
+
+    @Test func spaceShortInstructionsNotTruncatedInCompact() async {
         let body = await SpaceSource().render(input(
             space: SpaceSnapshot(id: UUID(), name: "Work", instructions: "Focus."),
             isSmallContext: true
         ))
-        #expect(body == nil)
+        #expect(body?.contains("Focus.") == true)
     }
 
     // MARK: - GeneralInfoSource

@@ -4,74 +4,6 @@ import Testing
 
 @Suite("LocalClient")
 struct LocalClientTests {
-    // MARK: - parseToolCalls
-
-    @Test func parseToolCallsEmpty() {
-        let result = LocalClient.parseToolCalls("Hello world")
-        #expect(result.isEmpty)
-    }
-
-    @Test func parseToolCallsSingleCall() {
-        let output = "<|tool_call>call:get_weather{\"location\":\"San Francisco\"}<tool_call|>"
-        let calls = LocalClient.parseToolCalls(output)
-        #expect(calls.count == 1)
-        #expect(calls[0].function.name == "get_weather")
-        #expect(calls[0].function.arguments == "{\"location\":\"San Francisco\"}")
-    }
-
-    @Test func parseToolCallsMultipleCalls() {
-        let output = """
-        Hello there<|tool_call>call:get_weather{\"location\":\"NYC\"}<tool_call|>
-        <|tool_call>call:search{\"query\":\"news\"}<tool_call|>
-        """
-        let calls = LocalClient.parseToolCalls(output)
-        #expect(calls.count == 2)
-        #expect(calls[0].function.name == "get_weather")
-        #expect(calls[0].function.arguments == "{\"location\":\"NYC\"}")
-        #expect(calls[1].function.name == "search")
-        #expect(calls[1].function.arguments == "{\"query\":\"news\"}")
-    }
-
-    @Test func parseToolCallsNoArgs() {
-        let output = "<|tool_call>call:ping{}<tool_call|>"
-        let calls = LocalClient.parseToolCalls(output)
-        #expect(calls.count == 1)
-        #expect(calls[0].function.name == "ping")
-        #expect(calls[0].function.arguments == "{}")
-    }
-
-    @Test func parseToolCallsGemmaStyleUnquotedKeys() {
-        let output = "<|tool_call>call:get_weather{location:<|\"|>San Francisco<|\"|>}<tool_call|>"
-        let calls = LocalClient.parseToolCalls(output)
-        #expect(calls.count == 1)
-        #expect(calls[0].function.name == "get_weather")
-        #expect(calls[0].function.arguments.contains("\"location\":"))
-        #expect(calls[0].function.arguments.contains("San Francisco"))
-    }
-
-    // MARK: - convertGemmaArgsToJSON
-
-    @Test func convertGemmaArgsToJSONAlreadyValid() {
-        let gemma = "{\"name\":\"John\"}"
-        let json = LocalClient.convertGemmaArgsToJSON(gemma)
-        #expect(json == "{\"name\":\"John\"}")
-    }
-
-    @Test func convertGemmaArgsToJSONUnquotedKeys() {
-        let gemma = "{name:<|\"|>John<|\"|>}"
-        let json = LocalClient.convertGemmaArgsToJSON(gemma)
-        #expect(json.contains("\"name\":"))
-        #expect(json.contains("John"))
-    }
-
-    @Test func convertGemmaArgsToJSONReplacesGemmaQuotes() {
-        let gemma = "{msg:<|\"|>hello<|\"|>}"
-        let json = LocalClient.convertGemmaArgsToJSON(gemma)
-        #expect(json.contains("\"msg\":"))
-        #expect(json.contains("hello"))
-        #expect(!json.contains("<|\"|>"))
-    }
-
     // MARK: - convertJSONArgsToGemma
 
     @Test func convertJSONArgsToGemmaSimple() {
@@ -98,5 +30,45 @@ struct LocalClientTests {
         let invalid = "{not json}"
         let result = LocalClient.convertJSONArgsToGemma(invalid)
         #expect(result == invalid)
+    }
+
+    // MARK: - FC history wire format
+
+    //
+    // These pin the exact marker output of the Gemma function-calling history
+    // encoders. The strings must match Gemma's chat template precisely or
+    // replayed tool history corrupts, so the format is a sticky contract.
+
+    @Test("renderGemmaToolCall wraps name + args in tool_call markers")
+    func renderToolCall() {
+        let rendered = LocalClient.renderGemmaToolCall(
+            name: "web_search",
+            jsonArgs: "{\"query\":\"weather\"}"
+        )
+        #expect(rendered == "<|tool_call>call:web_search{query:<|\"|>weather<|\"|>}<tool_call|>")
+    }
+
+    @Test("renderGemmaToolResponse converts a JSON-object body")
+    func renderToolResponseJSON() {
+        let rendered = LocalClient.renderGemmaToolResponse(
+            name: "web_search",
+            content: "{\"result\":\"ok\"}"
+        )
+        #expect(
+            rendered
+                == "<|tool_response>response:web_search{result:<|\"|>ok<|\"|>}<tool_response|>"
+        )
+    }
+
+    @Test("renderGemmaToolResponse wraps plain text in a value field")
+    func renderToolResponsePlainText() {
+        let rendered = LocalClient.renderGemmaToolResponse(
+            name: "web_fetch",
+            content: "hello world"
+        )
+        #expect(
+            rendered
+                == "<|tool_response>response:web_fetch{value:<|\"|>hello world<|\"|>}<tool_response|>"
+        )
     }
 }

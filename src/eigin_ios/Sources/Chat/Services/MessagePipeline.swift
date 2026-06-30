@@ -15,6 +15,24 @@ enum MessagePipeline {
     /// sliding window compaction, a minimal system prompt, and reduced tools.
     static let smallContextThreshold: Int = 16000
 
+    /// Low-water mark for the small-context sliding window, as a fraction of the
+    /// budget. When kept history exceeds the budget (high-water mark) it is
+    /// trimmed back to this fraction in one step, so the kept prefix stays stable
+    /// for many turns between trims (preserving the on-device KV cache) instead of
+    /// shifting every turn.
+    static let slidingWindowLowWaterFraction: Double = 0.5
+
+    /// Fraction of the context window kept as the usable input budget for
+    /// small-context models. The character-based token estimator can undercount
+    /// by up to 2x for multilingual SentencePiece models (e.g. Gemma / Danish),
+    /// so we truncate well before the real limit to leave the engine headroom.
+    static let smallContextSafetyFactor: Double = 0.75
+
+    /// Fraction of the context window the emergency compaction pass is allowed to
+    /// fill when truncating oldest messages so the compaction API call itself
+    /// fits within the window.
+    static let emergencyCompactionBudgetFraction: Double = 0.75
+
     /// Synthetic assistant acknowledgement inserted after a compaction summary
     /// so the outgoing conversation starts with a valid user→assistant turn.
     private static let compactionAck = "Understood — continuing from there."
@@ -112,12 +130,13 @@ enum MessagePipeline {
         let allActiveSkills = BundledSkill.alwaysActive + activeSkills.filter { !$0.alwaysActive }
 
         // 6. Build tool registry
-        let registry = if isSmallContext {
+        let builtRegistry = if isSmallContext {
             ToolRegistry.smallChat(
                 chatID: chatID,
                 agentID: agent.id,
                 permissionPolicy: permissionPolicy,
-                activeSkill: activeSkills.last.flatMap { BundledSkill.skill(forID: $0.id) }
+                activeSkill: activeSkills.last.flatMap { BundledSkill.skill(forID: $0.id) },
+                onBrowse: onBrowse
             )
         } else {
             ToolRegistry.chat(
@@ -133,6 +152,8 @@ enum MessagePipeline {
                 onPresentOptions: onPresentOptions
             )
         }
+
+        let registry = builtRegistry
 
         // 7. Extract the compaction summary (if any) and the real post-summary
         //    conversation slice. The summary will be rendered as a synthetic
@@ -195,6 +216,11 @@ enum MessagePipeline {
         let estimatedTokens = TokenEstimator.estimateRequest(
             messages: apiMessages,
             toolDefinitions: registry.definitions
+        )
+
+        AppLogger.debug(
+            "Pipeline: ~\(public: estimatedTokens)/\(public: contextWindow) tokens, \(public: apiMessages.count) messages",
+            category: .chat
         )
 
         return TurnInputs(
@@ -377,7 +403,7 @@ enum MessagePipeline {
             // Reserve space for generation output so the KV cache doesn't
             // evict the system prompt during generation.
             let maxOutput = KnownModelCatalog.lookup(model)?.maxOutput ?? 256
-            let inputBudget = contextWindow - maxOutput
+            let inputBudget = Int(Double(contextWindow - maxOutput) * smallContextSafetyFactor)
             guard estimatedTokens > inputBudget else {
                 return CompactionResult(
                     apiMessages: apiMessages,
@@ -387,14 +413,16 @@ enum MessagePipeline {
             }
             let systemPrompt = apiMessages.first!
             let systemTokens = TokenEstimator.estimate(systemPrompt.content ?? "") + 4
-            let conversationBudget = max(inputBudget - systemTokens, 0)
+            let highMark = max(inputBudget - systemTokens, 0)
+            let lowMark = Int(Double(highMark) * slidingWindowLowWaterFraction)
             let conversationMessages = Array(apiMessages.dropFirst())
-            let truncated = CompactionService.truncateForBudget(
+            let truncated = CompactionService.windowedForBudget(
                 messages: conversationMessages,
-                tokenBudget: conversationBudget
+                highMark: highMark,
+                lowMark: lowMark
             )
             AppLogger.info(
-                "Sliding window: kept \(public: truncated.count)/\(public: conversationMessages.count) messages for budget \(public: conversationBudget) (input budget \(public: inputBudget))",
+                "Sliding window: kept \(public: truncated.count)/\(public: conversationMessages.count) messages (budget \(public: highMark), low-water \(public: lowMark))",
                 category: .chat
             )
             return CompactionResult(
@@ -431,7 +459,7 @@ enum MessagePipeline {
 
         // Emergency: truncate oldest messages so the compaction API call fits.
         if isEmergency {
-            let compactionBudget = Int(Double(contextWindow) * 0.75)
+            let compactionBudget = Int(Double(contextWindow) * emergencyCompactionBudgetFraction)
             let truncated = CompactionService.truncateForBudget(
                 messages: toCompact,
                 tokenBudget: compactionBudget

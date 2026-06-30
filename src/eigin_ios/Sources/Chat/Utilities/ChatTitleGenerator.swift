@@ -36,15 +36,18 @@ enum ChatTitleGenerator {
 
         Task {
             var title = ""
-            let stream = try await chatService.chatCompletionStream(
-                baseURL: provider.baseURL,
-                providerID: provider.id,
-                messages: titleMessages,
-                model: agent.model
-            )
             do {
-                for try await token in stream {
-                    title += token
+                // Best-effort background work: a foreground chat send preempts it.
+                try await LocalGeneration.$priority.withValue(.background) {
+                    let stream = try await chatService.chatCompletionStream(
+                        baseURL: provider.baseURL,
+                        providerID: provider.id,
+                        messages: titleMessages,
+                        model: agent.model
+                    )
+                    for try await token in stream {
+                        title += token
+                    }
                 }
                 let cleaned = cleanTitle(title)
                 if let cleaned {

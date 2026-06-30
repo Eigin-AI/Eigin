@@ -104,7 +104,7 @@ final class RelevantKnowledgeSource: SystemHintSource {
         // Render top N from retained. Fresh entries (staleTurns 0) rank
         // before stale ones; within the same staleness tier, higher
         // scores rank first.
-        let maxEntries = input.isSmallContext ? 2 : KnowledgeHydrator.maxEntries
+        let maxEntries = KnowledgeHydrator.maxEntries
         let toRender = retained.values
             .sorted { a, b in
                 if a.staleTurns != b.staleTurns {
@@ -117,13 +117,13 @@ final class RelevantKnowledgeSource: SystemHintSource {
 
         guard !toRender.isEmpty else { return nil }
 
-        // Small context: minimal — just ID and a short summary, no preamble.
+        // Small context: minimal — just a short summary, no preamble.
         if input.isSmallContext {
             return toRender.map { entry in
                 let summary = entry.summary.count > 60
                     ? String(entry.summary.prefix(60)) + "…"
                     : entry.summary
-                return "- \(entry.qualifiedID): \(summary)"
+                return "- \(summary)"
             }.joined(separator: "\n")
         }
 
