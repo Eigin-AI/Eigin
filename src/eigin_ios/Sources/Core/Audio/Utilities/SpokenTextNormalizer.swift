@@ -7,7 +7,7 @@ import Foundation
 enum SpokenTextNormalizer {
     /// Normalize text for speech using the given locale rules.
     static func normalize(_ text: String, locale: SpokenTextLocale) -> String {
-        var result = text
+        var result = normalizeUnicodeApostrophes(text)
         result = processURLsAndDomains(result, locale: locale)
         result = processVersionNumbers(result, locale: locale)
         result = processScaleAbbreviations(result, locale: locale)
@@ -24,6 +24,19 @@ enum SpokenTextNormalizer {
         result = stripNonSpeechCharacters(result, locale: locale)
         result = tidyPunctuation(result)
         return result
+    }
+
+    // MARK: - Unicode Normalization
+
+    /// U+2019 and friends are common in LLM output and iOS smart-keyboard input.
+    /// Normalize them to ASCII U+0027 before any other processing so the
+    /// stripNonSpeechCharacters filter (which only allows U+0027) passes them through.
+    private static func normalizeUnicodeApostrophes(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .replacingOccurrences(of: "\u{2018}", with: "'")
+            .replacingOccurrences(of: "\u{02BC}", with: "'")
+            .replacingOccurrences(of: "\u{FF07}", with: "'")
     }
 
     // MARK: - URLs and Domains
