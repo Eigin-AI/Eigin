@@ -31,3 +31,17 @@ The app does not bundle or redistribute model weights directly.
 | **CoreML HuggingFace** | https://huggingface.co/42futures/plapre-pico-coreml |
 | **Tokenizer** | swift-transformers (Apache 2.0) — see swift-packages.md |
 | **Model license** | CC BY 4.0 |
+
+---
+
+## Gemma 4 E2B (Google, LiteRT-LM QAT build by litert-community)
+
+| | |
+|---|---|
+| **Model** | Gemma 4 E2B (instruction-tuned, QAT 2/4/8-bit mobile) |
+| **Original provider** | Google |
+| **Original HuggingFace** | https://huggingface.co/google/gemma-4-E2B-it-qat-mobile-transformers |
+| **LiteRT-LM build** | litert-community |
+| **LiteRT-LM HuggingFace** | https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm |
+| **Runtime** | LiteRT-LM (Apache 2.0) — see swift-packages.md |
+| **Model license** | Gemma Terms of Use |

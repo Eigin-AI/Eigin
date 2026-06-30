@@ -73,16 +73,35 @@ extension ToolRegistry {
         return ToolRegistry(tools: filtered)
     }
 
-    /// Tool set for small-context models (≤16K).
+    /// Tool set for small-context models (≤16K, e.g. Gemma 4 E2B).
     ///
-    /// Small-context models cannot use tools, so the registry is empty.
+    /// Curated tool set for small-context (on-device) models.
+    ///
+    /// Keeps the declaration footprint small and only includes tools the model
+    /// can use reliably with simple string parameters: knowledge search and web
+    /// access. Scheduling tools require temporal reasoning the model isn't
+    /// reliable at; they'll be revisited when a simplified date API is designed.
     @MainActor static func smallChat(
         chatID: UUID? = nil,
         agentID: UUID? = nil,
         permissionPolicy: ToolPermissionPolicy,
-        activeSkill: Skill? = nil
+        activeSkill: Skill? = nil,
+        onBrowse: BrowseHandler? = nil
     ) -> ToolRegistry {
-        ToolRegistry(tools: [], isSmallContext: true)
+        let knowledgeService = Container.shared.knowledgeService()
+        var searchKnowledge = SearchKnowledgeTool(
+            knowledgeService: knowledgeService, spaceID: nil, agentID: agentID
+        )
+        searchKnowledge.isSmallContext = true
+        var webSearch = WebSearchTool(onBrowse: onBrowse)
+        webSearch.isSmallContext = true
+        var webFetch = WebFetchTool(onBrowse: onBrowse)
+        webFetch.isSmallContext = true
+        let tools: [any Tool] = [searchKnowledge, webSearch, webFetch]
+        let filtered = tools.filter {
+            permissionPolicy.permissionLevel(for: $0.name) != .never
+        }
+        return ToolRegistry(tools: filtered, isSmallContext: true)
     }
 
     /// Space bootstrap tool set.

@@ -1314,6 +1314,17 @@ enum Localized {
             Localized.get("model.insufficientRAM")
         }
 
+        /// Error description when the on-device model files are not present on disk.
+        static var notDownloaded: String {
+            Localized.get("model.notDownloaded")
+        }
+
+        /// Error description when the on-device model is present but couldn't be loaded into
+        /// memory.
+        static var notLoaded: String {
+            Localized.get("model.notLoaded")
+        }
+
         /// Warning message when removing a model
         static var removeStorageWarning: String {
             Localized.get("model.removeStorageWarning")
@@ -1340,6 +1351,32 @@ enum Localized {
             /// The name of the machine learning model used in the app.
             static var name: String {
                 Localized.get("model.gemma4e2b.name")
+            }
+        }
+
+        enum NotDownloaded {
+            /// Suggestion in the chat error card guiding the user to download the on-device model
+            /// from settings.
+            static var suggestion: String {
+                Localized.get("model.notDownloaded.suggestion")
+            }
+
+            /// Title of the chat error card shown when the on-device model isn't downloaded.
+            static var title: String {
+                Localized.get("model.notDownloaded.title")
+            }
+        }
+
+        enum NotLoaded {
+            /// Suggestion in the chat error card when the on-device model failed to load, guiding
+            /// the user to retry or re-download.
+            static var suggestion: String {
+                Localized.get("model.notLoaded.suggestion")
+            }
+
+            /// Title of the chat error card shown when the on-device model failed to load.
+            static var title: String {
+                Localized.get("model.notLoaded.title")
             }
         }
 

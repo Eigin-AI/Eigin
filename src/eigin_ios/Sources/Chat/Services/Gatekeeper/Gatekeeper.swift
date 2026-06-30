@@ -54,6 +54,10 @@ final class Gatekeeper {
         smallSources = [
             GeneralInfoSource(),
             LanguageSource(),
+            SpaceSource(),
+            InteractionModeSource(),
+            ActiveIntentsSource(),
+            RelevantKnowledgeSource(knowledgeService: knowledgeService),
         ]
     }
 

@@ -7,6 +7,7 @@
 | Factory | https://github.com/hmlongco/Factory | 2.4.0 | MIT |
 | FluidAudio | https://github.com/42futures/FluidAudio | feature/pocket-tts-sessions | Apache 2.0 |
 | swift-transformers | https://github.com/huggingface/swift-transformers | 1.3.0 | Apache 2.0 |
+| LiteRT-LM | https://github.com/google-ai-edge/LiteRT-LM | 0.12.0 | Apache 2.0 |
 
 ## Notes
 

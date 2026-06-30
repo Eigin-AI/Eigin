@@ -12,7 +12,7 @@ Eigin's iOS app is built with Swift 6, SwiftUI, SwiftData, and targets iOS 26. I
 
 **Live call via CallKit.** The live call session uses the platform's CallKit framework to stay alive when the device is locked, showing native call UI on the lock screen. This is what makes the experience work like a phone call rather than a foreground-only feature.
 
-**Local ML via Core ML.** On-device models run as Core ML models. We've evaluated alternatives including MLX, but on iOS, non-Core ML runtimes count against app memory in ways that make them impractical. Core ML keeps memory overhead within acceptable bounds.
+**Local ML via LiteRT-LM.** On-device models run through Google's LiteRT-LM runtime on the GPU/Metal backend, using a quantization-aware-trained Gemma 4 E2B build. See [Local model](local-model.md) for the runtime, download, and caching details. Apple's Foundation Models framework is also wired in as a second local option.
 
 **Localisation via a generated enum.** All user-facing strings live in `Localizable.xcstrings` and are accessed through the generated `Localized` enum. The app switches language at runtime via `Bundle.appLanguage` rather than being tied to the system locale. Run `just generate` after catalog changes to regenerate the enum.
 

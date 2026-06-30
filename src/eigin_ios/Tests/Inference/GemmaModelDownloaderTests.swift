@@ -50,15 +50,10 @@ struct GemmaModelDownloaderTests {
         )
         defer { try? FileManager.default.removeItem(at: dest) }
 
-        // Create a minimal fake model directory so localModelURL returns non-nil
-        let chunkDir = dest
-            .appendingPathComponent("chunk1.mlmodelc/weights", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: chunkDir, withIntermediateDirectories: true
-        )
+        // Create the model file so localModelURL returns non-nil.
         FileManager.default.createFile(
-            atPath: chunkDir.appendingPathComponent("weight.bin").path,
-            contents: nil,
+            atPath: dest.appendingPathComponent(GemmaModelDownloader.modelFileName).path,
+            contents: Data("test".utf8),
             attributes: nil
         )
 
@@ -94,7 +89,7 @@ struct GemmaModelDownloaderTests {
 
     // MARK: – isModelComplete
 
-    @Test func isModelCompleteReturnsFalseForPartialFiles() throws {
+    @Test func isModelCompleteReturnsFalseWhenLitertlmFileMissing() throws {
         let downloader = GemmaModelDownloader.shared
         let documents = try #require(
             FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
@@ -106,14 +101,7 @@ struct GemmaModelDownloaderTests {
         try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dest) }
 
-        // Only create chunk1 weight.bin — not enough
-        let chunkDir = dest.appendingPathComponent("chunk1.mlmodelc/weights", isDirectory: true)
-        try FileManager.default.createDirectory(at: chunkDir, withIntermediateDirectories: true)
-        FileManager.default.createFile(
-            atPath: chunkDir.appendingPathComponent("weight.bin").path,
-            contents: nil,
-            attributes: nil
-        )
+        // Directory exists but the .litertlm artifact is absent — incomplete.
 
         let model = GemmaModelDownloader.ModelInfo(
             id: "partial-test-model",

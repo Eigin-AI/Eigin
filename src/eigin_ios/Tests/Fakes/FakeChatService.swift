@@ -100,6 +100,33 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         tools: [ToolDefinition]?,
         cacheKey _: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            baseURL: baseURL, providerID: providerID, messages: messages,
+            model: model, tools: tools, cacheKey: nil, inlineToolRunner: nil
+        )
+    }
+
+    /// Captures the inline runner passed by the loop so tests can inspect or invoke it.
+    private(set) var capturedInlineRunner: InlineToolRunner?
+
+    /// Scripted inline tool calls to execute using the captured runner before yielding prose.
+    private var _inlineToolCalls: [ToolCall] = []
+
+    /// Queue scripted inline tool calls. The fake will invoke the runner for each
+    /// and emit only prose + .finished(.stop) to simulate a local model.
+    func enqueueInlineToolCalls(_ calls: [ToolCall]) {
+        lock.withLock { _inlineToolCalls = calls }
+    }
+
+    func chatCompletionEventStream(
+        baseURL: String,
+        providerID: UUID,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        cacheKey _: String?,
+        inlineToolRunner: InlineToolRunner?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         if let thrown: Error = lock.withLock({
             let e = _eventStreamThrow
             _eventStreamThrow = nil
@@ -118,8 +145,24 @@ final class FakeChatService: ChatService, @unchecked Sendable {
             }
         }
 
+        // Capture the runner for test inspection.
+        lock.withLock { capturedInlineRunner = inlineToolRunner }
+
+        // Inline tool calls: invoke the runner mid-stream (before prose), then
+        // yield prose-only events. This simulates a local model executing tools
+        // internally before producing its final response.
+        let inlineCalls = lock.withLock { _inlineToolCalls }
+
         return AsyncThrowingStream { continuation in
-            Task {
+            Task { @MainActor in
+                // Execute inline tool calls through the runner, like a local model would.
+                for call in inlineCalls {
+                    if let runner = inlineToolRunner {
+                        _ = await runner.run(call)
+                    }
+                }
+                // Yield the scripted prose events (caller should queue .contentDelta +
+                // .finished(.stop)).
                 for event in events {
                     continuation.yield(event)
                 }

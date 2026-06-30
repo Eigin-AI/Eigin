@@ -125,6 +125,130 @@ struct CompactionServiceTests {
 
         #expect(result.isEmpty)
     }
+
+    // MARK: - windowedForBudget()
+
+    /// Builds a message whose estimated cost (content tokens + 4 framing) equals
+    /// `tokens`. `TokenEstimator.estimate` is `max(1, chars / 4)`, so
+    /// `4 * (tokens - 4)` characters yields `tokens - 4` content tokens.
+    private func sizedMessage(tokens: Int) -> ChatMessage {
+        let contentTokens = max(1, tokens - 4)
+        return ChatMessage(role: "user", content: String(repeating: "x", count: contentTokens * 4))
+    }
+
+    private func tokenCount(_ messages: [ChatMessage]) -> Int {
+        messages.reduce(0) { $0 + TokenEstimator.estimate($1.content ?? "") + 4 }
+    }
+
+    @Test func windowReturnsAllWhenUnderHighMark() {
+        let messages = (0 ..< 5).map { _ in sizedMessage(tokens: 100) } // 500 tokens total
+        let result = CompactionService.windowedForBudget(
+            messages: messages, highMark: 1000, lowMark: 500
+        )
+        #expect(result.map(\.localID) == messages.map(\.localID))
+    }
+
+    @Test func windowEmptyInputReturnsEmpty() {
+        #expect(
+            CompactionService.windowedForBudget(messages: [], highMark: 1000, lowMark: 500).isEmpty
+        )
+    }
+
+    @Test func windowNeverExceedsHighMark() {
+        let all = (0 ..< 40).map { _ in sizedMessage(tokens: 100) }
+        for n in 1 ... all.count {
+            let result = CompactionService.windowedForBudget(
+                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
+            )
+            #expect(!result.isEmpty)
+            // A single message can't be split, so the bound only applies when we
+            // actually kept more than one.
+            if result.count > 1 {
+                #expect(tokenCount(result) <= 1000)
+            }
+        }
+    }
+
+    @Test func windowKeepsContiguousNewestSuffix() {
+        let messages = (0 ..< 30).map { _ in sizedMessage(tokens: 100) }
+        let result = CompactionService.windowedForBudget(
+            messages: messages, highMark: 1000, lowMark: 500
+        )
+        #expect(result.last?.localID == messages.last?.localID)
+        let resultIDs = result.map(\.localID)
+        let tail = Array(messages.map(\.localID).suffix(resultIDs.count))
+        #expect(resultIDs == tail)
+    }
+
+    @Test func windowKeepsAtLeastLastMessageWhenOversized() {
+        let messages = [sizedMessage(tokens: 50), sizedMessage(tokens: 5000)]
+        let result = CompactionService.windowedForBudget(
+            messages: messages, highMark: 1000, lowMark: 500
+        )
+        #expect(result.count == 1)
+        #expect(result.first?.localID == messages.last?.localID)
+    }
+
+    @Test func windowIsDeterministic() {
+        let messages = (0 ..< 25).map { _ in sizedMessage(tokens: 100) }
+        let a = CompactionService.windowedForBudget(
+            messages: messages,
+            highMark: 1000,
+            lowMark: 500
+        )
+        let b = CompactionService.windowedForBudget(
+            messages: messages,
+            highMark: 1000,
+            lowMark: 500
+        )
+        #expect(a.map(\.localID) == b.map(\.localID))
+    }
+
+    /// The core hysteresis property: as the conversation grows one message at a
+    /// time, the oldest kept message stays fixed for several turns and only jumps
+    /// at step boundaries — so the prefix (and the on-device KV cache) is reused
+    /// between jumps. With 100-token messages, high 1000 / low 500 (step 500),
+    /// the boundary advances exactly every 5 turns.
+    @Test func windowBoundaryIsStableBetweenSteps() {
+        let all = (0 ..< 30).map { _ in sizedMessage(tokens: 100) }
+
+        func oldestKeptIndex(messageCount n: Int) -> Int {
+            let result = CompactionService.windowedForBudget(
+                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
+            )
+            let oldestID = result.first!.localID
+            return all.firstIndex { $0.localID == oldestID }!
+        }
+
+        for n in 11 ... 14 {
+            #expect(oldestKeptIndex(messageCount: n) == 5)
+        }
+        for n in 15 ... 19 {
+            #expect(oldestKeptIndex(messageCount: n) == 10)
+        }
+        for n in 20 ... 24 {
+            #expect(oldestKeptIndex(messageCount: n) == 15)
+        }
+    }
+
+    @Test func windowBoundaryAdvancesMonotonicallyAndInfrequently() throws {
+        let all = (0 ..< 60).map { _ in sizedMessage(tokens: 100) }
+        var previousIndex = 0
+        var changes = 0
+        for n in 1 ... all.count {
+            let result = CompactionService.windowedForBudget(
+                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
+            )
+            let oldestID = try #require(result.first?.localID)
+            let index = try #require(all.firstIndex { $0.localID == oldestID })
+            #expect(index >= previousIndex) // boundary never moves backward
+            if index != previousIndex { changes += 1 }
+            previousIndex = index
+        }
+        // Step 500 / 100 per turn ⇒ ~1 change per 5 turns, far below the 60 turns.
+        // A plain per-turn truncation would change on nearly every turn.
+        #expect(changes < 20)
+    }
 }
 
 // MARK: - Helpers

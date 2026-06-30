@@ -57,7 +57,7 @@ struct GemmaModelManagerTests {
         let manager = GemmaModelManager(
             deviceInfo: FakeDeviceInfoService(
                 diskBytes: .max,
-                ramBytes: 4 * 1_073_741_824
+                ramBytes: 2 * 1_073_741_824
             )
         )
         await manager.download()
@@ -69,7 +69,16 @@ struct GemmaModelManagerTests {
         }
     }
 
+    @Test func hasRequiredRAMReturnsFalseForTwoGigabytes() {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(ramBytes: 2 * 1_073_741_824)
+        )
+        #expect(!manager.hasRequiredRAM())
+    }
+
     @Test func hasRequiredRAMReturnsFalseForFourGigabytes() {
+        // A 4 GB device (e.g. iPhone 13) can't run a long-context session plus a
+        // voice model — it must be gated out.
         let manager = GemmaModelManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
         )

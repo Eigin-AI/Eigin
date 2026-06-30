@@ -32,17 +32,20 @@ enum CompactionService {
         let expectedLength = max(200, transcript.count / 8)
 
         do {
-            let stream = try await chatService.chatCompletionStream(
-                baseURL: baseURL,
-                providerID: providerID,
-                messages: summaryMessages,
-                model: model
-            )
+            // Best-effort background work: a foreground chat send preempts it.
+            try await LocalGeneration.$priority.withValue(.background) {
+                let stream = try await chatService.chatCompletionStream(
+                    baseURL: baseURL,
+                    providerID: providerID,
+                    messages: summaryMessages,
+                    model: model
+                )
 
-            for try await token in stream {
-                summary += token
-                let progress = min(1.0, Float(summary.count) / Float(expectedLength))
-                onProgress?(.streaming(progress))
+                for try await token in stream {
+                    summary += token
+                    let progress = min(1.0, Float(summary.count) / Float(expectedLength))
+                    onProgress?(.streaming(progress))
+                }
             }
         } catch {
             AppLogger.error(
@@ -109,6 +112,57 @@ enum CompactionService {
 
         if startIndex >= messages.count { return [] }
         return Array(messages[startIndex...])
+    }
+
+    /// Sliding window with hysteresis, for small-context on-device models.
+    ///
+    /// Keeps the newest messages within `highMark` tokens, but only advances the
+    /// drop boundary once the conversation has grown a further
+    /// `highMark - lowMark` tokens. Between advances the kept prefix is identical
+    /// from turn to turn, so the on-device KV cache is reused instead of being
+    /// re-prefilled every turn. (A plain budget truncation drops the oldest
+    /// message on nearly every turn once full, which changes the prefix each time
+    /// and forces a full re-prefill.)
+    ///
+    /// Whole messages are dropped — never partially truncated — so the prefix
+    /// stays byte-stable. The result is always a contiguous suffix that never
+    /// exceeds `highMark` tokens; at least the most recent message is always kept.
+    static func windowedForBudget(
+        messages: [ChatMessage],
+        highMark: Int,
+        lowMark: Int
+    ) -> [ChatMessage] {
+        guard !messages.isEmpty else { return [] }
+        guard highMark > 0 else { return [messages[messages.count - 1]] }
+
+        // Cumulative tokens before each message. `cumulativeBefore[i]` is the cost
+        // of messages[0..<i]; these values don't change when newer messages are
+        // appended, which is what lets the boundary stay put across turns.
+        var cumulativeBefore = [Int](repeating: 0, count: messages.count + 1)
+        for i in messages.indices {
+            let cost = TokenEstimator.estimate(messages[i].content ?? "") + 4
+            cumulativeBefore[i + 1] = cumulativeBefore[i] + cost
+        }
+        let total = cumulativeBefore[messages.count]
+        if total <= highMark { return messages }
+
+        let low = max(0, min(lowMark, highMark - 1))
+        let step = highMark - low // ≥ 1
+        // Quantise the dropped-token threshold to whole multiples of `step` so it
+        // only increases in jumps. Within a jump the boundary — and therefore the
+        // kept prefix — is identical from one turn to the next. The flooring also
+        // bounds the kept size below `highMark`: kept = total - dropped ≤ low + r
+        // where 0 ≤ r < step, so kept < highMark.
+        let dropThreshold = ((total - low) / step) * step
+
+        // Drop the fewest oldest messages needed to clear the threshold.
+        var start = 0
+        while start < messages.count, cumulativeBefore[start] < dropThreshold {
+            start += 1
+        }
+        // Never drop everything: keep at least the most recent message.
+        if start >= messages.count { start = messages.count - 1 }
+        return Array(messages[start...])
     }
 
     /// Truncates content to approximately `maxTokens` tokens, appending "…".

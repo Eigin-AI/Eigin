@@ -17,6 +17,43 @@ protocol ChatService: Sendable {
         tools: [ToolDefinition]?,
         cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
+
+    /// Variant for local models: passes an ``InlineToolRunner`` so the
+    /// runtime can execute tools mid-stream without the chat loop needing
+    /// any provider-specific branching. Cloud implementations forward to the
+    /// standard method and ignore the runner.
+    func chatCompletionEventStream(
+        baseURL: String,
+        providerID: UUID,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        cacheKey: String?,
+        inlineToolRunner: InlineToolRunner?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
+}
+
+extension ChatService {
+    /// Default implementation: ignores the runner and forwards to the
+    /// standard method. Cloud providers adopt this automatically.
+    func chatCompletionEventStream(
+        baseURL: String,
+        providerID: UUID,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        cacheKey: String?,
+        inlineToolRunner _: InlineToolRunner?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            baseURL: baseURL,
+            providerID: providerID,
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey
+        )
+    }
 }
 
 /// Implementation that uses ``LLMClientFactory`` to pick the right client for each provider.
@@ -52,6 +89,26 @@ struct DefaultChatService: ChatService {
         tools: [ToolDefinition]?,
         cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            baseURL: baseURL,
+            providerID: providerID,
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            inlineToolRunner: nil
+        )
+    }
+
+    func chatCompletionEventStream(
+        baseURL: String,
+        providerID: UUID,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        cacheKey: String?,
+        inlineToolRunner: InlineToolRunner?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         guard let apiKey = ProviderCredentials.apiToken(
             baseURL: baseURL, providerID: providerID, keychain: keychainService
         ) else {
@@ -62,6 +119,19 @@ struct DefaultChatService: ChatService {
             throw ChatServiceError.apiKeyNotFound
         }
         let client = LLMClientFactory.client(baseURL: baseURL, apiToken: apiKey)
+        // Local client: forward the runner so the runtime can execute tools inline.
+        if let localClient = client as? LocalClient {
+            return try await withRetry {
+                try await localClient.chatCompletionEventStream(
+                    messages: messages,
+                    model: model,
+                    tools: tools,
+                    cacheKey: cacheKey,
+                    inlineToolRunner: inlineToolRunner
+                )
+            }
+        }
+        // Cloud clients: runner is irrelevant.
         return try await withRetry {
             try await client.chatCompletionEventStream(
                 messages: messages,

@@ -6,8 +6,8 @@ import Foundation
 /// ``IntentService``; this source formats them as a bulleted list and appends a
 /// short cue when something is timely ("due today", "in 3 days", "2 open
 /// tasks"), so the agent sees why an intent is rising. In compact mode the list
-/// is truncated to the top three intents and each intent's content is clipped,
-/// to fit into the limited hydration budget of small-context models.
+/// is truncated to the top three intents and each intent renders as a single
+/// truncated line to fit the limited hydration budget of small-context models.
 @MainActor
 final class ActiveIntentsSource: SystemHintSource {
     let title = "Active intents"
@@ -25,15 +25,17 @@ final class ActiveIntentsSource: SystemHintSource {
             : input.activeIntents
 
         let lines: [String] = intents.map { intent in
-            let content: String = if input.isSmallContext,
-                                     intent.content.count > compactContentLimit
-            {
-                String(intent.content.prefix(compactContentLimit)) + "…"
-            } else {
-                intent.content
+            if input.isSmallContext {
+                // Small-context models get a minimal one-liner.
+                let content = intent.content.count > compactContentLimit
+                    ? String(intent.content.prefix(compactContentLimit)) + "…"
+                    : intent.content
+                return "- \"\(content)\""
             }
-            // Full id so the agent can act on the intent directly via tools.
-            var line = "- [\(intent.id.uuidString)] \"\(content)\""
+
+            // Full context: ID so the agent can act on the intent via tools,
+            // a timeliness cue, and any open tasks.
+            var line = "- [\(intent.id.uuidString)] \"\(intent.content)\""
             if let cue = IntentDigest.summary(for: intent) {
                 line += " (\(cue))"
             }
