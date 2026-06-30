@@ -244,6 +244,17 @@ struct SpokenTextNormalizerTests {
         #expect(SpokenTextNormalizer.normalize("", locale: en) == "")
     }
 
+    @Test func englishContractions() {
+        // U+2019 (smart apostrophe) is common in LLM output and iOS keyboard input.
+        // It must survive stripNonSpeechCharacters, which only allows ASCII U+0027.
+        let apos = "\u{2019}"
+        #expect(SpokenTextNormalizer.normalize("I\(apos)m fine", locale: en) == "I'm fine")
+        #expect(SpokenTextNormalizer
+            .normalize("you\(apos)re welcome", locale: en) == "you're welcome")
+        #expect(SpokenTextNormalizer.normalize("it\(apos)s great", locale: en) == "it's great")
+        #expect(SpokenTextNormalizer.normalize("don\(apos)t stop", locale: en) == "don't stop")
+    }
+
     // MARK: - Danish
 
     let da = SpokenTextLocale.danish()
@@ -385,5 +396,11 @@ struct SpokenTextNormalizerTests {
 
     @Test func danishPassthrough() {
         #expect(SpokenTextNormalizer.normalize("Hej verden", locale: da) == "Hej verden")
+    }
+
+    @Test func danishContractions() {
+        let apos = "\u{2019}"
+        // Danish uses apostrophes in some loanwords and contractions.
+        #expect(SpokenTextNormalizer.normalize("det\(apos)s fint", locale: da) == "det's fint")
     }
 }
