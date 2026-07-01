@@ -111,12 +111,9 @@ enum BackgroundPromptScheduler {
         // Always reschedule so the chain never breaks.
         // Fall back to .balanced if the agent fetch fails.
         let context = ModelContext(container)
-        let descriptor = FetchDescriptor<Agent>(
-            predicate: #Predicate { $0.bootstrapComplete },
-            sortBy: [SortDescriptor(\Agent.updatedAt, order: .reverse)]
-        )
-        let proactivity: ProactivityLevel = if let agents = try? context.fetch(descriptor),
-                                               let agent = agents.first
+        let proactivity: ProactivityLevel = if let agents = try? context
+            .fetch(Agent.primaryDescriptor),
+            let agent = agents.primary
         {
             agent.proactivity
         } else {

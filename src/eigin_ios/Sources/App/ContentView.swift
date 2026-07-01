@@ -54,13 +54,8 @@ struct ContentView: View {
     }
 
     private func ensureBackgroundSchedule() {
-        let descriptor = FetchDescriptor<Agent>(
-            predicate: #Predicate { $0.bootstrapComplete },
-            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
-        )
-        guard let agents = try? modelContext.fetch(descriptor),
-              // TODO: Use the primary agent once that concept is formalized.
-              let agent = agents.first,
+        guard let agents = try? modelContext.fetch(Agent.primaryDescriptor),
+              let agent = agents.primary,
               agent.proactivity.isBackgroundEnabled
         else {
             return

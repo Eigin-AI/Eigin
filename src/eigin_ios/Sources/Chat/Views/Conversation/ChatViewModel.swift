@@ -98,7 +98,7 @@ final class ChatViewModel {
         }
         chat = fetched
 
-        if let agent = agents.first(where: { $0.id == fetched.agentID }) {
+        if let agent = agents.primary {
             gatekeeper = Gatekeeper(
                 proactivity: agent.proactivity,
                 knowledgeService: Container.shared.knowledgeService()

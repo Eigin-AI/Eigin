@@ -48,13 +48,9 @@ enum BackgroundPromptService {
     ) async -> Result {
         let context = ModelContext(container)
 
-        // Fetch the active agent (most recently updated, bootstrap complete).
-        let agentDescriptor = FetchDescriptor<Agent>(
-            predicate: #Predicate { $0.bootstrapComplete },
-            sortBy: [SortDescriptor(\Agent.updatedAt, order: .reverse)]
-        )
-        guard let agents = try? context.fetch(agentDescriptor),
-              let agent = agents.first
+        // Fetch the primary agent.
+        guard let agents = try? context.fetch(Agent.primaryDescriptor),
+              let agent = agents.primary
         else {
             AppLogger.warning("No active agent found", category: .backgroundPrompt)
             return silentResult

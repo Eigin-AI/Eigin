@@ -14,8 +14,7 @@ struct ChatView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Injected(\.languageManager) private var languageManager
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
-    @Query(filter: #Predicate<Agent> { $0.bootstrapComplete })
-    private var agents: [Agent]
+    @Query private var agents: [Agent]
     @Query private var spaces: [Space]
     @Query(filter: #Predicate<MCPServer> { $0.isEnabled }) private var mcpServers: [MCPServer]
 
@@ -30,8 +29,8 @@ struct ChatView: View {
     }
 
     private var agent: Agent? {
-        guard let chat = viewModel.chat else { return nil }
-        return agents.first { $0.id == chat.agentID }
+        guard viewModel.chat != nil else { return nil }
+        return agents.primary
     }
 
     private var activeProvider: Provider? {

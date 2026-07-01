@@ -8,7 +8,7 @@ struct AgentView: View {
     @Query private var agents: [Agent]
 
     private var agent: Agent? {
-        agents.first
+        agents.primary
     }
 
     var body: some View {
