@@ -202,6 +202,7 @@ final class ChatViewModel {
                 spaceID: chat?.spaceID, chatID: chat?.id,
                 mcpServers: servers,
                 activeSkills: activeSkills,
+                activeFlow: chat?.activeFlow,
                 gatekeeper: gatekeeper,
                 mode: context,
                 hasSpaces: hasSpaces,

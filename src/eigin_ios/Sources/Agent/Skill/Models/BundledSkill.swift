@@ -13,6 +13,7 @@ enum BundledSkill {
         email,
         organization,
         scheduling,
+        planning,
         health,
     ]
 
@@ -151,6 +152,24 @@ enum BundledSkill {
         instruction: Prompt.Skills.Scheduling.instruction,
         smallInstruction: Prompt.Skills.Scheduling.small,
         requiredTools: [
+            GetCalendarEventsTool.capability,
+            CreateCalendarEventTool.capability,
+            ManageCalendarEventTool.capability,
+            GetRemindersTool.capability,
+            ManageReminderTool.capability,
+        ],
+        alwaysActive: false
+    )
+
+    static let planning = Skill(
+        id: "planning",
+        displayName: Localized.Ui.planning,
+        description: "Plan an upcoming trip, event, day out, gathering, festival, or conference.",
+        instruction: Prompt.Skills.Planning.instruction,
+        smallInstruction: Prompt.Skills.Planning.small,
+        requiredTools: [
+            StartFlowTool.capability,
+            AdvanceFlowTool.capability,
             GetCalendarEventsTool.capability,
             CreateCalendarEventTool.capability,
             ManageCalendarEventTool.capability,

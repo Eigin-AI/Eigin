@@ -1,3 +1,4 @@
+pub mod flows;
 pub mod generator;
 pub mod parser;
 
@@ -8,34 +9,55 @@ use std::process::Command;
 
 const SOURCE_REL: &str = "design/prompts";
 const OUTPUT_REL: &str = "src/eigin_ios/Sources/Core/Design/Generated/Prompt.swift";
+const FLOW_REGISTRY_OUTPUT_REL: &str =
+    "src/eigin_ios/Sources/Core/Design/Generated/FlowRegistry.swift";
 
 /// Compile every `design/prompts/**/*.jinja` template into typed Swift accessors
 /// at `Sources/Core/Design/Generated/Prompt.swift`, mirroring the folder tree into
-/// nested enums. Called by `eigin-tools generate`.
+/// nested enums. Also compiles every `design/prompts/**/flows.toml` manifest into
+/// `Sources/Core/Design/Generated/FlowRegistry.swift`. Called by `eigin-tools generate`.
 pub fn generate(repo_root: &str) -> Result<()> {
     let source_dir = PathBuf::from(repo_root).join(SOURCE_REL);
     let output_path = PathBuf::from(repo_root).join(OUTPUT_REL);
+    let flow_output_path = PathBuf::from(repo_root).join(FLOW_REGISTRY_OUTPUT_REL);
 
     if !source_dir.exists() {
-        if output_path.exists() {
-            fs::remove_file(&output_path)
-                .with_context(|| format!("removing {}", output_path.display()))?;
+        for path in [&output_path, &flow_output_path] {
+            if path.exists() {
+                fs::remove_file(path).with_context(|| format!("removing {}", path.display()))?;
+            }
         }
         return Ok(());
     }
 
     let mut templates = generator::Templates::new();
     collect(&source_dir, &source_dir, &mut templates)?;
+    let params = generator::resolve_all_params(&templates)?;
 
     let swift = generator::emit(&templates).context("generating Prompt.swift")?;
+    write_swift(&output_path, &swift)?;
 
+    let mut resolved_flows = Vec::new();
+    flows::collect(
+        &source_dir,
+        &source_dir,
+        &templates,
+        &params,
+        &mut resolved_flows,
+    )?;
+    let flow_swift = flows::emit(&resolved_flows).context("generating FlowRegistry.swift")?;
+    write_swift(&flow_output_path, &flow_swift)?;
+
+    Ok(())
+}
+
+fn write_swift(output_path: &Path, swift: &str) -> Result<()> {
     let parent = output_path.parent().unwrap();
     fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
-    fs::write(&output_path, &swift)
-        .with_context(|| format!("writing {}", output_path.display()))?;
+    fs::write(output_path, swift).with_context(|| format!("writing {}", output_path.display()))?;
 
     let status = Command::new("swiftformat")
-        .arg(&output_path)
+        .arg(output_path)
         .status()
         .context("running swiftformat")?;
     if !status.success() {

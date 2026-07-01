@@ -26,6 +26,7 @@ struct RelevantKnowledgeSourceTests {
             activeIntents: [],
             activeSkills: [],
             availableSkills: [],
+            activeFlow: nil,
             provider: ProviderSnapshot(name: "Test", baseURL: "https://test.com"),
             modelID: "test-model",
             isSmallContext: isSmallContext

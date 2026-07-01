@@ -504,6 +504,7 @@ final class LiveCallService: @unchecked Sendable {
                 spaceID: spaceID, chatID: chatID,
                 mcpServers: mcpServers,
                 activeSkills: activeSkills,
+                activeFlow: fetchChat(agent: agent)?.activeFlow,
                 gatekeeper: gatekeeper,
                 mode: .liveCall,
                 hasSpaces: false,

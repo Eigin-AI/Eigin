@@ -136,20 +136,12 @@ struct ActivateSkillTool: Tool {
             )
         }
 
-        // Single-slot: deactivate other on-demand skills so only one is active at a time.
-        if isSmallContext {
-            chat.activeSkillEntries.removeAll { entry in
-                guard let existing = BundledSkill.skill(forID: entry.skillID) else { return false }
-                return !existing.alwaysActive
-            }
-        }
-
-        let entry = ActiveSkillEntry(
+        SkillActivation.activate(
             skillID: skillID,
-            activatedAt: .now,
-            activatingToolCallID: id
+            on: chat,
+            activatingToolCallID: id,
+            isSmallContext: isSmallContext
         )
-        chat.activeSkillEntries.append(entry)
 
         let toolNames = skill.requiredTools.map(\.key).sorted()
         return ToolResult(
@@ -157,6 +149,10 @@ struct ActivateSkillTool: Tool {
             content: ToolHelpers.output(result: [
                 "activated": skillID,
                 "tools_available": toolNames,
+                // Included inline so the model has it this turn — the Gatekeeper's
+                // per-turn hint (which also carries this instruction on every
+                // subsequent turn) isn't recomputed mid-turn after a tool call.
+                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
             ]),
             isError: false
         )

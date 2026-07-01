@@ -25,6 +25,7 @@ struct GatekeeperTests {
             activeIntents: activeIntents,
             activeSkills: [],
             availableSkills: availableSkills,
+            activeFlow: nil,
             provider: ProviderSnapshot(name: "Test", baseURL: "https://test.com"),
             modelID: "test-model",
             isSmallContext: isSmallContext
@@ -128,6 +129,7 @@ struct GatekeeperTests {
             activeIntents: [],
             activeSkills: [],
             availableSkills: [],
+            activeFlow: nil,
             provider: ProviderSnapshot(name: "Test", baseURL: "https://test.com"),
             modelID: "test-model",
             isSmallContext: true
