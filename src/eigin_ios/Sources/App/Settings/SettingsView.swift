@@ -62,7 +62,7 @@ struct SettingsView: View {
 
             AppCardSurface(padding: 0) {
                 VStack(spacing: 0) {
-                    if let agent = agents.first {
+                    if let agent = agents.primary {
                         NavigationLink {
                             ToolPermissions(agent: agent)
                                 .hidesTabBar()

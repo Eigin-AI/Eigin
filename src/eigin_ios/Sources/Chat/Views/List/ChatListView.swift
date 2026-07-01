@@ -10,14 +10,13 @@ struct ChatListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Query(sort: \Chat.updatedAt, order: .reverse) private var chats: [Chat]
-    @Query(filter: #Predicate<Agent> { $0.bootstrapComplete })
-    private var agents: [Agent]
+    @Query private var agents: [Agent]
     @Query(sort: \Space.name) private var spaces: [Space]
 
     @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
     @AppStorage(StorageKey.pendingOnboardingChat) private var pendingOnboardingChat: String?
     private var agent: Agent? {
-        agents.first
+        agents.primary
     }
 
     @State private var path = NavigationPath()

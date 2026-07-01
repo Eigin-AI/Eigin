@@ -5,12 +5,11 @@ struct SpaceListView: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Space.name) private var spaces: [Space]
-    @Query(filter: #Predicate<Agent> { $0.bootstrapComplete })
-    private var agents: [Agent]
+    @Query private var agents: [Agent]
     @Query(sort: \Chat.updatedAt) private var allChats: [Chat]
 
     private var agent: Agent? {
-        agents.first
+        agents.primary
     }
 
     private var activeProvider: Provider? {

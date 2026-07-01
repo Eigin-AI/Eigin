@@ -21,6 +21,7 @@ struct DevelopmentMenu: View {
     @State private var pendingImportURL: URL?
     @State private var importExportError: String?
     @State private var importSuccess = false
+    @State private var showResetOnboardingConfirmation = false
 
     var body: some View {
         List {
@@ -245,7 +246,7 @@ struct DevelopmentMenu: View {
 
             Section("Onboarding") {
                 Button {
-                    retriggerOnboarding()
+                    showResetOnboardingConfirmation = true
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "arrow.counterclockwise", color: .purple)
@@ -333,6 +334,21 @@ struct DevelopmentMenu: View {
         } message: {
             Text(
                 Localized.Development.replaceAllDataMessage
+            )
+        }
+        .confirmationDialog(
+            "Reset Onboarding?",
+            isPresented: $showResetOnboardingConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset Onboarding", role: .destructive) {
+                retriggerOnboarding()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This starts a new agent from scratch and force-quits the app. " +
+                    "Your existing agent and chats are kept but you'll go through onboarding again."
             )
         }
     }
