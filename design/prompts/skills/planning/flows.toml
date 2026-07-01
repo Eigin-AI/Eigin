@@ -1,0 +1,96 @@
+# Flow definitions for the planning skill.
+#
+# Each flow is an ordered list of stages. A stage's `instructions` path is
+# relative to this file and points at a stage's `.jinja` prose. `show_notes`
+# controls whether the accumulated notes recorded via advance_flow are
+# rendered back to the model alongside that stage's instructions.
+#
+# Flow names must be globally unique across all skills. Each flow's stage
+# prose lives under `flow/<flow_name>/`.
+
+[[flows]]
+name = "trip"
+
+  [[flows.stages]]
+  name = "preferences"
+  instructions = "flow/trip/preferences.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "constraints"
+  instructions = "flow/trip/constraints.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "options"
+  instructions = "flow/trip/options.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "logistics"
+  instructions = "flow/trip/logistics.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "itinerary"
+  instructions = "flow/trip/itinerary.jinja"
+  show_notes = true
+
+[[flows]]
+name = "shortlist"
+
+  [[flows.stages]]
+  name = "overview"
+  instructions = "flow/shortlist/overview.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "preferences"
+  instructions = "flow/shortlist/preferences.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "triage"
+  instructions = "flow/shortlist/triage.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "sequence"
+  instructions = "flow/shortlist/sequence.jinja"
+  show_notes = true
+
+[[flows]]
+name = "day_out"
+
+  [[flows.stages]]
+  name = "preferences"
+  instructions = "flow/day_out/preferences.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "options"
+  instructions = "flow/day_out/options.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "schedule"
+  instructions = "flow/day_out/schedule.jinja"
+  show_notes = true
+
+[[flows]]
+name = "gathering"
+
+  [[flows.stages]]
+  name = "occasion"
+  instructions = "flow/gathering/occasion.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "activities"
+  instructions = "flow/gathering/activities.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "prep"
+  instructions = "flow/gathering/prep.jinja"
+  show_notes = true

@@ -20,6 +20,10 @@ Running `just generate` reads the token file and assets, then produces platform-
 
 Generated files are git-ignored so machine-local font choices don't pollute source control.
 
+## Prompts
+
+Agent-facing prompt text also lives in the design domain, under `design/prompts/`, as Jinja templates mirrored by folder into typed Swift accessors (e.g. `design/prompts/skills/planning/instruction.jinja` becomes `Prompt.Skills.Planning.instruction`). A skill folder can also carry a `flows.toml` describing its flows (see [Skills](./agents/skills.md#flows)), compiled into a generated flow registry the same way. `just generate` regenerates all of it alongside the design tokens.
+
 ## Design components
 
 Eigin apps implement a design component library based on the Eigin design system. Components consume the generated tokens directly, so visual changes flow from tokens through to components without manual updates.

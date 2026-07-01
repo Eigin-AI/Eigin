@@ -59,6 +59,7 @@ enum MessagePipeline {
         chatID: UUID? = nil,
         mcpServers: [MCPServer],
         activeSkills: [Skill] = [],
+        activeFlow: FlowState? = nil,
         gatekeeper: Gatekeeper,
         mode: InteractionMode,
         hasSpaces: Bool,
@@ -189,6 +190,7 @@ enum MessagePipeline {
             activeIntents: activeIntents,
             activeSkills: allActiveSkills,
             availableSkills: BundledSkill.all,
+            activeFlow: activeFlow,
             provider: provider,
             modelID: agent.model,
             isSmallContext: isSmallContext

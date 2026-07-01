@@ -22,17 +22,26 @@ struct SkillTests {
         #expect(Set(ids).count == ids.count)
     }
 
-    @Test func noToolCapabilityAppearsInMultipleSkills() {
-        var seen = [String: String]() // capability key -> skill id
-        for skill in BundledSkill.all {
-            for tool in skill.requiredTools {
-                if let existingSkill = seen[tool.key] {
-                    Issue.record(
-                        "Tool \(tool.key) appears in both \(existingSkill) and \(skill.id)"
-                    )
-                }
-                seen[tool.key] = skill.id
-            }
+    @Test @MainActor func sharedToolsAreDeduplicatedAcrossSkills() async {
+        // A skill may reuse tools owned by another skill — planning reuses the
+        // scheduling skill's calendar and reminder tools. The active tool set is
+        // a union, so activating both must yield each shared tool exactly once,
+        // not a duplicate per skill that requires it.
+        let policy = AlwaysAllowPolicy()
+        let registry = await ToolRegistry.chat(
+            permissionPolicy: policy,
+            activeSkills: BundledSkill.alwaysActive
+                + [BundledSkill.scheduling, BundledSkill.planning]
+        )
+        let names = registry.definitions.map(\.function.name)
+
+        let shared = [
+            "get_calendar_events", "create_calendar_event", "manage_calendar_event",
+            "get_reminders", "manage_reminder",
+        ]
+        for tool in shared {
+            #expect(names.contains(tool), "\(tool) should be available")
+            #expect(names.count(where: { $0 == tool }) == 1, "\(tool) should appear once")
         }
     }
 

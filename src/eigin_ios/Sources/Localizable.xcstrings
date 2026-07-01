@@ -9950,6 +9950,23 @@
         }
       }
     },
+    "tools.agent.advanceFlow" : {
+      "comment" : "Display name for the advance-flow tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fortsæt forløb"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Advance Flow"
+          }
+        }
+      }
+    },
     "tools.agent.listIntents" : {
       "comment" : "Display name for the list-intents tool",
       "localizations" : {
@@ -9980,6 +9997,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Resolve Intent"
+          }
+        }
+      }
+    },
+    "tools.agent.startFlow" : {
+      "comment" : "Display name for the start-flow tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start forløb"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Flow"
           }
         }
       }
@@ -12394,6 +12428,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rename"
+          }
+        }
+      }
+    },
+    "ui.planning" : {
+      "comment" : "Section label for the planning skill (trips, holidays, activities)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rejseplanlægning"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planning"
           }
         }
       }

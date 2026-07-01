@@ -3320,6 +3320,11 @@ enum Localized {
                 Localized.get("tools.agent.addIntent")
             }
 
+            /// Display name for the advance-flow tool
+            static var advanceFlow: String {
+                Localized.get("tools.agent.advanceFlow")
+            }
+
             /// Display name for the list-intents tool
             static var listIntents: String {
                 Localized.get("tools.agent.listIntents")
@@ -3328,6 +3333,11 @@ enum Localized {
             /// Display name for the resolve-intent tool
             static var resolveIntent: String {
                 Localized.get("tools.agent.resolveIntent")
+            }
+
+            /// Display name for the start-flow tool
+            static var startFlow: String {
+                Localized.get("tools.agent.startFlow")
             }
 
             /// Display name for the update-intent tool
@@ -4079,6 +4089,11 @@ enum Localized {
         /// A label showing the percentage of the download that has completed.
         static func percentageFormat(_ p1: String) -> String {
             String(format: Localized.get("ui.percentageFormat"), p1)
+        }
+
+        /// Section label for the planning skill (trips, holidays, activities)
+        static var planning: String {
+            Localized.get("ui.planning")
         }
 
         /// A toggle switch label that indicates whether a space is private or public.

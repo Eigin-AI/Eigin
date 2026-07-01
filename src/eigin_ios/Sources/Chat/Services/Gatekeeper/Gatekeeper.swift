@@ -46,6 +46,7 @@ final class Gatekeeper {
             LanguageSource(),
             InteractionModeSource(),
             ActiveSkillsSource(),
+            ActiveFlowSource(),
             AvailableSkillsSource(),
             ActiveIntentsSource(),
             ChatHintSource(proactivity: proactivity),

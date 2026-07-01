@@ -45,6 +45,7 @@ struct SystemHintSourcesTests {
         activeIntents: [IntentSnapshot] = [],
         activeSkills: [Skill] = [],
         availableSkills: [Skill] = [],
+        activeFlow: FlowState? = nil,
         provider: ProviderSnapshot = ProviderSnapshot(
             name: "Test Provider",
             baseURL: "https://test.example.com"
@@ -65,6 +66,7 @@ struct SystemHintSourcesTests {
             activeIntents: activeIntents,
             activeSkills: activeSkills,
             availableSkills: availableSkills,
+            activeFlow: activeFlow,
             provider: provider,
             modelID: modelID,
             isSmallContext: isSmallContext
@@ -148,6 +150,46 @@ struct SystemHintSourcesTests {
         let alphaHeaderIdx = try #require(body.range(of: "### Alpha")?.lowerBound)
         let firstInstructionIdx = try #require(body.range(of: "first instruction")?.lowerBound)
         #expect(alphaHeaderIdx < firstInstructionIdx)
+    }
+
+    // MARK: - ActiveFlowSource
+
+    @Test func activeFlowNilWhenNoneActive() async {
+        let source = ActiveFlowSource()
+        #expect(await source.render(input(activeFlow: nil)) == nil)
+    }
+
+    @Test func activeFlowNilInCompact() async {
+        let source = ActiveFlowSource()
+        let state = FlowState(flowID: "trip", skillID: "planning", stage: 0, notes: [])
+        #expect(await source.render(input(activeFlow: state, isSmallContext: true)) == nil)
+    }
+
+    @Test func activeFlowRendersCurrentStageAndNudge() async {
+        let source = ActiveFlowSource()
+        let state = FlowState(
+            flowID: "trip",
+            skillID: "planning",
+            stage: 1,
+            notes: ["family of four, Berlin"]
+        )
+        let body = await source.render(input(activeFlow: state)) ?? ""
+        #expect(body.contains("trip"))
+        #expect(body.contains("stage 2 of 5"))
+        #expect(body.contains("advance_flow"))
+    }
+
+    @Test func activeFlowRendersAccumulatedNotesOnShowNotesStage() async {
+        let source = ActiveFlowSource()
+        // Stage index 4 ("itinerary") has show_notes = true in flows.toml.
+        let state = FlowState(
+            flowID: "trip",
+            skillID: "planning",
+            stage: 4,
+            notes: ["chose the aquarium"]
+        )
+        let body = await source.render(input(activeFlow: state)) ?? ""
+        #expect(body.contains("chose the aquarium"))
     }
 
     // MARK: - AvailableSkillsSource

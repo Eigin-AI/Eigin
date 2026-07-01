@@ -37,6 +37,7 @@ struct SystemHintInput {
     let activeIntents: [IntentSnapshot]
     let activeSkills: [Skill]
     let availableSkills: [Skill]
+    let activeFlow: FlowState?
 
     // MARK: Provider & Model
 

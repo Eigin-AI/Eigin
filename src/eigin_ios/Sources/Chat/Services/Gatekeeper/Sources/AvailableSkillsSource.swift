@@ -29,11 +29,11 @@ final class AvailableSkillsSource: SystemHintSource {
 
         let lines: [String] = shown.map { skill in
             let description: String = if input.isSmallContext,
-                                         skill.description.count > compactDescriptionLimit
+                                         skill.smallInstruction.count > compactDescriptionLimit
             {
-                String(skill.description.prefix(compactDescriptionLimit)) + "…"
+                String(skill.smallInstruction.prefix(compactDescriptionLimit)) + "…"
             } else {
-                skill.description
+                skill.smallInstruction
             }
             return "- \(skill.displayName) (`\(skill.id)`): \(description)"
         }

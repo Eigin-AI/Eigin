@@ -41,6 +41,7 @@ struct SeasonalInfoSourceTests {
             activeIntents: [],
             activeSkills: [],
             availableSkills: [],
+            activeFlow: nil,
             provider: ProviderSnapshot(name: "Test Provider", baseURL: "https://test.example.com"),
             modelID: "test-model",
             isSmallContext: isSmallContext
