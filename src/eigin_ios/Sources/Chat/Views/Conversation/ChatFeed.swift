@@ -336,6 +336,17 @@ struct ChatFeed: View {
         throttler.phase == .waiting || throttler.phase == .streaming
     }
 
+    /// Whether to show the icebreaker starters: only on a truly blank slate —
+    /// no messages, no staged attachments, an empty composer, an enabled input,
+    /// and nothing streaming.
+    private var showsIcebreakers: Bool {
+        items.isEmpty
+            && !isInputDisabled
+            && !isStreaming
+            && context.stagedAttachments.isEmpty
+            && messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     /// The flat item list used when no user turn has been pinned yet.
     ///
     /// If the conversation opens with an agent-initiated message (no user
@@ -478,6 +489,18 @@ struct ChatFeed: View {
             .animation(Animations.smooth, value: isAtBottom)
             .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
                 VStack(spacing: 0) {
+                    if showsIcebreakers {
+                        IcebreakerFeed(
+                            groups: IcebreakerSelection.groups(),
+                            onSelect: { prompt in
+                                messageText = prompt
+                                sendMessage()
+                            }
+                        )
+                        // Same gap the staged-attachments strip leaves above the input.
+                        .padding(.bottom, Spacing.n8)
+                        .transition(.opacity)
+                    }
                     if !context.stagedAttachments.isEmpty {
                         StagedAttachmentsView(
                             attachments: context.stagedAttachments,
@@ -504,6 +527,7 @@ struct ChatFeed: View {
                     )
                 }
                 .animation(Animations.smooth, value: context.stagedAttachments.isEmpty)
+                .animation(Animations.smooth, value: showsIcebreakers)
                 .ignoresSafeArea(.container, edges: .horizontal)
             }
             // Scroll correction on prepend: old first item pinned to top

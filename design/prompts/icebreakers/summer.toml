@@ -1,0 +1,33 @@
+# Featured icebreakers for the summer season. Surfaced first.
+id = "summer"
+label.en = "Summer"
+label.da = "Sommerferie"
+featured = true
+
+[[icebreaker]]
+id = "trip"
+title.en = "Plan a trip or a day out"
+title.da = "Planlæg en rejse eller udflugt"
+prompt.en = "Let's plan something for the summer. Ask me what I'm after, then help me make a plan."
+prompt.da = "Lad os planlægge noget til sommeren. Spørg, hvad jeg vil, og hjælp mig så med at lave en plan."
+
+[[icebreaker]]
+id = "summer_food"
+title.en = "Make summer food"
+title.da = "Lav sommermad"
+prompt.en = "Help me cook something that tastes like summer. Ask what I'm in the mood for, then talk me through it."
+prompt.da = "Hjælp mig med at lave noget, der smager af sommer. Spørg, hvad jeg er i humør til, og hjælp mig så igennem det."
+
+[[icebreaker]]
+id = "diy_project"
+title.en = "Do a DIY project"
+title.da = "Lav et gør-det-selv-projekt"
+prompt.en = "There's a DIY job at home I've been wanting to do. Ask me what it is, then help me plan it out and get it done."
+prompt.da = "Der er et gør-det-selv-projekt derhjemme, jeg vil i gang med. Spørg, hvad det er, og hjælp mig så med at planlægge det og få det gjort."
+
+[[icebreaker]]
+id = "fun"
+title.en = "Find fun things to do"
+title.da = "Find på noget sjovt"
+prompt.en = "I want to have some fun this summer. Ask about my interests, then suggest some things to do."
+prompt.da = "Jeg vil gerne have det sjovt i sommer. Spørg til mine interesser, og foreslå så nogle ting, jeg kan lave."

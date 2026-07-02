@@ -1,0 +1,33 @@
+# Icebreakers for the "Think it through" use case, shown on an empty chat.
+id = "think_it_through"
+label.en = "Think it through"
+label.da = "Tænk det igennem"
+order = 40
+
+[[icebreaker]]
+id = "decision"
+title.en = "Talk through a decision"
+title.da = "Vend en beslutning"
+prompt.en = "I've got a difficult decision to make and I keep going back and forth. Ask me about my options and what matters to me, then help me weigh them."
+prompt.da = "Jeg står med en svær beslutning, og jeg bliver ved med at tvivle. Spørg til mine muligheder, og hvad der betyder noget for mig, og hjælp mig så med at veje dem op mod hinanden."
+
+[[icebreaker]]
+id = "on_mind"
+title.en = "Sort out what's on my mind"
+title.da = "Få styr på tankerne"
+prompt.en = "I've got a lot on my mind and need to get it all out. Help me make sense of it so I can get focused."
+prompt.da = "Jeg har meget i hovedet og har brug for at få det hele ud. Hjælp mig med at få styr på det, så jeg kan blive fokuseret."
+
+[[icebreaker]]
+id = "sounding_board"
+title.en = "Be a sounding board"
+title.da = "Vær min sparringspartner"
+prompt.en = "I need to talk something through. Listen, ask me questions, challenge me, and help me see things more clearly."
+prompt.da = "Jeg har brug for at tale noget igennem. Lyt, stil spørgsmål, udfordr mig, og hjælp mig med at se tingene klarere."
+
+[[icebreaker]]
+id = "process_event"
+title.en = "Reflect on something"
+title.da = "Reflekter over noget"
+prompt.en = "Something happened and I'm still thinking about it. Ask me about it, then help me make sense of it."
+prompt.da = "Der er sket noget, jeg stadig tænker over. Spørg ind til det, og hjælp mig så med at få styr på det."

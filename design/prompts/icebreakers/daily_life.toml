@@ -1,0 +1,33 @@
+# Icebreakers for the "Daily life" use case, shown on an empty chat.
+id = "daily_life"
+label.en = "Daily life"
+label.da = "Hverdag"
+order = 20
+
+[[icebreaker]]
+id = "on_top_week"
+title.en = "Get on top of the week"
+title.da = "Få styr på ugen"
+prompt.en = "Help me plan the week ahead. Ask what's coming up and what I'm worried about, then help me lay out a realistic plan."
+prompt.da = "Hjælp mig med at planlægge ugen, der kommer. Spørg, hvad der venter, og hvad jeg er bekymret for, og hjælp mig så med at lægge en realistisk plan."
+
+[[icebreaker]]
+id = "dinner_tonight"
+title.en = "Dinner from what I've got"
+title.da = "Aftensmad af det, jeg har"
+prompt.en = "Help me figure out dinner tonight. Ask me what I've got in and who I'm feeding, then help me find something I can actually cook."
+prompt.da = "Hjælp mig med at finde ud af aftensmaden i aften. Spørg, hvad jeg har derhjemme, og hvem jeg laver mad til, og hjælp mig så med at finde noget, jeg rent faktisk kan lave."
+
+[[icebreaker]]
+id = "week_meals"
+title.en = "Plan the week's meals"
+title.da = "Planlæg ugens måltider"
+prompt.en = "I'd like a meal plan for the week. Ask about what we like and what to avoid, then put together a plan and a shopping list."
+prompt.da = "Jeg vil gerne have en madplan for ugen. Spørg til, hvad vi godt kan lide, og hvad vi skal undgå, og lav så en plan og en indkøbsliste."
+
+[[icebreaker]]
+id = "small_stuff"
+title.en = "Sort out the small stuff"
+title.da = "Få klaret småtingene"
+prompt.en = "There are a lot of little tasks I keep putting off. Ask me what they are, then help me sort them and get them done."
+prompt.da = "Der er mange småting, jeg bliver ved med at udskyde. Spørg mig, hvad de er, og hjælp mig så med at sortere dem og få dem klaret."
