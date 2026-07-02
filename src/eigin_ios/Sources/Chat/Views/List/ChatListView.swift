@@ -1,3 +1,4 @@
+import Factory
 import SwiftData
 import SwiftUI
 
@@ -9,6 +10,7 @@ enum ChatListDestination: Hashable {
 struct ChatListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
+    @Injected(\.chatAttachmentStore) private var attachmentStore
     @Query(sort: \Chat.updatedAt, order: .reverse) private var chats: [Chat]
     @Query private var agents: [Agent]
     @Query(sort: \Space.name) private var spaces: [Space]
@@ -117,6 +119,8 @@ struct ChatListView: View {
                 Button(Localized.Common.Actions.delete, role: .destructive) {
                     Haptics.error()
                     if let chat = chatToDelete {
+                        let attachments = chat.messages.flatMap { $0.attachments ?? [] }
+                        attachmentStore.deleteAll(attachments)
                         modelContext.delete(chat)
                     }
                 }

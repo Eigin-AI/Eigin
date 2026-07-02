@@ -2,7 +2,7 @@ import Foundation
 
 /// A single item in a chat feed. Each case renders differently in `ChatFeed`.
 enum ChatItem: Identifiable {
-    case message(id: String, role: String, content: String)
+    case message(id: String, role: String, content: String, attachments: [MessageAttachment] = [])
     case typing(id: String)
     case status(id: String, text: String)
     case error(id: String, error: ConnectionError)
@@ -16,7 +16,7 @@ enum ChatItem: Identifiable {
 
     var id: String {
         switch self {
-        case .message(let id, _, _): id
+        case .message(let id, _, _, _): id
         case .typing(let id): id
         case .status(let id, _): id
         case .error(let id, _): id
@@ -105,15 +105,17 @@ extension ChatItem {
                         progress: nil,
                         summary: summaryText
                     ))
-                } else if let content = message.content,
-                          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                {
-                    let displayContent = ChatTags.stripAll(from: content)
-                    if !displayContent.isEmpty {
+                } else {
+                    // User (and other non-tool) messages. Content may be nil for image-only sends.
+                    let rawContent = message.content ?? ""
+                    let displayContent = ChatTags.stripAll(from: rawContent)
+                    let attachments = message.attachments ?? []
+                    if !displayContent.isEmpty || !attachments.isEmpty {
                         items.append(.message(
                             id: "msg-\(message.localID)",
                             role: message.role,
-                            content: displayContent
+                            content: displayContent,
+                            attachments: attachments
                         ))
                     }
                 }

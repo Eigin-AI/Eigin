@@ -1,5 +1,7 @@
 import Factory
+import PhotosUI
 import SwiftUI
+import UIKit
 
 /// Pagination and scroll-tracking callbacks for ``ChatFeed``.
 struct FeedPagination {
@@ -17,6 +19,14 @@ struct FeedContext {
     var spaces: [SpaceSnapshot] = []
     var currentSpaceID: UUID?
     var onMoveToSpace: ((UUID?) -> Void)?
+    /// Whether the current model supports image input.
+    var supportsVision: Bool = false
+    /// Staged image attachments waiting to be sent with the next message.
+    var stagedAttachments: [MessageAttachment] = []
+    /// Called when the user picks an image (from library or camera) to stage.
+    var onStageImage: ((UIImage) -> Void)?
+    /// Called when the user removes a staged attachment.
+    var onRemoveStagedAttachment: ((MessageAttachment) -> Void)?
 }
 
 /// Pending interaction requests passed through to ``ChatInputBar``.
@@ -64,6 +74,10 @@ struct ChatFeed: View {
     @State private var browsingPageReady = false
     @State private var showActionSheet = false
     @State private var showSpacePicker = false
+    @State private var showPhotoPicker = false
+    @State private var showCamera = false
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var showNonVisionWarning = false
     /// Item IDs that existed before the current streaming turn started.
     /// Items not in this set appeared mid-turn and get `.growIn()` animation.
     @State private var preStreamItemIDs: Set<String> = []
@@ -190,17 +204,46 @@ struct ChatFeed: View {
                 detents: [.medium]
             ) {
                 ActionSheetContent(
-                    actions: [
-                        ActionItem(
-                            label: Localized.Debug.moveToSpaceTitle,
-                            icon: Iconography.Brand.security,
-                            action: {
-                                showActionSheet = false
-                                showSpacePicker = true
-                            }
-                        ),
-                    ]
+                    actions: actionSheetItems
                 )
+            }
+            .photosPicker(
+                isPresented: $showPhotoPicker,
+                selection: $selectedPhotoItems,
+                maxSelectionCount: 1,
+                matching: .images
+            )
+            .onChange(of: selectedPhotoItems) { _, items in
+                guard let item = items.first else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data)
+                    {
+                        context.onStageImage?(image)
+                    }
+                    selectedPhotoItems = []
+                }
+            }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPickerView(
+                    onCapture: { image in
+                        showCamera = false
+                        context.onStageImage?(image)
+                    },
+                    onCancel: {
+                        showCamera = false
+                    }
+                )
+                .ignoresSafeArea()
+            }
+            .appSheet(
+                isPresented: $showNonVisionWarning,
+                title: Localized.Attachment.imageStagedOnNonVisionTitle,
+                description: Localized.Attachment.imageStagedOnNonVisionMessage,
+                detents: [.medium]
+            ) {
+                // Empty body — the description in the sheet header is sufficient.
+                EmptyView()
             }
             .appSheet(
                 isPresented: $showSpacePicker,
@@ -238,8 +281,51 @@ struct ChatFeed: View {
     private var inputAction: (() -> Void)? {
         guard showsInputActions else { return nil }
         let hasMoveToSpace = context.onMoveToSpace != nil && !context.spaces.isEmpty
-        guard hasMoveToSpace else { return nil }
+        let canAttachImage = context.supportsVision
+            && context.stagedAttachments.count < ChatViewModel.maxStagedAttachments
+        guard hasMoveToSpace || canAttachImage else { return nil }
         return { showActionSheet = true }
+    }
+
+    /// Builds the action items for the action sheet based on available capabilities.
+    private var actionSheetItems: [ActionItem] {
+        var items: [ActionItem] = []
+
+        if context.supportsVision,
+           context.stagedAttachments.count < ChatViewModel.maxStagedAttachments
+        {
+            items.append(ActionItem(
+                label: Localized.Attachment.takePhoto,
+                icon: Image(systemName: "camera"),
+                action: {
+                    showActionSheet = false
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        showCamera = true
+                    }
+                }
+            ))
+            items.append(ActionItem(
+                label: Localized.Attachment.attachImage,
+                icon: Image(systemName: "photo"),
+                action: {
+                    showActionSheet = false
+                    showPhotoPicker = true
+                }
+            ))
+        }
+
+        if context.onMoveToSpace != nil, !context.spaces.isEmpty {
+            items.append(ActionItem(
+                label: Localized.Debug.moveToSpaceTitle,
+                icon: Iconography.Brand.security,
+                action: {
+                    showActionSheet = false
+                    showSpacePicker = true
+                }
+            ))
+        }
+
+        return items
     }
 
     private var actorName: String {
@@ -257,7 +343,8 @@ struct ChatFeed: View {
     /// the pinned-turn block. Without it, `.defaultScrollAnchor(.bottom)`
     /// pushes a short opening message to the bottom of the viewport.
     @ViewBuilder private var agentInitiatedBlock: some View {
-        let isAgentOpened: Bool = if case .message(_, let role, _) = items.first { role != "user" }
+        let isAgentOpened: Bool = if case .message(_, let role, _, _) = items
+            .first { role != "user" }
         else { true }
         VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
             ForEach(items) { item in
@@ -390,20 +477,33 @@ struct ChatFeed: View {
             }
             .animation(Animations.smooth, value: isAtBottom)
             .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
-                ChatInputBar(
-                    text: $messageText,
-                    isDisabled: isInputDisabled,
-                    onSend: { mode in sendMessage(mode: mode) },
-                    onStop: onStop,
-                    isFocused: $isInputFocused,
-                    spaces: context.spaces,
-                    currentSpaceID: context.currentSpaceID,
-                    onMoveToSpace: context.onMoveToSpace,
-                    agentName: context.agentName,
-                    permissionRequest: interactions.permissionRequest,
-                    onPermissionResponse: interactions.onPermissionResponse,
-                    onActionTap: inputAction
-                )
+                VStack(spacing: 0) {
+                    if !context.stagedAttachments.isEmpty {
+                        StagedAttachmentsView(
+                            attachments: context.stagedAttachments,
+                            onRemove: { attachment in
+                                context.onRemoveStagedAttachment?(attachment)
+                            }
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                    ChatInputBar(
+                        text: $messageText,
+                        isDisabled: isInputDisabled,
+                        onSend: { mode in sendMessage(mode: mode) },
+                        onStop: onStop,
+                        isFocused: $isInputFocused,
+                        spaces: context.spaces,
+                        currentSpaceID: context.currentSpaceID,
+                        onMoveToSpace: context.onMoveToSpace,
+                        agentName: context.agentName,
+                        permissionRequest: interactions.permissionRequest,
+                        onPermissionResponse: interactions.onPermissionResponse,
+                        onActionTap: inputAction,
+                        hasStagedAttachments: !context.stagedAttachments.isEmpty
+                    )
+                }
+                .animation(Animations.smooth, value: context.stagedAttachments.isEmpty)
                 .ignoresSafeArea(.container, edges: .horizontal)
             }
             // Scroll correction on prepend: old first item pinned to top
@@ -428,7 +528,7 @@ struct ChatFeed: View {
                 // end on a user message don't trigger the viewport-sized spacer.
                 guard isExpectingSendAppend,
                       let last = items.last,
-                      case .message(let id, let role, _) = last,
+                      case .message(let id, let role, _, _) = last,
                       role == "user",
                       id != pinnedUserMessageID
                 else {
@@ -478,7 +578,7 @@ struct ChatFeed: View {
     @ViewBuilder
     private func itemView(for item: ChatItem) -> some View {
         switch item {
-        case .message(let id, let role, let content):
+        case .message(let id, let role, let content, let attachments):
             let showsUserMessageFooter =
                 role == "user"
                     && id == items.last?.id
@@ -494,6 +594,7 @@ struct ChatFeed: View {
             ChatMessageView(
                 role: role,
                 content: content,
+                attachments: attachments,
                 messageID: id,
                 showFooter: role == "assistant",
                 animateFooter: id == lastStreamedItemID,
@@ -540,7 +641,7 @@ struct ChatFeed: View {
 
     private func sendMessage(mode: InteractionMode = .text) {
         let text = messageText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty || !context.stagedAttachments.isEmpty else { return }
         isInputFocused = false
         isExpectingSendAppend = true
         onSend(mode)

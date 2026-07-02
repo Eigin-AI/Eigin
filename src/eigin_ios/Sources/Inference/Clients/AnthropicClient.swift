@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 
 /// Native client for Anthropic's Messages API.
@@ -177,11 +178,40 @@ struct AnthropicClient: LLMClient {
                 }
 
             default: // "user" and any other role
-                result.append(AnthropicMessage(role: "user", content: .text(msg.content ?? "")))
+                let content = buildUserContent(for: msg)
+                result.append(AnthropicMessage(role: "user", content: content))
             }
         }
 
         return result
+    }
+
+    /// Builds the Anthropic content value for a user message.
+    ///
+    /// Returns a plain `.text` string when there are no attachments (preserving the
+    /// existing wire format for text-only messages). Returns `.blocks` when images are
+    /// present, placing image blocks before the text so context is clear to the model.
+    private func buildUserContent(for msg: ChatMessage) -> AnthropicMessage.AnthropicContent {
+        guard let attachments = msg.attachments, !attachments.isEmpty else {
+            return .text(msg.content ?? "")
+        }
+
+        let store = Container.shared.chatAttachmentStore()
+        var blocks: [AnthropicContentBlock] = []
+
+        for attachment in attachments where attachment.kind == .image {
+            guard let data = store.load(id: attachment.id) else { continue }
+            let b64 = data.base64EncodedString()
+            blocks.append(.image(mediaType: attachment.mimeType, data: b64))
+        }
+
+        if let text = msg.content, !text.isEmpty {
+            blocks.append(.text(text))
+        }
+
+        // Fallback: if no image bytes were loadable, return plain text.
+        guard !blocks.isEmpty else { return .text(msg.content ?? "") }
+        return .blocks(blocks)
     }
 
     /// Parses a JSON string into a `[String: JSONValue]` dictionary for tool_use `input`.

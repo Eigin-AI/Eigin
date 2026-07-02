@@ -60,6 +60,28 @@ struct MessagePipelineHintAppendTests {
         #expect(output[2].content == "ok")
     }
 
+    @Test func hintAppendPreservesAttachments() {
+        let agent = agent()
+        let attachment = MessageAttachment(
+            id: UUID(),
+            kind: .image,
+            mimeType: "image/jpeg",
+            width: 100,
+            height: 100,
+            byteCount: 512
+        )
+        let messages = [
+            ChatMessage(role: "user", content: "look at this", attachments: [attachment]),
+        ]
+        let output = MessagePipeline.buildAPIMessages(
+            agent: agent,
+            conversationMessages: messages,
+            systemHint: "HINT"
+        )
+        #expect(output.last?.attachments?.count == 1)
+        #expect(output.last?.attachments?.first?.id == attachment.id)
+    }
+
     @Test func nilHintProducesPlainConversation() {
         let agent = agent()
         let messages = [ChatMessage(role: "user", content: "hello")]

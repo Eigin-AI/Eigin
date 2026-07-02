@@ -1,10 +1,12 @@
 import Factory
 import SwiftUI
 import Textual
+import UIKit
 
 struct ChatMessageView: View {
     let role: String
     let content: String
+    var attachments: [MessageAttachment] = []
     var messageID: String = ""
     var showFooter: Bool = false
     var animateFooter: Bool = false
@@ -23,6 +25,7 @@ struct ChatMessageView: View {
     init(
         role: String,
         content: String,
+        attachments: [MessageAttachment] = [],
         messageID: String = "",
         showFooter: Bool = false,
         animateFooter: Bool = false,
@@ -31,6 +34,7 @@ struct ChatMessageView: View {
     ) {
         self.role = role
         self.content = content
+        self.attachments = attachments
         self.messageID = messageID
         self.showFooter = showFooter
         self.animateFooter = animateFooter
@@ -75,7 +79,13 @@ struct ChatMessageView: View {
 
     private var userMessageView: some View {
         VStack(alignment: .trailing, spacing: Spacing.n16) {
-            AppChatUserMessage(text: content)
+            if !attachments.isEmpty {
+                AttachedImagesView(attachments: attachments)
+                    .padding(.trailing, breakpoint.outer)
+            }
+            if !content.isEmpty {
+                AppChatUserMessage(text: content)
+            }
             if showUserMessageFooter, let action = onUserMessageFooterAction {
                 userMessageFooter(action: action)
                     .padding(.trailing, breakpoint.outer + Spacing.n4)

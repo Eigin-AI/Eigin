@@ -25,6 +25,10 @@ final class ChatViewModel {
         Container.shared.languageManager()
     }
 
+    private var attachmentStore: any ChatAttachmentStoring {
+        Container.shared.chatAttachmentStore()
+    }
+
     // MARK: - State
 
     var chat: Chat?
@@ -43,6 +47,13 @@ final class ChatViewModel {
     var gatekeeper: Gatekeeper?
     var pendingEmailCompose: (ComposeEmailRequest, CheckedContinuation<ComposeEmailResult, Never>)?
     private var backgroundGuard: BackgroundTaskGuard?
+
+    /// Images staged in the composer, waiting to be attached to the next sent message.
+    var stagedAttachments: [MessageAttachment] = []
+
+    /// Maximum number of images a single message can carry. Keeps request
+    /// payloads bounded and avoids cluttering the chat feed with a large gallery.
+    static let maxStagedAttachments = 4
 
     private var didLoad = false
     /// ID of the last assistant message that just finished streaming, for footer fade-in.
@@ -68,6 +79,17 @@ final class ChatViewModel {
             )
         }
         return items
+    }
+
+    // MARK: - Staged attachments
+
+    /// Stages `attachment` for the next sent message if under
+    /// ``maxStagedAttachments``. Returns whether it was staged.
+    @discardableResult
+    func stageAttachment(_ attachment: MessageAttachment) -> Bool {
+        guard stagedAttachments.count < Self.maxStagedAttachments else { return false }
+        stagedAttachments.append(attachment)
+        return true
     }
 
     // MARK: - Init
@@ -146,7 +168,8 @@ final class ChatViewModel {
         mcpServers: [MCPServer]
     ) {
         let text = messageText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
+        let pendingAttachments = stagedAttachments
+        guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
 
         // If an interactive tool is waiting (e.g. options are showing), stop the current
         // turn cleanly before starting the new user-message turn. handleStop() cancels
@@ -158,10 +181,15 @@ final class ChatViewModel {
         // Snap window to bottom if scrolled away
         if window.hasNewerMessages { window.snapToBottom() }
 
-        let userMessage = ChatMessage(role: "user", content: text)
+        let userMessage = ChatMessage(
+            role: "user",
+            content: text.isEmpty ? nil : text,
+            attachments: pendingAttachments.isEmpty ? nil : pendingAttachments
+        )
         window.messages.append(userMessage)
-        seedTitle(from: text)
+        if !text.isEmpty { seedTitle(from: text) }
         messageText = ""
+        stagedAttachments = []
         chatError = nil
 
         let hasSpaces = spaces.contains(where: { $0.agentID == agent.id })
@@ -359,6 +387,9 @@ final class ChatViewModel {
            let persisted = window.allPersisted.last, persisted.role == "user"
         {
             window.allPersisted.removeLast()
+            if let attachments = persisted.attachments {
+                attachmentStore.deleteAll(attachments)
+            }
             modelContext.delete(persisted)
         }
         window.messages.removeLast()

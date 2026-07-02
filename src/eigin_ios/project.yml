@@ -103,6 +103,8 @@ targets:
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Eigin uses the camera so you can take a photo and include it in your message."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Eigin accesses your photo library so you can attach images to your messages."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_PRODUCTION}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
@@ -175,6 +177,8 @@ targets:
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "Eigin accesses your reminders to check and create reminders for you."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Eigin reads your health data to give you insight into your nutrition, activity, sleep, and vitals."
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Eigin saves data to Apple Health when you log meals, body measurements, or sleep."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Eigin uses the camera so you can take a photo and include it in your message."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Eigin accesses your photo library so you can attach images to your messages."
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_STAGING}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}

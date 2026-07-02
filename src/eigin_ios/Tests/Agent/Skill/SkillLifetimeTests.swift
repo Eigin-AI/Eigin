@@ -11,7 +11,7 @@ struct SkillLifetimeTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Schema(SchemaV3.models, version: SchemaV3.versionIdentifier),
+            for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
             configurations: config
         )
     }
