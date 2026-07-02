@@ -1,8 +1,8 @@
 # Icebreakers for the "Daily life" use case, shown on an empty chat.
 id = "daily_life"
 label.en = "Daily life"
-label.da = "Hverdag"
-order = 20
+label.da = "Hverdagen"
+order = 10
 
 [[icebreaker]]
 id = "on_top_week"

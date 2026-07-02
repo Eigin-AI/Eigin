@@ -12503,6 +12503,23 @@
         }
       }
     },
+    "ui.recommendations" : {
+      "comment" : "Section label for the recommendations skill (finding books, movies, music, and games worth the user's time)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anbefalinger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommendations"
+          }
+        }
+      }
+    },
     "ui.recommended" : {
       "comment" : "Badge or label for recommended options",
       "localizations" : {

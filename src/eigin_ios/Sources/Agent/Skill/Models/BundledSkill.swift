@@ -16,6 +16,7 @@ enum BundledSkill {
         planning,
         health,
         cooking,
+        recommendations,
     ]
 
     /// Skills that are active in every chat from the start.
@@ -203,6 +204,19 @@ enum BundledSkill {
         description: "Decide what to cook and walk through cooking it, step by step.",
         instruction: Prompt.Skills.Cooking.instruction,
         smallInstruction: Prompt.Skills.Cooking.small,
+        requiredTools: [
+            StartFlowTool.capability,
+            AdvanceFlowTool.capability,
+        ],
+        alwaysActive: false
+    )
+
+    static let recommendations = Skill(
+        id: "recommendations",
+        displayName: Localized.Ui.recommendations,
+        description: "Find a book, movie, album, or game worth your time.",
+        instruction: Prompt.Skills.Recommendations.instruction,
+        smallInstruction: Prompt.Skills.Recommendations.small,
         requiredTools: [
             StartFlowTool.capability,
             AdvanceFlowTool.capability,

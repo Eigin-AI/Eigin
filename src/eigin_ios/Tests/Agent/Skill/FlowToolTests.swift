@@ -255,4 +255,185 @@ struct FlowToolTests {
         #expect(chat.activeFlow == nil)
         #expect(complete.content.contains("complete"))
     }
+
+    // MARK: - book flow (recommendations skill)
+
+    @Test @MainActor func startFlowActivatesRecommendationsSkillForBookFlow() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let tool = StartFlowTool(chatID: chat.id)
+
+        let result = await tool.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "book"}"#),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(chat.isSkillActive("recommendations"))
+        #expect(chat.activeFlow?.flowID == "book")
+        #expect(chat.activeFlow?.stage == 0)
+        #expect(result.content.contains("context"))
+    }
+
+    @Test @MainActor func bookFlowAdvancesThroughContextSuggestionsBookAndCompletes() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let start = StartFlowTool(chatID: chat.id)
+        _ = await start.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "book"}"#),
+            agent: agent
+        )
+
+        let advance = AdvanceFlowTool(chatID: chat.id)
+        // context(0) -> suggestions(1, show_notes = true)
+        let suggestions = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "cozy mystery, likes Agatha Christie"}"#
+            ),
+            agent: agent
+        )
+        #expect(!suggestions.isError)
+        #expect(chat.activeFlow?.stage == 1)
+        #expect(suggestions.content.contains("cozy mystery, likes Agatha Christie"))
+
+        // suggestions(1) -> book(2, show_notes = true)
+        let book = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "chose The Thursday Murder Club"}"#
+            ),
+            agent: agent
+        )
+        #expect(!book.isError)
+        #expect(chat.activeFlow?.stage == 2)
+        #expect(book.content.contains("cozy mystery, likes Agatha Christie"))
+        #expect(book.content.contains("chose The Thursday Murder Club"))
+
+        // book(2) -> complete
+        let complete = await advance.execute(makeCall(name: "advance_flow"), agent: agent)
+        #expect(!complete.isError)
+        #expect(chat.activeFlow == nil)
+        #expect(complete.content.contains("complete"))
+    }
+
+    // MARK: - game flow (recommendations skill)
+
+    @Test @MainActor func startFlowActivatesRecommendationsSkillForGameFlow() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let tool = StartFlowTool(chatID: chat.id)
+
+        let result = await tool.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "game"}"#),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(chat.isSkillActive("recommendations"))
+        #expect(chat.activeFlow?.flowID == "game")
+        #expect(chat.activeFlow?.stage == 0)
+        #expect(result.content.contains("context"))
+    }
+
+    @Test @MainActor func gameFlowAdvancesThroughContextSuggestionsGameAndCompletes() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let start = StartFlowTool(chatID: chat.id)
+        _ = await start.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "game"}"#),
+            agent: agent
+        )
+
+        let advance = AdvanceFlowTool(chatID: chat.id)
+        // context(0) -> suggestions(1, show_notes = true)
+        let suggestions = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "cozy co-op, plays on Switch"}"#
+            ),
+            agent: agent
+        )
+        #expect(!suggestions.isError)
+        #expect(chat.activeFlow?.stage == 1)
+        #expect(suggestions.content.contains("cozy co-op, plays on Switch"))
+
+        // suggestions(1) -> game(2, show_notes = true)
+        let game = await advance.execute(
+            makeCall(name: "advance_flow", arguments: #"{"notes": "chose Overcooked"}"#),
+            agent: agent
+        )
+        #expect(!game.isError)
+        #expect(chat.activeFlow?.stage == 2)
+        #expect(game.content.contains("cozy co-op, plays on Switch"))
+        #expect(game.content.contains("chose Overcooked"))
+
+        // game(2) -> complete
+        let complete = await advance.execute(makeCall(name: "advance_flow"), agent: agent)
+        #expect(!complete.isError)
+        #expect(chat.activeFlow == nil)
+        #expect(complete.content.contains("complete"))
+    }
+
+    // MARK: - playlist flow (recommendations skill)
+
+    @Test @MainActor func startFlowActivatesRecommendationsSkillForPlaylistFlow() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let tool = StartFlowTool(chatID: chat.id)
+
+        let result = await tool.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "playlist"}"#),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(chat.isSkillActive("recommendations"))
+        #expect(chat.activeFlow?.flowID == "playlist")
+        #expect(chat.activeFlow?.stage == 0)
+        #expect(result.content.contains("context"))
+    }
+
+    @Test @MainActor func playlistFlowAdvancesThroughContextSuggestionsPlaylistAndCompletes(
+    ) async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let start = StartFlowTool(chatID: chat.id)
+        _ = await start.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "playlist"}"#),
+            agent: agent
+        )
+
+        let advance = AdvanceFlowTool(chatID: chat.id)
+        // context(0) -> suggestions(1, show_notes = true)
+        let suggestions = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "more like the concert we just saw, indie rock"}"#
+            ),
+            agent: agent
+        )
+        #expect(!suggestions.isError)
+        #expect(chat.activeFlow?.stage == 1)
+        #expect(suggestions.content.contains("more like the concert we just saw, indie rock"))
+
+        // suggestions(1) -> playlist(2, show_notes = true)
+        let playlist = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "chose the mellower direction"}"#
+            ),
+            agent: agent
+        )
+        #expect(!playlist.isError)
+        #expect(chat.activeFlow?.stage == 2)
+        #expect(playlist.content.contains("more like the concert we just saw, indie rock"))
+        #expect(playlist.content.contains("chose the mellower direction"))
+
+        // playlist(2) -> complete
+        let complete = await advance.execute(makeCall(name: "advance_flow"), agent: agent)
+        #expect(!complete.isError)
+        #expect(chat.activeFlow == nil)
+        #expect(complete.content.contains("complete"))
+    }
 }

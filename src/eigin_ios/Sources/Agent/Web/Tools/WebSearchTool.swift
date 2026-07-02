@@ -50,7 +50,7 @@ struct WebSearchTool: Tool {
                     "focus": .init(
                         type: "string",
                         description: "Optional: Restrict results to a curated set of trusted sites for a topic.",
-                        enum: ["recipes"]
+                        enum: ["recipes", "books", "games", "music"]
                     ),
                 ],
                 required: ["query"]
