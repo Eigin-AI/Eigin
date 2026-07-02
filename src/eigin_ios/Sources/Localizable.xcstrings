@@ -11621,6 +11621,23 @@
         }
       }
     },
+    "ui.cooking": {
+      "comment": "Section label for the cooking skill (deciding what to cook and cooking it)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Madlavning"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cooking"
+          }
+        }
+      }
+    },
     "ui.core": {
       "comment": "Label for the agent's core identity section",
       "localizations": {

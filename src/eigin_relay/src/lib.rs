@@ -20,5 +20,5 @@ pub use error::AppError;
 pub use health::handler as health;
 pub use quota::{Quota, QuotaError};
 pub use rate_limit::RateLimiter;
-pub use search::{SearchClient, create_client};
+pub use search::{SearchClient, SearchFocus, SearchOptions, create_client};
 pub use state::AppState;

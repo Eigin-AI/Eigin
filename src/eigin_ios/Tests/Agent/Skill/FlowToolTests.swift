@@ -196,4 +196,63 @@ struct FlowToolTests {
         #expect(chat.activeFlow == nil)
         #expect(lastResult?.content.contains("complete") == true)
     }
+
+    // MARK: - recipe flow (cooking skill)
+
+    @Test @MainActor func startFlowActivatesCookingSkillForRecipeFlow() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let tool = StartFlowTool(chatID: chat.id)
+
+        let result = await tool.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "recipe"}"#),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(chat.isSkillActive("cooking"))
+        #expect(chat.activeFlow?.flowID == "recipe")
+        #expect(chat.activeFlow?.stage == 0)
+        #expect(result.content.contains("context"))
+    }
+
+    @Test @MainActor func recipeFlowAdvancesThroughContextSuggestionsRecipeAndCompletes(
+    ) async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container // keep the container alive for the duration of the test
+        let start = StartFlowTool(chatID: chat.id)
+        _ = await start.execute(
+            makeCall(name: "start_flow", arguments: #"{"flow": "recipe"}"#),
+            agent: agent
+        )
+
+        let advance = AdvanceFlowTool(chatID: chat.id)
+        // context(0) -> suggestions(1, show_notes = true)
+        let suggestions = await advance.execute(
+            makeCall(
+                name: "advance_flow",
+                arguments: #"{"notes": "chicken, peppers, two adults"}"#
+            ),
+            agent: agent
+        )
+        #expect(!suggestions.isError)
+        #expect(chat.activeFlow?.stage == 1)
+        #expect(suggestions.content.contains("chicken, peppers, two adults"))
+
+        // suggestions(1) -> recipe(2, show_notes = true)
+        let recipe = await advance.execute(
+            makeCall(name: "advance_flow", arguments: #"{"notes": "chose the chicken fajitas"}"#),
+            agent: agent
+        )
+        #expect(!recipe.isError)
+        #expect(chat.activeFlow?.stage == 2)
+        #expect(recipe.content.contains("chicken, peppers, two adults"))
+        #expect(recipe.content.contains("chose the chicken fajitas"))
+
+        // recipe(2) -> complete
+        let complete = await advance.execute(makeCall(name: "advance_flow"), agent: agent)
+        #expect(!complete.isError)
+        #expect(chat.activeFlow == nil)
+        #expect(complete.content.contains("complete"))
+    }
 }

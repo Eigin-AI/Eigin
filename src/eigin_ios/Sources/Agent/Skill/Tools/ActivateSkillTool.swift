@@ -41,7 +41,7 @@ struct ActivateSkillTool: Tool {
         if isSmallContext {
             return ToolDefinition(
                 name: name,
-                description: "Activate a skill for its tools.",
+                description: "Activate a skill to load its instructions and tools.",
                 parameters: JSONSchema(
                     type: "object",
                     properties: [
@@ -57,7 +57,7 @@ struct ActivateSkillTool: Tool {
         }
         return ToolDefinition(
             name: name,
-            description: "Activate a skill to gain access to its tools. Available skills: \(skillIDs.joined(separator: ", ")).",
+            description: "Activate a skill to load its instructions and tools. Available skills: \(skillIDs.joined(separator: ", ")).",
             parameters: JSONSchema(
                 type: "object",
                 properties: [

@@ -11,13 +11,18 @@ use axum::routing::{get, post};
 use tower::util::ServiceExt;
 
 mod mock_client {
+    use std::sync::{Arc, Mutex};
+
     use async_trait::async_trait;
-    use eigin_relay::SearchClient;
+    use eigin_relay::{SearchClient, SearchOptions};
 
     pub struct MockClient {
         response: Vec<u8>,
         should_error: bool,
         error_message: String,
+        /// Records the options passed to the most recent `search` call, so tests
+        /// can assert on how the handler translated client params.
+        captured_options: Arc<Mutex<Option<SearchOptions>>>,
     }
 
     impl MockClient {
@@ -26,6 +31,7 @@ mod mock_client {
                 response,
                 should_error: false,
                 error_message: String::new(),
+                captured_options: Arc::new(Mutex::new(None)),
             }
         }
 
@@ -34,7 +40,21 @@ mod mock_client {
                 response: Vec::new(),
                 should_error: true,
                 error_message: message.into(),
+                captured_options: Arc::new(Mutex::new(None)),
             }
+        }
+
+        /// Returns a handle that can be inspected for the options passed to the
+        /// most recent `search` call, alongside the client itself.
+        pub fn spy(response: Vec<u8>) -> (Self, Arc<Mutex<Option<SearchOptions>>>) {
+            let captured_options = Arc::new(Mutex::new(None));
+            let client = Self {
+                response,
+                should_error: false,
+                error_message: String::new(),
+                captured_options: captured_options.clone(),
+            };
+            (client, captured_options)
         }
     }
 
@@ -44,7 +64,9 @@ mod mock_client {
             &self,
             _api_key: &str,
             _query: &str,
+            options: &SearchOptions,
         ) -> Result<Vec<u8>, eigin_relay::AppError> {
+            *self.captured_options.lock().unwrap() = Some(options.clone());
             if self.should_error {
                 return Err(eigin_relay::AppError::Upstream(self.error_message.clone()));
             }
@@ -144,7 +166,7 @@ async fn call(app: &axum::Router, uri: &str, key: Option<&str>) -> axum::respons
 
 #[tokio::test]
 async fn health_returns_ok() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -157,7 +179,7 @@ async fn health_returns_ok() {
 
 #[tokio::test]
 async fn search_without_key_returns_401() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -172,7 +194,7 @@ async fn search_without_key_returns_401() {
 
 #[tokio::test]
 async fn search_with_wrong_key_returns_401() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -190,7 +212,7 @@ async fn search_accepts_either_configured_key_and_rejects_others() {
         router(
             test_state_with_keys(
                 1000,
-                MockClient::new(b"{}".to_vec()),
+                MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec()),
                 vec!["primary-key".to_string(), "secondary-key".to_string()],
             )
             .await,
@@ -219,7 +241,7 @@ async fn search_accepts_either_configured_key_and_rejects_others() {
 
 #[tokio::test]
 async fn search_without_query_returns_400() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -233,7 +255,7 @@ async fn search_without_query_returns_400() {
 
 #[tokio::test]
 async fn search_with_empty_query_returns_400() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -248,8 +270,8 @@ async fn search_proxies_upstream_response() {
         "response": {
             "title": "Test Results",
             "results": [
-                {"title": "Result 1", "url": "https://example.com/1"},
-                {"title": "Result 2", "url": "https://example.com/2"}
+                {"title": "Result 1", "url": "https://example.com/1", "desc": "About result 1"},
+                {"title": "Result 2", "url": "https://example.com/2", "desc": "About result 2"}
             ]
         }
     });
@@ -263,7 +285,51 @@ async fn search_proxies_upstream_response() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = to_bytes(response.into_body(), 4096).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["response"]["results"].as_array().unwrap().len(), 2);
+    // The raw Mojeek envelope (head, cats, etc.) is stripped — only a small,
+    // stable result shape is returned to clients.
+    let results = json["results"].as_array().unwrap();
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0]["title"], "Result 1");
+    assert_eq!(results[0]["url"], "https://example.com/1");
+    assert_eq!(results[0]["desc"], "About result 1");
+}
+
+#[tokio::test]
+async fn search_forwards_recognised_focus_and_region() {
+    let (mock, captured) = MockClient::spy(b"{\"response\":{\"results\":[]}}".to_vec());
+    let state = test_state(1000, mock).await;
+    let app = router(state);
+
+    let response = call(
+        &app,
+        "/search?q=pandekager&region=dk&focus=recipes",
+        Some("test-relay-key"),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let options = captured.lock().unwrap().clone().expect("search was called");
+    assert_eq!(options.region.as_deref(), Some("DK"));
+    assert_eq!(options.focus, Some(eigin_relay::SearchFocus::Recipes));
+}
+
+#[tokio::test]
+async fn search_drops_unrecognised_focus_and_malformed_region() {
+    let (mock, captured) = MockClient::spy(b"{\"response\":{\"results\":[]}}".to_vec());
+    let state = test_state(1000, mock).await;
+    let app = router(state);
+
+    let response = call(
+        &app,
+        "/search?q=test&region=denmark&focus=bogus",
+        Some("test-relay-key"),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let options = captured.lock().unwrap().clone().expect("search was called");
+    assert_eq!(options.region, None);
+    assert_eq!(options.focus, None);
 }
 
 #[tokio::test]
@@ -287,7 +353,7 @@ async fn search_upstream_error_returns_502() {
 
 #[tokio::test]
 async fn search_rate_limited_after_10_requests() {
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -306,7 +372,7 @@ async fn search_rate_limited_after_10_requests() {
 #[tokio::test]
 async fn search_pool_exhausts_after_quota_reached() {
     // Pool of 2 searches; the IP limiter is high enough not to interfere.
-    let mock = MockClient::new(b"{}".to_vec());
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
     let state = test_state(2, mock).await;
     let app = router(state);
 

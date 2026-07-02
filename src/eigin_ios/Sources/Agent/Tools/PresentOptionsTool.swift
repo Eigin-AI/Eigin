@@ -41,9 +41,8 @@ struct PresentOptionsTool: Tool {
             name: name,
             description: """
             Present the user with a set of selectable options in the chat. \
-            Use when you want to offer a clear choice rather than asking an \
-            open-ended question. The user can pick an option or dismiss by selecting \
-            "something else" (this is automatically provided) to type a custom response.
+            The user can pick an option or dismiss by selecting "something else" (this is \
+            automatically provided) to type a custom response.
             """,
             parameters: JSONSchema(
                 type: "object",
@@ -68,7 +67,7 @@ struct PresentOptionsTool: Tool {
                                 ),
                                 "category": .init(
                                     type: "string",
-                                    description: "Abstract feel of the option (e.g. create, organise, explore). Used to pick a visual icon.",
+                                    description: "Category of the option (e.g. create, organise, explore). Used to pick a visual icon.",
                                     enum: OptionCategory.allCases.map { $0.rawValue }
                                 ),
                             ],

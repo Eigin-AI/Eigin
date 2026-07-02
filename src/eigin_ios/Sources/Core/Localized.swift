@@ -3914,6 +3914,11 @@ enum Localized {
             Localized.get("ui.connections")
         }
 
+        /// Section label for the cooking skill (deciding what to cook and cooking it)
+        static var cooking: String {
+            Localized.get("ui.cooking")
+        }
+
         /// Label for the agent's core identity section
         static var core: String {
             Localized.get("ui.core")
