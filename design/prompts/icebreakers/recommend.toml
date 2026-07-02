@@ -1,0 +1,33 @@
+# Icebreakers for the "Recommend" use case, shown on an empty chat.
+id = "recommend"
+label.en = "Recommendations"
+label.da = "Anbefalinger"
+order = 20
+
+[[icebreaker]]
+id = "book"
+title.en = "Find your next read"
+title.da = "Find din næste bog"
+prompt.en = "Help me find a book to read. Ask what I'm in the mood for, then find a few good options."
+prompt.da = "Hjælp mig med at finde en bog at læse. Spørg, hvad jeg er i humør til, og find så nogle gode bud."
+
+[[icebreaker]]
+id = "game"
+title.en = "Pick something to play"
+title.da = "Vælg noget at spille"
+prompt.en = "Help me find a game to play. Ask what I'm after, then find a few good options."
+prompt.da = "Hjælp mig med at finde et spil at spille. Spørg, hvad jeg er ude efter, og find så nogle gode bud."
+
+[[icebreaker]]
+id = "playlist"
+title.en = "Discover new music"
+title.da = "Opdag ny musik"
+prompt.en = "Help me discover new music. Ask what I've been enjoying lately — an artist, an album, a show I loved — then build me a playlist from that."
+prompt.da = "Hjælp mig med at opdage ny musik. Spørg, hvad jeg har nydt for nylig — en kunstner, et album, en koncertoplevelse — og lav så en playliste ud fra det."
+
+[[icebreaker]]
+id = "gathering_playlist"
+title.en = "Set the mood for a gathering"
+title.da = "Sæt stemningen til en sammenkomst"
+prompt.en = "Help me put together a playlist for people coming over. Ask who's coming and what everyone's into, then build me a playlist that works for the group."
+prompt.da = "Hjælp mig med at lave en spilleliste til mine gæster. Spørg, hvem der kommer, og hvad de kan lide, og lav så en playliste, der passer til gruppen."

@@ -67,7 +67,7 @@ struct PresentOptionsTool: Tool {
                                 ),
                                 "category": .init(
                                     type: "string",
-                                    description: "Category of the option (e.g. create, organise, explore). Used to pick a visual icon.",
+                                    description: "Category of the option, used to pick a visual icon. Try to pick a different one for each option.",
                                     enum: OptionCategory.allCases.map { $0.rawValue }
                                 ),
                             ],

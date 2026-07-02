@@ -4171,6 +4171,12 @@ enum Localized {
             Localized.get("ui.reactive")
         }
 
+        /// Section label for the recommendations skill (finding books, movies, music, and games
+        /// worth the user's time)
+        static var recommendations: String {
+            Localized.get("ui.recommendations")
+        }
+
         /// Badge or label for recommended options
         static var recommended: String {
             Localized.get("ui.recommended")

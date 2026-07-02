@@ -1,7 +1,7 @@
 # Icebreakers for the "Learn" use case, shown on an empty chat.
 id = "learn"
-label.en = "Learn"
-label.da = "Lær noget"
+label.en = "Learn something new"
+label.da = "Lær noget nyt"
 order = 30
 
 [[icebreaker]]

@@ -43,6 +43,82 @@ const RECIPE_DOMAINS: &[&str] = &[
     "ah.nl",
 ];
 
+/// Curated domains used to narrow results when [`SearchFocus::Books`] is requested.
+///
+/// Same exclusion criteria as [`RECIPE_DOMAINS`]: no site whose `robots.txt`
+/// disallows AI user agents (e.g. `ChatGPT-User`, `Claude-Web`/`Claude-User`,
+/// `Perplexity-User`, `MistralAI-User`).
+const BOOK_DOMAINS: &[&str] = &[
+    // Global
+    "goodreads.com",
+    "thestorygraph.com",
+    "bookriot.com",
+    "lithub.com",
+    "librarything.com",
+    "kirkusreviews.com",
+    "electricliterature.com",
+    "penguin.co.uk",
+    // Nordic / North European
+    "litteratursiden.dk",
+    "bibliotek.dk",
+    "saxo.com",
+    "plusbog.dk",
+    "bokelskere.no",
+    "dagensbok.com",
+    "perlentaucher.de",
+    "kirjasampo.fi",
+];
+
+/// Curated domains used to narrow results when [`SearchFocus::Games`] is requested.
+///
+/// Same exclusion criteria as [`RECIPE_DOMAINS`]. Many gaming outlets (IGN, Eurogamer,
+/// Rock Paper Shotgun, Polygon, Kotaku, VG247, TheGamer, HowLongToBeat) now block
+/// real-time AI user agents outright, or block crawling broadly enough that AI
+/// user agents fall through the default rule — those were dropped. Nordic coverage
+/// is thinner here than recipes/books: one verified, unrestricted flagship site per
+/// country rather than a full spread.
+const GAME_DOMAINS: &[&str] = &[
+    // Global
+    "gamespot.com",
+    "metacritic.com",
+    "opencritic.com",
+    "store.steampowered.com",
+    "pcgamesn.com",
+    "gamesradar.com",
+    "giantbomb.com",
+    "mobygames.com",
+    "nintendo.com",
+    "speedrun.com",
+    // Nordic / North European
+    "gamer.no",
+    "fragbite.se",
+    "pelit.fi",
+    "spiluniverset.dk",
+];
+
+/// Curated domains used to narrow results when [`SearchFocus::Music`] is requested.
+///
+/// Same exclusion criteria as [`RECIPE_DOMAINS`]. Several major music outlets
+/// (Pitchfork, Rolling Stone, NME, Genius, RateYourMusic, SoundCloud, Resident
+/// Advisor, Consequence) now block real-time AI user agents and were dropped.
+const MUSIC_DOMAINS: &[&str] = &[
+    // Global
+    "allmusic.com",
+    "bandcamp.com",
+    "stereogum.com",
+    "last.fm",
+    "musicbrainz.org",
+    "loudwire.com",
+    "kexp.org",
+    "udiscovermusic.com",
+    // Nordic / North European
+    "gaffa.dk",
+    "gaffa.no",
+    "soundvenue.com",
+    "rumba.fi",
+    "nyafabriken.se",
+];
+
 /// A named site focus a caller can ask for instead of naming individual domains.
 ///
 /// Kept as a closed set of server-known categories, rather than an arbitrary
@@ -51,6 +127,12 @@ const RECIPE_DOMAINS: &[&str] = &[
 pub enum SearchFocus {
     /// Restrict results to a curated list of trusted recipe sites.
     Recipes,
+    /// Restrict results to a curated list of trusted book sites.
+    Books,
+    /// Restrict results to a curated list of trusted game sites.
+    Games,
+    /// Restrict results to a curated list of trusted music sites.
+    Music,
 }
 
 impl SearchFocus {
@@ -61,6 +143,9 @@ impl SearchFocus {
     pub fn parse(value: Option<&str>) -> Option<Self> {
         match value {
             Some("recipes") => Some(Self::Recipes),
+            Some("books") => Some(Self::Books),
+            Some("games") => Some(Self::Games),
+            Some("music") => Some(Self::Music),
             _ => None,
         }
     }
@@ -68,6 +153,9 @@ impl SearchFocus {
     fn domains(self) -> &'static [&'static str] {
         match self {
             Self::Recipes => RECIPE_DOMAINS,
+            Self::Books => BOOK_DOMAINS,
+            Self::Games => GAME_DOMAINS,
+            Self::Music => MUSIC_DOMAINS,
         }
     }
 }
@@ -198,6 +286,21 @@ mod tests {
             SearchFocus::parse(Some("recipes")),
             Some(SearchFocus::Recipes)
         );
+    }
+
+    #[test]
+    fn parses_books_focus() {
+        assert_eq!(SearchFocus::parse(Some("books")), Some(SearchFocus::Books));
+    }
+
+    #[test]
+    fn parses_games_focus() {
+        assert_eq!(SearchFocus::parse(Some("games")), Some(SearchFocus::Games));
+    }
+
+    #[test]
+    fn parses_music_focus() {
+        assert_eq!(SearchFocus::parse(Some("music")), Some(SearchFocus::Music));
     }
 
     #[test]

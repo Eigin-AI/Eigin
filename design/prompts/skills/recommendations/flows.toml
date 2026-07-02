@@ -1,0 +1,55 @@
+# Flow definitions for the recommendations skill.
+
+[[flows]]
+name = "book"
+
+  [[flows.stages]]
+  name = "context"
+  instructions = "flow/book/context.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "suggestions"
+  instructions = "flow/book/suggestions.jinja"
+  show_notes = true
+
+  [[flows.stages]]
+  name = "book"
+  instructions = "flow/book/book.jinja"
+  show_notes = true
+
+[[flows]]
+name = "game"
+
+  [[flows.stages]]
+  name = "context"
+  instructions = "flow/game/context.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "suggestions"
+  instructions = "flow/game/suggestions.jinja"
+  show_notes = true
+
+  [[flows.stages]]
+  name = "game"
+  instructions = "flow/game/game.jinja"
+  show_notes = true
+
+[[flows]]
+name = "playlist"
+
+  [[flows.stages]]
+  name = "context"
+  instructions = "flow/playlist/context.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "suggestions"
+  instructions = "flow/playlist/suggestions.jinja"
+  show_notes = true
+
+  [[flows.stages]]
+  name = "playlist"
+  instructions = "flow/playlist/playlist.jinja"
+  show_notes = true
