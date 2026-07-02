@@ -1,0 +1,19 @@
+# Flow definitions for the cooking skill.
+
+[[flows]]
+name = "recipe"
+
+  [[flows.stages]]
+  name = "context"
+  instructions = "flow/recipe/context.jinja"
+  show_notes = false
+
+  [[flows.stages]]
+  name = "suggestions"
+  instructions = "flow/recipe/suggestions.jinja"
+  show_notes = true
+
+  [[flows.stages]]
+  name = "recipe"
+  instructions = "flow/recipe/recipe.jinja"
+  show_notes = true

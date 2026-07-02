@@ -15,6 +15,7 @@ enum BundledSkill {
         scheduling,
         planning,
         health,
+        cooking,
     ]
 
     /// Skills that are active in every chat from the start.
@@ -192,6 +193,19 @@ enum BundledSkill {
             LogBodyMeasurementTool.capability,
             LogSleepTool.capability,
             GetHealthLogTool.capability,
+        ],
+        alwaysActive: false
+    )
+
+    static let cooking = Skill(
+        id: "cooking",
+        displayName: Localized.Ui.cooking,
+        description: "Decide what to cook and walk through cooking it, step by step.",
+        instruction: Prompt.Skills.Cooking.instruction,
+        smallInstruction: Prompt.Skills.Cooking.small,
+        requiredTools: [
+            StartFlowTool.capability,
+            AdvanceFlowTool.capability,
         ],
         alwaysActive: false
     )

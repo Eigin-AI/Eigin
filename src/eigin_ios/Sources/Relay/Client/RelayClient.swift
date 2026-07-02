@@ -3,7 +3,10 @@ import Foundation
 /// Client for the Eigin Relay HTTP API,
 protocol RelayClient: Sendable {
     /// Proxied web search.
-    func search(query: String) async throws -> String
+    /// - Parameters:
+    ///   - region: ISO 3166-1 alpha-2 region code used to boost regionally relevant results.
+    ///   - focus: A named site focus (e.g. "recipes"), mapped server-side to a curated domain list.
+    func search(query: String, region: String?, focus: String?) async throws -> String
     /// Available credit products and the credits each grants. Fetched before any wallet exists.
     func products() async throws -> [CreditProduct]
     /// Redeem an entitlement proof, minting or restoring a credit token.
@@ -41,10 +44,12 @@ struct DefaultRelayClient: RelayClient {
         self.session = session
     }
 
-    func search(query: String) async throws -> String {
-        var request = try makeRequest(path: "/v1/search", queryItems: [
-            URLQueryItem(name: "q", value: query),
-        ])
+    func search(query: String, region: String? = nil, focus: String? = nil) async throws -> String {
+        var queryItems = [URLQueryItem(name: "q", value: query)]
+        if let region { queryItems.append(URLQueryItem(name: "region", value: region)) }
+        if let focus { queryItems.append(URLQueryItem(name: "focus", value: focus)) }
+
+        var request = try makeRequest(path: "/v1/search", queryItems: queryItems)
         request.httpMethod = "GET"
         let data = try await perform(request)
         return String(data: data, encoding: .utf8) ?? ""

@@ -5,8 +5,9 @@ use std::sync::Arc;
 use axum::extract::{ConnectInfo, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use super::client::SearchOptions;
 use crate::AppState;
 use crate::error::AppError;
 
@@ -18,12 +19,51 @@ const SEARCH_QUOTA_KEY: &str = "search";
 pub struct SearchParams {
     /// The search query string.
     q: Option<String>,
+    /// ISO 3166-1 alpha-2 region code, used to boost regionally relevant results.
+    region: Option<String>,
+    /// A named site focus (e.g. "recipes"), mapped server-side to a curated domain list.
+    focus: Option<String>,
+}
+
+/// A single reshaped search result.
+#[derive(Serialize)]
+struct SearchResultItem {
+    title: String,
+    url: String,
+    desc: String,
+}
+
+/// The structured response returned to clients, in place of the raw Mojeek payload.
+#[derive(Serialize)]
+struct SearchResponse {
+    results: Vec<SearchResultItem>,
+}
+
+/// The subset of Mojeek's JSON response shape needed to reshape results.
+#[derive(Deserialize)]
+struct MojeekResponse {
+    response: MojeekResponseBody,
+}
+
+#[derive(Deserialize)]
+struct MojeekResponseBody {
+    #[serde(default)]
+    results: Vec<MojeekResult>,
+}
+
+#[derive(Deserialize)]
+struct MojeekResult {
+    title: String,
+    url: String,
+    #[serde(default)]
+    desc: String,
 }
 
 /// Handles search requests.
 ///
-/// Validates the query, checks rate limits and quota, then proxies
-/// the request to the upstream search API.
+/// Validates the query, checks rate limits and quota, then proxies the
+/// request to the upstream search API and reshapes the response into a
+/// small, stable shape rather than passing Mojeek's raw payload through.
 pub async fn handle(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
@@ -33,6 +73,8 @@ pub async fn handle(
         .q
         .filter(|q| !q.trim().is_empty())
         .ok_or_else(|| AppError::BadRequest("missing 'q' parameter".into()))?;
+
+    let options = SearchOptions::parse(params.region.as_deref(), params.focus.as_deref());
 
     let ip = addr.ip();
 
@@ -54,13 +96,32 @@ pub async fn handle(
 
     let body = state
         .search_client
-        .search(&state.mojeek_api_key, &query)
+        .search(&state.mojeek_api_key, &query, &options)
         .await?;
+
+    let parsed: MojeekResponse = serde_json::from_slice(&body)
+        .map_err(|e| AppError::Upstream(format!("invalid search response: {e}")))?;
+
+    let reshaped = SearchResponse {
+        results: parsed
+            .response
+            .results
+            .into_iter()
+            .map(|r| SearchResultItem {
+                title: r.title,
+                url: r.url,
+                desc: r.desc,
+            })
+            .collect(),
+    };
+
+    let out = serde_json::to_vec(&reshaped)
+        .map_err(|e| AppError::Internal(format!("failed to encode search response: {e}")))?;
 
     Ok((
         StatusCode::OK,
         [(axum::http::header::CONTENT_TYPE, "application/json")],
-        body,
+        out,
     )
         .into_response())
 }

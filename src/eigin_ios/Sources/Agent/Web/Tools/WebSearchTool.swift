@@ -47,6 +47,11 @@ struct WebSearchTool: Tool {
                         type: "string",
                         description: "The search query."
                     ),
+                    "focus": .init(
+                        type: "string",
+                        description: "Optional: Restrict results to a curated set of trusted sites for a topic.",
+                        enum: ["recipes"]
+                    ),
                 ],
                 required: ["query"]
             )
@@ -73,9 +78,13 @@ struct WebSearchTool: Tool {
             )
         }
 
+        let focus = args["focus"] as? String
+        let region = Locale.current.region?.identifier
+
         // Try the relay first (background HTTP, no WebView needed)
-        if let json = try? await Container.shared.relayClient().search(query: query),
-           !json.isEmpty
+        if let json = try? await Container.shared.relayClient()
+            .search(query: query, region: region, focus: focus),
+            !json.isEmpty
         {
             var content = json
             var warnings: [String] = []

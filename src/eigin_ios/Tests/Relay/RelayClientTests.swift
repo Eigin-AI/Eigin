@@ -65,6 +65,20 @@ struct RelayClientTests {
         #expect(body == #"{"results":[]}"#)
     }
 
+    @Test func searchIncludesRegionAndFocusWhenProvided() async throws {
+        FakeURLProtocol.stubResponse(
+            for: "https://relay.test/v1/search?q=pandekager&region=DK&focus=recipes",
+            data: Data(#"{"results":[]}"#.utf8),
+            statusCode: 200
+        )
+        let body = try await makeClient().search(
+            query: "pandekager",
+            region: "DK",
+            focus: "recipes"
+        )
+        #expect(body == #"{"results":[]}"#)
+    }
+
     @Test func redeemMapsProofFailure() async {
         FakeURLProtocol.stubResponse(
             for: "https://relay.test/v1/credits/redeem",

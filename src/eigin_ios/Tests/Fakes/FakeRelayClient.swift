@@ -3,7 +3,7 @@ import Foundation
 
 /// Programmable `RelayClient` for tests. Each handler defaults to throwing `.notConfigured`.
 final class FakeRelayClient: RelayClient, @unchecked Sendable {
-    var searchHandler: @Sendable (String) async throws -> String = { _ in
+    var searchHandler: @Sendable (String, String?, String?) async throws -> String = { _, _, _ in
         throw RelayClientError.notConfigured
     }
 
@@ -23,8 +23,8 @@ final class FakeRelayClient: RelayClient, @unchecked Sendable {
         throw RelayClientError.notConfigured
     }
 
-    func search(query: String) async throws -> String {
-        try await searchHandler(query)
+    func search(query: String, region: String?, focus: String?) async throws -> String {
+        try await searchHandler(query, region, focus)
     }
 
     func products() async throws -> [CreditProduct] {
