@@ -1,0 +1,33 @@
+# Icebreakers for the "Learn" use case, shown on an empty chat.
+id = "learn"
+label.en = "Learn"
+label.da = "Lær noget"
+order = 30
+
+[[icebreaker]]
+id = "explain_simply"
+title.en = "Explain something simply"
+title.da = "Forklar noget enkelt"
+prompt.en = "There's something I've never quite understood. Ask me what it is, then explain it simply and check I'm keeping up."
+prompt.da = "Der er noget, jeg aldrig helt har forstået. Spørg, hvad det er, og forklar det så enkelt og tjek, at jeg er med."
+
+[[icebreaker]]
+id = "new_hobby"
+title.en = "Start a new hobby"
+title.da = "Start en ny hobby"
+prompt.en = "I want to start a new hobby, but I don't know where to start. Ask me what I'm interested in and how much time I have, then help me begin."
+prompt.da = "Jeg vil gerne i gang med en ny hobby, men ved ikke, hvor jeg skal starte. Spørg, hvad jeg er interesseret i, og hvor meget tid jeg har, og hjælp mig så i gang."
+
+[[icebreaker]]
+id = "understand_topic"
+title.en = "Understand a topic deeply"
+title.da = "Forstå et emne i dybden"
+prompt.en = "Help me really understand a topic. Ask what it is and what I already know, then take me through the background and the different points of view, one step at a time."
+prompt.da = "Hjælp mig med virkelig at forstå et emne. Spørg, hvad det er, og hvad jeg allerede ved, og tag mig så igennem baggrunden og de forskellige synspunkter, et skridt ad gangen."
+
+[[icebreaker]]
+id = "quiz_me"
+title.en = "Quiz me on something"
+title.da = "Test min forståelse"
+prompt.en = "I want to test what I know about a topic. Ask me a few questions about it, see where the gaps are, and help me fill them in."
+prompt.da = "Jeg vil gerne teste, hvad jeg ved om et emne. Stil mig et par spørgsmål om det, find ud af, hvor hullerne er, og hjælp mig så med at lukke dem."

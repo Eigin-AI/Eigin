@@ -26,6 +26,13 @@ enum AppLanguage: String, CaseIterable, Codable {
         rawValue
     }
 
+    /// The language currently selected app-wide, read from the same persisted
+    /// preference `Bundle.appLanguage` uses. Defaults to `.english`.
+    static var current: AppLanguage {
+        UserDefaults.standard.string(forKey: StorageKey.appLanguage)
+            .flatMap(AppLanguage.init(rawValue:)) ?? .english
+    }
+
     // MARK: - Detection
 
     /// Returns the first supported app language matching the given preferred language

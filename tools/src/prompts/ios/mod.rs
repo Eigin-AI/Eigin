@@ -1,5 +1,6 @@
 pub mod flows;
 pub mod generator;
+pub mod icebreakers;
 pub mod parser;
 
 use anyhow::{Context, Result};
@@ -11,6 +12,8 @@ const SOURCE_REL: &str = "design/prompts";
 const OUTPUT_REL: &str = "src/eigin_ios/Sources/Core/Design/Generated/Prompt.swift";
 const FLOW_REGISTRY_OUTPUT_REL: &str =
     "src/eigin_ios/Sources/Core/Design/Generated/FlowRegistry.swift";
+const ICEBREAKER_REGISTRY_OUTPUT_REL: &str =
+    "src/eigin_ios/Sources/Core/Design/Generated/IcebreakerRegistry.swift";
 
 /// Compile every `design/prompts/**/*.jinja` template into typed Swift accessors
 /// at `Sources/Core/Design/Generated/Prompt.swift`, mirroring the folder tree into
@@ -20,9 +23,10 @@ pub fn generate(repo_root: &str) -> Result<()> {
     let source_dir = PathBuf::from(repo_root).join(SOURCE_REL);
     let output_path = PathBuf::from(repo_root).join(OUTPUT_REL);
     let flow_output_path = PathBuf::from(repo_root).join(FLOW_REGISTRY_OUTPUT_REL);
+    let icebreaker_output_path = PathBuf::from(repo_root).join(ICEBREAKER_REGISTRY_OUTPUT_REL);
 
     if !source_dir.exists() {
-        for path in [&output_path, &flow_output_path] {
+        for path in [&output_path, &flow_output_path, &icebreaker_output_path] {
             if path.exists() {
                 fs::remove_file(path).with_context(|| format!("removing {}", path.display()))?;
             }
@@ -47,6 +51,11 @@ pub fn generate(repo_root: &str) -> Result<()> {
     )?;
     let flow_swift = flows::emit(&resolved_flows).context("generating FlowRegistry.swift")?;
     write_swift(&flow_output_path, &flow_swift)?;
+
+    let groups = icebreakers::collect(&source_dir)?;
+    let icebreaker_swift =
+        icebreakers::emit(&groups).context("generating IcebreakerRegistry.swift")?;
+    write_swift(&icebreaker_output_path, &icebreaker_swift)?;
 
     Ok(())
 }
