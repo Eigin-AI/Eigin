@@ -198,17 +198,26 @@ enum MessagePipeline {
         let systemHint = await gatekeeper.beforeTurn(hintInput)
 
         // 9. Build API messages
+        // Apply image stripping before assembly: keep only the most recent
+        // `maxLiveImageTurns` image-bearing user turns; strip all images
+        // unconditionally when the model does not support vision.
+        let supportsVision = KnownModelCatalog.lookup(agent.model)?.supportsVision ?? false
+        let strippedConversation = applyImageStripping(
+            conversationMessages,
+            supportsVision: supportsVision
+        )
+
         let apiMessages: [ChatMessage] = if isSmallContext {
             buildSmallAPIMessages(
                 agent: agent,
-                conversationMessages: conversationMessages,
+                conversationMessages: strippedConversation,
                 compactionSummary: compactionSummary,
                 systemHint: systemHint
             )
         } else {
             buildAPIMessages(
                 agent: agent,
-                conversationMessages: conversationMessages,
+                conversationMessages: strippedConversation,
                 compactionSummary: compactionSummary,
                 systemHint: systemHint
             )
@@ -310,8 +319,9 @@ enum MessagePipeline {
     /// Walks back from the end of the array to find the most recent
     /// `role == "user"` message that is not the synthetic compaction-summary
     /// carrier — if no real user message exists post-compaction, falls back
-    /// to the synthetic one. Creates a new ``ChatMessage`` for the modified
-    /// entry so we never mutate the caller's input.
+    /// to the synthetic one. Mutates only the `content` of a copy of the
+    /// array (value semantics keep the caller's input untouched), preserving
+    /// every other field on the matched message, including attachments.
     private static func appendSystemHint(
         _ hint: String,
         to messages: [ChatMessage]
@@ -328,8 +338,56 @@ enum MessagePipeline {
         var copy = messages
         let existing = copy[idx].content ?? ""
         let merged = existing.isEmpty ? hint : existing + "\n\n" + hint
-        copy[idx] = ChatMessage(role: "user", content: merged)
+        copy[idx].content = merged
         return copy
+    }
+
+    // MARK: - Image Stripping
+
+    /// Maximum number of image-bearing user turns whose image content is kept live
+    /// in the outgoing request. Older image turns are reduced to a text placeholder.
+    static let maxLiveImageTurns = 2
+
+    /// Applies image stripping to `messages` before they are sent to an inference provider.
+    ///
+    /// - When `supportsVision` is `false`, **all** image attachments are stripped to a
+    ///   placeholder so the request works with text-only models (e.g. after a model switch).
+    /// - When `supportsVision` is `true`, only the most recent ``maxLiveImageTurns``
+    ///   image-bearing user messages keep their attachments; older ones are stripped.
+    ///
+    /// Stripping replaces the `attachments` array with `nil` and appends a short
+    /// placeholder string to the message text so the model can see that an image was
+    /// present. Bytes on disk are never touched — this only affects the outgoing request.
+    static func applyImageStripping(
+        _ messages: [ChatMessage],
+        supportsVision: Bool
+    ) -> [ChatMessage] {
+        guard messages.contains(where: { $0.attachments?.isEmpty == false }) else {
+            return messages
+        }
+
+        if !supportsVision {
+            // Strip all images.
+            return messages.map { msg in
+                msg.attachments?.isEmpty == false ? msg.withStrippedAttachments() : msg
+            }
+        }
+
+        // Keep only the most recent `maxLiveImageTurns` image-bearing turns.
+        // Walk from newest to oldest, tracking how many image turns we've kept.
+        var result = messages
+        var liveImageTurnsRemaining = maxLiveImageTurns
+
+        for i in stride(from: result.count - 1, through: 0, by: -1) {
+            guard result[i].attachments?.isEmpty == false else { continue }
+            if liveImageTurnsRemaining > 0 {
+                liveImageTurnsRemaining -= 1
+            } else {
+                result[i] = result[i].withStrippedAttachments()
+            }
+        }
+
+        return result
     }
 
     // MARK: - Sequence Repair

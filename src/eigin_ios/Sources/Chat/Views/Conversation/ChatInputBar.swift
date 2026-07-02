@@ -19,6 +19,7 @@ struct ChatInputBar: View {
     var permissionRequest: PermissionRequest?
     var onPermissionResponse: ((PermissionResponse) -> Void)?
     var onActionTap: (() -> Void)?
+    var hasStagedAttachments = false
 
     @Environment(\.colors) private var colors
     @Injected(\.dictationService) private var dictationService
@@ -43,7 +44,8 @@ struct ChatInputBar: View {
     }
 
     private var canSend: Bool {
-        !effectiveText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isDisabled
+        let hasText = !effectiveText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return (hasText || hasStagedAttachments) && !isDisabled
     }
 
     private var showStopButton: Bool {

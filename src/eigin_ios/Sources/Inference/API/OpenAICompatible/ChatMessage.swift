@@ -22,6 +22,13 @@ struct ChatMessage: Codable {
     /// Not sent to the API — used by ``ChatItem.buildItems()`` and ``buildAPIMessages()``.
     var isCompactionSummary: Bool = false
 
+    /// Lightweight references to locally-stored attachments (images, etc.).
+    ///
+    /// Not part of the Codable encoding; each provider client converts these into
+    /// its own wire representation at request-build time. The bytes are loaded from
+    /// ``ChatAttachmentStore`` on demand.
+    var attachments: [MessageAttachment]?
+
     enum CodingKeys: String, CodingKey {
         case role, content, name
         case toolCallID = "tool_call_id"
@@ -44,6 +51,7 @@ struct ChatMessage: Codable {
         name: String? = nil,
         toolCalls: [ToolCall]? = nil,
         providerMetadata: [String: String]? = nil,
+        attachments: [MessageAttachment]? = nil,
         localID: String = UUID().uuidString
     ) {
         self.localID = localID
@@ -53,6 +61,19 @@ struct ChatMessage: Codable {
         self.name = name
         self.toolCalls = toolCalls
         self.providerMetadata = providerMetadata
+        self.attachments = attachments
+    }
+
+    /// Returns a copy of this message with all attachment references replaced by the given
+    /// placeholder text appended to the existing content.
+    func withStrippedAttachments(placeholder: String = "[image omitted]") -> ChatMessage {
+        guard attachments != nil else { return self }
+        var copy = self
+        copy.attachments = nil
+        // Append placeholder so the model knows an image was present.
+        let base = copy.content ?? ""
+        copy.content = base.isEmpty ? placeholder : base + "\n\n" + placeholder
+        return copy
     }
 
     /// Custom encoding that omits nil optional fields instead of writing null.

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
+use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing::{get, post};
 use tower_http::trace::TraceLayer;
@@ -402,6 +403,12 @@ fn configure_inference() -> InferenceConfig {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 
+/// Chat completions carry base64-encoded image attachments, so the default
+/// 2 MB Axum body limit rejects legitimate multi-image requests. 10 MB
+/// comfortably covers several normalised images while still bounding request
+/// size on this anonymous, open endpoint.
+const MAX_REQUEST_BODY_BYTES: usize = 10 * 1024 * 1024;
+
 fn build_router(state: Arc<AppState>) -> Router {
     // Routes gated by Eigin Relay key.
     let routes_with_eigin_key = Router::new()
@@ -451,5 +458,6 @@ fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes_with_eigin_key)
         .merge(routes_with_bearer)
         .layer(TraceLayer::new_for_http())
+        .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
         .with_state(state)
 }

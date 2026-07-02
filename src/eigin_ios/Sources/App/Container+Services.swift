@@ -19,7 +19,7 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV3.models, version: SchemaV3.versionIdentifier),
+                for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
                 migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
@@ -81,6 +81,16 @@ extension Container {
 
     var chatService: Factory<any ChatService> {
         self { DefaultChatService(keychainService: self.keychainService()) }.singleton
+    }
+
+    var chatAttachmentStore: Factory<any ChatAttachmentStoring> {
+        self {
+            let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first!
+            let root = appSupport.appendingPathComponent("ChatAttachments")
+            return DefaultChatAttachmentStore(root: root)
+        }.singleton
     }
 
     var modelMetadataService: Factory<any ModelMetadataService> {

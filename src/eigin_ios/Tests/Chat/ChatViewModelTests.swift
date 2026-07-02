@@ -12,7 +12,7 @@ struct ChatViewModelTests {
     private func makeContext() throws -> (Chat, Agent, Provider, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV3.models, version: SchemaV3.versionIdentifier),
+            for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
             configurations: config
         )
         let ctx = container.mainContext
@@ -441,5 +441,46 @@ struct ChatViewModelTests {
         vm.moveToSpace(nil)
 
         #expect(chat.spaceID == nil)
+    }
+
+    // MARK: - stageAttachment
+
+    private func makeAttachment() -> MessageAttachment {
+        MessageAttachment(
+            id: UUID(),
+            kind: .image,
+            mimeType: "image/jpeg",
+            width: 100,
+            height: 100,
+            byteCount: 512
+        )
+    }
+
+    @Test("stageAttachment stages up to the per-message cap")
+    @MainActor
+    func stageAttachmentUpToCap() throws {
+        let (chat, _, _, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+
+        for _ in 0 ..< ChatViewModel.maxStagedAttachments {
+            #expect(vm.stageAttachment(makeAttachment()) == true)
+        }
+
+        #expect(vm.stagedAttachments.count == ChatViewModel.maxStagedAttachments)
+    }
+
+    @Test("stageAttachment refuses beyond the per-message cap")
+    @MainActor
+    func stageAttachmentBeyondCapRefused() throws {
+        let (chat, _, _, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+
+        for _ in 0 ..< ChatViewModel.maxStagedAttachments {
+            vm.stageAttachment(makeAttachment())
+        }
+        let accepted = vm.stageAttachment(makeAttachment())
+
+        #expect(accepted == false)
+        #expect(vm.stagedAttachments.count == ChatViewModel.maxStagedAttachments)
     }
 }

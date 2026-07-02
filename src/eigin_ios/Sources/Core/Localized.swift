@@ -163,6 +163,41 @@ enum Localized {
         }
     }
 
+    enum Attachment {
+        /// Action sheet button label to attach an image from the photo library.
+        static var attachImage: String {
+            Localized.get("attachment.attachImage")
+        }
+
+        /// Body of the sheet shown when the user switches to a non-vision model with a staged
+        /// image.
+        static var imageStagedOnNonVisionMessage: String {
+            Localized.get("attachment.imageStagedOnNonVisionMessage")
+        }
+
+        /// Title of the sheet shown when the user switches to a non-vision model with a staged
+        /// image.
+        static var imageStagedOnNonVisionTitle: String {
+            Localized.get("attachment.imageStagedOnNonVisionTitle")
+        }
+
+        /// Title shown in the full-screen viewer for a chat image attachment, in place of its
+        /// on-disk filename.
+        static var previewTitle: String {
+            Localized.get("attachment.previewTitle")
+        }
+
+        /// Accessibility label for the remove-image button on a staged attachment thumbnail.
+        static var removeImage: String {
+            Localized.get("attachment.removeImage")
+        }
+
+        /// Action sheet button label to take a new photo with the camera.
+        static var takePhoto: String {
+            Localized.get("attachment.takePhoto")
+        }
+    }
+
     enum Auth {
         /// A loading indicator while waiting for the user to sign in to their provider.
         static func signingIn(_ p1: String) -> String {

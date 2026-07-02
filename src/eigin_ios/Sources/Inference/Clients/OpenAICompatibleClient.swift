@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 
 /// HTTP client for any provider that implements the OpenAI-compatible REST API (`/models`,
@@ -65,7 +66,10 @@ struct OpenAICompatibleClient: LLMClient {
 
         var body = ChatCompletionRequest(
             model: model,
-            messages: [ChatMessage(role: "user", content: "hi")],
+            messages: [ChatCompletionMessage(
+                ChatMessage(role: "user", content: "hi"),
+                store: Container.shared.chatAttachmentStore()
+            )],
             stream: false
         )
         body.maxTokens = 1
@@ -95,13 +99,17 @@ struct OpenAICompatibleClient: LLMClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         applyExtraHeaders(to: &request)
 
+        let store = Container.shared.chatAttachmentStore()
         let body = ChatCompletionRequest(
             model: model,
-            messages: messages,
+            messages: messages.map { ChatCompletionMessage($0, store: store) },
             stream: true
         )
         let encoded = try JSONEncoder().encode(body)
-        request.httpBody = try adapter(for: model).processRequestBody(encoded, messages: messages)
+        request.httpBody = try adapter(for: model).processRequestBody(
+            encoded,
+            messages: messages
+        )
 
         let (bytes, response) = try await session.bytes(for: request)
         try validateResponse(response)
@@ -166,9 +174,10 @@ struct OpenAICompatibleClient: LLMClient {
         applyExtraHeaders(to: &request)
 
         let resolvedAdapter = adapter(for: model)
+        let store = Container.shared.chatAttachmentStore()
         var body = ChatCompletionRequest(
             model: model,
-            messages: messages,
+            messages: messages.map { ChatCompletionMessage($0, store: store) },
             stream: true
         )
         body.tools = tools

@@ -62,17 +62,25 @@ enum AnthropicContentBlock: Encodable {
     case text(String)
     case toolUse(id: String, name: String, input: [String: JSONValue])
     case toolResult(toolUseID: String, content: String)
+    case image(mediaType: String, data: String)
 
     private enum BlockType: String, Encodable {
         case text
         case toolUse = "tool_use"
         case toolResult = "tool_result"
+        case image
     }
 
     private enum CodingKeys: String, CodingKey {
-        case type, text, id, name, input
+        case type, text, id, name, input, source
         case toolUseID = "tool_use_id"
         case content
+    }
+
+    private enum ImageSourceCodingKeys: String, CodingKey {
+        case type
+        case mediaType = "media_type"
+        case data
     }
 
     func encode(to encoder: Encoder) throws {
@@ -90,6 +98,17 @@ enum AnthropicContentBlock: Encodable {
             try container.encode(BlockType.toolResult, forKey: .type)
             try container.encode(toolUseID, forKey: .toolUseID)
             try container.encode(content, forKey: .content)
+        case .image(let mediaType, let data):
+            try container.encode(BlockType.image, forKey: .type)
+            // Encodes as: { "type": "image", "source": { "type": "base64", "media_type": "...",
+            // "data": "..." } }
+            var sourceContainer = container.nestedContainer(
+                keyedBy: ImageSourceCodingKeys.self,
+                forKey: .source
+            )
+            try sourceContainer.encode("base64", forKey: .type)
+            try sourceContainer.encode(mediaType, forKey: .mediaType)
+            try sourceContainer.encode(data, forKey: .data)
         }
     }
 }

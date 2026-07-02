@@ -1,6 +1,7 @@
 import Factory
 import SwiftData
 import SwiftUI
+import UIKit
 
 /// The active chat screen: message feed, input bar, streaming, and live call access.
 struct ChatView: View {
@@ -21,7 +22,9 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var showLiveCall = false
     @State private var voiceDownloadItem: AssetItem?
+    @State private var showNonVisionStagedWarning = false
     @Environment(\.dismiss) private var dismiss
+    @Injected(\.chatAttachmentStore) private var attachmentStore
 
     init(chatID: UUID) {
         self.chatID = chatID
@@ -57,6 +60,11 @@ struct ChatView: View {
 
     private var canSend: Bool {
         agent != nil && activeProvider != nil
+    }
+
+    private var supportsVision: Bool {
+        guard let model = agent?.model else { return false }
+        return KnownModelCatalog.lookup(model)?.supportsVision ?? false
     }
 
     private var showVoiceDownload: Binding<Bool> {
@@ -143,7 +151,14 @@ struct ChatView: View {
                         agentName: agent?.name ?? "",
                         spaces: agentSpaceSnapshots,
                         currentSpaceID: viewModel.chat?.spaceID,
-                        onMoveToSpace: { spaceID in viewModel.moveToSpace(spaceID) }
+                        onMoveToSpace: { spaceID in viewModel.moveToSpace(spaceID) },
+                        supportsVision: supportsVision,
+                        stagedAttachments: viewModel.stagedAttachments,
+                        onStageImage: stageImage,
+                        onRemoveStagedAttachment: { attachment in
+                            viewModel.stagedAttachments.removeAll { $0.id == attachment.id }
+                            attachmentStore.delete(id: attachment.id)
+                        }
                     ),
                     lastStreamedItemID: viewModel.lastStreamedItemID,
                     onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
@@ -254,10 +269,40 @@ struct ChatView: View {
                 }
             }
         }
+        .onChange(of: supportsVision) { _, nowSupports in
+            // When the model switches away from vision, clear any staged images.
+            if !nowSupports, !viewModel.stagedAttachments.isEmpty {
+                attachmentStore.deleteAll(viewModel.stagedAttachments)
+                viewModel.stagedAttachments = []
+                showNonVisionStagedWarning = true
+            }
+        }
+        .appSheet(
+            isPresented: $showNonVisionStagedWarning,
+            title: Localized.Attachment.imageStagedOnNonVisionTitle,
+            description: Localized.Attachment.imageStagedOnNonVisionMessage,
+            detents: [.medium]
+        ) {
+            EmptyView()
+        }
     }
 
     private func syncVoice() {
         var service = speechService
         service.voiceIdentifier = agent?.voiceIdentifier
+    }
+
+    /// Normalises and saves a newly picked image, then stages it for the next
+    /// send. No-ops once ``ChatViewModel/maxStagedAttachments`` is reached.
+    private func stageImage(_ image: UIImage) {
+        guard viewModel.stagedAttachments.count < ChatViewModel.maxStagedAttachments else {
+            return
+        }
+        Task {
+            guard let data = image.jpegData(compressionQuality: 1.0) else { return }
+            if let attachment = try? attachmentStore.save(imageData: data, id: UUID()) {
+                viewModel.stageAttachment(attachment)
+            }
+        }
     }
 }
