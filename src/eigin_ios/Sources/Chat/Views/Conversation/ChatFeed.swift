@@ -57,6 +57,14 @@ struct ChatFeed: View {
     /// When false, the input's action button is hidden regardless of what's available.
     /// Use for surfaces (onboarding, bootstrap) where actions don't apply.
     let showsInputActions: Bool
+    /// When false, icebreaker starters never appear. Set for agent-initiated
+    /// surfaces (onboarding, bootstrap) where the agent opens the turn, so the
+    /// user isn't the one starting the conversation.
+    let allowsIcebreakers: Bool
+    /// Whether the feed's messages have finished loading. While false, icebreakers
+    /// stay hidden so they don't flash on an existing chat whose messages are still
+    /// being fetched (the feed is momentarily empty before they populate).
+    let isLoaded: Bool
     /// Item ID whose footer should fade in (set when a streaming turn just ended).
     var lastStreamedItemID: String?
     /// Action for the trailing user-message footer (e.g. retry last turn).
@@ -111,6 +119,8 @@ struct ChatFeed: View {
         interactions: FeedInteractions = FeedInteractions(),
         context: FeedContext = FeedContext(),
         showsInputActions: Bool = true,
+        allowsIcebreakers: Bool = true,
+        isLoaded: Bool = true,
         lastStreamedItemID: String? = nil,
         onUserMessageFooterAction: (() -> Void)? = nil
     ) {
@@ -125,6 +135,8 @@ struct ChatFeed: View {
         self.interactions = interactions
         self.context = context
         self.showsInputActions = showsInputActions
+        self.allowsIcebreakers = allowsIcebreakers
+        self.isLoaded = isLoaded
         self.lastStreamedItemID = lastStreamedItemID
         self.onUserMessageFooterAction = onUserMessageFooterAction
     }
@@ -340,7 +352,9 @@ struct ChatFeed: View {
     /// no messages, no staged attachments, an empty composer, an enabled input,
     /// and nothing streaming.
     private var showsIcebreakers: Bool {
-        items.isEmpty
+        allowsIcebreakers
+            && isLoaded
+            && items.isEmpty
             && !isInputDisabled
             && !isStreaming
             && context.stagedAttachments.isEmpty
