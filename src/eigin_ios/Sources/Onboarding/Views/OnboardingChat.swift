@@ -99,6 +99,7 @@ struct OnboardingChat: View {
                     onSend: { _ in handleSend() },
                     onStop: nil,
                     showsInputActions: false,
+                    allowsIcebreakers: false,
                     lastStreamedItemID: chatLoop.lastStreamedItemID
                 )
                 .safeAreaInset(edge: .top, spacing: 0) {

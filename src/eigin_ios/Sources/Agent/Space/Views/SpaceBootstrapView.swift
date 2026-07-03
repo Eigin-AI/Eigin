@@ -68,6 +68,7 @@ struct SpaceBootstrapView: View {
                 isInputDisabled: isStreaming,
                 onSend: { _ in send() },
                 onStop: stopHandler,
+                allowsIcebreakers: false,
                 lastStreamedItemID: chatLoop.lastStreamedItemID
             )
             .safeAreaInset(edge: .bottom, spacing: Spacing.n8) {

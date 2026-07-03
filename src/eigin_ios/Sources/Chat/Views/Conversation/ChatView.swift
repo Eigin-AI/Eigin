@@ -160,6 +160,7 @@ struct ChatView: View {
                             attachmentStore.delete(id: attachment.id)
                         }
                     ),
+                    isLoaded: viewModel.window.isPreloaded,
                     lastStreamedItemID: viewModel.lastStreamedItemID,
                     onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
                         ? {
