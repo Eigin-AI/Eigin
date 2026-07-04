@@ -1,0 +1,8 @@
+fact eigin_compaction {
+    name = "Context Compaction"
+    claim = "When conversations get long, context is automatically compressed so the conversation can continue indefinitely without losing important information."
+    source = enum"stated"
+    describes = [thing.eigin]
+    tags = ["conversation", "context", "compression", "long conversations"]
+    created_at = 2025-03-11
+}

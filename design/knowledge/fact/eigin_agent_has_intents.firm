@@ -1,0 +1,9 @@
+fact eigin_agent_has_intents {
+    name = "Intents"
+    claim = "Intents are the agent's goals — things it is working toward for you, carried across conversations rather than forgotten when a chat ends. It sets them itself, keeps them current, and resolves them once they're met. An intent can hold tasks, dated events, and recurring schedules. The system uses these to gauge how relevant each intent is at any given moment, bringing the most pressing ones to the agent's attention."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_has_initiative, fact.eigin_agent_has_knowledge]
+    tags = ["intents", "goals", "tasks", "reminders", "schedules", "events", "initiative", "proactive", "tracking", "follow-up"]
+    created_at = 2026-07-03
+}

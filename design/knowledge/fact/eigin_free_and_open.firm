@@ -1,0 +1,8 @@
+fact eigin_free_and_open {
+    name = "Free and Open Source"
+    claim = "The Eigin app is open source and free at its core. The app is funded by providing sovereign AI to organisations"
+    source = enum"stated"
+    describes = [thing.eigin]
+    tags = ["free", "open source", "sovereign", "pricing"]
+    created_at = 2025-03-11
+}

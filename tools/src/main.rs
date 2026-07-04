@@ -9,6 +9,7 @@ mod generate;
 mod grant;
 mod hooks;
 mod infra;
+mod knowledge;
 mod lint;
 mod localize;
 mod prompts;

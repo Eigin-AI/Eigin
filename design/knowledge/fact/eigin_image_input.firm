@@ -1,0 +1,9 @@
+fact eigin_image_input {
+    name = "Image Input"
+    claim = "You can attach images to a chat when the model you're using supports vision. Tap the plus button in the chat to take a photo or choose one from your library. The image is processed and stored on your device, then sent to the model along with your message. If the current model doesn't support vision, the image options don't appear."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_on_device_processing, fact.eigin_chat_actions]
+    tags = ["image", "images", "vision", "photo", "camera", "attach", "picture", "multimodal", "on-device", "privacy"]
+    created_at = 2026-07-03
+}

@@ -1,0 +1,10 @@
+fact eigin_is_private_ai {
+    name = "Private and Local-First"
+    claim = "Eigin is a private, local-first AI app, with no tracking and no hidden incentives. Your data stays on your device, and the only thing that leaves is what the agent sends to the AI provider you've chosen. If that's Eigin Relay, it goes to European providers only, with zero data retention. If it's a local model, nothing leaves your device at all. Privacy, security, and ownership are principles the whole app is built on, and it shows in how it works."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_on_device_processing, fact.eigin_respects_os_security, fact.eigin_free_and_open, fact.eigin_relay]
+    tags = ["privacy", "private", "local-first", "data", "security", "ownership", "no tracking", "on-device", "relay", "european", "zero data retention", "local model"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

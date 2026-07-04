@@ -34,27 +34,7 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("");
 
-    // Scan .env for PROVIDER_*_API_KEY_<ENV> entries and build a map for Terraform.
-    let provider_api_keys: HashMap<String, String> = dot_env
-        .iter()
-        .filter(|(k, _v)| {
-            k.starts_with("PROVIDER_")
-                && k.ends_with(&format!("_API_KEY_{env_upper}"))
-                && k.len() > format!("PROVIDER__API_KEY_{env_upper}").len()
-        })
-        .filter_map(|(k, v)| {
-            // Extract provider name: PROVIDER_BERGET_API_KEY_STAGING -> berget
-            let prefix = "PROVIDER_";
-            let suffix = &format!("_API_KEY_{env_upper}");
-            if let Some(name_part) = k.strip_prefix(prefix).and_then(|s| s.strip_suffix(suffix)) {
-                Some((name_part.to_lowercase(), v.clone()))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let provider_api_keys_json = serde_json::to_string(&provider_api_keys)?;
+    let provider_api_keys_json = serde_json::to_string(&provider_api_keys(&dot_env, &env_upper))?;
 
     let scw_secret = scw_secret_key().unwrap_or_default();
     let image_tag = git_short_head().unwrap_or_default();
@@ -66,6 +46,27 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
     println!("export TF_VAR_provider_api_keys='{provider_api_keys_json}'");
 
     Ok(())
+}
+
+/// Build the `provider_api_keys` map for Terraform from a parsed `.env`: every
+/// `PROVIDER_<NAME>_API_KEY_<ENV>` entry becomes `<name>` (lowercased) → key.
+/// Entries for other environments, non-provider keys, and an empty `<NAME>` are
+/// ignored.
+fn provider_api_keys(
+    dot_env: &HashMap<String, String>,
+    env_upper: &str,
+) -> HashMap<String, String> {
+    let suffix = format!("_API_KEY_{env_upper}");
+    dot_env
+        .iter()
+        .filter_map(|(key, value)| {
+            let name = key.strip_prefix("PROVIDER_")?.strip_suffix(&suffix)?;
+            if name.is_empty() {
+                return None;
+            }
+            Some((name.to_lowercase(), value.clone()))
+        })
+        .collect()
 }
 
 fn repo_root() -> Result<String> {
@@ -117,5 +118,54 @@ fn git_short_head() -> Option<String> {
         Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn extracts_and_lowercases_provider_names() {
+        let dot_env = env(&[
+            ("PROVIDER_BERGET_API_KEY_STAGING", "berget-key"),
+            ("PROVIDER_MISTRAL_API_KEY_STAGING", "mistral-key"),
+        ]);
+        let keys = provider_api_keys(&dot_env, "STAGING");
+        assert_eq!(keys.get("berget").map(String::as_str), Some("berget-key"));
+        assert_eq!(keys.get("mistral").map(String::as_str), Some("mistral-key"));
+        assert_eq!(keys.len(), 2);
+    }
+
+    #[test]
+    fn ignores_other_keys_and_environments() {
+        let dot_env = env(&[
+            ("PROVIDER_BERGET_API_KEY_STAGING", "stg"),
+            ("PROVIDER_BERGET_API_KEY_PRODUCTION", "prod"),
+            ("MOJEEK_API_KEY_STAGING", "mojeek"),
+            ("SOME_OTHER_VALUE", "x"),
+        ]);
+        let keys = provider_api_keys(&dot_env, "STAGING");
+        assert_eq!(keys.get("berget").map(String::as_str), Some("stg"));
+        assert_eq!(keys.len(), 1);
+    }
+
+    #[test]
+    fn ignores_empty_provider_name() {
+        let dot_env = env(&[("PROVIDER__API_KEY_STAGING", "orphan")]);
+        assert!(provider_api_keys(&dot_env, "STAGING").is_empty());
+    }
+
+    #[test]
+    fn empty_when_no_provider_keys() {
+        let dot_env = env(&[("MOJEEK_API_KEY_STAGING", "mojeek")]);
+        assert!(provider_api_keys(&dot_env, "STAGING").is_empty());
     }
 }

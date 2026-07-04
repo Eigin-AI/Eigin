@@ -1,0 +1,10 @@
+fact eigin_agent_tab_review {
+    name = "Reviewing Agent Data"
+    claim = "Everything your agent stores — its own core texts, its knowledge, its intents, and the rest — can be reviewed in the Agent tab. Under its advanced section you can read, edit, or delete any of it, so what the agent knows and keeps is always open to you and in your control."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_tab, fact.eigin_agent_has_core_texts, fact.eigin_agent_has_knowledge, fact.eigin_agent_has_intents]
+    tags = ["agent", "data", "review", "advanced", "core texts", "knowledge", "intents", "edit", "delete", "transparency", "control"]
+    created_at = 2025-03-12
+    last_verified = 2026-07-03
+}

@@ -1,0 +1,10 @@
+fact eigin_voice_is_core {
+    name = "Voice Is Core"
+    claim = "Voice is an important interaction mode in Eigin. Dictation, text-to-speech, and live call are always available, and they all work offline."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_live_call, fact.eigin_local_voice]
+    tags = ["voice", "dictation", "tts", "speech", "text-to-speech", "speaking", "listening", "offline", "live call"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

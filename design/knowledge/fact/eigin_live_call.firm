@@ -1,0 +1,10 @@
+fact eigin_live_call {
+    name = "Live Call"
+    claim = "Live call is a hands-free, walkie-talkie-style conversation mode. It uses the phone's call framework, so it keeps working with the screen locked or the app in the background. You can adjust the pace: how long it waits after you stop speaking before it takes its turn. While the agent is talking, tap the hand button to interrupt and say something yourself instead, and tap the red phone button to hang up. Afterwards, whatever you talked about becomes part of the chat as normal messages."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_voice_is_core, fact.eigin_chat_actions]
+    tags = ["voice", "live call", "call", "hands-free", "phone", "pace", "interrupt", "hang up", "background", "screen lock", "turn", "walkie-talkie"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

@@ -1,0 +1,9 @@
+fact eigin_local_voice {
+    name = "Local Voice"
+    claim = "The agent can speak aloud. Out of the box it uses your device's built-in text-to-speech, and Eigin also offers an improved voice model that sounds much more natural and runs entirely on your device, available for every supported language. You're offered the download the first time you start a live call or play back a chat, and you can also get it from the Agent tab. If you decline, we won't ask again, but you can manage local voice models any time under Settings, in the advanced section."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_voice_is_core, fact.eigin_agent_tab, fact.eigin_settings_tab, fact.eigin_on_device_processing]
+    tags = ["voice", "text-to-speech", "tts", "speech", "voice model", "download", "local", "on-device", "agent tab", "settings", "offline", "languages", "speaking"]
+    created_at = 2026-07-03
+}

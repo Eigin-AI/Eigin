@@ -1,0 +1,9 @@
+fact eigin_agent_self_configurable {
+    name = "Self-Configurable"
+    claim = "The agent can modify itself. You can ask it to change its personality, change its presentation, and modify its own settings. If you want something changed, just ask."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_has_core_texts, fact.eigin_agent_has_initiative]
+    tags = ["configure", "settings", "self", "customize", "personality", "voice", "avatar", "presentation", "core texts", "autonomy"]
+    created_at = 2025-03-11
+}
