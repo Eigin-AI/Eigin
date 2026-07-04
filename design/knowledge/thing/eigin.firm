@@ -1,0 +1,6 @@
+thing eigin {
+    name = "Eigin"
+    category = enum"digital"
+    tags = ["eigin", "app"]
+    created_at = 2025-03-11
+}

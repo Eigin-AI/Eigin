@@ -1,0 +1,10 @@
+fact eigin_agent_has_initiative {
+    name = "Initiative"
+    claim = "The agent can work proactively in the background, reflecting on past conversations and its intents and sharing an observation worth hearing. It does this at moments the system chooses, often while your device is charging, rather than on a fixed schedule. You decide how proactive it is: reactive (no background activity), balanced (the occasional worthwhile insight), or proactive (more frequent observations). You can change the level by asking the agent, or set it yourself in the Agent tab."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_has_intents]
+    tags = ["initiative", "proactive", "proactivity", "background", "notifications", "reactive", "balanced", "charging", "settings", "level"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

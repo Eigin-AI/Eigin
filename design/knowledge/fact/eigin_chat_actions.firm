@@ -1,0 +1,10 @@
+fact eigin_chat_actions {
+    name = "Chat Actions"
+    claim = "In a chat, the plus button opens more actions: move the chat to a space, attach an image or take a photo, and other quick ways to organise or add to the conversation. The microphone button lets you dictate instead of typing. The phone button starts a live call for a hands-free, spoken conversation."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_chat_tab, fact.eigin_live_call, fact.eigin_spaces_organize_context, fact.eigin_image_input, fact.eigin_voice_is_core]
+    tags = ["chat", "actions", "plus button", "move", "space", "attach", "image", "photo", "dictation", "microphone", "voice", "vocabulary", "live call", "phone", "hands-free", "organization"]
+    created_at = 2025-03-12
+    last_verified = 2026-07-03
+}

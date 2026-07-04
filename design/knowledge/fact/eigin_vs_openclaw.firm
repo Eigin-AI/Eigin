@@ -1,0 +1,9 @@
+fact eigin_vs_openclaw {
+    name = "Eigin vs. Agent Frameworks"
+    claim = "Eigin is sometimes compared to OpenClaw and similar open-source AI agent frameworks. Those projects focus on maximum capability — running headless on a computer, executing code, browsing the web, managing files. Eigin takes a different approach: it is a dedicated app, not a command-line tool, and it is deliberate about privacy and security over raw capability. Open-source agent frameworks carry more risk for data loss, security incidents, and unintended actions. Eigin trades some of that power for trust and safety."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_is_private_ai, fact.eigin_respects_os_security]
+    tags = ["comparison", "open claw", "agent", "capability", "privacy", "security", "risk", "headless", "command line"]
+    created_at = 2025-03-11
+}

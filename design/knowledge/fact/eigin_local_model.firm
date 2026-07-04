@@ -1,0 +1,9 @@
+fact eigin_local_model {
+    name = "Local Model"
+    claim = "You can run the agent on a model that lives entirely on your device. You download it first from the Settings tab, under Connections. A local model gives you solid conversational ability and general knowledge, and it can still draw on web search and your knowledge base to look things up, so it can carry any conversation. But it works with a limited set of tools, and a smaller context window means it may lose track of earlier details as a chat goes on. Think of it as a stand-in: best when you're offline or want completely guaranteed privacy, with nothing leaving your device at all. Local AI is improving quickly, and we expect this to get much better over time."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_ai_providers, fact.eigin_on_device_processing, fact.eigin_is_private_ai, fact.eigin_settings_tab]
+    tags = ["local", "local model", "on-device", "offline", "privacy", "download", "settings", "connections", "tools", "context window", "forget", "fallback", "stand-in", "conversational", "web search", "knowledge"]
+    created_at = 2026-07-04
+}

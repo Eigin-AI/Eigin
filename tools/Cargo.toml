@@ -17,6 +17,9 @@ toml = "0.8"
 walkdir = "2"
 glob = "0.3"
 dirs = "5"
+# Firm language — validates the design/knowledge/ workspace at generate time.
+# Same engine the iOS FirmFFI xcframework wraps; keep the rev aligned with that build.
+firm_lang = { git = "https://github.com/42futures/firm", rev = "4144d4a08bdf285c09ed2b9781e5ec448004e506" }
 # Grant signing faucet
 jsonwebtoken = "9"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }

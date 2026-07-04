@@ -1,0 +1,8 @@
+fact eigin_language_support {
+    name = "Language Support"
+    claim = "Eigin is available in multiple languages, currently supporting English and Danish. Language affects dictation, text-to-speech voice, and the interface."
+    source = enum"stated"
+    describes = [thing.eigin]
+    tags = ["language", "languages", "english", "danish", "localization", "dictation", "tts", "interface"]
+    created_at = 2025-03-11
+}

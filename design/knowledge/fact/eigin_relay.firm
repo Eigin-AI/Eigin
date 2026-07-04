@@ -1,0 +1,9 @@
+fact eigin_relay {
+    name = "Eigin Relay"
+    claim = "Eigin Relay is an optional connectivity service that helps the agent do things it can't manage on your device alone — such as searching the web, or reaching cloud AI models. Its cloud AI is an anonymous inference service: a way to use capable models without creating any new account or bringing a provider key of your own. It runs on European infrastructure with zero data retention, built around privacy and GDPR. The Eigin relay is optional — lean on it if it helps, or skip it and bring your own keys and services instead."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_ai_providers, fact.eigin_bring_your_own_key, fact.eigin_is_private_ai]
+    tags = ["relay", "eigin relay", "connectivity", "web search", "cloud ai", "inference", "anonymous", "europe", "european", "gdpr", "privacy", "zero data retention", "optional", "keys"]
+    created_at = 2026-07-03
+}

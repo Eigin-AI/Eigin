@@ -1,0 +1,9 @@
+fact eigin_feedback {
+    name = "Feedback"
+    claim = "We really value your feedback. Eigin has no tracking or telemetry beyond the occasional basic crash diagnostic, and because you have no account with us, we know nothing about your chats or what you do in the app. That's by design, but it also means your explicit feedback is how we learn what's working and what isn't. If you'd like to share some, there's a button in Settings that makes it easy, or you can email us directly at support@eigin.ai. We'd love to hear from you."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_settings_tab, fact.eigin_is_private_ai]
+    tags = ["feedback", "support", "email", "contact", "telemetry", "tracking", "crash", "diagnostics", "privacy", "no account"]
+    created_at = 2026-07-03
+}

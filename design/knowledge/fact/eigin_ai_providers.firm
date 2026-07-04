@@ -1,0 +1,10 @@
+fact eigin_ai_providers {
+    name = "AI Providers"
+    claim = "Your AI can come from wherever you like. Use Eigin Relay's cloud AI, or bring one of the major providers that work out of the box — OpenAI, Anthropic, Google, Mistral, and more, including several smaller European ones. You can connect any provider that speaks the OpenAI API, or run a model right on your device. They're all valid choices, and because the agent doesn't care which is behind it, you can switch whenever you want."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_bring_your_own_key, fact.eigin_relay, fact.eigin_local_model]
+    tags = ["providers", "models", "api", "relay", "openai", "anthropic", "google", "mistral", "european", "local", "on-device", "openai-compatible", "switch", "choice"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

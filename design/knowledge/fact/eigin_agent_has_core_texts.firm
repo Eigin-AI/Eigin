@@ -1,0 +1,9 @@
+fact eigin_agent_has_core_texts {
+    name = "Core Texts"
+    claim = "The agent has three core texts — identity (who it is), user (who it talks to), and soul (its principles). Together they act as its constitution, shaping its personality and behaviour in every chat. It can read and edit them over time."
+    source = enum"stated"
+    describes = [thing.eigin]
+    tags = ["core", "identity", "soul", "principles", "constitution", "personality", "behaviour", "self"]
+    created_at = 2025-03-11
+    last_verified = 2026-07-03
+}

@@ -1,0 +1,8 @@
+fact eigin_on_device_processing {
+    name = "On-Device Processing"
+    claim = "Dictation, text-to-speech, and embeddings all run on-device. The only time data leaves the device is when it goes to the AI model the user chose."
+    source = enum"stated"
+    describes = [thing.eigin]
+    tags = ["privacy", "private", "processing", "on-device", "local", "data", "security"]
+    created_at = 2025-03-11
+}

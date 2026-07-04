@@ -1,0 +1,271 @@
+schema actor {
+    field {
+        name = "name"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "type"
+        type = "enum"
+        allowed_values = ["human", "ai", "organization", "other"]
+        required = false
+    }
+    field {
+        name = "tags"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "created_at"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_from"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_until"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "relates_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "belongs_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "uses"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "describes"
+        type = "list"
+        required = false
+    }
+}
+
+schema thing {
+    field {
+        name = "name"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "category"
+        type = "enum"
+        allowed_values = ["physical", "digital", "place", "service", "concept", "other"]
+        required = false
+    }
+    field {
+        name = "tags"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "created_at"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_from"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_until"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "relates_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "belongs_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "uses"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "describes"
+        type = "list"
+        required = false
+    }
+}
+
+schema fact {
+    field {
+        name = "name"
+        type = "string"
+        required = false
+    }
+    field {
+        name = "claim"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "tags"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "created_at"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "last_verified"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_from"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_until"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "relates_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "belongs_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "uses"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "describes"
+        type = "list"
+        required = false
+    }
+}
+
+schema output {
+    field {
+        name = "name"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "content"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "authors"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "tags"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "created_at"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_from"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_until"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "relates_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "belongs_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "uses"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "describes"
+        type = "list"
+        required = false
+    }
+}
+
+schema note {
+    field {
+        name = "content"
+        type = "string"
+        required = true
+    }
+    field {
+        name = "tags"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "created_at"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_from"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "valid_until"
+        type = "datetime"
+        required = false
+    }
+    field {
+        name = "relates_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "belongs_to"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "uses"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "describes"
+        type = "list"
+        required = false
+    }
+}

@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::config;
 use crate::design;
+use crate::knowledge;
 use crate::localize;
 use crate::prompts;
 
@@ -24,6 +25,7 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     localize::generate_all(&root)?;
     design::generate_all(&root)?;
     prompts::generate_all(&root)?;
+    knowledge::generate_all(&root)?;
 
     run_cmd(
         Command::new("xcodegen")
