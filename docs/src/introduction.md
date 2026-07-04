@@ -25,23 +25,9 @@ Then jump into whatever you're touching: [Conversation](./conversation/README.md
 
 ## Building from source
 
-This is a monorepo containing all Eigin applications. Install dependencies for the platform you want to work on.
-
-**iOS:**
-
-- Xcode — `xcode-select -s /Applications/Xcode.app/Contents/Developer`
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
-- [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) — `brew install swiftformat`
-
-**Relay:**
-
-- [Rust and Cargo](https://rustup.rs) — via rustup
-
-**Command runner (required for all platforms):**
-
-- [just](https://just.systems) — `brew install just`
-
-After cloning, run `just hooks` once to install git hooks. Then use `just build`, `just test`, and `just format`, scoped by platform if needed:
+This is a monorepo containing all Eigin applications. Install the toolchain for
+the platform you want to work on, then use `just build`, `just test`, and
+`just format`, scoped by platform if needed:
 
 ```
 just build          # All targets
@@ -49,4 +35,5 @@ just build ios      # iOS only
 just build relay    # Relay only
 ```
 
-Run `just --list` to see all available commands.
+See [Build from source](./build-from-source.md) for prerequisites, first-time
+setup, and troubleshooting.

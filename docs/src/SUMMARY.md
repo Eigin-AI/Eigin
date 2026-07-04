@@ -2,6 +2,7 @@
 
 [Introduction](./introduction.md)
 [Philosophy](./philosophy.md)
+[Build from source](./build-from-source.md)
 [FAQ](./faq.md)
 
 # Platform
