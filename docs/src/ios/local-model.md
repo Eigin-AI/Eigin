@@ -12,6 +12,11 @@ Gemma's chat formatting lives alongside it: message conversion
 (`GemmaMessageConversion`), the native tool-call wire format (`GemmaToolFormat`),
 and the output filter (`GemmaStreamFilter`).
 
+LiteRT-LM's Swift wrapper is vendored as a local package at
+`src/eigin_ios/Packages/LiteRTLM` rather than pulled in as a remote SPM
+dependency — see that package's `README.md` for why (git-LFS checkout
+failures upstream, and an explicit `Conversation.close()` we add locally).
+
 ## The model file
 
 A single `.litertlm` file (~2.6 GB) is downloaded from the
