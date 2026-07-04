@@ -1,3 +1,56 @@
+## [0.15.0] - 2026-07-04
+
+### Features
+
+- *(relay)* Inference proxy with credit ledger
+- Eigin relay inference with IAP credits
+- Rebalance known model catalog
+- *(relay)* Accept Apple Sandbox IAP in production under a credit budget
+- *(relay)* Accept an optional secondary API key (safe key rotation)
+- Conversational onboarding flow
+- *(relay)* Multi-provider routing, canonical model IDs, and alias support
+- Explicit prompt caching with a generic cache key
+- Refreshable model catalog
+- Agent behavioural guidelines and brand voice guide
+- Redesign live call screen and improve speech pipeline
+- Retry last user message in chat
+- Seasonal system hints for Denmark
+- LiteRT LM local Gemma
+- Planning skill and flow mechanism
+- Vision support
+- Cooking skill
+- Branded icebreaker prompts
+- Recommendations skill
+
+### Bug Fixes
+
+- Bump Apple IAP product version
+- *(ios)* Add OAuth state validation for provider flows
+- *(relay)* Use the same canonical ID for mistral 3.5 as known model catalog
+- Improve chat streaming performance
+- Pagination aware chat pinning
+- Make app header safe-area aware across orientations
+- Run background prompts for relay and on-device providers
+- Don't strip apostrophes in spoken text
+- Consistent primary agent resolution
+- Generate debug symbols for LiteRT and bump build version
+- Hide icebreaker pills on agent-initiated and loading chats
+
+### Refactor
+
+- Migrate system prompts to Jinja templates
+- Centralise hint, skill, and title prompts as templates
+- Bundle knowledge as an external Firm workspace
+
+### Styling
+
+- Improve code block look and feel: Fira Code, card container, syntax theme
+- Switch design component
+- Spaces screens designs and card surface component
+- Segmented control component
+- Disclosure component
+- Polish Agent tab layout and information hierarchy
+- Polish Settings tab layout and information hierarchy
 ## [0.14.0] - 2026-06-12
 
 ### Features

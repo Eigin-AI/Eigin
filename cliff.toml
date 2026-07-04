@@ -83,6 +83,8 @@ fail_on_unmatched_commit = false
 link_parsers = []
 # Include only the tags that belong to the current branch.
 use_branch_tags = false
+# Regex to select git tags that represent releases (excludes build-ios-* tags).
+tag_pattern = "^[0-9]+\\.[0-9]+\\.[0-9]+$"
 # Order releases topologically instead of chronologically.
 topo_order = false
 # Order commits topologically instead of chronologically.
