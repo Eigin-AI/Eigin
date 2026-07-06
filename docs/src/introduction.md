@@ -1,39 +1,35 @@
 # Introduction
 
-**Eigin is the application layer for personal AI:** a persistent agent that runs on your device, connects any AI inference provider you want, and builds knowledge about you across every conversation.
+Eigin is the application layer for personal AI: local-first native apps that turn any model into an agent that's truly yours.
 
-These are the technical docs for Eigin: what it is, how it works, and how its implemented.
+More specifically, Eigin is:
 
-## Features
+#### A persistent personal agent
+One per device, with its own identity, knowledge graph, intents, and skills. See [The Agent](./agents/README.md).
 
-- **Persistent agent.** One per device, with its own identity, knowledge graph, intents, and skills. See [The Agent](./agents/README.md).
-- **Local-first.** Chats, knowledge, intents, and settings live on the device. See [System context](./system-context.md).
-- **Model-agnostic.** Cloud (any OpenAI-compatible API) or fully local. See [Inference providers](./providers.md).
-- **Voice.** On-device dictation and a live call mode for hands-free conversation. See [Voice](./voice/README.md).
-- **Free and open source.** See [Philosophy](./philosophy.md).
+#### Local-first
+Chats, knowledge, intents, and settings live on the device. See [System context](./system-context.md).
+
+#### Model-agnostic
+Any OpenAI-compatible cloud API, or a fully local model. See [Inference providers](./providers.md).
+
+#### Voice native
+On-device dictation and a live call mode. See [Voice](./voice/README.md).
+
+#### Free and open source
+Because personal AI is something that should belong to everyone. See [Philosophy](./philosophy.md).
 
 ## Where to start
 
-If you're new to the codebase, read in this order:
+New to the codebase? Read in order:
 
-1. [Philosophy](./philosophy.md) — why Eigin exists.
-2. [System context](./system-context.md) — Eigin at the system level.
-3. [The Agent](./agents/README.md) — the agent ontology: Core, Experience, Knowledge, Intents, Skills.
-4. [iOS Implementation](./ios/README.md) — how the iOS app realises those concepts.
+1. [Philosophy](./philosophy.md): why Eigin exists.
+2. [System context](./system-context.md): Eigin at the system level.
+3. [The Agent](./agents/README.md): the agent ontology.
+4. [iOS](./ios/README.md): how the app realises those concepts.
 
-Then jump into whatever you're touching: [Conversation](./conversation/README.md), [Tools](./tools/README.md), or [Voice](./voice/README.md).
+Then jump to whatever you're working on: [Conversation](./conversation/README.md), [Tools](./tools/README.md), or [Voice](./voice/README.md).
 
 ## Building from source
 
-This is a monorepo containing all Eigin applications. Install the toolchain for
-the platform you want to work on, then use `just build`, `just test`, and
-`just format`, scoped by platform if needed:
-
-```
-just build          # All targets
-just build ios      # iOS only
-just build relay    # Relay only
-```
-
-See [Build from source](./build-from-source.md) for prerequisites, first-time
-setup, and troubleshooting.
+See [Build from source](./build-from-source.md) for prerequisites, setup, and build commands.

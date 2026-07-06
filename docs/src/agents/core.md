@@ -1,32 +1,22 @@
 # Core
 
-Agents in Eigin have an essence. It shapes every conversation and makes the interaction feel personal and directed.
+An agent's essence shapes every conversation and makes the interaction feel personal and directed.
 
 ## Presentation
 
-The agent has a way of appearing to the user. It has a name, a symbol and a voice. These can be set by the user, or by the agent.
+The agent has a name, a symbol, and a voice, set by the user or by the agent itself.
 
-### Voices
-
-The agent's voice is selected from the user's preferences. Eigin ships local TTS models for each supported language; where one is available it is used automatically, otherwise the OS voice is the fallback. Users can also choose a specific voice manually.
+The voice comes from the user's preferences. Eigin ships local TTS models per supported language; where one exists it's used automatically, otherwise the OS voice is the fallback. Users can also pick a specific voice.
 
 ## Core texts
 
-The agent has three persistent "core" texts that define its character. These are injected into every system prompt.
+Three persistent texts define the agent's character, injected into every system prompt. The layout is inspired by constitutional AI. The agent can read and edit them with tools, updating its way of being over time.
 
-### Identity
-
-The specifics of who the agent is. Role, capabilities, tone, constraints. This shapes what the agent does and how it communicates.
-
-### User
-
-A profile of the person the agent talks to. Likes, dislikes, working style, relevant context. This builds up over time as the agent learns about the user through conversation.
-
-### Soul
-
-A shared value system: principles and philosophy. The essence or "spirit" of the agent.
-
-This layout is inspired by constitutional AI. The agent can read and edit these texts using tools, so it can update its way of being over time.
+| Text | About | What it holds |
+|---|---|---|
+| **Identity** | The agent itself | Role, capabilities, tone, constraints |
+| **User** | The person it talks to | Likes, dislikes, working style, context |
+| **Soul** | Shared values | Principles and the spirit of the agent |
 
 ## Permissions
 

@@ -30,7 +30,7 @@
 - [The gatekeeper](./conversation/context.md)
 - [Compaction](./conversation/compaction.md)
 - [Spaces](./conversation/spaces.md)
-- [Image input](./conversation/image-input.md)
+- [Attachments](./conversation/attachments.md)
 
 # Tools
 
