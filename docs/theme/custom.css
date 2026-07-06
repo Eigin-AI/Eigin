@@ -211,7 +211,8 @@ ol.section {
 }
 
 blockquote {
-    border-left: 3px solid var(--accent-warm);
+    border: none;
+    border-left: 3px solid var(--accent);
     background-color: var(--bg-secondary);
     padding: 1em;
     margin: 1.5em 0;

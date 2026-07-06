@@ -1,29 +1,37 @@
 # Design system
 
-Eigin uses a centralised design token system as the single source of truth for visual primitives. Changing a token and running `just generate` propagates the change through all generated platform code.
+The `design/` folder is the single source of truth for content generated into the Eigin apps. Edit a source, run `just generate`, and it flows into platform-native code.
+
+| Folder | Generates |
+|---|---|
+| `tokens.json` | Design tokens: colour, type, spacing, layout, radius, strokes |
+| `assets/` | Fonts, icons, app icon |
+| `prompts/` | Agent prompt templates and skill flows |
+| `knowledge/` | Bundled read-only knowledge about Eigin |
 
 ## Design tokens
 
-Tokens are defined in `design/tokens.json` using the [W3C Design Tokens Community Group format](https://design-tokens.github.io/community-group/format/). The file is structured in two layers:
+`design/tokens.json`, in the [W3C Design Tokens format](https://design-tokens.github.io/community-group/format/), in two layers:
 
-**Palette** - raw colour primitives with no semantic meaning, referenced by the semantic layer.
-
-**Semantic tokens** - named by purpose. Most provide both a light mode value and a dark mode override. Token groups cover colours, typography, spacing, layout, radius, and stroke weights. Layout tokens provide different values per breakpoint (mobile, tablet, desktop).
+- **Palette**: raw colour primitives, referenced by the semantic layer.
+- **Semantic tokens**: named by purpose, most with light and dark values. Cover colour, typography, spacing, layout, radius, and strokes. Layout tokens vary per breakpoint (mobile, tablet, desktop).
 
 ## Assets
 
-Assets live in `design/assets/` and are picked up at generation time. This includes fonts, icons, and the app icon. Fonts and icons are copied into platform resources and registered automatically. Proprietary fonts are not committed to the repository - add them locally to activate them.
-
-## Code generation
-
-Running `just generate` reads the token file and assets, then produces platform-native styling code. For iOS, generated files are written to `Sources/Core/Design/Generated/` and cover colours, typography, spacing, layout, radius, stroke weights, font registration, and typed icon accessors.
-
-Generated files are git-ignored so machine-local font choices don't pollute source control.
+`design/assets/` holds fonts, icons, and the app icon. They're copied into platform resources and registered automatically at generation time. Proprietary fonts aren't committed: add them locally to activate them.
 
 ## Prompts
 
-Agent-facing prompt text also lives in the design domain, under `design/prompts/`, as Jinja templates mirrored by folder into typed Swift accessors (e.g. `design/prompts/skills/planning/instruction.jinja` becomes `Prompt.Skills.Planning.instruction`). A skill folder can also carry a `flows.toml` describing its flows (see [Skills](./agents/skills.md#flows)), compiled into a generated flow registry the same way. `just generate` regenerates all of it alongside the design tokens.
+`design/prompts/` holds agent prompt text as Jinja templates, mirrored by folder into typed accessors: `prompts/skills/planning/instruction.jinja` becomes `Prompt.Skills.Planning.instruction`. A skill folder can also carry a `flows.toml` describing its flows (see [Skills](./agents/skills.md#flows)), compiled into a generated flow registry.
+
+## Knowledge
+
+`design/knowledge/` is the read-only knowledge that ships with the app: the Firm schema (`schemas.firm`) plus one seed entity per file about Eigin. It's a real [Firm](https://github.com/42futures/firm) workspace, so entries can be authored and validated with Firm tooling. See [Knowledge](./agents/knowledge.md#bundled-knowledge).
+
+## Code generation
+
+`just generate` reads everything under `design/` and writes typed accessors into each app's generated sources, so tokens, prompts, and knowledge are used through the type system rather than by raw string or path. Generated files are git-ignored, so machine-local font choices stay out of source control.
 
 ## Design components
 
-Eigin apps implement a design component library based on the Eigin design system. Components consume the generated tokens directly, so visual changes flow from tokens through to components without manual updates.
+Eigin apps build a component library on the tokens. Components consume generated tokens directly, so a token change flows straight through without manual edits.

@@ -1,40 +1,41 @@
 # Privacy and security
 
-Eigin is designed to be a responsible AI agent for your device. The agent is powerful, but it works within a strict harness: a permission system, OS platform security, and a local-first data model. The Eigin apps have no tracking, telemetry, or analytics.
+Eigin is a powerful agent that works within a strict harness: a permission system, OS platform security, and a local-first data model. It's built on the premise that you own your data, and the apps share as little of it as they can.
 
 ## Local-first data
 
-Eigin data lives on your device. Chats, knowledge, intents, and settings are stored locally and not sent to Eigin servers.
+Chats, knowledge, intents, and settings are stored on your device. Data leaves the device in two cases, both under your control.
 
-Data leaves your device in two situations, both under your control:
+#### Inference
+Generating a reply sends the conversation to whichever engine you choose:
 
-1. **Inference calls.** When the agent generates a reply, it calls the provider you configured. The request goes from your device to that provider with your API key. You choose which providers to trust - GDPR-compliant providers with zero data retention, a specific vendor you trust, or a fully on-device local model.
-2. **Eigin Relay (optional).** A connectivity service that brokers narrow third-party features. The relay is built around only seeing the specific request being made - nothing else. If your agent never uses a relay-backed feature, the relay is never contacted.
+- **Eigin Relay**: a privacy-preserving, European-owned service that proxies AI inference for you.
+- **Your own provider**: any OpenAI-compatible provider. Eigin highlights sensible options, though data handling follows each provider's terms.
+- **A local model**: runs entirely on-device, so nothing leaves for inference.
+
+#### Connectivity services
+A few features, like web search, run through the Eigin Relay because they need a server-side key. The relay is only ever contacted when you use it, and is built to see only the request being made.
 
 ## Platform security
 
-When Eigin interacts with your device - location, reminders, email, microphone - it goes through OS native APIs. The OS standard permission model applies: you'll be asked whether to allow access.
-
-Eigin doesn't try to work around these restrictions. It takes the official route, using APIs that have access controls baked in that users are already familiar with.
+When Eigin uses device capabilities (location, reminders, email, microphone) it goes through native OS APIs and their standard permission system. It takes the official route rather than working around access controls.
 
 ## On-device processing
 
-Speech recognition, text-to-speech, on-device machine learning, and tools all run on the device. Speech doesn't leave the device for processing, and the agent's knowledge base doesn't rely on an external service. See [Voice](./voice/README.md) and [Knowledge](./agents/knowledge.md) for details.
+Speech recognition, text-to-speech, on-device ML, and tools all run on device. Speech never leaves for processing, and the knowledge base doesn't depend on an external service. See [Voice](./voice/README.md) and [Knowledge](./agents/knowledge.md).
 
 ## Tool permissions
 
-The agent has a [configurable permission system](./tools/permissions.md) that controls what it's allowed to do.
-
-Permission defaults are conservative: read-only actions are allowed, while anything that modifies state or touches external services requires user consent. See [Permissions](./tools/permissions.md) for more.
+A [configurable permission system](./tools/permissions.md) controls what the agent can do. Defaults are conservative: read-only actions are allowed; anything that modifies state or uses external services requires consent.
 
 ## Prompt injection
 
-External inputs like web search results and MCP tool responses carry a risk of prompt injection - instructions embedded in external content that attempt to hijack the agent's behaviour.
+External inputs like web search results and MCP tool responses carry risk of prompt injection: instructions embedded in content that try to hijack the agent. 
 
-Eigin mitigates this in stages:
+Eigin mitigates this in layers:
 
-1. External actions require user permission by default. Search and MCP tools are ask-before-use unless explicitly allowed
-2. Destructive actions are subject to user consent by default, no matter what triggered them
-3. OS platform restrictions provide a further boundary for system-level actions
+1. External actions require permission by default; search and MCP tools are ask-before-use unless explicitly allowed.
+2. Destructive actions require consent regardless of what triggered them.
+3. OS restrictions bound system-level actions.
 
-This doesn't eliminate the risk entirely, but a prompt injection won't silently cause damage. It would need to get past multiple permission gates first.
+This doesn't eliminate the risk, but an injection can't silently cause damage: it would have to clear multiple permission gates first.

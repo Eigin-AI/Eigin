@@ -1,19 +1,20 @@
 # The agentic loop
 
-The agentic loop orchestrates the tool-calling cycle:
+The agentic loop orchestrates the tool-calling cycle, exchanging with the model until it produces a reply that needs no more tools.
 
-1. Initiate a request based on a user prompt and chat history
-2. Stream the assistant's response from the model
-3. If the response contains tool calls, execute each one (checking [permissions](../tools/permissions.md) first)
-4. Append tool results and send them back to the model
-5. Repeat until the model finishes without requesting tools, or a safety limit is reached
+| Step | What happens |
+|---|---|
+| **Build request** | Assemble the system prompt, chat history, and the gatekeeper's [system hint](./context.md) into one request. |
+| **Stream** | Send it to the [provider](../providers.md) and stream the assistant's response. |
+| **Check tool calls** | If the response calls tools, check each against the [permission policy](../tools/permissions.md). |
+| **Execute** | Run the allowed calls and append their results. |
+| **Repeat** | Send the results back and stream again, until the model replies with no tool calls, or a safety limit is reached. |
+| **Reply** | The final response goes to the user. |
 
 ## Safe checkpoints
 
-The loop tracks safe checkpoints so that if it's interrupted for any reason, the chat doesn't end up in a broken state. This matters because inference providers have strict rules about message format, and normalising across multiple providers means being conservative to satisfy the strictest ones.
+The loop tracks safe checkpoints so an interruption doesn't leave the chat in a broken state. Inference providers have strict message-format rules, and normalising across providers means being conservative enough to satisfy the strictest.
 
 ## Permission gating
 
-Before executing any tool, the loop checks the [permission policy](../tools/permissions.md). Tools can be `always` allowed, `never` allowed (blocked), or require the user to be asked.
-
-This is checked per-call, so the same tool can have different policies in different contexts (e.g. editing core docs is allowed during onboarding, but requires confirmation during normal chat).
+Before executing any tool, the loop checks the [permission policy](../tools/permissions.md): a tool can be `always` allowed, `never` allowed (blocked), or require asking. This is checked per-call, so the same tool can have different policies in different contexts (e.g. editing core docs is allowed during onboarding but confirmed in normal chat).

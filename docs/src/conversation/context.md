@@ -1,37 +1,35 @@
 # The gatekeeper
 
-Between the agent and the inference provider sits the **gatekeeper**: a pre/post-processor responsible for hydrating each turn with dynamic context. It is designed to be extended with more pre- and post-processing over time.
+Between the agent and the inference provider sits the **gatekeeper**: a pre/post-processor that hydrates each turn with dynamic context. It's a seam built to grow.
 
-A lot of what shapes the agent's next response changes between turns: which skills are active, which intents it's pursuing, the user's interaction mode and language, the active space and its instructions, occasional hints from the app. Baking this into the system prompt would bust the prefix cache; prepending it to persisted user messages would leave stale tags in chat history.
+Much of what shapes the next response changes between turns: active skills, intents, interaction mode, the active space, occasional hints. Baking that into the system prompt would bust the prefix cache; prepending it to persisted messages would leave stale tags in history. The gatekeeper solves both.
 
 ## How it works
 
-The system prompt stays byte-stable across turns: just identity and a brief orientation to Eigin. Each turn the gatekeeper composes the dynamic state into a single `<system_hint>` block and appends it to the latest user message at inference time only. The persisted message is never modified.
+The system prompt stays byte-stable across turns: just identity and a brief orientation. Each turn, the gatekeeper composes the dynamic state into a single `<system_hint>` block and appends it to the latest user message at inference time only, never touching the persisted message.
 
-Each section of the block is produced by a small source. Most are stateless; a few hold session state. The interaction mode source, for example, emits the full description only on the first turn or when the mode changes.
+Each part of the block comes from a small **source**. Most are stateless; a few hold session state (the interaction-mode source, for one, sends its full description only on the first turn or when the mode changes). Small-context models get a reduced set.
+
+## System hint sources
+
+| Source | What it adds |
+|---|---|
+| **General info** | Time, date, and model info. |
+| **Language** | The user's current language. |
+| **Interaction mode** | How the user is interacting (see below). |
+| **Space** | The active [space](./spaces.md) and its instructions. |
+| **Active skills** | Instructions for the skills active this turn. |
+| **Available skills** | Skills the agent can activate on demand. |
+| **Active flow** | The current [flow](../agents/skills.md#flows) stage's instructions. |
+| **Active intents** | The agent's most relevant [intents](../agents/intents.md). |
+| **Relevant knowledge** | A compact summary of [knowledge](../agents/knowledge.md) matching the message. |
+| **Seasonal** | A sense of the time of year, to speak into holidays and breaks. |
+| **Hints** | App [nudges](../agents/initiative.md) worth acting on, when relevant. |
 
 ## Interaction modes
 
-The current interaction mode is injected each turn:
-
-- **Text**: full formatting, markdown, lists, code blocks
-- **Dictation**: the user is speaking; infer intent through transcription noise
-- **Live call**: half-duplex voice; keep replies short and speech-friendly
-
-## Knowledge hydration
-
-Each turn, the gatekeeper searches for [knowledge](../agents/knowledge.md) related to the user's message. If anything relevant surfaces, a compact summary is included in the hint block as a starting point for the agent.
-
-## Seasonal awareness
-
-The gatekeeper gives the agent a sense of what time of year it is for the user, so it can speak into the season and warmly offer help around the holidays and breaks that matter. The user's region is deduced from ambient signals (locale and timezone) with no location prompt; when no known region resolves, nothing is injected rather than guessing. Each season carries a short lead-up so the agent can raise something just before it arrives.
-
-Today this covers the most widespread seasons and traditions in Denmark, from summer holiday to Christmas. The system is built to extend to more times and dates, and to other regions with their own traditions.
-
-## Hints
-
-Hints are nudges from the app to the agent: things worth thinking about or acting on that aid the user journey. Hint delivery is gated by the agent's [proactivity level](../agents/initiative.md). Reactive agents never receive hints; balanced and proactive agents do.
-
-## What's next
-
-The gatekeeper is a natural place to add filtering of dangerous inputs before they reach the model, and screening of outputs before they reach the user. There are many ideas here - it's a seam designed to grow.
+| Mode | Reply style |
+|---|---|
+| **Text** | Full formatting: markdown, lists, code blocks. |
+| **Dictation** | The user is speaking; infer intent through transcription noise. |
+| **Live call** | Half-duplex voice; keep replies short and speech-friendly. |
