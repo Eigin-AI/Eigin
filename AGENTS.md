@@ -1,18 +1,15 @@
 # Eigin monorepo project
-Eigin is the application layer for personal AI: a native app and agent harness built around privacy, ownership, and freedom of choice. Data lives on device. 
-
-Users bring their own keys and connect to any AI inference provider or run fully local models. There is no tracking and no hidden incentives.
+Eigin is the application layer for personal AI: local-first native apps that turn any model into an agent that's truly yours.
 
 ## Project structure
 
-- `src/` — contains all deployable Eigin apps
-  - `src/eigin_ios/` — iOS app (Swift 6, SwiftUI, iOS 26.0)
-  - `src/eigin_relay/` — connectivity service (Rust, Axum, Tower)
-- `design/` — design tokens and assets (fonts, icons, app icon, sound effects)
-- `LICENSES/` — third-party license attributions (ML models, Swift packages, Rust crates)
+- `src/` — all deployable Eigin apps
+- `design/` — design tokens, prompts and assets
 - `tools/` — Rust CLI for cross-cutting tasks
-- `justfile` — build, test, and project commands
+- `infra/` — infrastructure code
+- `justfile` — project commands
 - `docs/` — technical documentation
+- `LICENSES/` — third-party license attributions
 
 ## Prerequisites
 
@@ -22,31 +19,26 @@ See the platform-specific AGENTS file for environment setup:
 
 ## Build and test
 
-All commands run from the repo root. After cloning:
-
-```
-just hooks      # Install git hooks (one-time)
-just generate   # Regenerate the project
-```
-
-Then the core loop:
-
 ```
 just build      # Build all targets
 just test       # Run all tests
-just format     # Auto-format all code
+just format     # Format all code
 ```
 
 Run `just --list` to see all available commands.
 
-## Workflow
+## GitLab
 
-1. **Discuss**: Before starting a new feature, discuss how and why we do it.
-2. **Plan**: When we have a rough design, create a plan of action for review.
-3. **Implement**: Implement a first pass according to the plan.
-4. **Iterate**: Review, test, ask questions, and give feedback for changes.
-5. **Test**: Make sure new behaviour is covered by unit tests.
-6. **Document**: Make sure new behaviour is documented.
+This project uses GitLab for issue tracking and merge requests:
+
+- **Remote:** `dev/eigin` at `code.eigin.ai`
+- **CLI:** Use `glab` to interact with issues and MRs from the command line
+- **Common commands:**
+  - `glab issue list` — list open issues
+  - `glab issue view <number> --output json` — fetch issue details
+  - `glab mr create` — create a merge request
+
+When working on a task, issues typically provide the problem context and expected behavior. Merge requests should reference their originating issue.
 
 ## Documentation
 

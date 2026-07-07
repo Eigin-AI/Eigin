@@ -101,5 +101,13 @@ infra/**/backend.tf
 ## Opencode
 .opencode
 
+## Pi coding agent
+# Installed package dependencies (like node_modules) — restored via `pi install`
+# from .pi/settings.json on next launch.
+.pi/npm/
+# Personal model-role overrides (which model backs planner/builder/explorer) —
+# see .pi/extensions/eigin/workflow/role-store.ts. Per-developer, not shared.
+.pi/model-roles.json
+
 ## MacOS
 **/.DS_Store
