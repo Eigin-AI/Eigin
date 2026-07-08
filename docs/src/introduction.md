@@ -32,4 +32,4 @@ Then jump to whatever you're working on: [Conversation](./conversation/README.md
 
 ## Building from source
 
-See [Build from source](./build-from-source.md) for prerequisites, setup, and build commands.
+See [Build from source](./contributing/build-from-source.md) for prerequisites, setup, and build commands.

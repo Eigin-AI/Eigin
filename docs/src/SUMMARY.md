@@ -2,8 +2,14 @@
 
 [Introduction](./introduction.md)
 [Philosophy](./philosophy.md)
-[Build from source](./build-from-source.md)
 [FAQ](./faq.md)
+
+# Contributing
+
+- [Overview](./contributing/README.md)
+- [Development environment](./contributing/development-environment.md)
+- [Build from source](./contributing/build-from-source.md)
+- [Guidelines](./contributing/guidelines.md)
 
 # Platform
 

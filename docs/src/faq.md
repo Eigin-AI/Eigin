@@ -22,4 +22,4 @@ Those are server-side, autonomy-first frameworks built to give an agent broad co
 
 **How do I contribute?**
 
-See [CONTRIBUTING.md](https://code.eigin.ai/dev/eigin/-/blob/main/CONTRIBUTING.md).
+See [Contributing](./contributing/README.md).
