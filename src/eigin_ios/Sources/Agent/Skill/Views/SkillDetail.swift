@@ -31,19 +31,25 @@ struct SkillDetail: View {
                         .typography(Typography.miniLabel)
                 }
 
-                Section {
-                    ForEach(
-                        skill.requiredTools.sorted(by: { $0.displayName < $1.displayName }),
-                        id: \.key
-                    ) { tool in
-                        Label(tool.displayName, systemImage: "wrench")
-                            .typography(Typography.navTab)
-                            .foregroundStyle(colors.text.standard.base)
+                // Some skills (e.g. email) have no built-in tools of their own —
+                // they only do anything once a connected integration provides a
+                // capability they declare — so skip the section entirely rather
+                // than showing an empty "Tools" header.
+                if !skill.requiredTools.isEmpty {
+                    Section {
+                        ForEach(
+                            skill.requiredTools.sorted(by: { $0.displayName < $1.displayName }),
+                            id: \.key
+                        ) { tool in
+                            Label(tool.displayName, systemImage: "wrench")
+                                .typography(Typography.navTab)
+                                .foregroundStyle(colors.text.standard.base)
+                        }
+                        .listRowBackground(colors.surface.standard.alternative)
+                    } header: {
+                        Text(Localized.Skills.tools)
+                            .typography(Typography.miniLabel)
                     }
-                    .listRowBackground(colors.surface.standard.alternative)
-                } header: {
-                    Text(Localized.Skills.tools)
-                        .typography(Typography.miniLabel)
                 }
             }
             .scrollContentBackground(.hidden)

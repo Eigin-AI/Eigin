@@ -9,6 +9,7 @@ typealias AgentToolGrant = SchemaV1.AgentToolGrant
 typealias Chat = SchemaV4.Chat
 typealias ChatToolGrant = SchemaV1.ChatToolGrant
 typealias FirmSource = SchemaV1.FirmSource
+typealias Integration = SchemaV5.Integration
 typealias Intent = SchemaV2.Intent
 typealias MCPServer = SchemaV1.MCPServer
 typealias Message = SchemaV4.Message

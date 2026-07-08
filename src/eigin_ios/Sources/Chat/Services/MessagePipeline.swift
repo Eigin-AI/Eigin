@@ -41,6 +41,9 @@ enum MessagePipeline {
         let apiMessages: [ChatMessage]
         let registry: ToolRegistry
         let mcpTools: [any Tool]
+        /// Connected integrations' tools grouped by capability, for reuse when
+        /// rebuilding the registry mid-turn (e.g. on skill activation).
+        let integrationToolsByCapability: [Capability: [any Tool]]
         let estimatedTokens: Int
         let contextWindow: Int
         let isSmallContext: Bool
@@ -58,13 +61,13 @@ enum MessagePipeline {
         spaceID: UUID?,
         chatID: UUID? = nil,
         mcpServers: [MCPServer],
+        integrations: [Integration] = [],
         activeSkills: [Skill] = [],
         activeFlow: FlowState? = nil,
         gatekeeper: Gatekeeper,
         mode: InteractionMode,
         hasSpaces: Bool,
         needsCompaction: Bool,
-        onCompose: ComposeEmailHandler? = nil,
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil
     ) async -> TurnInputs {
@@ -72,6 +75,14 @@ enum MessagePipeline {
         let mcpServerManager = Container.shared.mcpServerManager()
         nonisolated(unsafe) let servers = mcpServers
         let mcpTools = await mcpServerManager.prepareTools(servers: servers)
+
+        // 1b. Build integration tools, grouped by capability, gated in ToolAssembly
+        // behind active skills (unlike MCP tools, which are always injected above).
+        let integrationManager = Container.shared.integrationManager()
+        let integrationToolsByCapability = integrationManager.toolsByCapability(
+            integrations: integrations,
+            context: ToolContext(spaceID: spaceID, chatID: chatID, agentID: agent.id)
+        )
 
         // 2. Compute space access policy and fetch provider
         let accessPolicy: SpaceAccessPolicy
@@ -148,7 +159,7 @@ enum MessagePipeline {
                 permissionPolicy: permissionPolicy,
                 activeSkills: allActiveSkills,
                 additionalTools: mcpTools,
-                onCompose: onCompose,
+                integrationToolsByCapability: integrationToolsByCapability,
                 onBrowse: onBrowse,
                 onPresentOptions: onPresentOptions
             )
@@ -190,6 +201,8 @@ enum MessagePipeline {
             activeIntents: activeIntents,
             activeSkills: allActiveSkills,
             availableSkills: BundledSkill.all,
+            connectedCapabilities: integrationManager
+                .connectedCapabilities(integrations: integrations),
             activeFlow: activeFlow,
             provider: provider,
             modelID: agent.model,
@@ -238,6 +251,7 @@ enum MessagePipeline {
             apiMessages: apiMessages,
             registry: registry,
             mcpTools: mcpTools,
+            integrationToolsByCapability: integrationToolsByCapability,
             estimatedTokens: estimatedTokens,
             contextWindow: contextWindow,
             isSmallContext: isSmallContext

@@ -18,6 +18,10 @@
  *   `just infra deploy` (which wraps it) everywhere.
  * - Integrates Plannotator as a review UI (see tools/plannotator.ts).
  * - Persists across session resume.
+ * - Maintains an agent-managed task list (add_tasks / resolve_tasks / clear_tasks),
+ *   rendered alongside the stage instructions in the same per-turn block
+ *   (see workflow/task-list.ts) so long-running, multi-step jobs don't lose
+ *   track of what's left. A done/total count also shows in the footer.
  * - Provides an `explore` sub-agent (isolated `pi` subprocess) the main agent
  *   can delegate codebase/docs/web reconnaissance to (see tools/subagent/).
  *   The sub-agent's own eigin process runs in a stripped-down mode (detected
@@ -48,6 +52,7 @@
  *   tool-defaults.ts     project-scoped defaults for third-party tools (e.g. web_search)
  *   tools/               always-on interactive tools
  *     propose.ts           propose_stage (yes/no transition dialog)
+ *     tasks.ts              add_tasks / resolve_tasks / clear_tasks (agent-managed checklist)
  *     confirm-dialog.ts    shared inline confirm-with-note dialog (used by propose)
  *     plannotator.ts       submit_plan / submit_review (Plannotator UI)
  *     role-command.ts      /role command: configure role→model assignments
@@ -60,6 +65,7 @@
  *       agents.ts            agent discovery (.pi/agents/*.md), unchanged from upstream
  *       model-role.ts        resolves an agent's `role:<name>` model to a real model id
  *   workflow/build-handoff.ts composes the Plan→Build compaction instructions + kickoff message
+ *   workflow/task-list.ts pure task-list state (add/resolve/format), rendered with the stage hint
  */
 
 import type {
@@ -82,6 +88,16 @@ import { appendStageHintIfFreshTurn, buildStageHint, type StageHintMessage } fro
 import { loadRoleOverrides, resolveRoleModel } from "./workflow/role-store.ts";
 import { registerRoleCommand } from "./tools/role-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
+import { ADD_TASKS_TOOL, CLEAR_TASKS_TOOL, RESOLVE_TASKS_TOOL, registerTaskTools } from "./tools/tasks.ts";
+import {
+  addTasks,
+  clearTasks,
+  emptyTaskList,
+  formatTaskList,
+  resolveTasks,
+  summarizeTaskList,
+  type TaskListState,
+} from "./workflow/task-list.ts";
 import {
   getStage,
   isStageId,
@@ -92,9 +108,20 @@ import {
 } from "./workflow/stages.ts";
 
 const EDIT_TOOLS = ["edit", "write"];
-const ALWAYS_ON_TOOLS = [PROPOSE_TOOL, SUBMIT_PLAN_TOOL, SUBMIT_REVIEW_TOOL, ASK_QUESTIONS_TOOL, "subagent"];
+const ALWAYS_ON_TOOLS = [
+  PROPOSE_TOOL,
+  SUBMIT_PLAN_TOOL,
+  SUBMIT_REVIEW_TOOL,
+  ASK_QUESTIONS_TOOL,
+  ADD_TASKS_TOOL,
+  RESOLVE_TASKS_TOOL,
+  CLEAR_TASKS_TOOL,
+  "subagent",
+];
 const STATUS_KEY = "stage";
+const TASKS_STATUS_KEY = "tasks";
 const STATE_TYPE = "stage-mode";
+const TASK_STATE_TYPE = "task-list";
 const DEFAULT_STAGE: StageId = "context";
 
 /** Set by tools/subagent/index.ts when spawning a sub-agent's child process. */
@@ -129,6 +156,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
   }
 
   let currentStage: StageId = DEFAULT_STAGE;
+  let taskListState: TaskListState = emptyTaskList();
 
   // --- Tool gating -------------------------------------------------------
 
@@ -156,6 +184,21 @@ export default function stageExtension(pi: ExtensionAPI): void {
 
   function persist(): void {
     pi.appendEntry(STATE_TYPE, { stage: currentStage });
+  }
+
+  // --- Task list -----------------------------------------------------------
+
+  function updateTaskStatus(ctx: ExtensionContext): void {
+    const summary = summarizeTaskList(taskListState);
+    if (summary) {
+      ctx.ui.setStatus(TASKS_STATUS_KEY, ctx.ui.theme.fg("muted", summary));
+    } else {
+      ctx.ui.setStatus(TASKS_STATUS_KEY, undefined);
+    }
+  }
+
+  function persistTasks(): void {
+    pi.appendEntry(TASK_STATE_TYPE, taskListState);
   }
 
   // --- Model suggestion --------------------------------------------------
@@ -328,6 +371,28 @@ export default function stageExtension(pi: ExtensionAPI): void {
   registerAskQuestionsTool(pi);
   registerRoleCommand(pi, { activeRole: () => getStage(currentStage).role });
   registerSubagentTool(pi);
+  registerTaskTools(pi, {
+    add(texts, ctx) {
+      const result = addTasks(taskListState, texts);
+      taskListState = result.state;
+      persistTasks();
+      updateTaskStatus(ctx);
+      return result;
+    },
+    resolve(ids, ctx) {
+      const result = resolveTasks(taskListState, ids);
+      taskListState = result.state;
+      persistTasks();
+      updateTaskStatus(ctx);
+      return result;
+    },
+    clear(ctx) {
+      taskListState = clearTasks(taskListState);
+      persistTasks();
+      updateTaskStatus(ctx);
+      return { state: taskListState };
+    },
+  });
 
   const cleanupPlannotator = registerPlannotator(pi);
   pi.on("session_shutdown", async () => {
@@ -385,7 +450,9 @@ Always blocked (every stage): the agent should not run stateful or destructive g
 
   pi.on("context", async (event) => {
     const stage = getStage(currentStage);
-    const hint = buildStageHint(stage.label, stage.guidance);
+    const taskBlock = formatTaskList(taskListState);
+    const guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
+    const hint = buildStageHint(stage.label, guidance);
     const messages = appendStageHintIfFreshTurn(event.messages as StageHintMessage[], hint);
     return { messages: messages as unknown as typeof event.messages };
   });
@@ -404,8 +471,17 @@ Always blocked (every stage): the agent should not run stateful or destructive g
     const restored = last?.data?.stage;
     if (restored && isStageId(restored)) currentStage = restored;
 
+    const lastTasks = entries
+      .filter(
+        (e: { type: string; customType?: string }) =>
+          e.type === "custom" && e.customType === TASK_STATE_TYPE,
+      )
+      .pop() as { data?: TaskListState } | undefined;
+    if (lastTasks?.data) taskListState = lastTasks.data;
+
     applyStageTools();
     updateStatus(ctx);
+    updateTaskStatus(ctx);
     await suggestModel(getStage(currentStage), ctx);
   });
 }

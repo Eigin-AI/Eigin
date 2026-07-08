@@ -114,6 +114,34 @@ enum SchemaV4: VersionedSchema {
     }
 }
 
+// MARK: - V5: Integrations
+
+/// Schema V5 adds the `Integration` model, a connected instance of an
+/// external service (e.g. a Google account) that provides capabilities to
+/// skills. Every other model is unchanged and reused from V4.
+///
+/// Model definition lives in `SchemaV5/SchemaV5+Integration.swift`.
+enum SchemaV5: VersionedSchema {
+    static let versionIdentifier = Schema.Version(5, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV1.Agent.self,
+            SchemaV4.Chat.self,
+            SchemaV4.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV1.MCPServer.self,
+            SchemaV1.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -126,13 +154,16 @@ enum SchemaV4: VersionedSchema {
 ///
 /// V3 → V4 is a lightweight stage: adding `attachmentsData` (defaulting to
 /// `nil`) to `Message`. No data is lost.
+///
+/// V4 → V5 is a lightweight stage: adding the new `Integration` model. No
+/// existing data is touched.
 enum EiginMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self]
+        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self]
     }
 
     static var stages: [MigrationStage] {
-        [migrateV1toV2, migrateV2toV3, migrateV3toV4]
+        [migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5]
     }
 
     static let migrateV1toV2 = MigrationStage.lightweight(
@@ -148,5 +179,10 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV3toV4 = MigrationStage.lightweight(
         fromVersion: SchemaV3.self,
         toVersion: SchemaV4.self
+    )
+
+    static let migrateV4toV5 = MigrationStage.lightweight(
+        fromVersion: SchemaV4.self,
+        toVersion: SchemaV5.self
     )
 }

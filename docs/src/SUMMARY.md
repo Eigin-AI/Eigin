@@ -38,6 +38,11 @@
 - [Permissions](./tools/permissions.md)
 - [MCP servers](./tools/mcp.md)
 
+# Integrations
+
+- [Overview](./integrations/README.md)
+- [Google](./integrations/google.md)
+
 # Voice
 
 - [Overview](./voice/README.md)

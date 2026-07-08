@@ -11,7 +11,6 @@ struct ToolContext {
     var chatID: UUID?
     var agentID: UUID?
     var canPromptUser: Bool = true
-    var onCompose: ComposeEmailHandler?
     var onBrowse: BrowseHandler?
     var onPresentOptions: OptionsHandler?
 }

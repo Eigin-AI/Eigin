@@ -18,6 +18,10 @@ struct PreviewKeychainService: KeychainService {
         "fake.mcp.\(serverID).\(suffix)"
     }
 
+    func integrationKey(for integrationID: UUID, suffix: String) -> String {
+        "fake.integration.\(integrationID).\(suffix)"
+    }
+
     var creditWalletsKey: String {
         "fake.credits.wallets"
     }

@@ -45,7 +45,6 @@ final class ChatViewModel {
     private(set) var isTurnInProgress = false
     var compactionProgress = ChasingProgress()
     var gatekeeper: Gatekeeper?
-    var pendingEmailCompose: (ComposeEmailRequest, CheckedContinuation<ComposeEmailResult, Never>)?
     private var backgroundGuard: BackgroundTaskGuard?
 
     /// Images staged in the composer, waiting to be attached to the next sent message.
@@ -165,7 +164,8 @@ final class ChatViewModel {
         provider: Provider,
         space: Space?,
         spaces: [Space],
-        mcpServers: [MCPServer]
+        mcpServers: [MCPServer],
+        integrations: [Integration] = []
     ) {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         let pendingAttachments = stagedAttachments
@@ -219,9 +219,7 @@ final class ChatViewModel {
                 self.window.isPreloaded
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
                     : self.window.messages
-            let activeSkills = (self.chat?.activeSkillEntries ?? []).compactMap {
-                BundledSkill.skill(forID: $0.skillID)
-            }
+            let activeSkills = self.resolvedActiveSkills(integrations: integrations)
 
             let turn = await MessagePipeline.prepareTurn(
                 messages: msgs,
@@ -229,17 +227,13 @@ final class ChatViewModel {
                 permissionPolicy: policy,
                 spaceID: chat?.spaceID, chatID: chat?.id,
                 mcpServers: servers,
+                integrations: integrations,
                 activeSkills: activeSkills,
                 activeFlow: chat?.activeFlow,
                 gatekeeper: gatekeeper,
                 mode: context,
                 hasSpaces: hasSpaces,
                 needsCompaction: needsCompaction,
-                onCompose: { [weak self] request, continuation in
-                    Task { @MainActor in
-                        self?.pendingEmailCompose = (request, continuation)
-                    }
-                },
                 onBrowse: { [weak self] browsingRequest in
                     guard let self else { return .cancelled }
                     return await chatLoop.requestBrowsing(browsingRequest)
@@ -258,9 +252,6 @@ final class ChatViewModel {
             let registry = turn.registry
 
             // Rebuild tool registry mid-turn when skills are activated.
-            let composeHandler: ComposeEmailHandler? = { [weak self] request, continuation in
-                Task { @MainActor in self?.pendingEmailCompose = (request, continuation) }
-            }
             let browseHandler: BrowseHandler? = { [weak self] browsingRequest in
                 guard let self else { return .cancelled }
                 return await chatLoop.requestBrowsing(browsingRequest)
@@ -271,9 +262,7 @@ final class ChatViewModel {
             }
             self.chatLoop.onToolsChanged = { [weak self] in
                 guard let self else { return (tools: registry.definitions, executor: registry) }
-                let updatedSkills = (chat?.activeSkillEntries ?? []).compactMap {
-                    BundledSkill.skill(forID: $0.skillID)
-                }
+                let updatedSkills = resolvedActiveSkills(integrations: integrations)
 
                 let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
                 let isSmallContext = contextWindow <= MessagePipeline.smallContextThreshold
@@ -294,7 +283,7 @@ final class ChatViewModel {
                         activeSkills: BundledSkill.alwaysActive
                             + updatedSkills.filter { !$0.alwaysActive },
                         additionalTools: turn.mcpTools,
-                        onCompose: composeHandler,
+                        integrationToolsByCapability: turn.integrationToolsByCapability,
                         onBrowse: browseHandler,
                         onPresentOptions: optionsHandler
                     )
@@ -363,7 +352,8 @@ final class ChatViewModel {
         provider: Provider,
         space: Space?,
         spaces: [Space],
-        mcpServers: [MCPServer]
+        mcpServers: [MCPServer],
+        integrations: [Integration] = []
     ) {
         guard !isTurnInProgress,
               let chat,
@@ -404,7 +394,8 @@ final class ChatViewModel {
             provider: provider,
             space: space,
             spaces: spaces,
-            mcpServers: mcpServers
+            mcpServers: mcpServers,
+            integrations: integrations
         )
     }
 
@@ -544,6 +535,23 @@ final class ChatViewModel {
     }
 
     // MARK: - Permissions
+
+    /// The chat's persisted active skills, dropping any whose required
+    /// capability is no longer connected — e.g. the user activated `email`
+    /// then disconnected their Google account. Without this, a stale skill
+    /// would keep injecting instructions ("if an email account is
+    /// connected...") and the agent could still try to call its tools, which
+    /// ``IntegrationManager`` no longer supplies, landing on "Unknown tool".
+    private func resolvedActiveSkills(integrations: [Integration]) -> [Skill] {
+        let connected = Container.shared.integrationManager()
+            .connectedCapabilities(integrations: integrations)
+        return (chat?.activeSkillEntries ?? [])
+            .compactMap { BundledSkill.skill(forID: $0.skillID) }
+            .filter { skill in
+                skill.requiredCapabilities.isEmpty
+                    || !skill.requiredCapabilities.isDisjoint(with: connected)
+            }
+    }
 
     func loadPermissionPolicy(for agent: Agent) -> AgentPermissionPolicy {
         PermissionPolicyLoader.load(

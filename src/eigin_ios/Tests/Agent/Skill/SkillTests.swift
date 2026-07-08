@@ -13,7 +13,13 @@ struct SkillTests {
             #expect(!skill.displayName.isEmpty, "Skill \(skill.id) has empty displayName")
             #expect(!skill.description.isEmpty, "Skill \(skill.id) has empty description")
             #expect(!skill.instruction.isEmpty, "Skill \(skill.id) has empty instruction")
-            #expect(!skill.requiredTools.isEmpty, "Skill \(skill.id) has no required tools")
+            // A skill needs *some* way to do something — either built-in tools, or
+            // a capability it expects a connected integration to provide (e.g.
+            // `email`, which has no tools of its own until Google is connected).
+            #expect(
+                !skill.requiredTools.isEmpty || !skill.requiredCapabilities.isEmpty,
+                "Skill \(skill.id) has no required tools or capabilities"
+            )
         }
     }
 
@@ -104,7 +110,7 @@ struct SkillTests {
 
         // Tools not required by any active skill should be filtered out.
         #expect(!toolNames.contains("web_search"))
-        #expect(!toolNames.contains("compose_email"))
+        #expect(!toolNames.contains("read_core"))
     }
 
     @Test @MainActor func registryWithAdditionalSkillIncludesUnion() async {
@@ -122,7 +128,7 @@ struct SkillTests {
         #expect(toolNames.contains("web_fetch"))
 
         // Should still NOT include other on-demand tools
-        #expect(!toolNames.contains("compose_email"))
+        #expect(!toolNames.contains("read_core"))
     }
 
     @Test @MainActor func activateSkillToolAlwaysPresentWithSkills() async {

@@ -19,7 +19,7 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
+                for: Schema(SchemaV5.models, version: SchemaV5.versionIdentifier),
                 migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
@@ -173,6 +173,19 @@ extension Container {
                 keychainService: self.keychainService(),
                 oauthService: self.mcpOAuthService()
             )
+        }.singleton
+    }
+
+    // MARK: - Integrations
+
+    var integrationOAuthService: Factory<any IntegrationOAuthService> {
+        self { DefaultIntegrationOAuthService(keychainService: self.keychainService()) }.singleton
+    }
+
+    @MainActor
+    var integrationManager: Factory<IntegrationManager> {
+        self { @MainActor in
+            IntegrationManager(oauthService: self.integrationOAuthService())
         }.singleton
     }
 }

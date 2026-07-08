@@ -2756,6 +2756,11 @@ enum Localized {
         }
 
         enum Action {
+            /// Button label to add a new integration
+            static var addIntegration: String {
+                Localized.get("settings.action.addIntegration")
+            }
+
             /// Button label to add a new MCP server
             static var addMcpServer: String {
                 Localized.get("settings.action.addMcpServer")
@@ -3435,6 +3440,33 @@ enum Localized {
             }
         }
 
+        enum Email {
+            /// Display name for the list-emails tool
+            static var list: String {
+                Localized.get("tools.email.list")
+            }
+
+            /// Display name for the read-email tool
+            static var read: String {
+                Localized.get("tools.email.read")
+            }
+
+            /// Display name for the reply-email tool
+            static var reply: String {
+                Localized.get("tools.email.reply")
+            }
+
+            /// Display name for the search-emails tool
+            static var search: String {
+                Localized.get("tools.email.search")
+            }
+
+            /// Display name for the send-email tool
+            static var send: String {
+                Localized.get("tools.email.send")
+            }
+        }
+
         enum EmptyState {
             /// A message displayed when there are no tools available to discover.
             static var notAvailable: String {
@@ -4034,6 +4066,11 @@ enum Localized {
         /// Field label for the agent instruction input
         static var instruction: String {
             Localized.get("ui.instruction")
+        }
+
+        /// Section label for connected integrations
+        static var integrations: String {
+            Localized.get("ui.integrations")
         }
 
         /// Label for a single agent intent

@@ -27,6 +27,7 @@ struct SystemHintSourcesTests {
         displayName: String,
         description: String,
         instruction: String = "Instruction body",
+        requiredCapabilities: Set<Capability> = [],
         alwaysActive: Bool = false
     ) -> Skill {
         Skill(
@@ -35,6 +36,7 @@ struct SystemHintSourcesTests {
             description: description,
             instruction: instruction,
             requiredTools: [],
+            requiredCapabilities: requiredCapabilities,
             alwaysActive: alwaysActive
         )
     }
@@ -45,6 +47,7 @@ struct SystemHintSourcesTests {
         activeIntents: [IntentSnapshot] = [],
         activeSkills: [Skill] = [],
         availableSkills: [Skill] = [],
+        connectedCapabilities: Set<Capability> = [],
         activeFlow: FlowState? = nil,
         provider: ProviderSnapshot = ProviderSnapshot(
             name: "Test Provider",
@@ -66,6 +69,7 @@ struct SystemHintSourcesTests {
             activeIntents: activeIntents,
             activeSkills: activeSkills,
             availableSkills: availableSkills,
+            connectedCapabilities: connectedCapabilities,
             activeFlow: activeFlow,
             provider: provider,
             modelID: modelID,
@@ -237,6 +241,29 @@ struct SystemHintSourcesTests {
         ))
         // Small-context models don't receive skill hints at all.
         #expect(result == nil)
+    }
+
+    @Test func availableSkillsHidesToollessSkillWithoutConnectedCapability() async {
+        let source = AvailableSkillsSource()
+        let email = skill(
+            id: "email", displayName: "Email", description: "d",
+            requiredCapabilities: [.email]
+        )
+        let result = await source.render(input(availableSkills: [email]))
+        #expect(result == nil)
+    }
+
+    @Test func availableSkillsShowsToollessSkillWhenCapabilityConnected() async {
+        let source = AvailableSkillsSource()
+        let email = skill(
+            id: "email", displayName: "Email", description: "d",
+            requiredCapabilities: [.email]
+        )
+        let body = await source.render(input(
+            availableSkills: [email],
+            connectedCapabilities: [.email]
+        )) ?? ""
+        #expect(body.contains("Email"))
     }
 
     @Test func availableSkillsFullModeIncludesActivateFooter() async {

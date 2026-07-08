@@ -9,6 +9,8 @@ Skills are how the agent gains capabilities. A skill bundles instructions with t
 | **Always-active** | Present in every chat from the start | Knowledge, intents, awareness, web search |
 | **On-demand** | Enabled by the user or agent when the time is right | Email, scheduling, self-modification |
 
+Some on-demand skills also declare a required [capability](../integrations/README.md) rather than (or in addition to) built-in tools. Email is one: it has no tools of its own and only appears once an integration providing the `email` capability is connected.
+
 ## Tool composition
 
 The active skill set is additive. Each active skill contributes its instruction to the system hint and its tools to the turn; the agent can call the union of all active skills' tools.

@@ -96,6 +96,7 @@ targets:
         EiginRelayURL: $(EIGIN_RELAY_URL)
         EiginRelayKey: $(EIGIN_RELAY_PRIMARY_KEY)
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
+        EiginGoogleOAuthClientID: $(EIGIN_GOOGLE_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
     settings:
@@ -124,6 +125,7 @@ targets:
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_PRODUCTION}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
+        EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_PRODUCTION}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements
 
@@ -186,6 +188,7 @@ targets:
         EiginRelayURL: $(EIGIN_RELAY_URL)
         EiginRelayKey: $(EIGIN_RELAY_PRIMARY_KEY)
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
+        EiginGoogleOAuthClientID: $(EIGIN_GOOGLE_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
     settings:
@@ -217,5 +220,6 @@ targets:
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_STAGING}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
+        EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_STAGING}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements

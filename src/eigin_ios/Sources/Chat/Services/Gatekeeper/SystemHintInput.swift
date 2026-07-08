@@ -37,6 +37,8 @@ struct SystemHintInput {
     let activeIntents: [IntentSnapshot]
     let activeSkills: [Skill]
     let availableSkills: [Skill]
+    /// Capabilities provided by at least one connected, enabled integration.
+    var connectedCapabilities: Set<Capability> = []
     let activeFlow: FlowState?
 
     // MARK: Provider & Model

@@ -121,12 +121,11 @@ enum BundledSkill {
     static let email = Skill(
         id: "email",
         displayName: Localized.Ui.email,
-        description: "Draft and compose emails.",
+        description: "Draft and, if connected, read and send email.",
         instruction: Prompt.Skills.Email.instruction,
         smallInstruction: Prompt.Skills.Email.small,
-        requiredTools: [
-            ComposeEmailTool.capability,
-        ],
+        requiredTools: [],
+        requiredCapabilities: [.email],
         alwaysActive: false
     )
 
