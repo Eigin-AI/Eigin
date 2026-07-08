@@ -9,10 +9,12 @@ struct ConnectionsView: View {
     @Injected(\.keychainService) private var keychainService
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
+    @Query(sort: \Integration.createdAt) private var integrations: [Integration]
     @State private var showSelectSheet = false
     @State private var showConnectSheet = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
     @State private var showingAddMCPServer = false
+    @State private var showingAddIntegration = false
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
     private var localPreset: ProviderPreset? {
@@ -61,6 +63,7 @@ struct ConnectionsView: View {
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
                     providersGroup
+                    integrationsGroup
                     mcpServersGroup
                 }
                 .padding(.horizontal, Spacing.n16)
@@ -112,6 +115,80 @@ struct ConnectionsView: View {
         .sheet(isPresented: $showingAddMCPServer) {
             AddMCPServer()
         }
+        .sheet(isPresented: $showingAddIntegration) {
+            AddIntegration()
+        }
+    }
+
+    // MARK: - Integrations
+
+    private var integrationsGroup: some View {
+        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+            sectionLabel(Localized.Ui.integrations)
+
+            AppCardSurface(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(
+                        Array(integrations.enumerated()),
+                        id: \.element.id
+                    ) { index, integration in
+                        if index > 0 {
+                            Divider().padding(.leading, Spacing.n24)
+                        }
+
+                        NavigationLink {
+                            IntegrationDetail(integration: integration)
+                                .hidesTabBar()
+                        } label: {
+                            integrationRow(integration)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if !integrations.isEmpty {
+                        Divider().padding(.leading, Spacing.n24)
+                    }
+
+                    Button { showingAddIntegration = true } label: {
+                        HStack(spacing: Spacing.n16) {
+                            Text(Localized.Settings.Action.addIntegration)
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.accent)
+                            Spacer()
+                            Image(systemName: "plus")
+                                .typography(Typography.miniLabel)
+                                .foregroundStyle(colors.accent)
+                        }
+                        .padding(.horizontal, Spacing.n24)
+                        .padding(.vertical, Spacing.n16)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func integrationRow(_ integration: Integration) -> some View {
+        HStack(spacing: Spacing.n16) {
+            VStack(alignment: .leading, spacing: Spacing.n4) {
+                Text(BundledIntegrationType.type(forID: integration.typeID)?
+                    .displayName ?? integration.typeID)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(colors.text.standard.base)
+                Text(integration.accountLabel)
+                    .typography(Typography.tag)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .typography(Typography.miniLabel)
+                .foregroundStyle(colors.text.standard.muted)
+        }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Providers

@@ -18,6 +18,7 @@ struct ChatView: View {
     @Query private var agents: [Agent]
     @Query private var spaces: [Space]
     @Query(filter: #Predicate<MCPServer> { $0.isEnabled }) private var mcpServers: [MCPServer]
+    @Query(filter: #Predicate<Integration> { $0.isEnabled }) private var integrations: [Integration]
 
     @State private var viewModel: ChatViewModel
     @State private var showLiveCall = false
@@ -116,7 +117,8 @@ struct ChatView: View {
                             provider: provider,
                             space: space,
                             spaces: spaces,
-                            mcpServers: mcpServers
+                            mcpServers: mcpServers,
+                            integrations: integrations
                         )
                     },
                     onStop: (viewModel.isStreaming && !viewModel.chatLoop
@@ -170,7 +172,8 @@ struct ChatView: View {
                                 provider: provider,
                                 space: space,
                                 spaces: spaces,
-                                mcpServers: mcpServers
+                                mcpServers: mcpServers,
+                                integrations: integrations
                             )
                         }
                         : nil
@@ -230,15 +233,6 @@ struct ChatView: View {
                     showLiveCall = true
                 }
             )
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.pendingEmailCompose != nil },
-            set: { if !$0 { viewModel.pendingEmailCompose = nil } }
-        )) {
-            if let (request, continuation) = viewModel.pendingEmailCompose {
-                MailComposeView(request: request, continuation: continuation)
-                    .ignoresSafeArea()
-            }
         }
         .onAppear {
             viewModel.setUp(modelContext: modelContext)

@@ -26,6 +26,10 @@ final class FakeKeychainService: KeychainService, @unchecked Sendable {
         "mcp.\(serverID.uuidString).\(suffix)"
     }
 
+    func integrationKey(for integrationID: UUID, suffix: String) -> String {
+        "integration.\(integrationID.uuidString).\(suffix)"
+    }
+
     var creditWalletsKey: String {
         "credits.wallets"
     }

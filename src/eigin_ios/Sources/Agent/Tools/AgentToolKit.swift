@@ -8,7 +8,6 @@ enum AgentToolKit: ToolKit {
         GetPresentationTool.capability,
         SetPresentationTool.capability,
         SetProactivityTool.capability,
-        ComposeEmailTool.capability,
         ManageVocabularyTool.capability,
         PresentOptionsTool.capability,
     ]
@@ -30,7 +29,6 @@ enum AgentToolKit: ToolKit {
                 agentID: context.agentID
             ),
             SetProactivityTool(),
-            ComposeEmailTool(onCompose: context.onCompose),
             ManageVocabularyTool(
                 vocabularyStore: vocabularyStore,
                 dictationService: dictationService

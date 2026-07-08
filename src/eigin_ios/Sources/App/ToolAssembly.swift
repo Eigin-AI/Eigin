@@ -17,9 +17,23 @@ extension ToolRegistry {
     ]
 
     /// All built-in capabilities collected from kits + special-purpose tools.
+    ///
+    /// Integration capabilities (e.g. email) are included statically — derived
+    /// from ``BundledIntegrationType/all`` rather than hardcoded per-domain —
+    /// so they always show in the permissions UI and resolve correctly for
+    /// `AgentPermissionPolicy`, even though the tools themselves only exist in
+    /// a turn's tool set when the matching integration is connected. Deduped
+    /// by key since two types could one day provide the same capability.
     static let allKitCapabilities: [ToolCapability] =
         allKits.flatMap { $0.capabilities }
+            + integrationCapabilities
             + [DoneTool.capability, BackgroundNotifyTool.capability]
+
+    private static var integrationCapabilities: [ToolCapability] {
+        var seenKeys = Set<String>()
+        return BundledIntegrationType.all.flatMap(\.toolCapabilities)
+            .filter { seenKeys.insert($0.key).inserted }
+    }
 
     /// Full chat tool set from all kits.
     @MainActor
@@ -40,7 +54,7 @@ extension ToolRegistry {
         permissionPolicy: ToolPermissionPolicy,
         activeSkills: [Skill] = [],
         additionalTools: [any Tool] = [],
-        onCompose: ComposeEmailHandler? = nil,
+        integrationToolsByCapability: [Capability: [any Tool]] = [:],
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil
     ) -> ToolRegistry {
@@ -49,7 +63,6 @@ extension ToolRegistry {
             accessPolicy: accessPolicy,
             spaceID: spaceID, chatID: chatID, agentID: agentID,
             canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
-            onCompose: onCompose,
             onBrowse: onBrowse,
             onPresentOptions: onPresentOptions
         )
@@ -66,6 +79,12 @@ extension ToolRegistry {
                     || !allSkillToolKeys.contains(tool.name)
                     || additionalTools.contains { $0.name == tool.name }
             }
+        }
+
+        // Integration tools are gated by capability, unlike MCP's additionalTools.
+        let activeCapabilities = Set(activeSkills.flatMap(\.requiredCapabilities))
+        for capability in activeCapabilities {
+            tools += integrationToolsByCapability[capability] ?? []
         }
 
         // User permissions always win — .never tools are excluded

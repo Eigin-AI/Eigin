@@ -13,6 +13,9 @@ struct Skill: Identifiable {
     /// Short instruction for small on-device models (~1-2 sentences).
     var smallInstruction: String = ""
     let requiredTools: Set<ToolCapability>
+    /// Capabilities this skill needs from a connected integration (e.g. `.email`).
+    /// Empty for skills that only use built-in tools.
+    var requiredCapabilities: Set<Capability> = []
     let alwaysActive: Bool
 }
 

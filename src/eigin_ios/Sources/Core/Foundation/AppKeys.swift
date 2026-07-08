@@ -13,4 +13,8 @@ enum AppKeys {
 
     static let supportEmail: String =
         Bundle.main.infoDictionary?["EiginSupportEmail"] as? String ?? "support@eigin.ai"
+
+    /// Google's OAuth client ID for the Eigin iOS app (public, no secret).
+    static let googleOAuthClientID: String =
+        Bundle.main.infoDictionary?["EiginGoogleOAuthClientID"] as? String ?? ""
 }

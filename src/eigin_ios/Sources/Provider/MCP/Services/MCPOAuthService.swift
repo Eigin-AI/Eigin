@@ -120,75 +120,33 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             throw MCPOAuthError.authorizationFailed("Client credentials are required")
         }
 
-        // Generate PKCE
-        let codeVerifier = PKCEUtilities.generateCodeVerifier()
-        let codeChallenge = PKCEUtilities.generateCodeChallenge(from: codeVerifier)
-        let state = PKCEUtilities.generateState()
+        // Delegates the PKCE mechanics (browser, callback, code exchange) to the
+        // shared flow. MCP keeps its direct `eigin://` redirect (already
+        // registered with dynamically-registered clients) and its `resource`
+        // indicator param, expressed here as flow config rather than special-cased code.
+        let flowConfig = PKCEOAuthConfig(
+            authorizationEndpoint: config.authorizationEndpoint,
+            tokenEndpoint: config.tokenEndpoint,
+            clientID: clientID,
+            clientSecret: config.clientSecret,
+            scopes: config.scopes ?? [],
+            redirectURI: Self.redirectURI,
+            extraAuthorizationParams: ["resource": config.resourceURL.absoluteString],
+            extraTokenParams: ["resource": config.resourceURL.absoluteString]
+        )
 
-        // Build authorization URL
-        var components = URLComponents(
-            url: config.authorizationEndpoint,
-            resolvingAgainstBaseURL: false
-        )!
-        var queryItems = [
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "client_id", value: clientID),
-            URLQueryItem(name: "redirect_uri", value: Self.redirectURI),
-            URLQueryItem(name: "code_challenge", value: codeChallenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
-            URLQueryItem(name: "state", value: state),
-            URLQueryItem(name: "resource", value: config.resourceURL.absoluteString),
-        ]
-        if let scopes = config.scopes, !scopes.isEmpty {
-            queryItems.append(URLQueryItem(name: "scope", value: scopes.joined(separator: " ")))
-        }
-        components.queryItems = queryItems
-
-        guard let authURL = components.url else {
-            throw MCPOAuthError.authorizationFailed("Failed to build authorization URL")
-        }
-
-        // Present browser
-        let callbackURL: URL
+        let tokenResponse: TokenResponse
         do {
-            callbackURL = try await PKCEUtilities.presentAuthSession(url: authURL)
-        } catch PKCEUtilities.AuthSessionError.userCancelled {
+            tokenResponse = try await PKCEOAuthFlow.authorize(
+                config: flowConfig,
+                callbackScheme: "eigin",
+                urlSession: urlSession
+            )
+        } catch PKCEOAuthFlow.FlowError.userCancelled {
             throw MCPOAuthError.userCancelled
-        } catch let error as PKCEUtilities.AuthSessionError {
+        } catch let error as PKCEOAuthFlow.FlowError {
             throw MCPOAuthError.authorizationFailed(error.localizedDescription)
         }
-
-        // Parse callback
-        guard let callbackComponents = URLComponents(
-            url: callbackURL,
-            resolvingAgainstBaseURL: false
-        ) else {
-            throw MCPOAuthError.authorizationFailed("Invalid callback URL")
-        }
-
-        let params = callbackComponents.queryItems ?? []
-        let returnedState = params.first(where: { $0.name == "state" })?.value
-        let code = params.first(where: { $0.name == "code" })?.value
-        let error = params.first(where: { $0.name == "error" })?.value
-
-        if let error {
-            throw MCPOAuthError.authorizationFailed(error)
-        }
-
-        guard returnedState == state else {
-            throw MCPOAuthError.authorizationFailed("State mismatch")
-        }
-
-        guard let code else {
-            throw MCPOAuthError.authorizationFailed("No authorization code received")
-        }
-
-        // Exchange code for tokens
-        let tokenResponse = try await exchangeCode(
-            code: code,
-            codeVerifier: codeVerifier,
-            config: config
-        )
 
         // Store tokens in Keychain
         storeTokens(tokenResponse, config: config, serverID: serverID)
@@ -230,13 +188,23 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         let clientSecret = readKeychain(serverID: serverID, suffix: "client_secret")
         let resource = readKeychain(serverID: serverID, suffix: "resource")
 
-        let tokenResponse = try await refreshAccessToken(
-            refreshToken: refreshToken,
+        let refreshConfig = PKCEOAuthConfig(
+            authorizationEndpoint: tokenEndpoint, // not used for refresh
             tokenEndpoint: tokenEndpoint,
             clientID: clientID,
             clientSecret: clientSecret,
-            resource: resource
+            extraTokenParams: resource.map { ["resource": $0] } ?? [:]
         )
+        let tokenResponse: TokenResponse
+        do {
+            tokenResponse = try await PKCEOAuthFlow.refresh(
+                refreshToken: refreshToken,
+                config: refreshConfig,
+                urlSession: urlSession
+            )
+        } catch let error as PKCEOAuthFlow.FlowError {
+            throw MCPOAuthError.tokenRefreshFailed(error.localizedDescription)
+        }
 
         // Re-store with updated tokens — reconstruct a minimal config for storage
         let config = OAuthConfiguration(
@@ -318,72 +286,6 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         return try JSONDecoder().decode(ClientRegistrationResponse.self, from: data)
     }
 
-    private func exchangeCode(
-        code: String,
-        codeVerifier: String,
-        config: OAuthConfiguration
-    ) async throws -> TokenResponse {
-        var request = URLRequest(url: config.tokenEndpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-
-        var params = [
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": Self.redirectURI,
-            "client_id": config.clientID!,
-            "code_verifier": codeVerifier,
-            "resource": config.resourceURL.absoluteString,
-        ]
-        if let secret = config.clientSecret {
-            params["client_secret"] = secret
-        }
-        request.httpBody = formEncode(params).data(using: .utf8)
-
-        let (data, response) = try await urlSession.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200 ... 299).contains(httpResponse.statusCode)
-        else {
-            throw MCPOAuthError.authorizationFailed("Token exchange failed")
-        }
-
-        return try JSONDecoder().decode(TokenResponse.self, from: data)
-    }
-
-    private func refreshAccessToken(
-        refreshToken: String,
-        tokenEndpoint: URL,
-        clientID: String,
-        clientSecret: String?,
-        resource: String?
-    ) async throws -> TokenResponse {
-        var request = URLRequest(url: tokenEndpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-
-        var params = [
-            "grant_type": "refresh_token",
-            "refresh_token": refreshToken,
-            "client_id": clientID,
-        ]
-        if let secret = clientSecret {
-            params["client_secret"] = secret
-        }
-        if let resource {
-            params["resource"] = resource
-        }
-        request.httpBody = formEncode(params).data(using: .utf8)
-
-        let (data, response) = try await urlSession.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200 ... 299).contains(httpResponse.statusCode)
-        else {
-            throw MCPOAuthError.tokenRefreshFailed("Server returned error")
-        }
-
-        return try JSONDecoder().decode(TokenResponse.self, from: data)
-    }
-
     private func storeTokens(
         _ response: TokenResponse,
         config: OAuthConfiguration,
@@ -442,16 +344,6 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
     private func fetchAndDecode<T: Decodable>(_ type: T.Type, from url: URL) async throws -> T {
         let (data, _) = try await urlSession.data(from: url)
         return try JSONDecoder().decode(type, from: data)
-    }
-
-    private func formEncode(_ params: [String: String]) -> String {
-        params.map { key, value in
-            let escapedKey = key
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
-            let escapedValue = value
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
-            return "\(escapedKey)=\(escapedValue)"
-        }.joined(separator: "&")
     }
 }
 
