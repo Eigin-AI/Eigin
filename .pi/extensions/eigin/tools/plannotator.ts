@@ -251,8 +251,8 @@ function registerReviewResultListener(pi: ExtensionAPI): () => void {
     const feedback = result.feedback?.trim();
     const message = result.approved
       ? feedback
-        ? `The plan was approved with notes:\n\n${feedback}\n\nPropose moving to the build stage, then execute the plan.`
-        : "The plan was approved. Propose moving to the build stage, then execute the plan."
+        ? `The plan was approved with notes:\n\n${feedback}\n\nPropose moving to the next stage, then execute the plan.`
+        : "The plan was approved. Propose moving to the next stage, then execute the plan."
       : feedback
         ? `The plan was denied. Address this feedback and resubmit:\n\n${feedback}`
         : "The plan was denied. Revise and resubmit.";

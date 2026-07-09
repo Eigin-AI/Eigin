@@ -65,7 +65,7 @@
  *
  * Module layout:
  *   index.ts            wiring: footer, tool gating, guidance injection, persistence
- *   workflow/stages.ts    shared stage vocabulary + metadata (label/icon/allowsEdits/role)
+ *   workflow/stages.ts    shared stage vocabulary + metadata (label/allowsEdits/role)
  *   workflow/workflows.ts  named stage sequences with per-workflow guidance (feature/bug/prototype)
  *   workflow/stage-hint.ts per-turn stage guidance, injected via the context event
  *   workflow/roles.ts     model roles (planner/builder/explorer) + built-in defaults
@@ -113,7 +113,12 @@ import { buildCompactionInstructions, buildKickoff } from "./workflow/build-hand
 import { PROPOSE_TOOL, registerProposeTool } from "./tools/propose.ts";
 import { ASK_QUESTIONS_TOOL, registerAskQuestionsTool } from "./tools/ask/ask.ts";
 import { applySubagentDefaults, applyWebSearchDefault, type ToolCallInput } from "./tool-defaults.ts";
-import { appendStageHintIfFreshTurn, buildStageHint, type StageHintMessage } from "./workflow/stage-hint.ts";
+import {
+  appendStageHintIfFreshTurn,
+  buildStageHint,
+  type StageHintMessage,
+  type WorkflowStageView,
+} from "./workflow/stage-hint.ts";
 import { loadRoleOverrides, resolveRoleModel } from "./workflow/role-store.ts";
 import { registerRoleCommand } from "./tools/role-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
@@ -444,7 +449,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
         const list = workflow.stages.map((s) => {
           const marker = s.id === currentStage ? "▶" : " ";
           const mode = s.allowsEdits ? "edit" : "read-only";
-          return `${marker} ${s.icon} ${s.label} (${mode})`;
+          return `${marker} ${s.label} (${mode})`;
         }).join("\n");
         ctx.ui.notify(`${workflow.icon} ${workflow.label}:\n${list}`, "info");
         return;
@@ -473,8 +478,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     handler: async (ctx) => {
       const workflow = activeWorkflow();
       const labels = workflow.stages.map(
-        (s) =>
-          `${s.icon} ${s.label}${s.id === currentStage ? " (current)" : ""}`,
+        (s) => `${s.label}${s.id === currentStage ? " (current)" : ""}`,
       );
       const choice = await ctx.ui.select("Set stage:", labels);
       if (!choice) return;
@@ -653,10 +657,17 @@ Always blocked (every stage): the agent should not run stateful or destructive g
   });
 
   pi.on("context", async (event) => {
+    const workflow = activeWorkflow();
     const stage = activeStage();
     const taskBlock = formatTaskList(taskListState);
     const guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
-    const hint = buildStageHint(stage.label, guidance);
+    const view: WorkflowStageView = {
+      workflowLabel: workflow.label,
+      workflowIcon: workflow.icon,
+      stages: workflow.stages.map((s) => ({ id: s.id, label: s.label })),
+      currentId: stage.id,
+    };
+    const hint = buildStageHint(view, guidance);
     const messages = appendStageHintIfFreshTurn(event.messages as StageHintMessage[], hint);
     return { messages: messages as unknown as typeof event.messages };
   });

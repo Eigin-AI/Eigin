@@ -48,8 +48,11 @@ export function registerProposeTool(
     description:
       "Propose moving to a different workflow stage. This tool shows the user a yes/no dialog " +
       "(they may attach a note) and returns their decision. Use when the current stage's work is done " +
-      "(e.g. plan approved → propose build). Act on the returned result: if approved you are now in the " +
-      "new stage; if declined, honor any note. Never assume the transition happened.",
+      "(e.g. plan approved → propose the next stage). Workflows differ in which stages they include — " +
+      "the per-turn stage hint lists the active workflow's sequence and the valid propose_stage targets " +
+      "from here; use those rather than guessing from the full stage vocabulary. Act on the returned " +
+      "result: if approved you are now in the new stage; if declined, honor any note. Never assume the " +
+      "transition happened.",
     promptSnippet:
       "Propose advancing the workflow to another stage (user confirms in a dialog)",
     promptGuidelines: [

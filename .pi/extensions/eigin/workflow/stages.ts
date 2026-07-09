@@ -3,7 +3,7 @@
  * test, review, merge.
  *
  * A *stage* is a mode the agent operates in (read-only exploration, plan
- * writing, implementing, etc). Its metadata — label, icon, whether edit
+ * writing, implementing, etc). Its metadata — label, whether edit
  * tools are enabled, which model role it suggests — is stable no matter
  * which workflow is using it. Its *guidance* (the behavior-shaping text
  * injected into the system prompt) is not: a workflow tunes it to its own
@@ -26,7 +26,6 @@ export type StageId =
 export interface StageMeta {
   id: StageId;
   label: string;
-  icon: string;
   /** Whether built-in edit/write tools are enabled in this stage. */
   allowsEdits: boolean;
   /**
@@ -45,13 +44,13 @@ export interface StageDef extends StageMeta {
 }
 
 export const STAGE_META: Record<StageId, StageMeta> = {
-  context: { id: "context", label: "Context", icon: "🔍", allowsEdits: false, role: "planner" },
-  plan: { id: "plan", label: "Plan", icon: "📝", allowsEdits: true, role: "planner" }, // Restricted to markdown files by guard.
-  build: { id: "build", label: "Build", icon: "🔨", allowsEdits: true, role: "builder" },
-  iterate: { id: "iterate", label: "Iterate", icon: "🔁", allowsEdits: true, role: "builder" },
-  test: { id: "test", label: "Test", icon: "🧪", allowsEdits: true, role: "builder" },
-  review: { id: "review", label: "Review", icon: "👀", allowsEdits: true, role: "builder" },
-  merge: { id: "merge", label: "Merge", icon: "🔀", allowsEdits: true, role: "builder" },
+  context: { id: "context", label: "Context", allowsEdits: false, role: "planner" },
+  plan: { id: "plan", label: "Plan", allowsEdits: true, role: "planner" }, // Restricted to markdown files by guard.
+  build: { id: "build", label: "Build", allowsEdits: true, role: "builder" },
+  iterate: { id: "iterate", label: "Iterate", allowsEdits: true, role: "builder" },
+  test: { id: "test", label: "Test", allowsEdits: true, role: "builder" },
+  review: { id: "review", label: "Review", allowsEdits: true, role: "builder" },
+  merge: { id: "merge", label: "Merge", allowsEdits: true, role: "builder" },
 };
 
 /** Merge a stage's fixed metadata with workflow-specific guidance. */

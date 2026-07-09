@@ -18,11 +18,42 @@ export interface StageHintMessage {
 	content: string | Array<{ type: string; text?: string; [key: string]: unknown }>;
 }
 
+/** A stage as it appears in the active workflow's ordered sequence. */
+export interface StageHintStage {
+	id: string;
+	label: string;
+}
+
+/**
+ * The active workflow's stage sequence, for rendering into the hint. This is
+ * what makes `propose_stage` targets discoverable: the agent sees exactly
+ * which stages this workflow has (and which one it's on) instead of guessing
+ * from the tool's full 7-stage vocabulary, some of which a given workflow
+ * may not include (e.g. Bug has no Review; Prototype has no Build).
+ */
+export interface WorkflowStageView {
+	workflowLabel: string;
+	workflowIcon: string;
+	stages: StageHintStage[];
+	currentId: string;
+}
+
 /** Build the stage hint block appended to the user's message. */
-export function buildStageHint(stageLabel: string, guidance: string): string {
+export function buildStageHint(view: WorkflowStageView, guidance: string): string {
+	const sequence = view.stages
+		.map((s) => (s.id === view.currentId ? `[${s.label}]` : s.label))
+		.join(" → ");
+	const targets = view.stages.filter((s) => s.id !== view.currentId).map((s) => s.id);
+	const current = view.stages.find((s) => s.id === view.currentId);
+	const currentLabel = current ? current.label : view.currentId;
+	const targetsLine =
+		targets.length > 0
+			? `To change stage, call propose_stage with one of: ${targets.join(", ")}. These are the only valid targets in this workflow.`
+			: "This workflow has no other stages to move to.";
 	return (
 		`\n\n---\n[Automatically injected — not part of the user's message]\n` +
-		`Current workflow stage: ${stageLabel}\n${guidance}\n---`
+		`Workflow: ${view.workflowIcon} ${view.workflowLabel} — ${sequence}\n` +
+		`Current workflow stage: ${currentLabel}\n${targetsLine}\n${guidance}\n---`
 	);
 }
 
