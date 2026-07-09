@@ -14,13 +14,15 @@ import type {
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { confirmWithNote } from "./confirm-dialog.ts";
-import { getStage, type StageId, STAGES } from "../workflow/stages.ts";
+import { STAGE_META, type StageId } from "../workflow/stages.ts";
+import { getStageInWorkflow, getWorkflow, hasStage, type WorkflowId } from "../workflow/workflows.ts";
 
 export const PROPOSE_TOOL = "propose_stage";
 
-/** Read/write access to the current stage, owned by the extension. */
+/** Read/write access to the current workflow + stage, owned by the extension. */
 export interface StageController {
   current(): StageId;
+  currentWorkflow(): WorkflowId;
   setStage(
     id: StageId,
     ctx: ExtensionContext,
@@ -32,8 +34,11 @@ export function registerProposeTool(
   pi: ExtensionAPI,
   controller: StageController,
 ): void {
+  // The full stage vocabulary, for typebox's static enum — validated against
+  // the *active workflow* at execute time (a workflow may not include every
+  // stage, e.g. Bug has no review).
   const schema = Type.Object({
-    stage: StringEnum(STAGES.map((s) => s.id) as [string, ...string[]]),
+    stage: StringEnum(Object.keys(STAGE_META) as [string, ...string[]]),
     reason: Type.Optional(Type.String()),
   });
 
@@ -53,11 +58,30 @@ export function registerProposeTool(
     parameters: schema,
     async execute(_id, params, _signal, _onUpdate, ctx) {
       const target = params.stage as StageId;
-      const stage = getStage(target);
-      const here = () => getStage(controller.current()).label;
+      const workflow = getWorkflow(controller.currentWorkflow());
+      const here = () => getStageInWorkflow(workflow, controller.current()).label;
+
+      // Target stage isn't part of the active workflow — report the valid
+      // stages instead of prompting for an impossible transition (e.g.
+      // proposing "review" while in the Bug workflow, which has none).
+      if (!hasStage(workflow, target)) {
+        const valid = workflow.stages.map((s) => s.id).join(", ");
+        return {
+          content: [
+            {
+              type: "text",
+              text: `The ${workflow.label} workflow has no "${target}" stage. Valid stages here: ${valid}.`,
+            },
+          ],
+          details: { stage: target, decision: "not-in-workflow" },
+          terminate: true,
+        };
+      }
+
+      const stage = getStageInWorkflow(workflow, target);
 
       // Already in the target stage — don't prompt for a no-op transition.
-      // (The in-context stage view can go stale after a manual /stage switch.)
+      // (The in-context stage view can go stale after a manual /eigin:stage switch.)
       if (target === controller.current()) {
         return {
           content: [

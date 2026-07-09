@@ -1,18 +1,20 @@
 /**
- * `/role` — show or set which model backs each workflow role
- * (planner/builder/explorer). Mirrors `/stage`: bare invocation opens an
+ * `/eigin:role` — show or set which model backs each workflow role
+ * (planner/builder/explorer). Mirrors `/eigin:stage`: bare invocation opens an
  * interactive picker, arguments set directly.
  *
- * Named `/role`, not `/model`, because pi already has a built-in `/model`
- * command (session model selector) — this is a different, higher-level
- * concept: which model a *role* resolves to, not which model the current
- * session uses right now.
+ * Named `/eigin:role`, not `/model`, because pi already has a built-in
+ * `/model` command (session model selector) — this is a different,
+ * higher-level concept: which model a *role* resolves to, not which model the
+ * current session uses right now. Namespaced under `eigin:` (as are the other
+ * commands this extension registers) to avoid colliding with other
+ * extensions' commands.
  *
  * Usage:
- *   /role                          interactive: pick a role, then a model
- *   /role <role>                   interactive: pick a model for that role
- *   /role <role> <id>              set directly (searches all providers for id)
- *   /role <role> <provider>/<id>   set directly, unambiguous provider
+ *   /eigin:role                          interactive: pick a role, then a model
+ *   /eigin:role <role>                   interactive: pick a model for that role
+ *   /eigin:role <role> <id>              set directly (searches all providers for id)
+ *   /eigin:role <role> <provider>/<id>   set directly, unambiguous provider
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -112,7 +114,7 @@ async function pickRoleThenModel(ctx: ExtensionContext, pi: ExtensionAPI, deps: 
 }
 
 export function registerRoleCommand(pi: ExtensionAPI, deps: RoleCommandDeps): void {
-	pi.registerCommand("role", {
+	pi.registerCommand("eigin:role", {
 		description: "Show or set the model for a role (planner|builder|explorer)",
 		getArgumentCompletions: (prefix: string) => {
 			const [first, ...rest] = prefix.split(/\s+/);

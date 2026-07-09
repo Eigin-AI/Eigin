@@ -1,23 +1,30 @@
 /**
  * Eigin extension — pi customizations for the Eigin workflow.
  *
- * Currently home to the stage state machine (a workflow pipeline for pi):
- * Pipeline: context → plan → build → iterate → review → merge
+ * Currently home to the workflow/stage state machine. A *workflow* is a
+ * named, ordered subset of the shared stage vocabulary, tuned to a kind of
+ * task (see workflow/workflows.ts):
+ *   🧰 Feature   — context → plan → build → iterate → review → merge
+ *   🐞 Bug       — context → plan → build → test → merge (plan skippable)
+ *   🧬 Prototype — context → iterate → merge
  *
- * - Tracks the current stage and shows it in the footer.
- * - Gates edit/write tools per stage (read-only in context/merge; plan is
+ * - Tracks the current workflow + stage and shows both in the footer.
+ * - Prompts a workflow picker on brand-new sessions (no prior persisted
+ *   state); resumed sessions restore silently.
+ * - Gates edit/write tools per stage (read-only in context; plan is
  *   markdown-only).
  * - Injects stage-specific guidance as a per-turn hint on the latest user
  *   message (not the system prompt) to avoid invalidating the cached
  *   system-prompt/tool-defs prefix on every stage change (see workflow/stage-hint.ts).
  * - Suggests a model when the stage changes, resolved via the stage's model
  *   role (planner/builder/explorer) rather than a hardcoded model (you may
- *   decline). Configure roles with /role (see workflow/roles.ts).
+ *   decline). Configure roles with /eigin:role (see workflow/roles.ts).
  * - Lets the agent propose a transition via a confirm dialog (never automatic).
  * - Blocks stateful/destructive git, `terraform apply`/`destroy`, and
  *   `just infra deploy` (which wraps it) everywhere.
  * - Integrates Plannotator as a review UI (see tools/plannotator.ts).
- * - Persists across session resume.
+ * - Persists workflow + stage across session resume (old sessions without a
+ *   persisted workflow default to Feature).
  * - Maintains an agent-managed task list (add_tasks / resolve_tasks / clear_tasks),
  *   rendered alongside the stage instructions in the same per-turn block
  *   (see workflow/task-list.ts) so long-running, multi-step jobs don't lose
@@ -33,18 +40,23 @@
  *   so Build starts from a compacted context + the plan rather than the full
  *   planning discussion (see offerBuildHandoff below and workflow/build-handoff.ts).
  *
- * Commands / shortcuts:
- *   /stage             show current stage and the pipeline
- *   /stage <name>      switch to a stage (context|plan|build|iterate|review|merge)
- *   /stage next|back   step along the pipeline
- *   Ctrl+Alt+S         pick a stage from a menu
- *   /role              pick a role, then a model, interactively
- *   /role <role>       pick a model for that role (planner|builder|explorer)
- *   /role <role> <id>  set a role's model directly ("provider/id" if ambiguous)
+ * Commands / shortcuts (namespaced under `eigin:` to avoid colliding with
+ * other extensions' commands):
+ *   /eigin:workflow          show current workflow and switch to another
+ *   /eigin:workflow <name>   switch workflow (feature|bug|prototype), landing on its first stage
+ *   Ctrl+Alt+W               pick a workflow from a menu
+ *   /eigin:stage             show current stage and the active workflow's stage sequence
+ *   /eigin:stage <name>      switch to a stage within the current workflow
+ *   /eigin:stage next|back   step along the current workflow's sequence
+ *   Ctrl+Alt+S               pick a stage from a menu
+ *   /eigin:role              pick a role, then a model, interactively
+ *   /eigin:role <role>       pick a model for that role (planner|builder|explorer)
+ *   /eigin:role <role> <id>  set a role's model directly ("provider/id" if ambiguous)
  *
  * Module layout:
  *   index.ts            wiring: footer, tool gating, guidance injection, persistence
- *   workflow/stages.ts   the pipeline state machine (stage defs, transitions)
+ *   workflow/stages.ts    shared stage vocabulary + metadata (label/icon/allowsEdits/role)
+ *   workflow/workflows.ts  named stage sequences with per-workflow guidance (feature/bug/prototype)
  *   workflow/stage-hint.ts per-turn stage guidance, injected via the context event
  *   workflow/roles.ts     model roles (planner/builder/explorer) + built-in defaults
  *   workflow/role-store.ts persists per-developer role→model overrides (.pi/model-roles.json)
@@ -55,7 +67,7 @@
  *     tasks.ts              add_tasks / resolve_tasks / clear_tasks (agent-managed checklist)
  *     confirm-dialog.ts    shared inline confirm-with-note dialog (used by propose)
  *     plannotator.ts       submit_plan / submit_review (Plannotator UI)
- *     role-command.ts      /role command: configure role→model assignments
+ *     role-command.ts      /eigin:role command: configure role→model assignments
  *     ask/                 ask_questions (structured multi-question dialog)
  *       ask.ts               tool registration, schema, validation, result formatting
  *       ask-dialog.ts        the tabbed ctx.ui.custom state machine
@@ -72,6 +84,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
 import { checkCommand } from "./guardrails/guards.ts";
 import {
@@ -98,14 +111,17 @@ import {
   summarizeTaskList,
   type TaskListState,
 } from "./workflow/task-list.ts";
+import { isStageId, type StageDef, type StageId } from "./workflow/stages.ts";
 import {
-  getStage,
-  isStageId,
-  relativeStage,
-  type StageDef,
-  type StageId,
-  STAGES,
-} from "./workflow/stages.ts";
+  firstStage,
+  getStageInWorkflow,
+  getWorkflow,
+  isWorkflowId,
+  relativeStageIn,
+  WORKFLOWS,
+  type WorkflowDef,
+  type WorkflowId,
+} from "./workflow/workflows.ts";
 
 const EDIT_TOOLS = ["edit", "write"];
 const ALWAYS_ON_TOOLS = [
@@ -122,7 +138,18 @@ const STATUS_KEY = "stage";
 const TASKS_STATUS_KEY = "tasks";
 const STATE_TYPE = "stage-mode";
 const TASK_STATE_TYPE = "task-list";
-const DEFAULT_STAGE: StageId = "context";
+const DEFAULT_WORKFLOW: WorkflowId = "feature";
+
+/** Icon + label for a workflow. */
+function workflowLabel(w: WorkflowDef): string {
+  return `${w.icon} ${w.label}`;
+}
+
+/** Two-line picker entry: `icon  Label` with a short muted summary underneath. */
+function workflowOption(w: WorkflowDef, current: boolean, theme: Theme): string {
+  const marker = current ? " (current)" : "";
+  return `${workflowLabel(w)}${marker}\n  ${theme.fg("muted", w.summary)}`;
+}
 
 /** Set by tools/subagent/index.ts when spawning a sub-agent's child process. */
 const SUBAGENT_ENV_VAR = "EIGIN_SUBAGENT";
@@ -155,13 +182,25 @@ export default function stageExtension(pi: ExtensionAPI): void {
     return;
   }
 
-  let currentStage: StageId = DEFAULT_STAGE;
+  let currentWorkflow: WorkflowId = DEFAULT_WORKFLOW;
+  let currentStage: StageId = firstStage(getWorkflow(DEFAULT_WORKFLOW));
   let taskListState: TaskListState = emptyTaskList();
+
+  // --- Workflow/stage lookups ---------------------------------------------
+
+  function activeWorkflow(): WorkflowDef {
+    return getWorkflow(currentWorkflow);
+  }
+
+  /** The active workflow's tuned StageDef for `id` (defaults to the current stage). */
+  function activeStage(id: StageId = currentStage): StageDef {
+    return getStageInWorkflow(activeWorkflow(), id);
+  }
 
   // --- Tool gating -------------------------------------------------------
 
   function applyStageTools(): void {
-    const stage = getStage(currentStage);
+    const stage = activeStage();
     const active = pi.getActiveTools();
     const withoutEdit = active.filter((t) => !EDIT_TOOLS.includes(t));
     const next = stage.allowsEdits
@@ -174,16 +213,17 @@ export default function stageExtension(pi: ExtensionAPI): void {
   // --- Footer status -----------------------------------------------------
 
   function updateStatus(ctx: ExtensionContext): void {
-    const stage = getStage(currentStage);
+    const workflow = activeWorkflow();
+    const stage = activeStage();
     const color = stage.allowsEdits ? "success" : "warning";
     ctx.ui.setStatus(
       STATUS_KEY,
-      ctx.ui.theme.fg(color, `${stage.icon} ${stage.label}`),
+      ctx.ui.theme.fg(color, `${workflowLabel(workflow)} > ${stage.label}`),
     );
   }
 
   function persist(): void {
-    pi.appendEntry(STATE_TYPE, { stage: currentStage });
+    pi.appendEntry(STATE_TYPE, { workflow: currentWorkflow, stage: currentStage });
   }
 
   // --- Task list -----------------------------------------------------------
@@ -245,7 +285,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
    * the normal stage-guidance continuation (declined — nothing else is coming).
    */
   async function offerBuildHandoff(ctx: ExtensionContext): Promise<boolean> {
-    const buildStage = getStage("build");
+    const buildStage = activeStage("build");
     const ok = await ctx.ui.confirm(
       "Compact context before Build?",
       "The approved plan is already saved as a file. Summarize the planning discussion (decisions, constraints, discoveries) and start Build from a compacted context + the plan, instead of carrying the full discussion forward.",
@@ -288,7 +328,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     opts?: { suggestModel?: boolean },
   ): Promise<{ handoffPending: boolean }> {
     const from = currentStage;
-    const stage = getStage(id);
+    const stage = activeStage(id);
     const changed = currentStage !== id;
     currentStage = id;
     applyStageTools();
@@ -308,13 +348,28 @@ export default function stageExtension(pi: ExtensionAPI): void {
     return { handoffPending: false };
   }
 
+  /** Switch workflows, landing on the new workflow's first stage. */
+  async function setWorkflow(id: WorkflowId, ctx: ExtensionContext): Promise<void> {
+    const changed = currentWorkflow !== id;
+    currentWorkflow = id;
+    const workflow = activeWorkflow();
+    const entry = firstStage(workflow);
+    currentStage = entry;
+    applyStageTools();
+    updateStatus(ctx);
+    persist();
+    if (!changed) return;
+    ctx.ui.notify(`Workflow → ${workflowLabel(workflow)}`, "info");
+    await suggestModel(activeStage(entry), ctx);
+  }
+
   // --- Command / shortcut ------------------------------------------------
 
-  pi.registerCommand("stage", {
+  pi.registerCommand("eigin:stage", {
     description:
-      "Show or set the workflow stage (context|plan|build|iterate|review|merge)",
+      "Show or set the stage within the current workflow (see /eigin:workflow for the workflow itself)",
     getArgumentCompletions: (prefix: string) => {
-      const options = [...STAGES.map((s) => s.id), "next", "back"];
+      const options = [...activeWorkflow().stages.map((s) => s.id), "next", "back"];
       const items = options
         .filter((o) => o.startsWith(prefix))
         .map((o) => ({ value: o, label: o }));
@@ -322,30 +377,31 @@ export default function stageExtension(pi: ExtensionAPI): void {
     },
     handler: async (args, ctx) => {
       const arg = args.trim().toLowerCase();
+      const workflow = activeWorkflow();
 
       if (arg === "") {
-        const list = STAGES.map((s) => {
+        const list = workflow.stages.map((s) => {
           const marker = s.id === currentStage ? "▶" : " ";
           const mode = s.allowsEdits ? "edit" : "read-only";
           return `${marker} ${s.icon} ${s.label} (${mode})`;
         }).join("\n");
-        ctx.ui.notify(`Pipeline:\n${list}`, "info");
+        ctx.ui.notify(`${workflow.icon} ${workflow.label}:\n${list}`, "info");
         return;
       }
 
       if (arg === "next" || arg === "back") {
-        const target = relativeStage(currentStage, arg === "next" ? 1 : -1);
+        const target = relativeStageIn(workflow, currentStage, arg === "next" ? 1 : -1);
         await setStage(target.id, ctx);
         return;
       }
 
-      if (isStageId(arg)) {
+      if (isStageId(arg) && workflow.stages.some((s) => s.id === arg)) {
         await setStage(arg, ctx);
         return;
       }
 
       ctx.ui.notify(
-        `Unknown stage: "${arg}". Try: ${STAGES.map((s) => s.id).join(", ")}`,
+        `Unknown stage: "${arg}" for the ${workflow.label} workflow. Try: ${workflow.stages.map((s) => s.id).join(", ")}`,
         "error",
       );
     },
@@ -354,22 +410,72 @@ export default function stageExtension(pi: ExtensionAPI): void {
   pi.registerShortcut("ctrl+alt+s", {
     description: "Pick a workflow stage",
     handler: async (ctx) => {
-      const labels = STAGES.map(
+      const workflow = activeWorkflow();
+      const labels = workflow.stages.map(
         (s) =>
           `${s.icon} ${s.label}${s.id === currentStage ? " (current)" : ""}`,
       );
       const choice = await ctx.ui.select("Set stage:", labels);
       if (!choice) return;
-      const picked = STAGES.find((s) => choice.includes(s.label));
+      const picked = workflow.stages.find((s) => choice.includes(s.label));
       if (picked) await setStage(picked.id, ctx);
+    },
+  });
+
+  // --- Workflow command / shortcut ----------------------------------------
+
+  pi.registerCommand("eigin:workflow", {
+    description: "Show or switch the workflow (feature|bug|prototype)",
+    getArgumentCompletions: (prefix: string) => {
+      const items = WORKFLOWS.map((w) => w.id)
+        .filter((o) => o.startsWith(prefix))
+        .map((o) => ({ value: o, label: o }));
+      return items.length > 0 ? items : null;
+    },
+    handler: async (args, ctx) => {
+      const arg = args.trim().toLowerCase();
+
+      if (arg === "") {
+        const list = WORKFLOWS.map((w) => {
+          const marker = w.id === currentWorkflow ? "▶" : " ";
+          return `${marker} ${workflowLabel(w)}\n    ${ctx.ui.theme.fg("muted", w.summary)}`;
+        }).join("\n");
+        ctx.ui.notify(`Workflows:\n${list}`, "info");
+        return;
+      }
+
+      if (isWorkflowId(arg)) {
+        await setWorkflow(arg, ctx);
+        return;
+      }
+
+      ctx.ui.notify(
+        `Unknown workflow: "${arg}". Try: ${WORKFLOWS.map((w) => w.id).join(", ")}`,
+        "error",
+      );
+    },
+  });
+
+  pi.registerShortcut("ctrl+alt+w", {
+    description: "Pick a workflow",
+    handler: async (ctx) => {
+      const labels = WORKFLOWS.map((w) => workflowOption(w, w.id === currentWorkflow, ctx.ui.theme));
+      const choice = await ctx.ui.select("Set workflow:", labels);
+      if (!choice) return;
+      const picked = WORKFLOWS.find((w) => choice.includes(w.label));
+      if (picked) await setWorkflow(picked.id, ctx);
     },
   });
 
   // --- Tools -------------------------------------------------------------
 
-  registerProposeTool(pi, { current: () => currentStage, setStage });
+  registerProposeTool(pi, {
+    current: () => currentStage,
+    currentWorkflow: () => currentWorkflow,
+    setStage,
+  });
   registerAskQuestionsTool(pi);
-  registerRoleCommand(pi, { activeRole: () => getStage(currentStage).role });
+  registerRoleCommand(pi, { activeRole: () => activeStage().role });
   registerSubagentTool(pi);
   registerTaskTools(pi, {
     add(texts, ctx) {
@@ -449,7 +555,7 @@ Always blocked (every stage): the agent should not run stateful or destructive g
   });
 
   pi.on("context", async (event) => {
-    const stage = getStage(currentStage);
+    const stage = activeStage();
     const taskBlock = formatTaskList(taskListState);
     const guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
     const hint = buildStageHint(stage.label, guidance);
@@ -466,10 +572,21 @@ Always blocked (every stage): the agent should not run stateful or destructive g
         (e: { type: string; customType?: string }) =>
           e.type === "custom" && e.customType === STATE_TYPE,
       )
-      .pop() as { data?: { stage?: StageId } } | undefined;
+      .pop() as { data?: { workflow?: WorkflowId; stage?: StageId } } | undefined;
 
-    const restored = last?.data?.stage;
-    if (restored && isStageId(restored)) currentStage = restored;
+    const isFreshSession = last === undefined;
+
+    // Old sessions persisted only `stage`, no `workflow` — default to Feature
+    // (today's pipeline) rather than losing the restored stage.
+    const restoredWorkflow = last?.data?.workflow;
+    currentWorkflow = restoredWorkflow && isWorkflowId(restoredWorkflow) ? restoredWorkflow : DEFAULT_WORKFLOW;
+
+    const restoredStage = last?.data?.stage;
+    const workflow = activeWorkflow();
+    currentStage =
+      restoredStage && isStageId(restoredStage) && workflow.stages.some((s) => s.id === restoredStage)
+        ? restoredStage
+        : firstStage(workflow); // Restored stage isn't part of this workflow (or none persisted) — start fresh.
 
     const lastTasks = entries
       .filter(
@@ -479,9 +596,22 @@ Always blocked (every stage): the agent should not run stateful or destructive g
       .pop() as { data?: TaskListState } | undefined;
     if (lastTasks?.data) taskListState = lastTasks.data;
 
+    // Brand-new session (nothing persisted yet): let the user pick a workflow
+    // up front instead of silently defaulting to Feature.
+    if (isFreshSession && ctx.hasUI) {
+      const labels = WORKFLOWS.map((w) => workflowOption(w, false, ctx.ui.theme));
+      const choice = await ctx.ui.select("Pick a workflow:", labels);
+      const picked = choice ? WORKFLOWS.find((w) => choice.includes(w.label)) : undefined;
+      if (picked) {
+        currentWorkflow = picked.id;
+        currentStage = firstStage(getWorkflow(picked.id));
+      }
+    }
+
     applyStageTools();
     updateStatus(ctx);
     updateTaskStatus(ctx);
-    await suggestModel(getStage(currentStage), ctx);
+    persist(); // Ensure a freshly-picked (or defaulted) workflow/stage is recorded even if nothing else changes it.
+    await suggestModel(activeStage(), ctx);
   });
 }
