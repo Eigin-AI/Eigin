@@ -23,10 +23,68 @@ function assertEqual<T>(actual: T, expected: T, message?: string): void {
 	}
 }
 
-test("buildStageHint includes the stage label and guidance", () => {
-	const hint = buildStageHint("Plan", "Narrow the funnel.");
+test("buildStageHint includes the current stage label and guidance", () => {
+	const hint = buildStageHint(
+		{
+			workflowLabel: "Feature",
+			workflowIcon: "🧰",
+			stages: [
+				{ id: "context", label: "Context" },
+				{ id: "plan", label: "Plan" },
+				{ id: "build", label: "Build" },
+			],
+			currentId: "plan",
+		},
+		"Narrow the funnel.",
+	);
 	if (!hint.includes("Plan") || !hint.includes("Narrow the funnel.")) {
 		throw new Error(`Hint missing expected content: ${hint}`);
+	}
+});
+
+test("buildStageHint renders the workflow sequence with the current stage marked", () => {
+	const hint = buildStageHint(
+		{
+			workflowLabel: "Bug",
+			workflowIcon: "🐞",
+			stages: [
+				{ id: "context", label: "Context" },
+				{ id: "plan", label: "Plan" },
+				{ id: "build", label: "Build" },
+				{ id: "test", label: "Test" },
+				{ id: "merge", label: "Merge" },
+			],
+			currentId: "build",
+		},
+		"Implement the fix.",
+	);
+	if (!hint.includes("🐞 Bug")) throw new Error(`Hint missing workflow icon/label: ${hint}`);
+	if (!hint.includes("[Build]")) throw new Error(`Hint missing current-stage marker: ${hint}`);
+	if (!hint.includes("Context → Plan → [Build] → Test → Merge")) {
+		throw new Error(`Hint missing full sequence: ${hint}`);
+	}
+});
+
+test("buildStageHint lists every other stage as a valid propose_stage target", () => {
+	const hint = buildStageHint(
+		{
+			workflowLabel: "Prototype",
+			workflowIcon: "🧬",
+			stages: [
+				{ id: "context", label: "Context" },
+				{ id: "iterate", label: "Iterate" },
+				{ id: "merge", label: "Merge" },
+			],
+			currentId: "iterate",
+		},
+		"Shape the idea.",
+	);
+	if (!hint.includes("context, merge")) {
+		throw new Error(`Hint missing valid targets list: ${hint}`);
+	}
+	// The current stage itself must not be offered as a target.
+	if (/one of:.*\biterate\b/.test(hint)) {
+		throw new Error(`Hint incorrectly offers the current stage as a target: ${hint}`);
 	}
 });
 
