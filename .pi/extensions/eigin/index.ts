@@ -22,6 +22,15 @@
  * - Lets the agent propose a transition via a confirm dialog (never automatic).
  * - Blocks stateful/destructive git, `terraform apply`/`destroy`, and
  *   `just infra deploy` (which wraps it) everywhere.
+ * - Auto-names new sessions from a cheap one-shot LLM call on the first
+ *   prompt, via pi.setSessionName() (see observability/generate-session-name.ts)
+ *   — skipped for resumed/forked sessions and manual /name. This feeds pi's
+ *   own terminal-title logic (`<app> - <name> - <cwd>`) and renames the
+ *   session in /resume lists. Re-name anytime with /eigin:rename. Rings the
+ *   terminal bell on agent_end so a pipelined, multi-terminal workflow
+ *   surfaces which session just finished (Zed's integrated terminal ignores
+ *   OSC 9/777 notify sequences but does show a bell as an attention
+ *   indicator on unfocused tabs).
  * - Integrates Plannotator as a review UI (see tools/plannotator.ts).
  * - Persists workflow + stage across session resume (old sessions without a
  *   persisted workflow default to Feature).
@@ -52,6 +61,7 @@
  *   /eigin:role              pick a role, then a model, interactively
  *   /eigin:role <role>       pick a model for that role (planner|builder|explorer)
  *   /eigin:role <role> <id>  set a role's model directly ("provider/id" if ambiguous)
+ *   /eigin:rename            regenerate the session name from the most recent user message
  *
  * Module layout:
  *   index.ts            wiring: footer, tool gating, guidance injection, persistence
@@ -78,6 +88,9 @@
  *       model-role.ts        resolves an agent's `role:<name>` model to a real model id
  *   workflow/build-handoff.ts composes the Plan→Build compaction instructions + kickoff message
  *   workflow/task-list.ts pure task-list state (add/resolve/format), rendered with the stage hint
+ *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
+ *   observability/generate-session-name.ts one-shot LLM call producing the session name
+ *   observability/bell.ts            terminal BEL write
  */
 
 import type {
@@ -87,6 +100,9 @@ import type {
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
 import { checkCommand } from "./guardrails/guards.ts";
+import { ringBell } from "./observability/bell.ts";
+import { generateSessionName } from "./observability/generate-session-name.ts";
+import { extractLastUserText } from "./observability/session-name.ts";
 import {
   getLastApprovedPlanPath,
   registerPlannotator,
@@ -185,6 +201,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
   let currentWorkflow: WorkflowId = DEFAULT_WORKFLOW;
   let currentStage: StageId = firstStage(getWorkflow(DEFAULT_WORKFLOW));
   let taskListState: TaskListState = emptyTaskList();
+  let hasAutoNamed = false;
 
   // --- Workflow/stage lookups ---------------------------------------------
 
@@ -224,6 +241,50 @@ export default function stageExtension(pi: ExtensionAPI): void {
 
   function persist(): void {
     pi.appendEntry(STATE_TYPE, { workflow: currentWorkflow, stage: currentStage });
+  }
+
+  // --- Session naming / bell ----------------------------------------------
+
+  /**
+   * Kicks off one-shot session naming, fire-and-forget so it never blocks
+   * the turn it's triggered from. Names via pi.setSessionName() rather than
+   * ctx.ui.setTitle() directly: this also renames the session in /resume
+   * lists, and pi.setSessionName() is what feeds pi's own terminal-title
+   * logic (see updateTerminalTitle below for how we then trim that title).
+   */
+  function maybeAutoNameSession(ctx: ExtensionContext, sourceText: string): void {
+    if (hasAutoNamed || pi.getSessionName()) return;
+    hasAutoNamed = true; // Mark handled regardless of outcome — never retry mid-session.
+    void generateSessionName(ctx, sourceText)
+      .then((name) => {
+        if (name) pi.setSessionName(name);
+      })
+      .catch(() => {
+        // Best-effort — e.g. ctx went stale from a session replacement mid-flight.
+      });
+  }
+
+  /**
+   * Trims pi's own terminal title down to `<app> - <name>`, dropping the
+   * trailing ` - <cwd>` pi's interactive-mode appends by default (see
+   * updateTerminalTitle() in interactive-mode.js). That suffix is redundant
+   * for this workflow — the terminal is already scoped to one repo — and on
+   * terminals that render the OSC title as the actual tab text (unlike Zed's
+   * plain terminal panes, which only reflect it in the optional breadcrumb
+   * toolbar) it reads as visual clutter: "<name> - eigin" when you're
+   * already looking at the eigin terminal.
+   *
+   * pi's own title update runs synchronously off the same session_start /
+   * session_info_changed events we hook here, so a same-tick ctx.ui.setTitle()
+   * call could still lose the "last write wins" race depending on handler
+   * registration order. Deferring via setTimeout(0) guarantees ours runs in
+   * a later tick, after any core-side title write for the same event.
+   */
+  function updateTerminalTitle(ctx: ExtensionContext): void {
+    if (!ctx.hasUI) return;
+    const name = pi.getSessionName();
+    if (!name) return; // No name yet — leave pi's own "<app> - <cwd>" default in place.
+    setTimeout(() => ctx.ui.setTitle(`π - ${name}`), 0);
   }
 
   // --- Task list -----------------------------------------------------------
@@ -505,6 +566,43 @@ export default function stageExtension(pi: ExtensionAPI): void {
     cleanupPlannotator();
   });
 
+  // --- Session naming / bell events ---------------------------------------
+
+  // Auto-name on the first prompt of a session (skipped if already named —
+  // manual /name, a resumed/forked session, or an earlier auto-name this run).
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (!ctx.hasUI || !event.prompt?.trim()) return;
+    maybeAutoNameSession(ctx, event.prompt);
+  });
+
+  // Fires for auto-naming, manual /name, and /eigin:rename alike (all three
+  // go through pi.setSessionName()) — trim the resulting title every time.
+  pi.on("session_info_changed", async (_event, ctx) => {
+    updateTerminalTitle(ctx);
+  });
+
+  pi.registerCommand("eigin:rename", {
+    description: "Regenerate the session name from the most recent user message",
+    handler: async (_args, ctx) => {
+      const lastPrompt = extractLastUserText(ctx.sessionManager.getEntries());
+      if (!lastPrompt) {
+        ctx.ui.notify("No user message to name the session from.", "warning");
+        return;
+      }
+      const name = await generateSessionName(ctx, lastPrompt);
+      if (name) {
+        pi.setSessionName(name);
+        ctx.ui.notify(`Session renamed: ${name}`, "info");
+      } else {
+        ctx.ui.notify("Could not generate a session name (no model or API key?).", "warning");
+      }
+    },
+  });
+
+  pi.on("agent_end", async (_event, ctx) => {
+    if (ctx.mode === "tui") ringBell(); // Zed shows this as an attention dot on unfocused tabs.
+  });
+
   // --- Always-blocked commands + stage write scope -----------------------
 
   pi.on("tool_call", async (event) => {
@@ -608,9 +706,15 @@ Always blocked (every stage): the agent should not run stateful or destructive g
       }
     }
 
+    // Resumed/forked sessions (or a manual /name) already carry a name —
+    // don't auto-rename over it. New sessions get exactly one auto-name shot,
+    // fired from before_agent_start on the first prompt.
+    hasAutoNamed = !!pi.getSessionName();
+
     applyStageTools();
     updateStatus(ctx);
     updateTaskStatus(ctx);
+    updateTerminalTitle(ctx); // Resumed/forked sessions already have a name — trim the title pi sets on rebind.
     persist(); // Ensure a freshly-picked (or defaulted) workflow/stage is recorded even if nothing else changes it.
     await suggestModel(activeStage(), ctx);
   });
