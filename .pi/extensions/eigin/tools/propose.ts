@@ -66,7 +66,12 @@ export function registerProposeTool(
 
       // Target stage isn't part of the active workflow — report the valid
       // stages instead of prompting for an impossible transition (e.g.
-      // proposing "review" while in the Bug workflow, which has none).
+      // proposing "review" while in the Bug workflow, which has none). No
+      // `terminate` here (unlike the cancelled/declined-without-note cases
+      // below): this is the agent's own mistake, not a user decision, so it
+      // should get an automatic follow-up call and self-correct by proposing
+      // a valid stage in the same turn rather than surfacing a raw rejection
+      // that the user has to notice and relay back.
       if (!hasStage(workflow, target)) {
         const valid = workflow.stages.map((s) => s.id).join(", ");
         return {
@@ -77,7 +82,6 @@ export function registerProposeTool(
             },
           ],
           details: { stage: target, decision: "not-in-workflow" },
-          terminate: true,
         };
       }
 

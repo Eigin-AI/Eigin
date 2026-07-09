@@ -41,9 +41,10 @@
  * - Provides an `explore` sub-agent (isolated `pi` subprocess) the main agent
  *   can delegate codebase/docs/web reconnaissance to (see tools/subagent/).
  *   The sub-agent's own eigin process runs in a stripped-down mode (detected
- *   via the EIGIN_SUBAGENT env var): only the bash guardrail and web_search
- *   default are registered — no stage, no UI calls, no stage context leaked
- *   into the child. See registerSubagentModeGuards below.
+ *   via the EIGIN_SUBAGENT env var): only the web_search default is
+ *   registered — no stage, no UI calls, no stage context leaked into the
+ *   child. Guardrails (see below) still apply, since that package is loaded
+ *   independently. See registerSubagentModeGuards below.
  * - Offers to compact context on Plan→Build — the one deliberate "big
  *   transition" — then auto-sends a kickoff with the approved plan inlined,
  *   so Build starts from a compacted context + the plan rather than the full
@@ -70,7 +71,6 @@
  *   workflow/stage-hint.ts per-turn stage guidance, injected via the context event
  *   workflow/roles.ts     model roles (planner/builder/explorer) + built-in defaults
  *   workflow/role-store.ts persists per-developer role→model overrides (.pi/model-roles.json)
- *   guardrails/guards.ts pure invariant checks (destructive git, terraform apply)
  *   tool-defaults.ts     project-scoped defaults for third-party tools (e.g. web_search)
  *   tools/               always-on interactive tools
  *     propose.ts           propose_stage (yes/no transition dialog)
@@ -91,6 +91,12 @@
  *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
  *   observability/generate-session-name.ts one-shot LLM call producing the session name
  *   observability/bell.ts            terminal BEL write
+ *
+ * Hard-invariant enforcement (destructive git, terraform apply/destroy, `just
+ * infra deploy`, secret files, outside-repo path access, dangerous shell
+ * commands) lives in the @aliou/pi-guardrails package — see
+ * .pi/extensions/guardrails.json. This extension no longer duplicates that
+ * logic; it stays focused on workflow/stage machinery.
  */
 
 import type {
@@ -99,7 +105,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
-import { checkCommand } from "./guardrails/guards.ts";
 import { ringBell } from "./observability/bell.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
@@ -178,22 +183,22 @@ const SUBAGENT_ENV_VAR = "EIGIN_SUBAGENT";
 /**
  * The eigin extension inside a sub-agent's child process. The child has no
  * concept of the parent's workflow stage and doesn't need one — it only sees
- * its own task. Register just the non-UI, always-correct invariants: the bash
- * guardrail (git-write/terraform/`just infra deploy` stay blocked even in the
- * child) and the web_search default. Skip everything else (footer, tool
- * gating, stage/role commands, model suggestion, stage-hint injection,
- * persistence) — all of it either needs a UI the child doesn't have, or would
- * clobber the `--tools` allowlist the parent configured for this agent.
+ * its own task. Register just the non-UI default: the web_search default.
+ * Skip everything else (footer, tool gating, stage/role commands, model
+ * suggestion, stage-hint injection, persistence) — all of it either needs a
+ * UI the child doesn't have, or would clobber the `--tools` allowlist the
+ * parent configured for this agent.
+ *
+ * Hard invariants (destructive git, terraform apply/destroy, `just infra
+ * deploy`, secret files, outside-repo paths, dangerous commands) don't need
+ * re-registering here: the @aliou/pi-guardrails package is loaded from
+ * .pi/settings.json like any other extension, so it's active in the child
+ * process too. Its non-interactive path (no UI to prompt in `-p` mode)
+ * hard-blocks rather than hanging — see .pi/extensions/guardrails.json.
  */
 function registerSubagentModeGuards(pi: ExtensionAPI): void {
   pi.on("tool_call", async (event) => {
     applyWebSearchDefault(event.toolName, event.input as ToolCallInput);
-
-    if (event.toolName === "bash") {
-      const command = (event.input as { command?: string }).command ?? "";
-      const violation = checkCommand(command);
-      if (violation) return { block: true, reason: violation.reason };
-    }
   });
 }
 
@@ -607,7 +612,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     if (ctx.mode === "tui") ringBell(); // Zed shows this as an attention dot on unfocused tabs.
   });
 
-  // --- Always-blocked commands + stage write scope -----------------------
+  // --- Stage write scope ---------------------------------------------
 
   pi.on("tool_call", async (event) => {
     // Project-scoped default: web_search skips the browser curator unless the
@@ -616,13 +621,6 @@ export default function stageExtension(pi: ExtensionAPI): void {
     // Project-scoped default: subagent finds our committed .pi/agents/*.md
     // without a per-call confirmation prompt (see tool-defaults.ts).
     applySubagentDefaults(event.toolName, event.input as ToolCallInput);
-
-    // Block destructive bash commands (every stage).
-    if (event.toolName === "bash") {
-      const command = (event.input as { command?: string }).command ?? "";
-      const violation = checkCommand(command);
-      if (violation) return { block: true, reason: violation.reason };
-    }
 
     // In the Plan stage, restrict write/edit to markdown files only.
     if (

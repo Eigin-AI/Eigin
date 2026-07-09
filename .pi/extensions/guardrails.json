@@ -1,0 +1,44 @@
+{
+  "$schema": "https://unpkg.com/@aliou/pi-guardrails@0.15.0/schema.json",
+  "enabled": true,
+  "applyBuiltinDefaults": true,
+  "features": {
+    "policies": true,
+    "permissionGate": true,
+    "pathAccess": true
+  },
+  "pathAccess": {
+    "mode": "ask"
+  },
+  "permissionGate": {
+    "requireConfirmation": true,
+    "autoDenyPatterns": [
+      {
+        "pattern": "\\bgit\\s+(?:-\\S+\\s+)*(?:commit|push|merge|rebase|reset)\\b",
+        "regex": true,
+        "description": "Stateful/destructive git — the agent should not commit, push, merge, rebase, or reset. This is the user's to run — discuss it with them, or tell them what to try. Read-only git (status/log/diff/show) is fine."
+      },
+      {
+        "pattern": "\\bgit\\s+branch\\s+(?:\\S+\\s+)*-(?:d|D|m|M|f)\\b",
+        "regex": true,
+        "description": "Git branch delete/rename — branch changes are the user's to run."
+      },
+      {
+        "pattern": "\\bgit\\s+remote\\s+(?:add|remove|rm|rename|set-url|set-head|prune)\\b",
+        "regex": true,
+        "description": "Git remote mutation — the user manages remotes themselves."
+      },
+      {
+        "pattern": "\\b(?:terraform|tofu)\\s+(?:apply|destroy)\\b",
+        "regex": true,
+        "description": "Terraform/OpenTofu apply or destroy — infra changes are the user's to run. `terraform plan` is fine."
+      },
+      {
+        "pattern": "\\bjust\\s+(?:-\\S+\\s+)*infra\\s+deploy\\b",
+        "regex": true,
+        "description": "`just infra deploy` wraps `terraform apply` and deploys infra — this is the user's to run. `just infra plan`/`init` are fine."
+      }
+    ]
+  },
+  "version": "0.13.0-20260619"
+}
