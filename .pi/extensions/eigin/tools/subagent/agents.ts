@@ -5,7 +5,7 @@
  * upstream: an agent's `model` frontmatter field may be a `role:<name>`
  * sentinel (e.g. `role:explorer`) instead of a literal model id, resolved
  * against our workflow/roles.ts role store on every discovery call — so
- * `/role explorer <id>` changes take effect on the next invocation without
+ * `/eigin:role explorer <id>` changes take effect on the next invocation without
  * touching agent files. See model-role.ts.
  */
 
