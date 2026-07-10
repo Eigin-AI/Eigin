@@ -48,6 +48,7 @@
 
 - [Overview](./integrations/README.md)
 - [Google](./integrations/google.md)
+- [Microsoft](./integrations/microsoft.md)
 
 # Voice
 

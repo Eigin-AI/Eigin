@@ -72,6 +72,42 @@ struct IntegrationManagerTests {
         #expect(Set(toolNames).count == toolNames.count)
     }
 
+    @Test @MainActor func toolsByCapabilityKeepsOnlyTheFirstConnectedIntegrationAcrossDifferentProviders() {
+        // Google and Microsoft both provide `.email` — whichever was connected
+        // first wins, and disconnecting it lets the other take over.
+        let manager = IntegrationManager(oauthService: FakeIntegrationOAuthService())
+        let earlierDate = Date(timeIntervalSince1970: 0)
+        let laterDate = Date(timeIntervalSince1970: 1000)
+        let google = Integration(
+            typeID: "google", accountLabel: "a@gmail.com",
+            grantedCapabilities: [Capability.email.rawValue]
+        )
+        google.createdAt = earlierDate
+        let microsoft = Integration(
+            typeID: "microsoft", accountLabel: "a@outlook.com",
+            grantedCapabilities: [Capability.email.rawValue]
+        )
+        microsoft.createdAt = laterDate
+
+        // Both connected: only the earlier-created integration's five tools
+        // contribute — not both providers' tools stacked (which would be 10
+        // same-named tools colliding in `ToolRegistry`).
+        let bothConnected = manager.toolsByCapability(
+            integrations: [google, microsoft],
+            context: ToolContext()
+        )
+        #expect((bothConnected[.email] ?? []).count == 5)
+
+        // Disconnecting the winner (drop it from the integrations list) lets
+        // the remaining provider take over.
+        let microsoftOnly = manager.toolsByCapability(
+            integrations: [microsoft],
+            context: ToolContext()
+        )
+        let names = Set((microsoftOnly[.email] ?? []).map(\.name))
+        #expect(names == ["email_list", "email_search", "email_read", "email_send", "email_reply"])
+    }
+
     @Test @MainActor func isConnectedReflectsGrantAndEnabledState() {
         let manager = IntegrationManager(oauthService: FakeIntegrationOAuthService())
         let connected = Integration(

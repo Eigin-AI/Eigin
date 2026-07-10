@@ -17,4 +17,8 @@ enum AppKeys {
     /// Google's OAuth client ID for the Eigin iOS app (public, no secret).
     static let googleOAuthClientID: String =
         Bundle.main.infoDictionary?["EiginGoogleOAuthClientID"] as? String ?? ""
+
+    /// Microsoft's OAuth client ID for the Eigin iOS app (public, no secret).
+    static let microsoftOAuthClientID: String =
+        Bundle.main.infoDictionary?["EiginMicrosoftOAuthClientID"] as? String ?? ""
 }

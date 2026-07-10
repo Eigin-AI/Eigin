@@ -72,7 +72,7 @@ struct IntegrationType: Sendable {
 
 /// Built-in integration types that ship with the app.
 enum BundledIntegrationType {
-    static let all: [IntegrationType] = [google]
+    static let all: [IntegrationType] = [google, microsoft]
 
     static func type(forID id: String) -> IntegrationType? {
         all.first { $0.id == id }
@@ -104,5 +104,31 @@ enum BundledIntegrationType {
             }
         },
         accountLabel: { accessToken in await GoogleAccountInfo.email(accessToken: accessToken) }
+    )
+
+    static let microsoft = IntegrationType(
+        id: "microsoft",
+        displayName: "Microsoft",
+        description: "Connect a Microsoft account to read and send email.",
+        systemImage: "envelope.fill",
+        providedCapabilities: [.email],
+        authKind: .oauth(configFactory: MicrosoftOAuth.config),
+        requiredScopes: [
+            .email: ["Mail.Read", "Mail.Send"],
+        ],
+        toolCapabilities: EmailToolCapabilities.all,
+        makeTools: { capability, integration, _ in
+            switch capability {
+            case .email:
+                let provider = MicrosoftEmailProvider(
+                    integrationID: integration.id,
+                    oauthService: Container.shared.integrationOAuthService(),
+                    oauthConfig: MicrosoftOAuth.config(),
+                    accountAddress: integration.accountLabel
+                )
+                return EmailToolKit.tools(provider: provider)
+            }
+        },
+        accountLabel: { accessToken in await MicrosoftAccountInfo.email(accessToken: accessToken) }
     )
 }
