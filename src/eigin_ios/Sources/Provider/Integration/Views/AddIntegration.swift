@@ -8,9 +8,6 @@ struct AddIntegration: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colors) private var colors
     @Injected(\.integrationOAuthService) private var oauthService
-    @Injected(\.integrationManager) private var integrationManager
-    @Query(filter: #Predicate<Integration> { $0.isEnabled
-    }) private var existingIntegrations: [Integration]
 
     @State private var phase: Phase = .picking
     @State private var partialGrantWarning: String?
@@ -119,21 +116,11 @@ struct AddIntegration: View {
     }
 
     private func connect(_ type: IntegrationType) {
-        // One provider per capability for now: connecting a second integration
-        // that would provide a capability another connection already grants
-        // means two same-named tools in one registry with no way to address a
-        // specific account. Disconnect the existing one first instead.
-        let alreadyConnected = integrationManager
-            .connectedCapabilities(integrations: existingIntegrations)
-        let conflicts = type.providedCapabilities.intersection(alreadyConnected)
-        guard conflicts.isEmpty else {
-            let names = conflicts.map(\.rawValue.titleCased).joined(separator: ", ")
-            phase = .error(
-                "\(names) is already provided by a connected integration. Disconnect it first to connect a different one."
-            )
-            return
-        }
-
+        // More than one provider can grant the same capability (e.g. Google
+        // and Microsoft both provide `.email`) — `IntegrationManager` already
+        // defends against two connected integrations both contributing
+        // same-named tools for it, keeping only the first-connected one, so no
+        // guard is needed here beyond that.
         guard case .oauth(let configFactory) = type.authKind else { return }
         let config = configFactory()
         // Client id comes from a build-time secret (see `.env` / project.yml) —

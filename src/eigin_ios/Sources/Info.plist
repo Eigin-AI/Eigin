@@ -24,6 +24,8 @@
 	<string>1</string>
 	<key>EiginGoogleOAuthClientID</key>
 	<string>$(EIGIN_GOOGLE_OAUTH_CLIENT_ID)</string>
+	<key>EiginMicrosoftOAuthClientID</key>
+	<string>$(EIGIN_MICROSOFT_OAUTH_CLIENT_ID)</string>
 	<key>EiginRelayKey</key>
 	<string>$(EIGIN_RELAY_PRIMARY_KEY)</string>
 	<key>EiginRelayURL</key>

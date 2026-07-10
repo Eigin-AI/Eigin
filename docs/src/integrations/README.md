@@ -13,3 +13,4 @@ Integration tools appear in the normal [permissions](../tools/permissions.md) sc
 | Integration | Capability | Auth |
 |---|---|---|
 | [Google](./google.md) | `email` | OAuth |
+| [Microsoft](./microsoft.md) | `email` | OAuth |

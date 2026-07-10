@@ -30,4 +30,19 @@ struct IntegrationTypeGrantTests {
         let granted = google.grantedCapabilities(fromGrantedScopes: [])
         #expect(granted.isEmpty)
     }
+
+    @Test func microsoftAllRequiredScopesGrantedMeansCapabilityGranted() {
+        let microsoft = BundledIntegrationType.microsoft
+        let granted = microsoft.grantedCapabilities(fromGrantedScopes: [
+            "Mail.Read", "Mail.Send", "offline_access", "User.Read",
+        ])
+        #expect(granted.contains(.email))
+    }
+
+    @Test func microsoftMissingSendScopeMeansCapabilityNotGranted() {
+        let microsoft = BundledIntegrationType.microsoft
+        // User approved read but denied send.
+        let granted = microsoft.grantedCapabilities(fromGrantedScopes: ["Mail.Read"])
+        #expect(!granted.contains(.email))
+    }
 }
