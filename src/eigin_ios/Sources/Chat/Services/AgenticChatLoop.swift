@@ -104,7 +104,7 @@ final class AgenticChatLoop {
     /// Optional callback invoked after each tool execution round to rebuild the tool
     /// registry (e.g. when a skill is activated mid-turn). Returns updated definitions
     /// and executor for subsequent rounds.
-    var onToolsChanged: (() -> (tools: [ToolDefinition], executor: ToolExecutor))?
+    var onToolsChanged: (() async -> (tools: [ToolDefinition], executor: ToolExecutor))?
 
     /// Maximum number of tool-calling rounds before forcing a stop.
     private let maxRounds = 40
@@ -353,7 +353,7 @@ final class AgenticChatLoop {
 
                 // Rebuild tools if a skill was activated (or any other tool changed the registry).
                 if let onToolsChanged {
-                    let updated = onToolsChanged()
+                    let updated = await onToolsChanged()
                     currentTools = updated.tools
                     currentExecutor = updated.executor
                 }

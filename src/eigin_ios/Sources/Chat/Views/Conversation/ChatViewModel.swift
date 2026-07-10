@@ -219,7 +219,10 @@ final class ChatViewModel {
                 self.window.isPreloaded
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
                     : self.window.messages
-            let activeSkills = self.resolvedActiveSkills(integrations: integrations)
+            let activeSkills = self.resolvedActiveSkills(
+                integrations: integrations,
+                mcpServers: servers
+            )
 
             let turn = await MessagePipeline.prepareTurn(
                 messages: msgs,
@@ -262,27 +265,43 @@ final class ChatViewModel {
             }
             self.chatLoop.onToolsChanged = { [weak self] in
                 guard let self else { return (tools: registry.definitions, executor: registry) }
-                let updatedSkills = resolvedActiveSkills(integrations: integrations)
+                let updatedSkills = resolvedActiveSkills(
+                    integrations: integrations,
+                    mcpServers: servers
+                )
 
                 let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
                 let isSmallContext = contextWindow <= MessagePipeline.smallContextThreshold
 
                 let activeOnDemand = updatedSkills.last
-                let updatedRegistry = if isSmallContext {
-                    ToolRegistry.smallChat(
+                let updatedRegistry: ToolRegistry
+                if isSmallContext {
+                    updatedRegistry = ToolRegistry.smallChat(
                         chatID: chat?.id,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkill: activeOnDemand
                     )
                 } else {
-                    ToolRegistry.chat(
+                    // Connect only the MCP servers backing active skills (e.g. one
+                    // just activated by this round's tool call) and gather fresh
+                    // tool proxies — turn.mcpTools reflects only what was active
+                    // at turn start.
+                    let activeMCPSkillIDs = Set(updatedSkills.map(\.id))
+                        .intersection(turn.mcpSkills.map(\.id))
+                    nonisolated(unsafe) let activeMCPServers = activeMCPSkillIDs.compactMap {
+                        MCPServerSkill.server(forSkillID: $0, servers: servers)
+                    }
+                    let mcpTools = await Container.shared.mcpServerManager()
+                        .prepareTools(servers: activeMCPServers)
+                    updatedRegistry = ToolRegistry.chat(
                         spaceID: chat?.spaceID, chatID: chat?.id,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkills: BundledSkill.alwaysActive
                             + updatedSkills.filter { !$0.alwaysActive },
-                        additionalTools: turn.mcpTools,
+                        mcpTools: mcpTools,
+                        mcpSkills: turn.mcpSkills,
                         integrationToolsByCapability: turn.integrationToolsByCapability,
                         onBrowse: browseHandler,
                         onPresentOptions: optionsHandler
@@ -542,11 +561,14 @@ final class ChatViewModel {
     /// would keep injecting instructions ("if an email account is
     /// connected...") and the agent could still try to call its tools, which
     /// ``IntegrationManager`` no longer supplies, landing on "Unknown tool".
-    private func resolvedActiveSkills(integrations: [Integration]) -> [Skill] {
+    private func resolvedActiveSkills(
+        integrations: [Integration],
+        mcpServers: [MCPServer]
+    ) -> [Skill] {
         let connected = Container.shared.integrationManager()
             .connectedCapabilities(integrations: integrations)
         return (chat?.activeSkillEntries ?? [])
-            .compactMap { BundledSkill.skill(forID: $0.skillID) }
+            .compactMap { SkillCatalog.skill(forID: $0.skillID, mcpServers: mcpServers) }
             .filter { skill in
                 skill.requiredCapabilities.isEmpty
                     || !skill.requiredCapabilities.isDisjoint(with: connected)

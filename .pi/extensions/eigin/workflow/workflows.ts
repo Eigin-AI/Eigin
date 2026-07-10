@@ -88,6 +88,7 @@ Behavior/functionality is settled — now make the *code* good.
 - Draft the MR description following \`.gitlab/merge_request_templates/Default.md\`: closes-issue line, one-line summary, then Summary / Changes / Related / Notes / How to Test. Keep it short and scannable, not prose — Changes is high-level bullet points of what's relevant, not every diff.
 - Reference the originating issue via \`Closes #<n>\`. If none exists, note that one should be created.
 - Confirm with the user that the branch has been pushed (do NOT run git yourself — the user drives git and pushes themselves).
+- Write MR drafts to \`.pi/mr/<short-name>.md\`.
 - Once pushed, use the \`glab\` CLI to create the merge request (project: dev/eigin on code.eigin.ai), e.g. \`glab mr create --title "..." --description "$(cat <path>)" --source-branch <branch>\` (glab's \`mr create\` has no \`--description-file\` flag — pass the rendered description text).
 - Title the MR using Conventional Commits (e.g. \`feat: pi coding agent\`, \`fix: deal with local model crash\`) — type, colon, short imperative summary.
 - Check existing issues/labels (\`glab label list\`) for the right tags to apply to the MR, following the conventions in \`.gitlab/issue_templates/\`.`,

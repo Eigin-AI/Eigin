@@ -40,6 +40,11 @@ struct SystemHintInput {
     /// Capabilities provided by at least one connected, enabled integration.
     var connectedCapabilities: Set<Capability> = []
     let activeFlow: FlowState?
+    /// Notes for active MCP server skills whose server couldn't be reached
+    /// this turn (e.g. token expired, server down) — surfaced so the agent
+    /// can tell the user rather than silently losing the tools. The skill
+    /// stays active; see ``ActiveSkillsSource``.
+    var unavailableSkillNotes: [String] = []
 
     // MARK: Provider & Model
 

@@ -13,14 +13,22 @@ final class ActiveSkillsSource: SystemHintSource {
 
     func render(_ input: SystemHintInput) async -> String? {
         guard !input.isSmallContext else { return nil }
-        guard !input.activeSkills.isEmpty else { return nil }
+        guard !input.activeSkills.isEmpty || !input.unavailableSkillNotes.isEmpty
+        else { return nil }
 
-        return input.activeSkills
+        var sections = input.activeSkills
             .map {
                 let instruction = $0.instruction
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 return "### \($0.displayName)\n\n\(instruction)"
             }
-            .joined(separator: "\n\n")
+
+        // An active MCP server skill whose server couldn't be reached this turn
+        // stays active (its instructions above still render), but its tools are
+        // absent — flag that here so the agent can tell the user, rather than
+        // silently failing tool calls.
+        sections.append(contentsOf: input.unavailableSkillNotes)
+
+        return sections.joined(separator: "\n\n")
     }
 }
