@@ -6,6 +6,7 @@
 typealias Agent = SchemaV1.Agent
 typealias AgentInitiativeRequest = SchemaV1.AgentInitiativeRequest
 typealias AgentToolGrant = SchemaV1.AgentToolGrant
+typealias CapabilityProviderSelection = SchemaV5.CapabilityProviderSelection
 typealias Chat = SchemaV4.Chat
 typealias ChatToolGrant = SchemaV1.ChatToolGrant
 typealias FirmSource = SchemaV1.FirmSource

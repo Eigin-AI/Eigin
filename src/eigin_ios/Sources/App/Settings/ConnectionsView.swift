@@ -7,9 +7,11 @@ struct ConnectionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Injected(\.keychainService) private var keychainService
+    @Injected(\.integrationManager) private var integrationManager
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
     @Query(sort: \Integration.createdAt) private var integrations: [Integration]
+    @Query private var capabilitySelections: [CapabilityProviderSelection]
     @State private var showSelectSheet = false
     @State private var showConnectSheet = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
@@ -122,6 +124,46 @@ struct ConnectionsView: View {
 
     // MARK: - Integrations
 
+    /// Connected integrations grouped by the capability they were granted for.
+    /// One integration can appear in more than one section (e.g. an account
+    /// that provides both email and, in future, calendar).
+    private struct CapabilitySection: Identifiable {
+        let capability: Capability
+        let providers: [Integration]
+        var id: Capability {
+            capability
+        }
+    }
+
+    private var capabilitySections: [CapabilitySection] {
+        var byCapability: [Capability: [Integration]] = [:]
+        for integration in integrations where integration.isEnabled {
+            guard let type = BundledIntegrationType.type(forID: integration.typeID)
+            else { continue }
+            let granted = type.providedCapabilities
+                .filter { integration.grantedCapabilities.contains($0.rawValue) }
+            for capability in granted {
+                byCapability[capability, default: []].append(integration)
+            }
+        }
+        return byCapability
+            .map { capability, providers in
+                CapabilitySection(
+                    capability: capability,
+                    providers: providers.sorted { $0.createdAt < $1.createdAt }
+                )
+            }
+            .sorted { $0.capability.rawValue < $1.capability.rawValue }
+    }
+
+    private func activeIntegrationID(for section: CapabilitySection) -> UUID? {
+        integrationManager.activeIntegration(
+            for: section.capability,
+            integrations: integrations,
+            selections: capabilitySelections
+        )?.id
+    }
+
     private var integrationsGroup: some View {
         VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
             sectionLabel(Localized.Ui.integrations)
@@ -129,23 +171,33 @@ struct ConnectionsView: View {
             AppCardSurface(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(
-                        Array(integrations.enumerated()),
-                        id: \.element.id
-                    ) { index, integration in
-                        if index > 0 {
+                        Array(capabilitySections.enumerated()),
+                        id: \.element.capability
+                    ) { sectionIndex, section in
+                        if sectionIndex > 0 {
                             Divider().padding(.leading, Spacing.n24)
                         }
 
-                        NavigationLink {
-                            IntegrationDetail(integration: integration)
-                                .hidesTabBar()
-                        } label: {
-                            integrationRow(integration)
+                        capabilityHeaderRow(section.capability)
+
+                        ForEach(
+                            Array(section.providers.enumerated()),
+                            id: \.element.id
+                        ) { providerIndex, integration in
+                            if providerIndex > 0 {
+                                Divider().padding(.leading, Spacing.n24)
+                            }
+
+                            integrationRow(
+                                integration,
+                                capability: section.capability,
+                                isActive: activeIntegrationID(for: section) == integration.id,
+                                showsSelector: section.providers.count > 1
+                            )
                         }
-                        .buttonStyle(.plain)
                     }
 
-                    if !integrations.isEmpty {
+                    if !capabilitySections.isEmpty {
                         Divider().padding(.leading, Spacing.n24)
                     }
 
@@ -169,26 +221,68 @@ struct ConnectionsView: View {
         }
     }
 
-    private func integrationRow(_ integration: Integration) -> some View {
+    private func capabilityHeaderRow(_ capability: Capability) -> some View {
+        Text(capability.rawValue.titleCased)
+            .typography(Typography.miniLabel)
+            .foregroundStyle(colors.text.standard.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.n24)
+            .padding(.top, Spacing.n16)
+            .padding(.bottom, Spacing.n4)
+    }
+
+    /// A single provider row for a capability section. The text area navigates
+    /// to ``IntegrationDetail`` (remove/inspect); the trailing radio (shown
+    /// only when the capability has more than one provider) sets this
+    /// integration as the active one for `capability` without navigating.
+    private func integrationRow(
+        _ integration: Integration,
+        capability: Capability,
+        isActive: Bool,
+        showsSelector: Bool
+    ) -> some View {
         HStack(spacing: Spacing.n16) {
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(BundledIntegrationType.type(forID: integration.typeID)?
-                    .displayName ?? integration.typeID)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                Text(integration.accountLabel)
-                    .typography(Typography.tag)
-                    .foregroundStyle(colors.text.standard.muted)
-                    .lineLimit(1)
+            NavigationLink {
+                IntegrationDetail(integration: integration)
+                    .hidesTabBar()
+            } label: {
+                HStack(spacing: Spacing.n16) {
+                    VStack(alignment: .leading, spacing: Spacing.n4) {
+                        Text(BundledIntegrationType.type(forID: integration.typeID)?
+                            .displayName ?? integration.typeID)
+                            .typography(Typography.titleXS)
+                            .foregroundStyle(colors.text.standard.base)
+                        Text(integration.accountLabel)
+                            .typography(Typography.tag)
+                            .foregroundStyle(colors.text.standard.muted)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .typography(Typography.miniLabel)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+                .contentShape(Rectangle())
             }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
+            .buttonStyle(.plain)
+
+            if showsSelector {
+                Button {
+                    integrationManager.setActiveProvider(
+                        integration,
+                        for: capability,
+                        in: modelContext
+                    )
+                } label: {
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(isActive ? colors.accent : colors.text.standard.muted)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, Spacing.n24)
         .padding(.vertical, Spacing.n16)
-        .contentShape(Rectangle())
     }
 
     // MARK: - Providers

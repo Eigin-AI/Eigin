@@ -142,6 +142,9 @@ struct IntegrationDetail: View {
 
     private func remove() {
         integrationManager.disconnect(integration)
+        // Fall back to the next connected provider for any capability this
+        // integration was the explicit active choice for.
+        integrationManager.clearSelections(referencing: integration.id, in: modelContext)
         modelContext.delete(integration)
         dismiss()
     }

@@ -118,9 +118,14 @@ enum SchemaV4: VersionedSchema {
 
 /// Schema V5 adds the `Integration` model, a connected instance of an
 /// external service (e.g. a Google account) that provides capabilities to
-/// skills. Every other model is unchanged and reused from V4.
+/// skills, and the `CapabilityProviderSelection` model, which records which
+/// connected integration is active for a capability when more than one
+/// provides it. Every other model is unchanged and reused from V4.
 ///
-/// Model definition lives in `SchemaV5/SchemaV5+Integration.swift`.
+/// Model definitions live in `SchemaV5/SchemaV5+Integration.swift` and
+/// `SchemaV5/SchemaV5+CapabilityProviderSelection.swift`. The latter was
+/// added after V5 shipped but before release, so it's folded into V5 in
+/// place rather than introducing a V6 migration.
 enum SchemaV5: VersionedSchema {
     static let versionIdentifier = Schema.Version(5, 0, 0)
 
@@ -138,6 +143,7 @@ enum SchemaV5: VersionedSchema {
             SchemaV2.Intent.self,
             SchemaV1.AgentInitiativeRequest.self,
             SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
         ]
     }
 }

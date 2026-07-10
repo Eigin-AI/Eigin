@@ -79,8 +79,13 @@ enum MessagePipeline {
         // 1b. Build integration tools, grouped by capability, gated in ToolAssembly
         // behind active skills (unlike MCP tools, which are always injected above).
         let integrationManager = Container.shared.integrationManager()
+        let capabilitySelections: [CapabilityProviderSelection] = {
+            guard let context = agent.modelContext else { return [] }
+            return (try? context.fetch(FetchDescriptor<CapabilityProviderSelection>())) ?? []
+        }()
         let integrationToolsByCapability = integrationManager.toolsByCapability(
             integrations: integrations,
+            selections: capabilitySelections,
             context: ToolContext(spaceID: spaceID, chatID: chatID, agentID: agent.id)
         )
 
