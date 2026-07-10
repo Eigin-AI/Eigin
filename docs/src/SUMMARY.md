@@ -49,6 +49,7 @@
 - [Overview](./integrations/README.md)
 - [Google](./integrations/google.md)
 - [Microsoft](./integrations/microsoft.md)
+- [IMAP](./integrations/imap.md)
 
 # Voice
 

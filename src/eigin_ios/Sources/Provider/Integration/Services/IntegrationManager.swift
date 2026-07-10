@@ -11,9 +11,11 @@ import SwiftData
 @MainActor
 final class IntegrationManager {
     private let oauthService: any IntegrationOAuthService
+    private let imapCredentialStore: any IMAPCredentialStore
 
-    init(oauthService: any IntegrationOAuthService) {
+    init(oauthService: any IntegrationOAuthService, imapCredentialStore: any IMAPCredentialStore) {
         self.oauthService = oauthService
+        self.imapCredentialStore = imapCredentialStore
     }
 
     /// Builds the capability → tools map for all connected, enabled integrations,
@@ -93,11 +95,16 @@ final class IntegrationManager {
         return result
     }
 
-    /// Disconnects an integration: clears its OAuth tokens and removes the model.
-    /// Callers are responsible for deleting `integration` from the model context
-    /// and calling ``clearSelections(referencing:in:)`` to fall back cleanly.
+    /// Disconnects an integration: clears its stored credentials (OAuth
+    /// tokens or, for IMAP, the stored server settings/password) and removes
+    /// the model. Both clears are unconditional — whichever one doesn't apply
+    /// to this integration's auth kind is simply a no-op against an empty
+    /// Keychain entry. Callers are responsible for deleting `integration` from
+    /// the model context and calling ``clearSelections(referencing:in:)`` to
+    /// fall back cleanly.
     func disconnect(_ integration: Integration) {
         oauthService.clearTokens(for: integration.id)
+        imapCredentialStore.clear(for: integration.id)
     }
 
     /// Marks `integration` as the active provider for `capability`, upserting
