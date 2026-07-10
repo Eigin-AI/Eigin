@@ -72,7 +72,7 @@ struct IntegrationType: Sendable {
 
 /// Built-in integration types that ship with the app.
 enum BundledIntegrationType {
-    static let all: [IntegrationType] = [google, microsoft]
+    static let all: [IntegrationType] = [google, microsoft, imap]
 
     static func type(forID id: String) -> IntegrationType? {
         all.first { $0.id == id }
@@ -130,5 +130,28 @@ enum BundledIntegrationType {
             }
         },
         accountLabel: { accessToken in await MicrosoftAccountInfo.email(accessToken: accessToken) }
+    )
+
+    static let imap = IntegrationType(
+        id: "imap",
+        displayName: Localized.Integrations.Imap.displayName,
+        description: Localized.Integrations.Imap.description,
+        systemImage: "envelope.fill",
+        providedCapabilities: [.email],
+        authKind: .imap,
+        // No OAuth scopes to gate on — a connected IMAP account grants every
+        // capability it provides, same as any other non-OAuth auth kind (see
+        // `grantedCapabilities(fromGrantedScopes:)`).
+        toolCapabilities: EmailToolCapabilities.all,
+        makeTools: { capability, integration, _ in
+            switch capability {
+            case .email:
+                let provider = IMAPEmailProvider(
+                    integrationID: integration.id,
+                    credentialStore: Container.shared.imapCredentialStore()
+                )
+                return EmailToolKit.tools(provider: provider)
+            }
+        }
     )
 }

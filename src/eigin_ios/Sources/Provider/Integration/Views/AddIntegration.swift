@@ -11,6 +11,7 @@ struct AddIntegration: View {
 
     @State private var phase: Phase = .picking
     @State private var partialGrantWarning: String?
+    @State private var showingAddIMAPAccount = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,6 +76,9 @@ struct AddIntegration: View {
         } message: {
             Text(partialGrantWarning ?? "")
         }
+        .sheet(isPresented: $showingAddIMAPAccount) {
+            AddIMAPAccount(onConnected: { dismiss() })
+        }
     }
 
     private var typesList: some View {
@@ -121,7 +125,18 @@ struct AddIntegration: View {
         // defends against two connected integrations both contributing
         // same-named tools for it, keeping only the first-connected one, so no
         // guard is needed here beyond that.
-        guard case .oauth(let configFactory) = type.authKind else { return }
+        switch type.authKind {
+        case .oauth(let configFactory):
+            connectOAuth(type, configFactory: configFactory)
+        case .imap:
+            showingAddIMAPAccount = true
+        }
+    }
+
+    private func connectOAuth(
+        _ type: IntegrationType,
+        configFactory: @Sendable () -> PKCEOAuthConfig
+    ) {
         let config = configFactory()
         // Client id comes from a build-time secret (see `.env` / project.yml) —
         // if it's missing, authorize() would still launch a browser session

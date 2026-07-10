@@ -745,6 +745,44 @@ enum Localized {
             }
         }
 
+        enum Imap {
+            /// Error shown when IMAP login fails during account verification. The argument is the
+            /// server's reason.
+            static func authFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.authFailed"), p1)
+            }
+
+            /// Error shown when connecting to the IMAP server fails during account verification.
+            /// The argument is the failure reason.
+            static func connectionFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.connectionFailed"), p1)
+            }
+
+            /// Error shown when SMTP login fails during account verification. The argument is the
+            /// server's reason.
+            static func smtpAuthFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.smtpAuthFailed"), p1)
+            }
+
+            /// Error shown when connecting to the SMTP server fails during account verification.
+            /// The argument is the failure reason.
+            static func smtpConnectionFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.smtpConnectionFailed"), p1)
+            }
+
+            /// Error shown when TLS negotiation fails during account verification. The argument is
+            /// the failure reason.
+            static func tlsFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.tlsFailed"), p1)
+            }
+
+            /// Generic fallback error shown during IMAP account verification when the failure
+            /// doesn't fit a more specific case. The argument is the failure reason.
+            static func unknown(_ p1: String) -> String {
+                String(format: Localized.get("errors.imap.unknown"), p1)
+            }
+        }
+
         enum Network {
             /// Short error title when the device has no internet connection
             static var noConnection: String {
@@ -1048,6 +1086,67 @@ enum Localized {
             /// Plural label for the 'thing' fact type
             static var things: String {
                 Localized.get("facts.type.things")
+            }
+        }
+    }
+
+    enum Integrations {
+        enum Imap {
+            /// Section header for the account (email/password) fields in the IMAP connect form
+            static var accountSection: String {
+                Localized.get("integrations.imap.accountSection")
+            }
+
+            /// Subtitle for the IMAP email integration type in the connect picker
+            static var description: String {
+                Localized.get("integrations.imap.description")
+            }
+
+            /// Display name for the generic IMAP/SMTP email integration
+            static var displayName: String {
+                Localized.get("integrations.imap.displayName")
+            }
+
+            /// Field label for the account's email address in the IMAP connect form
+            static var emailField: String {
+                Localized.get("integrations.imap.emailField")
+            }
+
+            /// Field label for a mail server hostname in the IMAP connect form
+            static var hostField: String {
+                Localized.get("integrations.imap.hostField")
+            }
+
+            /// Section header for IMAP server settings in the connect form
+            static var incomingSection: String {
+                Localized.get("integrations.imap.incomingSection")
+            }
+
+            /// Section header for SMTP server settings in the connect form
+            static var outgoingSection: String {
+                Localized.get("integrations.imap.outgoingSection")
+            }
+
+            /// Field label for the account password (often an app-specific password) in the IMAP
+            /// connect form
+            static var passwordField: String {
+                Localized.get("integrations.imap.passwordField")
+            }
+
+            /// Helper text under the password field in the IMAP connect form
+            static var passwordHint: String {
+                Localized.get("integrations.imap.passwordHint")
+            }
+
+            /// Field label for a mail server port in the IMAP connect form
+            static var portField: String {
+                Localized.get("integrations.imap.portField")
+            }
+
+            /// Field label for an optional server username, defaulting to the email address, in the
+            /// IMAP connect form
+            static var usernameField: String {
+                Localized.get("integrations.imap.usernameField")
             }
         }
     }
