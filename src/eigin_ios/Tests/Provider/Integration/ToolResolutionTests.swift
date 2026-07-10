@@ -5,7 +5,7 @@ import Testing
 
 /// Verifies the integrations gating rule: a tool from a connected integration
 /// is only in the turn's tool set when an active skill declares the matching
-/// capability — unlike MCP's always-injected `additionalTools`.
+/// capability.
 @Suite("Integration Tool Resolution")
 struct ToolResolutionTests {
     init() {

@@ -17,59 +17,77 @@ final class MCPServerManager: @unchecked Sendable {
         self.oauthService = oauthService
     }
 
-    /// Ensures all enabled servers are connected. Skips already-connected servers.
+    /// Ensures the given servers are connected, skipping already-connected ones.
+    /// Any tracked connection whose server isn't in `servers` (or has been
+    /// disabled) is torn down. Callers pass the specific servers they need
+    /// connected — e.g. those backing active skills in a chat, not every
+    /// enabled server (see ``MCPServerSkill``, whose catalog needs no connection).
     func ensureConnected(servers: [MCPServer]) async {
-        // Disconnect servers that were removed or disabled
-        let enabledIDs = Set(servers.filter(\.isEnabled).map(\.id))
-        for id in connections.keys where !enabledIDs.contains(id) {
-            AppLogger.info("Disconnecting removed/disabled server \(public: id)", category: .mcp)
+        let targetIDs = Set(servers.filter(\.isEnabled).map(\.id))
+        for id in connections.keys where !targetIDs.contains(id) {
+            AppLogger.info("Disconnecting unneeded server \(public: id)", category: .mcp)
             await connections[id]?.disconnect()
             connections.removeValue(forKey: id)
             connectionErrors.removeValue(forKey: id)
         }
 
-        // Connect new/enabled servers (already-connected servers are skipped;
-        // MCPServerConnection handles reconnection transparently on failure).
         for server in servers where server.isEnabled {
             guard connections[server.id] == nil else { continue }
-            guard let endpoint = URL(string: server.url) else {
-                AppLogger.warning(
-                    "Invalid URL for MCP server \(public: server.name)",
-                    category: .mcp
-                )
-                connectionErrors[server.id] = "Invalid URL"
-                continue
-            }
+            _ = await connect(server: server)
+        }
+    }
 
-            let authProvider: any MCPAuthProvider = switch server.authType {
-            case .oauth:
-                OAuthAuthProvider(oauthService: oauthService, serverID: server.id)
-            case .none:
-                NoAuthProvider()
-            }
+    /// Connects a single server, caching its discovered tool names and
+    /// instructions on success. Used by ``ActivateSkillTool`` so activation
+    /// can report success or an actionable error immediately.
+    ///
+    /// Returns `nil` on success (or if already connected), or an error
+    /// description on failure.
+    func connect(server: MCPServer) async -> String? {
+        if connections[server.id] != nil { return nil }
 
-            let connection = MCPServerConnection(
-                serverName: server.name,
-                endpoint: endpoint,
-                authProvider: authProvider
+        guard let endpoint = URL(string: server.url) else {
+            AppLogger.warning(
+                "Invalid URL for MCP server \(public: server.name)",
+                category: .mcp
             )
+            let message = "Invalid URL"
+            connectionErrors[server.id] = message
+            return message
+        }
 
-            do {
-                try await connection.connect()
-                connections[server.id] = connection
-                connectionErrors.removeValue(forKey: server.id)
+        let authProvider: any MCPAuthProvider = switch server.authType {
+        case .oauth:
+            OAuthAuthProvider(oauthService: oauthService, serverID: server.id)
+        case .none:
+            NoAuthProvider()
+        }
 
-                // Cache discovered tool names
-                let tools = await connection.tools()
-                server.cachedToolNames = tools.map(\.name)
-                server.updatedAt = .now
-            } catch {
-                AppLogger.error(
-                    "Failed to connect MCP server \(public: server.name): \(private: error.localizedDescription)",
-                    category: .mcp
-                )
-                connectionErrors[server.id] = error.localizedDescription
-            }
+        let connection = MCPServerConnection(
+            serverName: server.name,
+            endpoint: endpoint,
+            authProvider: authProvider
+        )
+
+        do {
+            try await connection.connect()
+            connections[server.id] = connection
+            connectionErrors.removeValue(forKey: server.id)
+
+            // Cache discovered tool names + instructions for the cache-driven catalog.
+            let tools = await connection.tools()
+            server.cachedToolNames = tools.map(\.name)
+            server.serverInstructions = await connection.instructions()
+            server.updatedAt = .now
+            return nil
+        } catch {
+            AppLogger.error(
+                "Failed to connect MCP server \(public: server.name): \(private: error.localizedDescription)",
+                category: .mcp
+            )
+            let message = error.localizedDescription
+            connectionErrors[server.id] = message
+            return message
         }
     }
 

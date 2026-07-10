@@ -432,7 +432,9 @@ final class LiveCallService: @unchecked Sendable {
     @MainActor
     private func loadActiveSkills(agent: Agent) -> [Skill] {
         guard let chat = fetchChat(agent: agent) else { return [] }
-        return chat.activeSkillEntries.compactMap { BundledSkill.skill(forID: $0.skillID) }
+        return chat.activeSkillEntries.compactMap {
+            SkillCatalog.skill(forID: $0.skillID, mcpServers: mcpServers)
+        }
     }
 
     @MainActor
@@ -532,13 +534,23 @@ final class LiveCallService: @unchecked Sendable {
                     return (tools: turn.registry.definitions, executor: turn.registry)
                 }
                 let updatedSkills = loadActiveSkills(agent: agent)
+                // Connect only the MCP servers backing active skills — turn.mcpTools
+                // reflects only what was active at turn start.
+                let activeMCPSkillIDs = Set(updatedSkills.map(\.id))
+                    .intersection(turn.mcpSkills.map(\.id))
+                nonisolated(unsafe) let activeMCPServers = activeMCPSkillIDs.compactMap {
+                    MCPServerSkill.server(forSkillID: $0, servers: mcpServers)
+                }
+                let mcpTools = await Container.shared.mcpServerManager()
+                    .prepareTools(servers: activeMCPServers)
                 let updatedRegistry = ToolRegistry.chat(
                     spaceID: spaceID, chatID: chatID,
                     agentID: agent.id,
                     permissionPolicy: policy,
                     activeSkills: BundledSkill.alwaysActive
                         + updatedSkills.filter { !$0.alwaysActive },
-                    additionalTools: turn.mcpTools
+                    mcpTools: mcpTools,
+                    mcpSkills: turn.mcpSkills
                 )
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)
             }

@@ -18,6 +18,7 @@ actor MCPServerConnection {
 
     private var client: Client?
     private var discoveredTools: [MCP.Tool] = []
+    private var discoveredInstructions: String?
     private let tokenCache = TokenCache()
 
     enum ConnectionError: Error, LocalizedError {
@@ -62,13 +63,15 @@ actor MCPServerConnection {
             }
         )
 
+        let initializeResult: Initialize.Result
         do {
-            try await mcpClient.connect(transport: transport)
+            initializeResult = try await mcpClient.connect(transport: transport)
         } catch {
             throw ConnectionError.connectionFailed(error.localizedDescription)
         }
 
         client = mcpClient
+        discoveredInstructions = initializeResult.instructions
 
         // Discover available tools
         let (tools, _) = try await mcpClient.listTools()
@@ -105,13 +108,15 @@ actor MCPServerConnection {
 
         let mcpClient = Client(name: "Eigin", version: "1.0.0")
 
+        let initializeResult: Initialize.Result
         do {
-            try await mcpClient.connect(transport: transport)
+            initializeResult = try await mcpClient.connect(transport: transport)
         } catch {
             throw ConnectionError.connectionFailed(error.localizedDescription)
         }
 
         client = mcpClient
+        discoveredInstructions = initializeResult.instructions
 
         let (tools, _) = try await mcpClient.listTools()
         discoveredTools = tools
@@ -122,11 +127,17 @@ actor MCPServerConnection {
         AppLogger.info("Disconnected from \(public: serverName)", category: .mcp)
         client = nil
         discoveredTools = []
+        discoveredInstructions = nil
     }
 
     /// Returns the tools discovered during connection.
     func tools() -> [MCP.Tool] {
         discoveredTools
+    }
+
+    /// Returns the server's self-reported `instructions` from `initialize`, if any.
+    func instructions() -> String? {
+        discoveredInstructions
     }
 
     /// Calls a tool on the remote MCP server.

@@ -41,6 +41,10 @@ enum MessagePipeline {
         let apiMessages: [ChatMessage]
         let registry: ToolRegistry
         let mcpTools: [any Tool]
+        /// Every enabled MCP server projected into a ``Skill`` (catalog
+        /// entries), not just active ones — reused when rebuilding the
+        /// registry mid-turn so newly activated servers gate correctly.
+        let mcpSkills: [Skill]
         /// Connected integrations' tools grouped by capability, for reuse when
         /// rebuilding the registry mid-turn (e.g. on skill activation).
         let integrationToolsByCapability: [Capability: [any Tool]]
@@ -71,10 +75,30 @@ enum MessagePipeline {
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil
     ) async -> TurnInputs {
-        // 1. Per-turn MCP tool discovery
+        // 1. Cache-driven MCP catalog: `mcpSkills` is a projection of persisted
+        // server data, no connection needed. Only servers backing an active
+        // skill get connected (see ``ActivateSkillTool``) and have tools
+        // injected. Skipped for small-context models, which never get MCP tools.
+        let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
+        let isSmallContextModel = contextWindow <= smallContextThreshold
         let mcpServerManager = Container.shared.mcpServerManager()
         nonisolated(unsafe) let servers = mcpServers
-        let mcpTools = await mcpServerManager.prepareTools(servers: servers)
+        let mcpSkills = isSmallContextModel ? [] : MCPServerSkill.project(servers: servers)
+        let activeMCPSkillIDs = Set(activeSkills.map(\.id)).intersection(mcpSkills.map(\.id))
+        nonisolated(unsafe) let activeMCPServers = activeMCPSkillIDs.compactMap {
+            MCPServerSkill.server(forSkillID: $0, servers: servers)
+        }
+        let mcpTools = isSmallContextModel
+            ? []
+            : await mcpServerManager.prepareTools(servers: activeMCPServers)
+
+        // An active MCP skill whose server failed to connect this turn keeps
+        // its instructions rendered (see below) but surfaces a note so the
+        // agent can tell the user, rather than losing its tools silently.
+        let unavailableMCPNotes: [String] = activeMCPServers.compactMap { server in
+            guard let error = mcpServerManager.connectionErrors[server.id] else { return nil }
+            return "\(server.name) is currently unavailable (\(error)). The user may need to reauthorize it in Settings → MCP Servers."
+        }
 
         // 1b. Build integration tools, grouped by capability, gated in ToolAssembly
         // behind active skills (unlike MCP tools, which are always injected above).
@@ -133,9 +157,8 @@ enum MessagePipeline {
             accessPolicy: accessPolicy
         )) ?? []
 
-        // 5. Determine context tier + build voice name list
-        let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
-        let isSmallContext = contextWindow <= smallContextThreshold
+        // 5. Build voice name list (context tier already determined above)
+        let isSmallContext = isSmallContextModel
 
         let voiceService = Container.shared.voiceService()
         let languageManager = Container.shared.languageManager()
@@ -163,7 +186,8 @@ enum MessagePipeline {
                 agentID: agent.id,
                 permissionPolicy: permissionPolicy,
                 activeSkills: allActiveSkills,
-                additionalTools: mcpTools,
+                mcpTools: mcpTools,
+                mcpSkills: mcpSkills,
                 integrationToolsByCapability: integrationToolsByCapability,
                 onBrowse: onBrowse,
                 onPresentOptions: onPresentOptions
@@ -205,10 +229,11 @@ enum MessagePipeline {
             mode: mode,
             activeIntents: activeIntents,
             activeSkills: allActiveSkills,
-            availableSkills: BundledSkill.all,
+            availableSkills: BundledSkill.all + mcpSkills,
             connectedCapabilities: integrationManager
                 .connectedCapabilities(integrations: integrations),
             activeFlow: activeFlow,
+            unavailableSkillNotes: unavailableMCPNotes,
             provider: provider,
             modelID: agent.model,
             isSmallContext: isSmallContext
@@ -256,6 +281,7 @@ enum MessagePipeline {
             apiMessages: apiMessages,
             registry: registry,
             mcpTools: mcpTools,
+            mcpSkills: mcpSkills,
             integrationToolsByCapability: integrationToolsByCapability,
             estimatedTokens: estimatedTokens,
             contextWindow: contextWindow,

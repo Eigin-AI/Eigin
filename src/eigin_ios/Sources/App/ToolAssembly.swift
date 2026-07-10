@@ -53,7 +53,8 @@ extension ToolRegistry {
         agentID: UUID? = nil,
         permissionPolicy: ToolPermissionPolicy,
         activeSkills: [Skill] = [],
-        additionalTools: [any Tool] = [],
+        mcpTools: [any Tool] = [],
+        mcpSkills: [Skill] = [],
         integrationToolsByCapability: [Capability: [any Tool]] = [:],
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil
@@ -67,21 +68,25 @@ extension ToolRegistry {
             onPresentOptions: onPresentOptions
         )
         var tools = allChatTools(context: context)
-        tools += additionalTools
+        tools += mcpTools
 
         // Filter to tools required by active skills (union of all requiredTools).
-        // Tools not claimed by any skill (e.g. ActivateSkillTool) pass through automatically.
+        // Tools not claimed by any skill (bundled or MCP-projected — e.g.
+        // ActivateSkillTool) pass through automatically. MCP tools are claimed
+        // by their server's projected skill, so — like bundled on-demand skill
+        // tools — they only enter context once that skill is active.
         let skillRequiredKeys = Set(activeSkills.flatMap { $0.requiredTools.map(\.key) })
         if !skillRequiredKeys.isEmpty {
             let allSkillToolKeys = Set(BundledSkill.all.flatMap { $0.requiredTools.map(\.key) })
+                .union(mcpSkills.flatMap { $0.requiredTools.map(\.key) })
             tools = tools.filter { tool in
-                skillRequiredKeys.contains(tool.name)
-                    || !allSkillToolKeys.contains(tool.name)
-                    || additionalTools.contains { $0.name == tool.name }
+                skillRequiredKeys.contains(tool.name) || !allSkillToolKeys.contains(tool.name)
             }
         }
 
-        // Integration tools are gated by capability, unlike MCP's additionalTools.
+        // Integration tools are gated by capability rather than the requiredTools key
+        // filter above (an integration's tool set can vary by which provider is
+        // selected, so it isn't a fixed key list like a skill's).
         let activeCapabilities = Set(activeSkills.flatMap(\.requiredCapabilities))
         for capability in activeCapabilities {
             tools += integrationToolsByCapability[capability] ?? []

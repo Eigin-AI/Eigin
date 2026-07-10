@@ -49,6 +49,7 @@ struct SystemHintSourcesTests {
         availableSkills: [Skill] = [],
         connectedCapabilities: Set<Capability> = [],
         activeFlow: FlowState? = nil,
+        unavailableSkillNotes: [String] = [],
         provider: ProviderSnapshot = ProviderSnapshot(
             name: "Test Provider",
             baseURL: "https://test.example.com"
@@ -71,6 +72,7 @@ struct SystemHintSourcesTests {
             availableSkills: availableSkills,
             connectedCapabilities: connectedCapabilities,
             activeFlow: activeFlow,
+            unavailableSkillNotes: unavailableSkillNotes,
             provider: provider,
             modelID: modelID,
             isSmallContext: isSmallContext
@@ -154,6 +156,33 @@ struct SystemHintSourcesTests {
         let alphaHeaderIdx = try #require(body.range(of: "### Alpha")?.lowerBound)
         let firstInstructionIdx = try #require(body.range(of: "first instruction")?.lowerBound)
         #expect(alphaHeaderIdx < firstInstructionIdx)
+    }
+
+    @Test func activeSkillsRendersUnavailableNoteForUnreachableMCPServer() async {
+        // An MCP skill stays active even when its server can't be reached this
+        // turn — the note surfaces the problem instead of silently dropping it.
+        let source = ActiveSkillsSource()
+        let body = await source.render(input(
+            activeSkills: [skill(
+                id: "mcp__gitlab", displayName: "GitLab", description: "d",
+                instruction: "Use GitLab tools."
+            )],
+            unavailableSkillNotes: [
+                "GitLab is currently unavailable (Session expired). The user may need to reauthorize it.",
+            ]
+        )) ?? ""
+        #expect(body.contains("### GitLab"))
+        #expect(body.contains("currently unavailable"))
+    }
+
+    @Test func activeSkillsRendersUnavailableNoteEvenWithNoActiveSkills() async {
+        // Edge case: nothing else active, only an unavailable-server note.
+        let source = ActiveSkillsSource()
+        let body = await source.render(input(
+            activeSkills: [],
+            unavailableSkillNotes: ["Linear is currently unavailable (Server down)."]
+        ))
+        #expect(body?.contains("Linear is currently unavailable") == true)
     }
 
     // MARK: - ActiveFlowSource
@@ -272,6 +301,23 @@ struct SystemHintSourcesTests {
             availableSkills: [skill(id: "s", displayName: "S", description: "d")]
         )) ?? ""
         #expect(body.contains("activate_skill"))
+    }
+
+    @Test func availableSkillsIncludesMCPProjectedServerWithNameInstructionsAndTools() async throws {
+        // A connected MCP server projects into the same catalog as bundled
+        // skills — see #140. Uses the real projection so the catalog entry
+        // matches what MCPServerSkill actually produces.
+        let server = MCPServer(name: "GitLab", url: "https://example.com")
+        server.cachedToolNames = ["list_issues"]
+        server.serverInstructions = "Manage GitLab issues and merge requests."
+        let mcpSkill = try #require(MCPServerSkill.project(servers: [server]).first)
+
+        let source = AvailableSkillsSource()
+        let body = await source.render(input(availableSkills: [mcpSkill])) ?? ""
+        #expect(body.contains("GitLab"))
+        #expect(body.contains("mcp__gitlab"))
+        #expect(body.contains("Manage GitLab issues and merge requests."))
+        #expect(body.contains("list_issues"))
     }
 
     // MARK: - SpaceSource

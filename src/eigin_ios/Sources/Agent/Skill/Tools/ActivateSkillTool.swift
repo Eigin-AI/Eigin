@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import SwiftData
 
@@ -38,33 +39,18 @@ struct ActivateSkillTool: Tool {
             ? BundledSkill.all
             : BundledSkill.all.filter { !$0.alwaysActive }
         let skillIDs = skills.map(\.id)
-        if isSmallContext {
-            return ToolDefinition(
-                name: name,
-                description: "Activate a skill to load its instructions and tools.",
-                parameters: JSONSchema(
-                    type: "object",
-                    properties: [
-                        "skill_id": .init(
-                            type: "string",
-                            description: "Skill to activate.",
-                            enum: skillIDs
-                        ),
-                    ],
-                    required: ["skill_id"]
-                )
-            )
-        }
+        let description = isSmallContext
+            ? "Activate a skill to load its instructions and tools."
+            : "Activate a skill to load its instructions and tools. Available skills: \(skillIDs.joined(separator: ", "))."
         return ToolDefinition(
             name: name,
-            description: "Activate a skill to load its instructions and tools. Available skills: \(skillIDs.joined(separator: ", ")).",
+            description: description,
             parameters: JSONSchema(
                 type: "object",
                 properties: [
                     "skill_id": .init(
                         type: "string",
-                        description: "The ID of the skill to activate.",
-                        enum: skillIDs
+                        description: "The ID of the skill to activate."
                     ),
                 ],
                 required: ["skill_id"]
@@ -86,22 +72,6 @@ struct ActivateSkillTool: Tool {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: ["Missing 'skill_id' parameter"]),
-                isError: true
-            )
-        }
-        guard let skill = BundledSkill.skill(forID: skillID) else {
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: ["Unknown skill '\(skillID)'"]),
-                isError: true
-            )
-        }
-        // In small context mode, always-active skills don't have their tools
-        // loaded by default, so the model can activate them like any other skill.
-        if skill.alwaysActive, !isSmallContext {
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: ["Skill '\(skillID)' is always active"]),
                 isError: true
             )
         }
@@ -136,6 +106,100 @@ struct ActivateSkillTool: Tool {
             )
         }
 
+        // Bundled and MCP server skills are checked directly (rather than
+        // through ``SkillCatalog``, which would collapse the distinction)
+        // because only MCP skills need a connection attempt before activating.
+        if let skill = BundledSkill.skill(forID: skillID) {
+            return activateBundled(skill, on: chat, toolCallID: id)
+        }
+        return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
+    }
+
+    // MARK: - Bundled skills
+
+    @MainActor private func activateBundled(
+        _ skill: Skill,
+        on chat: Chat,
+        toolCallID id: String
+    ) -> ToolResult {
+        if skill.alwaysActive, !isSmallContext {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: ["Skill '\(skill.id)' is always active"]),
+                isError: true
+            )
+        }
+        SkillActivation.activate(
+            skillID: skill.id,
+            on: chat,
+            activatingToolCallID: id,
+            isSmallContext: isSmallContext
+        )
+        return ToolResult(
+            toolCallID: id,
+            content: ToolHelpers.output(result: [
+                "activated": skill.id,
+                "tools_available": skill.requiredTools.map(\.key).sorted(),
+                // Included inline so the model has it this turn — the Gatekeeper's
+                // per-turn hint (which also carries this instruction on every
+                // subsequent turn) isn't recomputed mid-turn after a tool call.
+                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
+            ]),
+            isError: false
+        )
+    }
+
+    // MARK: - MCP server skills
+
+    /// Connects the server backing `skillID` before activating, so activation
+    /// either succeeds with tools available or fails with an actionable error
+    /// the agent can relay to the user (e.g. "reauthorize in Settings").
+    @MainActor private func activateMCPServer(
+        skillID: String,
+        context: ModelContext,
+        on chat: Chat,
+        toolCallID id: String
+    ) async -> ToolResult {
+        let servers = (try? context.fetch(FetchDescriptor<MCPServer>())) ?? []
+        // `MCPServer` is a SwiftData model (a class), so the compiler treats
+        // it as unsafe to pass into the `connect` actor hop below even though
+        // this whole method runs on @MainActor throughout — `nonisolated(unsafe)`
+        // tells it that's intentional. The `guard` has to bind a second
+        // `nonisolated(unsafe)` local because unwrapping an optional otherwise
+        // drops the annotation.
+        nonisolated(unsafe) let matchedServer = MCPServerSkill.server(
+            forSkillID: skillID,
+            servers: servers
+        )
+        guard matchedServer != nil else {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: ["Unknown skill '\(skillID)'"]),
+                isError: true
+            )
+        }
+        nonisolated(unsafe) let server = matchedServer!
+
+        let mcpServerManager = Container.shared.mcpServerManager()
+        if let connectionError = await mcpServerManager.connect(server: server) {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: [
+                    "Couldn't connect to '\(server.name)': \(connectionError). The user may need to reauthorize it in Settings.",
+                ]),
+                isError: true
+            )
+        }
+
+        // Reproject: `connect` just refreshed cachedToolNames/serverInstructions.
+        guard let skill = MCPServerSkill.skill(forID: skillID, servers: servers) else {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: ["Unknown skill '\(skillID)'"]),
+                isError: true
+            )
+        }
+
         SkillActivation.activate(
             skillID: skillID,
             on: chat,
@@ -143,15 +207,11 @@ struct ActivateSkillTool: Tool {
             isSmallContext: isSmallContext
         )
 
-        let toolNames = skill.requiredTools.map(\.key).sorted()
         return ToolResult(
             toolCallID: id,
             content: ToolHelpers.output(result: [
                 "activated": skillID,
-                "tools_available": toolNames,
-                // Included inline so the model has it this turn — the Gatekeeper's
-                // per-turn hint (which also carries this instruction on every
-                // subsequent turn) isn't recomputed mid-turn after a tool call.
+                "tools_available": skill.requiredTools.map(\.key).sorted(),
                 "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
             ]),
             isError: false
