@@ -21,7 +21,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func toolsByCapabilityEmptyWhenNoIntegrations() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let map = manager.toolsByCapability(
             integrations: [],
@@ -34,7 +35,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func toolsByCapabilitySkipsDisabledIntegrations() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let integration = Integration(
             typeID: "google",
@@ -51,7 +53,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func toolsByCapabilitySkipsUngrantedCapabilities() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         // Connected, but the email capability wasn't part of the grant (e.g. a
         // future integration that only granted a different capability so far).
@@ -69,7 +72,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func toolsByCapabilityIncludesConnectedGrantedIntegration() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let integration = Integration(
             typeID: "google",
@@ -91,7 +95,8 @@ struct IntegrationManagerTests {
         // tools, since same-named tools would silently collide in ToolRegistry.
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let first = Integration(
             typeID: "google", accountLabel: "first@gmail.com",
@@ -116,7 +121,8 @@ struct IntegrationManagerTests {
         // first wins by default, and disconnecting it lets the other take over.
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let earlierDate = Date(timeIntervalSince1970: 0)
         let laterDate = Date(timeIntervalSince1970: 1000)
@@ -157,7 +163,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func activeIntegrationPrefersExplicitSelection() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let google = Integration(
             typeID: "google", accountLabel: "a@gmail.com",
@@ -187,7 +194,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func activeIntegrationFallsBackWhenSelectionIsStale() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let google = Integration(
             typeID: "google", accountLabel: "a@gmail.com",
@@ -231,7 +239,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func activeIntegrationDefaultsToOldestWithoutSelection() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let google = Integration(
             typeID: "google", accountLabel: "a@gmail.com",
@@ -255,7 +264,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func setActiveProviderUpsertsSelection() throws {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let (context, _container) = try makeContext()
         let google = Integration(
@@ -283,7 +293,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func clearSelectionsRemovesOnlyMatchingRows() throws {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let (context, _container) = try makeContext()
         let removedID = UUID()
@@ -305,7 +316,8 @@ struct IntegrationManagerTests {
     @Test @MainActor func isConnectedReflectsGrantAndEnabledState() {
         let manager = IntegrationManager(
             oauthService: FakeIntegrationOAuthService(),
-            imapCredentialStore: FakeIMAPCredentialStore()
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let connected = Integration(
             typeID: "google", accountLabel: "a@gmail.com",
@@ -325,7 +337,8 @@ struct IntegrationManagerTests {
         let imapCredentialStore = FakeIMAPCredentialStore()
         let manager = IntegrationManager(
             oauthService: oauthService,
-            imapCredentialStore: imapCredentialStore
+            imapCredentialStore: imapCredentialStore,
+            aulaCredentialStore: FakeAulaCredentialStore()
         )
         let integration = Integration(
             typeID: "imap", accountLabel: "me@example.com",

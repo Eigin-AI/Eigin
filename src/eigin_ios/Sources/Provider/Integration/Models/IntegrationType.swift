@@ -72,7 +72,7 @@ struct IntegrationType: Sendable {
 
 /// Built-in integration types that ship with the app.
 enum BundledIntegrationType {
-    static let all: [IntegrationType] = [google, microsoft, imap]
+    static let all: [IntegrationType] = [google, microsoft, imap, aula]
 
     static func type(forID id: String) -> IntegrationType? {
         all.first { $0.id == id }
@@ -101,6 +101,8 @@ enum BundledIntegrationType {
                     oauthConfig: GoogleOAuth.config()
                 )
                 return EmailToolKit.tools(provider: provider)
+            default:
+                return []
             }
         },
         accountLabel: { accessToken in await GoogleAccountInfo.email(accessToken: accessToken) }
@@ -127,6 +129,8 @@ enum BundledIntegrationType {
                     accountAddress: integration.accountLabel
                 )
                 return EmailToolKit.tools(provider: provider)
+            default:
+                return []
             }
         },
         accountLabel: { accessToken in await MicrosoftAccountInfo.email(accessToken: accessToken) }
@@ -151,6 +155,33 @@ enum BundledIntegrationType {
                     credentialStore: Container.shared.imapCredentialStore()
                 )
                 return EmailToolKit.tools(provider: provider)
+            default:
+                return []
+            }
+        }
+    )
+
+    static let aula = IntegrationType(
+        id: "aula",
+        displayName: Localized.Integrations.Aula.displayName,
+        description: Localized.Integrations.Aula.description,
+        systemImage: "backpack.fill",
+        providedCapabilities: [.aula],
+        authKind: .webSession(configFactory: AulaOAuth.config),
+        // No OAuth scopes to gate on — a connected Aula account grants the
+        // capability it provides, same as the IMAP non-OAuth kind.
+        toolCapabilities: AulaToolCapabilities.all,
+        makeTools: { capability, integration, _ in
+            switch capability {
+            case .aula:
+                let provider = DefaultAulaProvider(
+                    integrationID: integration.id,
+                    credentialStore: Container.shared.aulaCredentialStore(),
+                    apiClient: AulaAPIClient(http: URLSessionAulaHTTP())
+                )
+                return AulaToolKit.tools(provider: provider)
+            default:
+                return []
             }
         }
     )

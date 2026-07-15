@@ -17,6 +17,7 @@ enum BundledSkill {
         health,
         cooking,
         recommendations,
+        aula,
     ]
 
     /// Skills that are active in every chat from the start.
@@ -126,6 +127,17 @@ enum BundledSkill {
         smallInstruction: Prompt.Skills.Email.small,
         requiredTools: [],
         requiredCapabilities: [.email],
+        alwaysActive: false
+    )
+
+    static let aula = Skill(
+        id: "aula",
+        displayName: Localized.Ui.aula,
+        description: "Get school and daycare updates from a connected Aula account.",
+        instruction: Prompt.Skills.Aula.instruction,
+        smallInstruction: Prompt.Skills.Aula.small,
+        requiredTools: [],
+        requiredCapabilities: [.aula],
         alwaysActive: false
     )
 

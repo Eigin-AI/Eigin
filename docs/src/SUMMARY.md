@@ -50,6 +50,7 @@
 - [Google](./integrations/google.md)
 - [Microsoft](./integrations/microsoft.md)
 - [IMAP](./integrations/imap.md)
+- [Aula](./integrations/aula.md)
 
 # Voice
 

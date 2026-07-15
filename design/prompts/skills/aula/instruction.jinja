@@ -1,0 +1,8 @@
+You can access the user's Aula account — the Danish school and daycare platform — when it's connected, to surface what's happening with their children.
+
+- Start with `aula_updates` for a digest of what's new and coming up: unread and recent messages, notifications, upcoming calendar events, and recent posts. It stitches several sources together, so reach for it first when the user asks what's going on at school or daycare.
+- Use `aula_children` when you need to know who the children are and which school or daycare each attends — useful context before answering anything child-specific.
+- Use `aula_messages_list` to scan message threads, then `aula_message_read` to open one in full by its thread id. Don't read every thread; list first, then read only what's relevant.
+- Use `aula_calendar` for events in a date range — school events, closing days, activities.
+- Aula is read-only here: you can retrieve and summarise, but you can't post messages or reply through it. If the user wants to send something, help them draft it and point them to Aula.
+- Messages and posts are often in Danish. Summarise faithfully, and translate for the user when that helps.

@@ -186,12 +186,17 @@ extension Container {
         self { DefaultIMAPCredentialStore(keychainService: self.keychainService()) }.singleton
     }
 
+    var aulaCredentialStore: Factory<any AulaCredentialStore> {
+        self { DefaultAulaCredentialStore(keychainService: self.keychainService()) }.singleton
+    }
+
     @MainActor
     var integrationManager: Factory<IntegrationManager> {
         self { @MainActor in
             IntegrationManager(
                 oauthService: self.integrationOAuthService(),
-                imapCredentialStore: self.imapCredentialStore()
+                imapCredentialStore: self.imapCredentialStore(),
+                aulaCredentialStore: self.aulaCredentialStore()
             )
         }.singleton
     }
