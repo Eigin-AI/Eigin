@@ -165,7 +165,7 @@ enum BundledIntegrationType {
         id: "aula",
         displayName: Localized.Integrations.Aula.displayName,
         description: Localized.Integrations.Aula.description,
-        systemImage: "backpack.fill",
+        systemImage: "figure.child",
         providedCapabilities: [.aula],
         authKind: .webSession(configFactory: AulaOAuth.config),
         // No OAuth scopes to gate on — a connected Aula account grants the
