@@ -13748,6 +13748,193 @@
           }
         }
       }
+    },
+    "integrations.aula.displayName": {
+      "comment": "Display name for the Aula school/daycare integration",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula"
+          }
+        }
+      }
+    },
+    "integrations.aula.description": {
+      "comment": "Subtitle for the Aula integration type in the connect picker",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbind Aula for at hente dine børns skole- og dagtilbudsopdateringer ind i Eigin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Aula to bring your children's school and daycare updates into Eigin."
+          }
+        }
+      }
+    },
+    "ui.aula": {
+      "comment": "Label for the Aula skill and integration",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula"
+          }
+        }
+      }
+    },
+    "tools.aula.updates": {
+      "comment": "Display name for the Aula updates digest tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula-opdateringer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula Updates"
+          }
+        }
+      }
+    },
+    "tools.aula.listMessages": {
+      "comment": "Display name for the list-Aula-messages tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis Aula-beskeder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List Aula Messages"
+          }
+        }
+      }
+    },
+    "tools.aula.readMessage": {
+      "comment": "Display name for the read-Aula-message tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læs Aula-besked"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read Aula Message"
+          }
+        }
+      }
+    },
+    "tools.aula.calendar": {
+      "comment": "Display name for the Aula calendar tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula-kalender"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula Calendar"
+          }
+        }
+      }
+    },
+    "tools.aula.children": {
+      "comment": "Display name for the Aula children tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula-børn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula Children"
+          }
+        }
+      }
+    },
+    "errors.aula.sessionRejected": {
+      "comment": "Error shown when Aula rejects the login session during connection.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula afviste login-sessionen. Prøv at forbinde igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula rejected the sign-in session. Please try connecting again."
+          }
+        }
+      }
+    },
+    "errors.aula.unexpectedResponse": {
+      "comment": "Error shown when Aula returns a response we can't read during connection.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula returnerede et uventet svar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula returned an unexpected response."
+          }
+        }
+      }
+    },
+    "errors.aula.requestFailed": {
+      "comment": "Error shown when an Aula request fails. The argument is the reason.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aula-forespørgslen mislykkedes: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Aula request failed: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

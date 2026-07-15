@@ -16,4 +16,12 @@ enum IntegrationAuthKind {
     /// pre-configured endpoint pair to build lazily; the connect flow collects
     /// settings from the user and hands them to ``IMAPConnectionVerifier``.
     case imap
+
+    /// PKCE flow that runs the login in an interactive in-app `WKWebView`
+    /// rather than `ASWebAuthenticationSession`, for a provider whose login
+    /// flow needs cookies or can't complete in a system browser sheet. The
+    /// PKCE mechanics and token exchange are still the shared
+    /// ``PKCEOAuthFlow``. Like `.oauth`, the config is built lazily so the
+    /// client id isn't read until a connection is attempted.
+    case webSession(configFactory: @Sendable () -> PKCEOAuthConfig)
 }

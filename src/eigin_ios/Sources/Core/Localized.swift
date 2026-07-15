@@ -696,6 +696,23 @@ enum Localized {
             }
         }
 
+        enum Aula {
+            /// Error shown when an Aula request fails. The argument is the reason.
+            static func requestFailed(_ p1: String) -> String {
+                String(format: Localized.get("errors.aula.requestFailed"), p1)
+            }
+
+            /// Error shown when Aula rejects the login session during connection.
+            static var sessionRejected: String {
+                Localized.get("errors.aula.sessionRejected")
+            }
+
+            /// Error shown when Aula returns a response we can't read during connection.
+            static var unexpectedResponse: String {
+                Localized.get("errors.aula.unexpectedResponse")
+            }
+        }
+
         enum Authentication {
             /// Error message when the user cancels the authentication flow
             static var cancelled: String {
@@ -1091,6 +1108,18 @@ enum Localized {
     }
 
     enum Integrations {
+        enum Aula {
+            /// Subtitle for the Aula integration type in the connect picker
+            static var description: String {
+                Localized.get("integrations.aula.description")
+            }
+
+            /// Display name for the Aula school/daycare integration
+            static var displayName: String {
+                Localized.get("integrations.aula.displayName")
+            }
+        }
+
         enum Imap {
             /// Section header for the account (email/password) fields in the IMAP connect form
             static var accountSection: String {
@@ -3485,6 +3514,33 @@ enum Localized {
             }
         }
 
+        enum Aula {
+            /// Display name for the Aula calendar tool
+            static var calendar: String {
+                Localized.get("tools.aula.calendar")
+            }
+
+            /// Display name for the Aula children tool
+            static var children: String {
+                Localized.get("tools.aula.children")
+            }
+
+            /// Display name for the list-Aula-messages tool
+            static var listMessages: String {
+                Localized.get("tools.aula.listMessages")
+            }
+
+            /// Display name for the read-Aula-message tool
+            static var readMessage: String {
+                Localized.get("tools.aula.readMessage")
+            }
+
+            /// Display name for the Aula updates digest tool
+            static var updates: String {
+                Localized.get("tools.aula.updates")
+            }
+        }
+
         enum Clear {
             /// Display name for the clear-transcripts tool
             static var transcripts: String {
@@ -4003,6 +4059,11 @@ enum Localized {
         /// Generic 'All' filter or tab label
         static var all: String {
             Localized.get("ui.all")
+        }
+
+        /// Label for the Aula skill and integration
+        static var aula: String {
+            Localized.get("ui.aula")
         }
 
         /// Button label to start an authorization flow

@@ -92,9 +92,9 @@ enum PKCEOAuthFlow {
         return try JSONDecoder().decode(TokenResponse.self, from: data)
     }
 
-    // MARK: - Private
+    // MARK: - Shared building blocks
 
-    private static func buildAuthorizationURL(
+    static func buildAuthorizationURL(
         config: PKCEOAuthConfig,
         codeChallenge: String,
         state: String
@@ -131,7 +131,7 @@ enum PKCEOAuthFlow {
         return url
     }
 
-    private static func validateCallback(_ url: URL, expectedState: String) throws -> String {
+    static func validateCallback(_ url: URL, expectedState: String) throws -> String {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw FlowError.authorizationFailed("Invalid callback URL")
         }
@@ -153,11 +153,11 @@ enum PKCEOAuthFlow {
         return code
     }
 
-    private static func exchangeCode(
+    static func exchangeCode(
         code: String,
         codeVerifier: String,
         config: PKCEOAuthConfig,
-        urlSession: URLSession
+        urlSession: URLSession = .shared
     ) async throws -> TokenResponse {
         var params = [
             "grant_type": "authorization_code",
@@ -189,11 +189,13 @@ enum PKCEOAuthFlow {
     }
 
     private static func formEncode(_ params: [String: String]) -> String {
-        params.map { key, value in
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return params.map { key, value in
             let escapedKey = key
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
+                .addingPercentEncoding(withAllowedCharacters: allowed) ?? key
             let escapedValue = value
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+                .addingPercentEncoding(withAllowedCharacters: allowed) ?? value
             return "\(escapedKey)=\(escapedValue)"
         }.joined(separator: "&")
     }

@@ -106,6 +106,7 @@ targets:
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
         EiginGoogleOAuthClientID: $(EIGIN_GOOGLE_OAUTH_CLIENT_ID)
         EiginMicrosoftOAuthClientID: $(EIGIN_MICROSOFT_OAUTH_CLIENT_ID)
+        EiginAulaOAuthClientID: $(EIGIN_AULA_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
     settings:
@@ -137,6 +138,7 @@ targets:
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
         EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_PRODUCTION}
         EIGIN_MICROSOFT_OAUTH_CLIENT_ID: ${EIGIN_MICROSOFT_OAUTH_CLIENT_ID_PRODUCTION}
+        EIGIN_AULA_OAUTH_CLIENT_ID: ${EIGIN_AULA_OAUTH_CLIENT_ID_PRODUCTION}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements
 
@@ -202,6 +204,7 @@ targets:
         EiginSupportEmail: $(EIGIN_SUPPORT_EMAIL)
         EiginGoogleOAuthClientID: $(EIGIN_GOOGLE_OAUTH_CLIENT_ID)
         EiginMicrosoftOAuthClientID: $(EIGIN_MICROSOFT_OAUTH_CLIENT_ID)
+        EiginAulaOAuthClientID: $(EIGIN_AULA_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
     settings:
@@ -236,5 +239,6 @@ targets:
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
         EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_STAGING}
         EIGIN_MICROSOFT_OAUTH_CLIENT_ID: ${EIGIN_MICROSOFT_OAUTH_CLIENT_ID_STAGING}
+        EIGIN_AULA_OAUTH_CLIENT_ID: ${EIGIN_AULA_OAUTH_CLIENT_ID_STAGING}
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Eigin-Bridging-Header.h
         CODE_SIGN_ENTITLEMENTS: Sources/Eigin.entitlements

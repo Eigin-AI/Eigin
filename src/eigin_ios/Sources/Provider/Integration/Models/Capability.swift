@@ -12,4 +12,5 @@ import Foundation
 /// in context when both sides line up — see `ToolRegistry.chat`.
 enum Capability: String, Codable, CaseIterable, Sendable {
     case email
+    case aula
 }

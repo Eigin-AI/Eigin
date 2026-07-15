@@ -12,6 +12,8 @@ struct AddIntegration: View {
     @State private var phase: Phase = .picking
     @State private var partialGrantWarning: String?
     @State private var showingAddIMAPAccount = false
+    /// Set (with Aula's OAuth config) to present the WKWebView login sheet.
+    @State private var pendingAulaConfig: PKCEOAuthConfig?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -79,6 +81,16 @@ struct AddIntegration: View {
         .sheet(isPresented: $showingAddIMAPAccount) {
             AddIMAPAccount(onConnected: { dismiss() })
         }
+        .sheet(
+            isPresented: Binding(
+                get: { pendingAulaConfig != nil },
+                set: { if !$0 { pendingAulaConfig = nil } }
+            )
+        ) {
+            if let config = pendingAulaConfig {
+                AddAulaAccount(onConnected: { dismiss() }, config: config)
+            }
+        }
     }
 
     private var typesList: some View {
@@ -130,7 +142,25 @@ struct AddIntegration: View {
             connectOAuth(type, configFactory: configFactory)
         case .imap:
             showingAddIMAPAccount = true
+        case .webSession(let configFactory):
+            connectWebSession(type, configFactory: configFactory)
         }
+    }
+
+    private func connectWebSession(
+        _ type: IntegrationType,
+        configFactory: @Sendable () -> PKCEOAuthConfig
+    ) {
+        let config = configFactory()
+        // Same fail-fast as OAuth: without the client id, the login page can't
+        // complete, which would read to the user as a silent hang.
+        guard !config.clientID.isEmpty else {
+            phase = .error(
+                "\(type.displayName) isn't configured in this build — its OAuth client id is missing."
+            )
+            return
+        }
+        pendingAulaConfig = config
     }
 
     private func connectOAuth(
