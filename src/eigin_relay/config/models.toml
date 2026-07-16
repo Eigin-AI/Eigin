@@ -25,7 +25,8 @@ output_millicredits_per_1m_tokens = 650_000
 [[models]]
 id = "z-ai/glm-5.2"
 provider = "tensorx"
-aliases = ["zai-org/GLM-4.7-FP8"]
+upstream_id = "zai-org/GLM-5.2"
+aliases = ["glm-5.2", "glm-5-2", "zai-org/GLM-5.2", "GLM-5.2"]
 input_millicredits_per_1m_tokens = 150_000
 cached_input_millicredits_per_1m_tokens = 35_000
 output_millicredits_per_1m_tokens = 400_000

@@ -4,7 +4,7 @@ import Foundation
 /// provider URL alone is not enough (e.g. models accessed via a router).
 enum ModelFamily: String {
     case openai, anthropic, google, mistral, grok, zhipu, moonshot, alibaba, minimax, deepseek,
-         apple, gemma
+         apple, gemma, nvidia
 }
 
 /// Metadata for a model family in the curated catalog.
@@ -70,20 +70,25 @@ enum KnownModelCatalog {
     /// a model in the provider's available models.
     static let preferenceRanking: [String] = [
         // Top tier — best cost-quality balance for personal assistants
+        "claude-sonnet-5",
         "claude-sonnet-4-6",
+        "gpt-5.6",
+        "gpt-5.6-terra",
         "gpt-5.5",
+        "mistral-medium-latest",
+        "mistral-medium-2604",
+        "Mistral-Medium-3.5-128B",
         "gemini-3.5-flash",
         "gpt-5.4",
         "gemini-3.1-pro-preview",
         "gpt-4.1",
         "mistral-large-latest",
         "mistral-large-2512",
+        "glm-5.2",
         "minimax-m3",
-        "mistral-medium-latest",
-        "mistral-medium-2604",
-        "Mistral-Medium-3.5-128B",
         "gpt-5.4-mini",
         "gpt-4.1-mini",
+        "kimi-k2.7-code",
         "kimi-k2.6",
         // Mid-tier — solid performers from all families
         "gemini-2.5-pro",
@@ -96,10 +101,16 @@ enum KnownModelCatalog {
         "claude-haiku-4-5",
         "grok-4",
         "kimi-k2.5",
+        "glm-5-turbo",
+        "glm-5v-turbo",
         "glm-5.1",
         "qwen3.7-max",
         "qwen3.7-plus",
         "gpt-5.4-nano",
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "nvidia-nemotron-3-super-120b-a12b",
+        "gemma-4-31b-it",
         "deepseek-v4-pro",
         "deepseek-v4-flash",
         "grok-3",
@@ -118,6 +129,7 @@ enum KnownModelCatalog {
         // Extreme cost / flagship tier
         "gpt-5.5-pro",
         "claude-opus-4-8",
+        "claude-fable-5",
         "claude-opus-4-7",
         "claude-opus-4-6",
         "claude-opus-4-5",
@@ -190,6 +202,58 @@ enum KnownModelCatalog {
     /// pattern first.
     static let entries: [KnownModelEntry] = [
         // OpenAI
+        KnownModelEntry(
+            pattern: "gpt-5.6",
+            displayName: "GPT-5.6",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 5.00,
+            outputCostPerMillion: 30.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "gpt-5.6-terra",
+            displayName: "GPT-5.6 Terra",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 2.50,
+            outputCostPerMillion: 15.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "gpt-5.6-luna",
+            displayName: "GPT-5.6 Luna",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 1.00,
+            outputCostPerMillion: 6.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "gpt-5.6-sol",
+            displayName: "GPT-5.6 Sol",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 5.00,
+            outputCostPerMillion: 30.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
         KnownModelEntry(
             pattern: "gpt-5.5-pro",
             displayName: "GPT-5.5 Pro",
@@ -348,6 +412,32 @@ enum KnownModelCatalog {
         ),
 
         // Anthropic
+        KnownModelEntry(
+            pattern: "claude-sonnet-5",
+            displayName: "Claude Sonnet 5",
+            family: .anthropic,
+            contextWindow: 1_000_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 2.00,
+            outputCostPerMillion: 10.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "claude-fable-5",
+            displayName: "Claude Fable 5",
+            family: .anthropic,
+            contextWindow: 1_000_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 10.00,
+            outputCostPerMillion: 50.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
         KnownModelEntry(
             pattern: "claude-opus-4-8",
             displayName: "Claude Opus 4.8",
@@ -721,6 +811,45 @@ enum KnownModelCatalog {
 
         // Zhipu (GLM)
         KnownModelEntry(
+            pattern: "glm-5.2",
+            displayName: "GLM 5.2",
+            family: .zhipu,
+            contextWindow: 1_000_000,
+            maxOutput: 131_072,
+            inputCostPerMillion: 1.40,
+            outputCostPerMillion: 4.40,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: false,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "glm-5-turbo",
+            displayName: "GLM-5 Turbo",
+            family: .zhipu,
+            contextWindow: 200_000,
+            maxOutput: 131_072,
+            inputCostPerMillion: 1.20,
+            outputCostPerMillion: 4.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: false,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "glm-5v-turbo",
+            displayName: "GLM-5V Turbo",
+            family: .zhipu,
+            contextWindow: 200_000,
+            maxOutput: 131_072,
+            inputCostPerMillion: 1.20,
+            outputCostPerMillion: 4.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
+        KnownModelEntry(
             pattern: "glm-5.1",
             displayName: "GLM 5.1",
             family: .zhipu,
@@ -774,6 +903,19 @@ enum KnownModelCatalog {
         ),
 
         // Kimi
+        KnownModelEntry(
+            pattern: "kimi-k2.7-code",
+            displayName: "Kimi K2.7 Code",
+            family: .moonshot,
+            contextWindow: 262_144,
+            maxOutput: 262_144,
+            inputCostPerMillion: 0.95,
+            outputCostPerMillion: 4.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
         KnownModelEntry(
             pattern: "kimi-k2.6",
             displayName: "Kimi K2.6",
@@ -1016,6 +1158,34 @@ enum KnownModelCatalog {
             supportsToolCall: true,
             supportsReasoning: false,
             supportsVision: false, // Model supports this, can add later
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "gemma-4-31b-it",
+            displayName: "Gemma 4 31B",
+            family: .gemma,
+            contextWindow: 128_000,
+            maxOutput: 8192,
+            inputCostPerMillion: 0.28,
+            outputCostPerMillion: 0.55,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+
+        // NVIDIA (relay-hosted)
+        KnownModelEntry(
+            pattern: "nvidia-nemotron-3-super-120b-a12b",
+            displayName: "Nemotron 3 Super 120B A12B",
+            family: .nvidia,
+            contextWindow: 262_144,
+            maxOutput: 262_144,
+            inputCostPerMillion: 0.20,
+            outputCostPerMillion: 0.80,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: false,
             isRecommended: true
         ),
     ]
