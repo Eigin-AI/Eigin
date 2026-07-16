@@ -8,11 +8,19 @@ enum CommunicationNotificationContent {
 
     /// Upgrades a notification to a Communication Notification with the agent's
     /// emoji as a circular avatar. Returns the original content on failure.
+    ///
+    /// - Parameter conversationID: Identifies the *thread* this notification
+    ///   belongs to. Pass a unique value per notification (e.g. the
+    ///   originating request's id) rather than reusing the agent's id — iOS
+    ///   groups notifications sharing a `conversationIdentifier`, and a new
+    ///   notification landing in a thread with an unread one can get folded
+    ///   into it silently instead of alerting on its own.
     static func upgrade(
         _ content: UNMutableNotificationContent,
         agentName: String,
         agentEmoji: String?,
-        agentID: UUID
+        agentID: UUID,
+        conversationID: String
     ) async -> UNNotificationContent {
         content.categoryIdentifier = categoryIdentifier
 
@@ -51,7 +59,7 @@ enum CommunicationNotificationContent {
             outgoingMessageType: .outgoingMessageText,
             content: content.body,
             speakableGroupName: INSpeakableString(spokenPhrase: agentName),
-            conversationIdentifier: agentID.uuidString,
+            conversationIdentifier: conversationID,
             serviceName: nil,
             sender: sender,
             attachments: nil

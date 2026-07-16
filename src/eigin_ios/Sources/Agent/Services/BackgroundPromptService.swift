@@ -99,11 +99,32 @@ enum BackgroundPromptService {
 
         // Build system prompt with active intents.
         let intentService = DefaultIntentService(modelContainer: container)
-        let activeIntents = await (try? intentService.activeIntents(
-            agentID: agent.id,
-            limit: 5,
-            accessPolicy: accessPolicy
-        )) ?? []
+        let promptIntents: [IntentSnapshot]
+        if mode == .initiative {
+            // Rotate through active intents so the same one isn't re-picked
+            // every run; fetch the full pool (unbounded) so rotation can see
+            // everything, not just the top 5.
+            let allActiveIntents = await (try? intentService.activeIntents(
+                agentID: agent.id,
+                limit: Int.max,
+                accessPolicy: accessPolicy
+            )) ?? []
+            let ranked = allActiveIntents.sorted { $0.relevance > $1.relevance }
+            let historyKey = Self.initiativeFocusHistoryKey(agentID: agent.id)
+            let history = UserDefaults.standard.stringArray(forKey: historyKey)?
+                .compactMap(UUID.init(uuidString:)) ?? []
+            let selection = InitiativeIntentRotation.select(rankedIntents: ranked, history: history)
+            UserDefaults.standard.set(
+                selection.history.map(\.uuidString), forKey: historyKey
+            )
+            promptIntents = selection.focus.map { [$0] } ?? []
+        } else {
+            promptIntents = await (try? intentService.activeIntents(
+                agentID: agent.id,
+                limit: 5,
+                accessPolicy: accessPolicy
+            )) ?? []
+        }
 
         // Fetch recent notifications so the agent doesn't repeat itself.
         let agentID = agent.id
@@ -131,7 +152,7 @@ enum BackgroundPromptService {
             BackgroundPrompt.build(
                 agent: agentRef,
                 proactivity: proactivity,
-                activeIntents: activeIntents,
+                activeIntents: promptIntents,
                 recentNotifications: recentNotifications,
                 mode: mode
             )
@@ -244,6 +265,11 @@ enum BackgroundPromptService {
 
     private static func recordRun(mode: BackgroundRunMode) {
         UserDefaults.standard.set(Date(), forKey: mode.lastRunKey)
+    }
+
+    /// `UserDefaults` key for a given agent's initiative focus-rotation history.
+    private static func initiativeFocusHistoryKey(agentID: UUID) -> String {
+        "initiativeFocusHistory_\(agentID.uuidString)"
     }
 
     @MainActor
