@@ -338,6 +338,88 @@ struct KnownModelCatalogTests {
         #expect(entry?.displayName == "Qwen 3.7 Plus")
     }
 
+    // MARK: - New models (2026-07 update)
+
+    @Test func claudeSonnet5ExactMatch() {
+        let entry = KnownModelCatalog.lookup("claude-sonnet-5")
+        #expect(entry?.displayName == "Claude Sonnet 5")
+    }
+
+    @Test func claudeFable5ExactMatch() {
+        let entry = KnownModelCatalog.lookup("claude-fable-5")
+        #expect(entry?.displayName == "Claude Fable 5")
+    }
+
+    @Test func gpt56ExactMatch() {
+        let entry = KnownModelCatalog.lookup("gpt-5.6")
+        #expect(entry?.displayName == "GPT-5.6")
+    }
+
+    @Test func gpt56VariantsDoNotMatchBase() {
+        let terra = KnownModelCatalog.lookup("gpt-5.6-terra")
+        #expect(terra?.displayName == "GPT-5.6 Terra")
+
+        let luna = KnownModelCatalog.lookup("gpt-5.6-luna")
+        #expect(luna?.displayName == "GPT-5.6 Luna")
+
+        let sol = KnownModelCatalog.lookup("gpt-5.6-sol")
+        #expect(sol?.displayName == "GPT-5.6 Sol")
+
+        let base = KnownModelCatalog.lookup("gpt-5.6")
+        #expect(base?.displayName == "GPT-5.6")
+    }
+
+    @Test func glm52ExactMatchNotSwallowedByGlm5() {
+        // "glm-5.2" must resolve to the 5.2 entry, not the base "glm-5" entry.
+        let entry = KnownModelCatalog.lookup("glm-5.2")
+        #expect(entry?.displayName == "GLM 5.2")
+
+        let base = KnownModelCatalog.lookup("glm-5")
+        #expect(base?.displayName == "GLM-5")
+    }
+
+    @Test func glm5TurboExactMatch() {
+        let entry = KnownModelCatalog.lookup("glm-5-turbo")
+        #expect(entry?.displayName == "GLM-5 Turbo")
+    }
+
+    @Test func glm5vTurboExactMatch() {
+        let entry = KnownModelCatalog.lookup("glm-5v-turbo")
+        #expect(entry?.displayName == "GLM-5V Turbo")
+    }
+
+    @Test func kimiK27CodeExactMatchNotSwallowedByKimiK2() {
+        // "kimi-k2.7-code" must resolve to its own entry, not base "kimi-k2".
+        let entry = KnownModelCatalog.lookup("kimi-k2.7-code")
+        #expect(entry?.displayName == "Kimi K2.7 Code")
+
+        let tag = KnownModelCatalog.versionTag(for: "kimi-k2.7-code")
+        #expect(tag == nil)
+    }
+
+    @Test func gemma431bExactMatch() {
+        let entry = KnownModelCatalog.lookup("gemma-4-31b-it")
+        #expect(entry?.displayName == "Gemma 4 31B")
+    }
+
+    @Test func gemma431bVendorPrefix() {
+        // Relay canonical id: google/gemma-4-31b-it
+        let entry = KnownModelCatalog.lookup("google/gemma-4-31b-it")
+        #expect(entry?.displayName == "Gemma 4 31B")
+    }
+
+    @Test func nvidiaNemotron3SuperExactMatch() {
+        let entry = KnownModelCatalog.lookup("nvidia-nemotron-3-super-120b-a12b")
+        #expect(entry?.displayName == "Nemotron 3 Super 120B A12B")
+        #expect(entry?.family == .nvidia)
+    }
+
+    @Test func nvidiaNemotron3SuperVendorPrefix() {
+        // Relay canonical id: nvidia/nvidia-nemotron-3-super-120b-a12b
+        let entry = KnownModelCatalog.lookup("nvidia/nvidia-nemotron-3-super-120b-a12b")
+        #expect(entry?.displayName == "Nemotron 3 Super 120B A12B")
+    }
+
     // MARK: - bestModel(from:)
 
     @Test func bestModelPicksHighestRanked() {
