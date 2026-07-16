@@ -212,6 +212,9 @@ struct ChatView: View {
                             let grant = ChatToolGrant(chatID: chat.id, capability: capability)
                             modelContext.insert(grant)
                         }
+                    },
+                    onError: { error in
+                        viewModel.setLiveCallError(error)
                     }
                 )
             }
