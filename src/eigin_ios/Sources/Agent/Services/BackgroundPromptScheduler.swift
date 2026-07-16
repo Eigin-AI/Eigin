@@ -159,9 +159,14 @@ enum BackgroundPromptScheduler {
             "initiativeRequestID": requestID,
         ]
 
+        // Each notification gets its own conversation thread (keyed by the
+        // request id) rather than sharing one per agent — otherwise a new
+        // notification landing on top of an unread one can get silently
+        // folded into that thread instead of alerting on its own.
         let finalContent: UNNotificationContent = if let name = agentName {
             await CommunicationNotificationContent.upgrade(
-                content, agentName: name, agentEmoji: agentEmoji, agentID: agentID
+                content, agentName: name, agentEmoji: agentEmoji, agentID: agentID,
+                conversationID: requestID
             )
         } else {
             content
