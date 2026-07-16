@@ -53,6 +53,7 @@ struct AppChatUserMessage: View {
                 .padding(Spacing.n24)
                 .background(colors.surface.standard.alternative)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+                .contentShape(RoundedRectangle(cornerRadius: Radius.card))
                 .onTapGesture {
                     guard isLongMessage else { return }
                     Haptics.light()
