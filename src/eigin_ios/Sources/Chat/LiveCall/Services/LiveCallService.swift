@@ -96,6 +96,9 @@ final class LiveCallService: @unchecked Sendable {
     private var onPersist: (([ChatMessage]) -> Void)?
     /// Callback to persist chat-level tool grants to SwiftData.
     private var onChatGrant: (([ToolCapability]) -> Void)?
+    /// Callback invoked with the underlying error when the call ends abnormally,
+    /// so the parent chat can surface it after the call dismisses.
+    private var onError: ((Error) -> Void)?
 
     // MARK: - CallKit
 
@@ -126,6 +129,16 @@ final class LiveCallService: @unchecked Sendable {
     private var dictationRetries = 0
     private let maxDictationRetries = 5
 
+    // MARK: - Error Termination
+
+    /// True once a non-recoverable error has triggered the farewell + hang-up
+    /// sequence, so `speech.onComplete` knows to end the call rather than
+    /// resume listening.
+    private var isEndingCall = false
+    /// Upper bound on how long we wait for the farewell to finish speaking
+    /// before hanging up anyway (e.g. if the TTS engine itself is broken).
+    private static let errorFarewellWatchdogDuration: TimeInterval = 10.0
+
     // MARK: - Sound
 
     private let soundManager = SoundManager()
@@ -152,8 +165,14 @@ final class LiveCallService: @unchecked Sendable {
         provider = context.provider
         messages = context.messages
         speech = Container.shared.speechService()
+        isEndingCall = false
         speech.onComplete = { [weak self] in
-            guard let self, phase == .speaking || phase == .processing else { return }
+            guard let self else { return }
+            if isEndingCall {
+                stop()
+                return
+            }
+            guard phase == .speaking || phase == .processing else { return }
             startListeningPhase()
         }
         speech.onAudioStarted = { [weak self] in
@@ -182,6 +201,7 @@ final class LiveCallService: @unchecked Sendable {
         mcpServers = context.mcpServers
         onPersist = context.onPersist
         onChatGrant = context.onChatGrant
+        onError = context.onError
 
         UIApplication.shared.isIdleTimerDisabled = true
         soundManager.preparePlayers()
@@ -219,6 +239,7 @@ final class LiveCallService: @unchecked Sendable {
         chatLoop.settle()
 
         phase = .idle
+        isEndingCall = false
         UIApplication.shared.isIdleTimerDisabled = false
 
         callManager.clearCallbacks()
@@ -267,6 +288,7 @@ final class LiveCallService: @unchecked Sendable {
 
         callManager.clearCallbacks()
         phase = .idle
+        isEndingCall = false
         UIApplication.shared.isIdleTimerDisabled = false
     }
 
@@ -571,15 +593,49 @@ final class LiveCallService: @unchecked Sendable {
             } catch is CancellationError {
                 // Stopped by user
             } catch {
+                guard !Task.isCancelled else {
+                    // The user interrupted the turn (taking a turn cancels the
+                    // in-flight request), which surfaces as URLError.cancelled
+                    // rather than Swift's CancellationError. interrupt() already
+                    // handles teardown and restarts listening — nothing to do.
+                    return
+                }
                 AppLogger.error(
                     "Live call chat error: \(private: error.localizedDescription)",
                     category: .livecall
                 )
-                chatLoop.abort()
-                chatLoop.onContentDelta = nil
-                self.error = error.localizedDescription
-                startListeningPhase()
+                endCallWithError(error)
             }
+        }
+    }
+
+    /// Ends the call gracefully after a non-recoverable error: speaks a canned
+    /// localized farewell, surfaces the error to the parent chat, and hangs up
+    /// once the farewell finishes (or after a watchdog timeout, whichever
+    /// comes first).
+    private func endCallWithError(_ error: Error) {
+        guard phase != .idle else { return }
+
+        silenceTask?.cancel()
+        silenceTask = nil
+        dictation.stop()
+        soundManager.stopAll()
+        chatLoop.abort()
+        chatLoop.onContentDelta = nil
+
+        onError?(error)
+        isEndingCall = true
+
+        phase = .speaking
+        speech.reset()
+        speech.voiceIdentifier = agent?.voiceIdentifier
+        speech.feedDelta(Localized.Voice.errorFarewell)
+        speech.finish()
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.errorFarewellWatchdogDuration))
+            guard let self, isEndingCall else { return }
+            stop()
         }
     }
 }

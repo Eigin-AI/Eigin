@@ -15,6 +15,8 @@ struct LiveCallView: View {
     let mcpServers: [MCPServer]
     var onPersist: (([ChatMessage]) -> Void)?
     var onChatGrant: (([ToolCapability]) -> Void)?
+    /// Invoked with the underlying error when the call ends abnormally.
+    var onError: ((Error) -> Void)?
 
     /// When set, used in place of the `@State` service — only for previews.
     var previewService: LiveCallService?
@@ -69,7 +71,8 @@ struct LiveCallView: View {
                     space: space,
                     mcpServers: mcpServers,
                     onPersist: onPersist,
-                    onChatGrant: onChatGrant
+                    onChatGrant: onChatGrant,
+                    onError: onError
                 ))
             }
         }

@@ -4611,6 +4611,12 @@ enum Localized {
             Localized.get("voice.enhancedName")
         }
 
+        /// Spoken by the agent during a live call when a non-recoverable error occurs, right before
+        /// the call hangs up.
+        static var errorFarewell: String {
+            Localized.get("voice.errorFarewell")
+        }
+
         /// A footer text that encourages users to install more voices if they haven't already.
         static var installHint: String {
             Localized.get("voice.installHint")

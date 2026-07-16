@@ -13404,6 +13404,23 @@
         }
       }
     },
+    "voice.errorFarewell": {
+      "comment": "Spoken by the agent during a live call when a non-recoverable error occurs, right before the call hangs up.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beklager, jeg stødte på et problem, jeg ikke kunne løse, så jeg er nødt til at lægge på. Du kan ringe til mig igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm sorry, there was an error I couldn't recover from, so I'm going to have to hang up. You can call me again."
+          }
+        }
+      }
+    },
     "voice.installHint": {
       "comment": "A footer text that encourages users to install more voices if they haven't already.",
       "localizations": {

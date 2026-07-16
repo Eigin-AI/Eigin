@@ -264,6 +264,17 @@ struct ChatViewModelTests {
         #expect(vm.chatError == nil)
     }
 
+    @Test("setLiveCallError surfaces the error as a chatError")
+    @MainActor
+    func setLiveCallErrorSetsChatError() throws {
+        let (chat, _, _, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+
+        vm.setLiveCallError(URLError(.notConnectedToInternet))
+
+        #expect(vm.chatError != nil)
+    }
+
     // MARK: - retryLastTurn
 
     @Test("retryLastTurn re-runs the trailing user message without appending a duplicate")

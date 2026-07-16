@@ -20,4 +20,6 @@ struct LiveCallContext {
     // Callbacks
     var onPersist: (([ChatMessage]) -> Void)?
     var onChatGrant: (([ToolCapability]) -> Void)?
+    /// Invoked with the underlying error when the call ends abnormally.
+    var onError: ((Error) -> Void)?
 }

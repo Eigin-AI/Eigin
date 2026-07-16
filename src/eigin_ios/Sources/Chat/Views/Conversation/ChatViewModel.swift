@@ -527,6 +527,12 @@ final class ChatViewModel {
         window.messages = window.loadInitialWindow()
     }
 
+    /// Surfaces an error from an abnormally-ended live call as a chat error card,
+    /// matching how a failed send is displayed.
+    func setLiveCallError(_ error: Error) {
+        chatError = ConnectionError(from: error)
+    }
+
     func cleanupEmptyChatIfNeeded() {
         guard let chat, chat.messages.isEmpty else { return }
         modelContext.delete(chat)
