@@ -2,7 +2,7 @@
 
 [Aula](https://aula.dk) is the Danish school and daycare communication platform. This integration gives the agent read-only access to a connected Aula account: a digest of what's happening with the user's children, message threads, and the calendar.
 
-**This is an unofficial API client.** Aula (built by Netcompany, on the Kombit platform) has not published a public API or an integration story, so this talks to the same undocumented JSON API the community's reverse-engineered clients use. We haven't seen a statement from Aula, Kombit, or Netcompany for or against this kind of use, though it's known to exist in other personal and commercial AI products. If the rights holders ask us to stop, we will.
+**This is an unofficial API client.** Aula (by Netcompany / Kombit) has not published a public API or an integration story, so this talks to the same undocumented JSON API the community's reverse-engineered clients use. We haven't seen a statement from Aula, Kombit, or Netcompany for or against this kind of use, though it's known to exist in other personal and commercial AI products. If the rights holders ask us to stop, we will.
 
 ## Tools
 
@@ -27,21 +27,21 @@ We don't reimplement MitID itself - that's not something a third party should be
 
 1. We open Aula's real login page in an embedded, interactive web view and let the user complete the actual MitID login exactly as they would in a browser, including the hand-off to the MitID app if they use that.
 2. Once MitID succeeds, the broker hands back a chain of redirects toward Aula. The last leg of that chain needs no further user input, so we take over there and finish it programmatically rather than in the visible web view.
-3. That leg ends one of two ways: either Aula hands back a code we exchange for an access token, or it simply lands on the logged-in Aula site with a working browser session (cookies).
-4. From then on, every API call replays whatever we captured (cookies, and a token when we have one), the same way Aula's own web app talks to its API.
+3. That leg ends with Aula handing back a code we exchange for an access token. A token is required: a leg that only lands on the logged-in site with browser cookies but no code is treated as a failed sign-in, because a cookie-only session can't be re-established once those cookies lapse.
+4. From then on, the access token is the credential every API call carries, the same way Aula's own web app talks to its API; the short-lived web cookies are re-primed from it as needed.
 
-When that session eventually lapses, we usually don't need the user to log in again: as long as the broker's own session is still alive, we can silently redo steps 2-4 in the background. Only a fully dead broker session forces an interactive reconnect.
+The web cookies (from logged-in browser session) are disposable: they lapse after about a day, independently of the token. When they lapse, we don't need the user to log in again - we re-establish the web session from the token by re-priming it in the background, the same way the app's own client does after an idle period. An interactive reconnect is only needed when the refresh token itself dies, which is something a background step can't recover.
 
-The finicky technical details are documented inline in that code rather than here.
+The technical details are documented inline in the integration code.
 
 ### Configuration
 
 | Requirement | Notes |
 |---|---|
-| `EIGIN_AULA_OAUTH_CLIENT_ID` | Aula's own mobile-app OAuth client id (not one we register). Set in `.env` (see `.env.example`), wired into the app via `EiginAulaOAuthClientID` in `Info.plist`. Connecting Aula fails fast with a clear error if it's missing. |
+| `EIGIN_AULA_OAUTH_CLIENT_ID` | Aula's own mobile-app OAuth client id. Set in `.env` (see `.env.example`), wired into the app via `EiginAulaOAuthClientID` in `Info.plist`. Connecting Aula fails fast with a clear error if it's missing. |
 
 ## Status and known limitations
 
-This is an experimental integration. A little more out of the ordinary than our other integrations, since it rides on an unofficial API. We expect Aula's API shape to drift over time and will need to keep an eye on it; for now we're rolling with it and seeing how it goes.
+This is an experimental integration. A little out of the ordinary compared to our other integrations, since it rides on an unofficial API. We expect Aula's API to drift over time and will need to keep an eye on it; for now we're rolling with it and seeing how it goes.
 
-The third-party homework/weekly-plan providers (MinUddannelse, Meebook, EasyIQ, Huskelisten) aren't included in this first cut.
+Third-party homework/weekly-plan providers (MinUddannelse, Meebook, EasyIQ, Huskelisten) aren't included in this first implementation.

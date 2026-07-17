@@ -23,15 +23,6 @@ struct AulaSession: Codable, Equatable, Sendable {
     /// The logged-in guardian's children, captured at connect time.
     var children: [AulaChild]
 
-    /// The full broker/MitID SSO cookie jar captured at login. `nil` for
-    /// sessions connected before this existed, or if a silent re-authorize is
-    /// otherwise unavailable.
-    var brokerCookies: [BrokerCookie]? = nil
-
-    /// The web view's `navigator.userAgent` at login time, replayed on a
-    /// silent re-authorize's headless requests.
-    var userAgent: String? = nil
-
     /// The guardian's own `institutionProfile.id`(s), parallel to each
     /// ``AulaChild/institutionProfileID``. `nil` for sessions connected
     /// before this existed.

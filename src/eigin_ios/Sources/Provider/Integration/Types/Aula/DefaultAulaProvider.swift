@@ -12,20 +12,17 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
     private let credentialStore: any AulaCredentialStore
     private let apiClient: AulaAPIClient
     private let tokenRefresher: any AulaTokenRefresher
-    private let reauthorizer: any AulaReauthorizer
 
     init(
         integrationID: UUID,
         credentialStore: any AulaCredentialStore,
         apiClient: AulaAPIClient,
-        tokenRefresher: any AulaTokenRefresher = DefaultAulaTokenRefresher(),
-        reauthorizer: any AulaReauthorizer = DefaultAulaReauthorizer()
+        tokenRefresher: any AulaTokenRefresher = DefaultAulaTokenRefresher()
     ) {
         self.integrationID = integrationID
         self.credentialStore = credentialStore
         self.apiClient = apiClient
         self.tokenRefresher = tokenRefresher
-        self.reauthorizer = reauthorizer
     }
 
     // MARK: - AulaProvider
@@ -230,27 +227,39 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
     /// scope) wouldn't change that, so refreshing there would just waste a
     /// round trip.
     ///
-    /// A `sessionExpired` that reaches here despite a valid access token means
-    /// something the base-token refresh can't fix: the MitID step-up assurance
-    /// or the web session (`PHPSESSID`) has lapsed — both decay independently
-    /// of the access token and aren't restored by a `refresh_token` grant. For
-    /// that we fall back once to a silent re-authorize (``reauthorizedSession``)
-    /// and retry; a second failure means the broker/SSO session itself is gone
-    /// and there's nothing left to recover without an interactive reconnect.
+    /// The OAuth token is the session: web cookies (`PHPSESSID`, `Csrfp-Token`)
+    /// are disposable server-side state that lapses independently of the token
+    /// (Aula's web session is ~24h). So a `sessionExpired` from the API *call*
+    /// — a `401`/`403` made with a valid access token — means that server-side
+    /// web session has died, not the token. We recover once by dropping the
+    /// stale cookies and priming a fresh server session (``resetWebSession``),
+    /// letting the API re-issue web state via `Set-Cookie`, then retry the call
+    /// against the primed session. A second failure propagates (no loop).
+    ///
+    /// A `sessionExpired` thrown by the proactive refresh grant itself, by
+    /// contrast, means the refresh token's own lifetime ran out (the overnight
+    /// case) — nothing a web-session reset can fix — so it propagates straight
+    /// to an interactive reconnect without attempting a reset.
     private func withRefresh(
         _ call: (AulaSession) async throws -> AulaResponse
     ) async throws -> Data {
         var current = try session()
+        // A refresh-grant failure here surfaces as `sessionExpired` before the
+        // do/catch below, so it bypasses the web-session reset (a dead refresh
+        // token isn't recoverable by re-priming cookies).
         if tokenExpired(current), current.refreshToken != nil {
             current = try await refreshedSession(current)
         }
         do {
             return try await persisting(call(current), against: current)
         } catch AulaProviderError.sessionExpired {
-            guard let recovered = try await reauthorizedSession(current) else {
+            AppLogger.debug("aula: sessionExpired, resetting web session", category: .network)
+            guard let primed = try await resetWebSession(current) else {
+                AppLogger.debug("aula: web-session reset unavailable or failed", category: .network)
                 throw AulaProviderError.sessionExpired
             }
-            return try await persisting(call(recovered), against: recovered)
+            AppLogger.debug("aula: web session reset, retrying call", category: .network)
+            return try await persisting(call(primed), against: primed)
         }
     }
 
@@ -275,6 +284,10 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
         do {
             tokens = try await tokenRefresher.refresh(refreshToken: refreshToken)
         } catch {
+            AppLogger.debug(
+                "aula: refresh grant failed: \(private: error.localizedDescription)",
+                category: .network
+            )
             throw AulaProviderError.sessionExpired
         }
         var updated = session
@@ -289,42 +302,32 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
         return updated
     }
 
-    /// Attempts a silent re-authorize against the session's persisted broker
-    /// cookies, merges the result (fresh tokens, when minted, plus the
-    /// re-warmed API/broker cookie jars) into the session, and persists it.
-    /// Returns `nil` when there's no broker jar to recover with — a session
-    /// connected before this existed, or one where the earlier interactive
-    /// login never captured one — so the caller falls straight through to
-    /// `sessionExpired`. Any re-authorize failure (most commonly the broker
-    /// session itself having lapsed) also surfaces as `nil`.
-    private func reauthorizedSession(_ session: AulaSession) async throws -> AulaSession? {
-        guard let brokerCookies = session.brokerCookies, !brokerCookies.isEmpty else {
-            return nil
-        }
-        let result: AulaReauthResult
+    /// Recovers from a `401`/`403` that means the server-side web session died
+    /// (it lapses independently of the token). Drops all cookies, primes a
+    /// fresh server session the way the reference client does, and lets the API
+    /// re-issue web state via `Set-Cookie`. Returns the primed session, or
+    /// `nil` when there's no token to reset onto (a cookie-only session can't
+    /// be re-primed) or the prime itself fails — the caller then surfaces
+    /// `sessionExpired` for an interactive reconnect.
+    private func resetWebSession(_ session: AulaSession) async throws -> AulaSession? {
+        guard session.accessToken != nil else { return nil } // nothing to reset onto
+        var cleared = session
+        cleared.cookies = [:]
         do {
-            result = try await reauthorizer.reauthorize(
-                brokerCookies: AulaSessionCookies.httpCookies(from: brokerCookies),
-                userAgent: session.userAgent
+            // Priming call: messaging endpoints 403 on an unprimed session (the
+            // reference client establishes the active profile context before
+            // getThreads). `absorbingCookies` captures the fresh PHPSESSID /
+            // Csrfp-Token the response sets.
+            let response = try await apiClient.get(
+                method: "profiles.getProfileContext",
+                queryItems: [URLQueryItem(name: "portalrole", value: "guardian")],
+                session: cleared
             )
+            credentialStore.save(response.session, for: integrationID)
+            return response.session
         } catch {
-            return nil
+            return nil // caller surfaces sessionExpired
         }
-
-        var updated = session
-        if let tokens = result.tokens {
-            updated.accessToken = tokens.accessToken
-            if let newRefreshToken = tokens.refreshToken {
-                updated.refreshToken = newRefreshToken
-            }
-            updated.expiresAt = tokens.expiresIn.map {
-                Date.now.addingTimeInterval(TimeInterval($0))
-            }
-        }
-        updated.cookies = AulaSessionCookies.apiCookies(from: result.cookies)
-        updated.brokerCookies = AulaSessionCookies.brokerCookies(from: result.cookies)
-        credentialStore.save(updated, for: integrationID)
-        return updated
     }
 
     /// Persists the returned session whenever it changed — the client bumps the

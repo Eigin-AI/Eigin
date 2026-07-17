@@ -120,10 +120,7 @@ struct AddAulaAccount: View {
                     codeVerifier: pkce.verifier,
                     config: config
                 )
-                // This direct path doesn't run the intercept script, so no
-                // user agent is captured — a later silent re-authorize for
-                // this session falls back to the walker's own default.
-                try await finish(tokens: tokens, cookies: cookies, userAgent: nil)
+                try await finish(tokens: tokens, cookies: cookies)
             } catch {
                 fail(error)
             }
@@ -156,11 +153,7 @@ struct AddAulaAccount: View {
                         AppLogger.debug("\(private: message)", category: .onboarding)
                     }
                 )
-                try await finish(
-                    tokens: result.tokens,
-                    cookies: result.cookies,
-                    userAgent: userAgent
-                )
+                try await finish(tokens: result.tokens, cookies: result.cookies)
             } catch {
                 fail(error)
             }
@@ -168,26 +161,25 @@ struct AddAulaAccount: View {
     }
 
     /// Shared tail: build the session, verify it works, and save the integration.
-    /// `tokens` is nil on the cookie-only path — the web flow authenticates the
-    /// API with the aula.dk session cookies alone, no OAuth code involved.
-    /// `cookies` is persisted twice: the API-scoped subset that authenticates
-    /// calls, and the full broker/SSO jar (``AulaSession/brokerCookies``) kept
-    /// only so a later silent re-authorize can re-walk the authorize chain
-    /// without a fresh MitID prompt.
+    /// The OAuth token *is* the session — web cookies are disposable server-side
+    /// state re-established from the token when they lapse. A walk that never
+    /// minted a token (the cookie-only portal landing) can't be recovered that
+    /// way, so it's a failed sign-in: reject it rather than persist a session
+    /// doomed to a one-shot cookie lifetime.
     private func finish(
         tokens: TokenResponse?,
-        cookies: [HTTPCookie],
-        userAgent: String?
+        cookies: [HTTPCookie]
     ) async throws {
+        guard let tokens else {
+            throw AulaConnectionError.sessionRejected
+        }
         let session = AulaSession(
-            accessToken: tokens?.accessToken,
-            refreshToken: tokens?.refreshToken,
-            expiresAt: tokens?.expiresIn.map { Date.now.addingTimeInterval(TimeInterval($0)) },
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresAt: tokens.expiresIn.map { Date.now.addingTimeInterval(TimeInterval($0)) },
             cookies: AulaSessionCookies.apiCookies(from: cookies),
             apiVersion: AulaSession.initialAPIVersion,
-            children: [],
-            brokerCookies: AulaSessionCookies.brokerCookies(from: cookies),
-            userAgent: userAgent
+            children: []
         )
 
         let apiClient = AulaAPIClient(http: URLSessionAulaHTTP())
