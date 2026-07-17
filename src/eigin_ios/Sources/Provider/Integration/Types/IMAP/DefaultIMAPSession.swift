@@ -21,8 +21,9 @@ final class DefaultIMAPSession: IMAPSession, @unchecked Sendable {
         guard let server else { throw MailSessionError.connectionFailed("Session not open") }
         do {
             let criteria: SearchCriteria = query.map { .text($0) } ?? .all
-            let uids: UIDSet = try await server.search(criteria: [criteria])
-            return uids.toArray().map(\.value)
+            let result: ExtendedSearchResult<UID> = try await server
+                .extendedSearch(criteria: [criteria])
+            return result.all?.toArray().map(\.value) ?? []
         } catch {
             throw Self.mapError(error)
         }
