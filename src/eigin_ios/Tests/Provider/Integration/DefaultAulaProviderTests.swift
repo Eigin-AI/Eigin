@@ -23,24 +23,20 @@ struct DefaultAulaProviderTests {
     private func makeProvider(
         store: FakeAulaCredentialStore,
         http: FakeAulaHTTP,
-        refresher: any AulaTokenRefresher = FakeAulaTokenRefresher.returning(accessToken: "unused"),
-        reauthorizer: any AulaReauthorizer =
-            FakeAulaReauthorizer(result: .failure(FakeAulaReauthorizer.ReauthorizeUnavailable()))
+        refresher: any AulaTokenRefresher = FakeAulaTokenRefresher.returning(accessToken: "unused")
     ) -> DefaultAulaProvider {
         DefaultAulaProvider(
             integrationID: integrationID,
             credentialStore: store,
             apiClient: AulaAPIClient(http: http),
-            tokenRefresher: refresher,
-            reauthorizer: reauthorizer
+            tokenRefresher: refresher
         )
     }
 
     private func session(
-        accessToken: String = "tok",
+        accessToken: String? = "tok",
         refreshToken: String? = nil,
-        expiresAt: Date? = nil,
-        brokerCookies: [BrokerCookie]? = nil
+        expiresAt: Date? = nil
     ) -> AulaSession {
         AulaSession(
             accessToken: accessToken,
@@ -48,20 +44,7 @@ struct DefaultAulaProviderTests {
             expiresAt: expiresAt,
             cookies: ["Csrfp-Token": "csrf1"],
             apiVersion: 24,
-            children: [AulaChild(id: "1", name: "Astrid", institution: "Solsikken")],
-            brokerCookies: brokerCookies
-        )
-    }
-
-    /// A minimal broker cookie, standing in for the captured SSO jar.
-    private func brokerCookie() -> BrokerCookie {
-        BrokerCookie(
-            name: "MOD_AUTH_CAS",
-            value: "sso1",
-            domain: "broker.unilogin.dk",
-            path: "/",
-            isSecure: true,
-            expiresDate: nil
+            children: [AulaChild(id: "1", name: "Astrid", institution: "Solsikken")]
         )
     }
 
@@ -300,9 +283,9 @@ struct DefaultAulaProviderTests {
     @Test func doesNotRefreshAForbiddenWhileTheTokenIsStillValid() async throws {
         // A 403 with a valid (unexpired) token is never a base-token problem —
         // a fresh access token (same scope) wouldn't change it — so the
-        // proactive refresh path is never triggered by it. With no broker
-        // cookies persisted on this session there's nothing to silently
-        // re-authorize with either, so it surfaces as `sessionExpired` outright.
+        // proactive refresh path is never triggered by it. The web-session
+        // reset is attempted, but here its prime call 403s too, so it surfaces
+        // as `sessionExpired`.
         let valid = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(3600))
         let store = FakeAulaCredentialStore(seed: [integrationID: valid])
         let refresher = FakeAulaTokenRefresher.returning(accessToken: "fresh-tok")
@@ -315,74 +298,85 @@ struct DefaultAulaProviderTests {
         #expect(refresher.refreshCount == 0)
     }
 
-    @Test func silentlyReauthorizesOnSessionExpiredThenRetries() async throws {
-        // The MitID step-up assurance / web session lapses independently of
-        // the access token and isn't restored by a `refresh_token` grant. A
-        // session with a persisted broker jar recovers by silently re-walking
-        // the authorize chain instead of surfacing straight to reconnect.
-        let valid = session(
-            refreshToken: "refresh",
-            expiresAt: Date.now.addingTimeInterval(3600),
-            brokerCookies: [brokerCookie()]
-        )
+    @Test func resetsTheWebSessionOnExpiredThenRetriesAgainstAFreshCookie() async throws {
+        // The web session (PHPSESSID/Csrfp-Token) lapses independently of the
+        // token. A 401 made with a valid token means that server-side session
+        // died: drop the stale cookies, prime a fresh one via a profile-context
+        // call, and retry against the re-issued cookie.
+        let valid = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(3600))
         let store = FakeAulaCredentialStore(seed: [integrationID: valid])
-        let reauthorizer = FakeAulaReauthorizer.returning(accessToken: "fresh-tok")
-        let http = FakeAulaHTTP { request in
-            request.url!.absoluteString.contains("access_token=tok")
-                ? (401, Data())
-                : (200, Data(#"{"data":{"threads":[]}}"#.utf8))
-        }
-        let provider = makeProvider(store: store, http: http, reauthorizer: reauthorizer)
+        // 401 whenever the request still carries the stale `csrf1` cookie; 200
+        // once it doesn't (the primed session and its fresh cookie).
+        let http = FakeAulaHTTP(
+            handler: { request in
+                (request.value(forHTTPHeaderField: "Cookie") ?? "").contains("csrf1")
+                    ? (401, Data())
+                    : (200, Data(#"{"data":{"threads":[]}}"#.utf8))
+            },
+            headers: { request in
+                // The prime call re-issues the web-session cookie via Set-Cookie.
+                request.aulaMethod == "profiles.getProfileContext"
+                    ? ["Set-Cookie": "PHPSESSID=fresh-sess; Domain=www.aula.dk; Path=/"]
+                    : [:]
+            }
+        )
+        let provider = makeProvider(store: store, http: http)
 
         _ = try await provider.listMessages(limit: 10)
 
-        #expect(reauthorizer.reauthorizeCount == 1)
-        #expect(http.requests.count == 2)
-        let sentToken = try #require(http.requests.last?.url?.absoluteString)
-        #expect(sentToken.contains("access_token=fresh-tok"))
-        #expect(store.read(for: integrationID)?.accessToken == "fresh-tok")
-        #expect(store.read(for: integrationID)?.brokerCookies?.isEmpty == false)
+        // Original call → prime (profile context) → retry.
+        #expect(http.requests.map(\.aulaMethod) == [
+            "messaging.getThreads",
+            "profiles.getProfileContext",
+            "messaging.getThreads",
+        ])
+        let saved = try #require(store.read(for: integrationID))
+        #expect(saved.cookies["PHPSESSID"] == "fresh-sess")
+        #expect(saved.cookies["Csrfp-Token"] == nil)
     }
 
-    @Test func surfacesSessionExpiredWhenReauthorizeItselfFails() async throws {
-        let valid = session(
-            refreshToken: "refresh",
-            expiresAt: Date.now.addingTimeInterval(3600),
-            brokerCookies: [brokerCookie()]
-        )
-        let store = FakeAulaCredentialStore(seed: [integrationID: valid])
-        let reauthorizer =
-            FakeAulaReauthorizer(result: .failure(FakeAulaReauthorizer.ReauthorizeUnavailable()))
+    @Test func doesNotResetACookieOnlySessionAndSurfacesSessionExpired() async throws {
+        // A legacy cookie-only session (no token) has nothing to prime a reset
+        // onto — a 401 surfaces straight to reconnect, with no prime attempted.
+        let cookieOnly = session(accessToken: nil)
+        let store = FakeAulaCredentialStore(seed: [integrationID: cookieOnly])
         let http = FakeAulaHTTP { _ in (401, Data()) }
-        let provider = makeProvider(store: store, http: http, reauthorizer: reauthorizer)
+        let provider = makeProvider(store: store, http: http)
 
         await #expect(throws: AulaProviderError.sessionExpired) {
             _ = try await provider.listMessages(limit: 10)
         }
-        #expect(reauthorizer.reauthorizeCount == 1)
+        #expect(http.requests.count == 1)
+        #expect(http.requests.first?.aulaMethod == "messaging.getThreads")
     }
 
-    @Test func doesNotLoopWhenTheRetryAfterReauthorizeStillFails() async throws {
-        // A successful re-authorize followed by another 401 means the retry
-        // itself is a genuine, unrelated failure — not looped forever.
-        let valid = session(
-            refreshToken: "refresh",
-            expiresAt: Date.now.addingTimeInterval(3600),
-            brokerCookies: [brokerCookie()]
-        )
+    @Test func doesNotLoopWhenTheRetryAfterAResetStillFails() async throws {
+        // The prime succeeds but the retry still 401s — a genuine failure, not
+        // looped forever: exactly one prime, then surface `sessionExpired`.
+        let valid = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(3600))
         let store = FakeAulaCredentialStore(seed: [integrationID: valid])
-        let reauthorizer = FakeAulaReauthorizer.returning(accessToken: "fresh-tok")
-        let http = FakeAulaHTTP { _ in (401, Data()) }
-        let provider = makeProvider(store: store, http: http, reauthorizer: reauthorizer)
+        // The prime (profile context) succeeds; every messaging call 401s.
+        let http = FakeAulaHTTP { request in
+            request.aulaMethod == "profiles.getProfileContext"
+                ? (200, Data(#"{"data":{}}"#.utf8))
+                : (401, Data())
+        }
+        let provider = makeProvider(store: store, http: http)
 
         await #expect(throws: AulaProviderError.sessionExpired) {
             _ = try await provider.listMessages(limit: 10)
         }
-        #expect(reauthorizer.reauthorizeCount == 1)
-        #expect(http.requests.count == 2)
+        #expect(http.requests.map(\.aulaMethod) == [
+            "messaging.getThreads",
+            "profiles.getProfileContext",
+            "messaging.getThreads",
+        ])
     }
 
     @Test func surfacesSessionExpiredWhenTheRefreshItselfFails() async throws {
+        // A dead refresh token (the overnight case) surfaces straight to
+        // reconnect — it's thrown before the call, so no web-session reset is
+        // attempted (re-priming cookies can't revive a dead refresh token).
         let expired = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(-10))
         let store = FakeAulaCredentialStore(seed: [integrationID: expired])
         let refresher =
@@ -393,6 +387,7 @@ struct DefaultAulaProviderTests {
         await #expect(throws: AulaProviderError.sessionExpired) {
             _ = try await provider.listMessages(limit: 10)
         }
+        #expect(http.requests.isEmpty)
     }
 
     @Test func persistsTheApiVersionAfterA410Bump() async throws {

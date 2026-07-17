@@ -8,21 +8,20 @@ import Foundation
 /// `docs/src/integrations/aula.md` for why this exists.
 ///
 /// Ends one of two ways: reaching the OIDC callback (exchanges the code
-/// against the caller's PKCE verifier/state), or — more commonly — landing on
-/// `www.aula.dk/portal/` with no code at all, which is itself success; the
-/// accumulated cookie jar is what ``AulaConnectionVerifier`` then checks.
+/// against the caller's PKCE verifier/state — the outcome ``AddAulaAccount``
+/// now requires, since the token *is* the session), or landing on
+/// `www.aula.dk/portal/` with no code at all. The caller treats a token-less
+/// (cookie-only) landing as a failed sign-in and rejects it.
 enum AulaFormWalker {
     /// How many hops (redirects + form resubmits combined) we'll follow before
     /// giving up — a guard against an unexpected loop in the chain.
     static let maxHops = 15
 
     struct Result {
-        /// OAuth tokens, when the walk reached the OIDC callback. `nil` on the
-        /// cookie-only success path: the browser web flow never mints a code
-        /// at all — it lands on `www.aula.dk/portal/` and drives the API with
-        /// the `PHPSESSID`/`Csrfp-Token` cookies alone — so a walk that ends
-        /// there with those cookies in the jar is a successful login, not a
-        /// failure.
+        /// OAuth tokens, when the walk reached the OIDC callback. `nil` when
+        /// the walk landed on `www.aula.dk/portal/` without minting a code;
+        /// ``AddAulaAccount`` rejects that case, since a token-less session
+        /// can't be re-established when the web session lapses.
         let tokens: TokenResponse?
         /// The walk's final cookie jar — includes whatever the SAML/broker
         /// hops set (e.g. the `www.aula.dk` session, `Csrfp-Token`), which the
@@ -76,7 +75,6 @@ enum AulaFormWalker {
         return try await drive(
             initialResponse: response,
             client: client,
-            autoFormsOnly: false,
             seedCookies: cookies,
             expectedState: expectedState,
             codeVerifier: codeVerifier,
@@ -87,72 +85,12 @@ enum AulaFormWalker {
         )
     }
 
-    /// Re-walks the OIDC authorize chain from scratch, using the broker/SSO
-    /// cookie jar captured at the original login (``AulaSession/brokerCookies``)
-    /// rather than a fresh MitID challenge. If that broker session is still
-    /// alive, it silently SSOs and this reaches the OIDC callback the same way
-    /// ``walk`` does after its intercepted form — no user interaction. If the
-    /// broker session has lapsed, the chain lands on an interactive page
-    /// (MitID prompt, IdP selection) instead of an auto-submit form; that's
-    /// treated as failure (``AulaConnectionError/sessionRejected``) rather than
-    /// resubmitted, since there's no credential to complete it headlessly. See
-    /// ``AulaReauthorizer``, the caller.
-    ///
-    /// - Parameters:
-    ///   - authorizationURL: a freshly-built OIDC authorize URL (fresh PKCE
-    ///     material — the code this mints must match its own verifier/state,
-    ///     distinct from whatever the original login used).
-    ///   - brokerCookies: the broker/SSO jar from ``AulaSession/brokerCookies``,
-    ///     seeded into a fresh ephemeral cookie jar for this walk.
-    static func reauthorize(
-        authorizationURL: URL,
-        brokerCookies: [HTTPCookie],
-        expectedState: String,
-        codeVerifier: String,
-        redirectHost: String,
-        config: PKCEOAuthConfig,
-        http: AulaFormWalkerHTTP? = nil,
-        urlSession: URLSession = .shared,
-        userAgent: String? = nil,
-        log: @escaping @Sendable (String) -> Void = { _ in }
-    ) async throws -> Result {
-        let client = http ?? URLSessionAulaFormWalkerHTTP(
-            cookies: brokerCookies,
-            userAgent: userAgent
-        )
-
-        log("reauthorize: GET \(authorizationURL.absoluteString)")
-        let response = try await client.get(authorizationURL)
-        log("reauthorize: ← \(response.statusCode) \(response.url.absoluteString)")
-
-        return try await drive(
-            initialResponse: response,
-            client: client,
-            autoFormsOnly: true,
-            seedCookies: brokerCookies,
-            expectedState: expectedState,
-            codeVerifier: codeVerifier,
-            redirectHost: redirectHost,
-            config: config,
-            urlSession: urlSession,
-            log: log
-        )
-    }
-
-    /// Shared hop loop for ``walk`` and ``reauthorize``: follows redirects,
-    /// resubmits auto-submit forms, and terminates on either the OIDC callback
-    /// or a formless landing on `aula.dk` (the portal — cookie-only success).
-    ///
-    /// - Parameter autoFormsOnly: when `true` (``reauthorize``'s silent
-    ///   re-authorize), only ``AulaHTMLParsing/confirmationForm`` and
-    ///   ``AulaHTMLParsing/samlForm`` are followed — never the generic
-    ///   ``AulaHTMLParsing/anyForm`` fallback ``walk`` uses, which would
-    ///   otherwise resubmit an interactive MitID/IdP-selection page as if it
-    ///   were an auto-submit hop.
+    /// Hop loop for ``walk``: follows redirects, resubmits auto-submit forms,
+    /// and terminates on either the OIDC callback or a formless landing on
+    /// `aula.dk` (the portal).
     private static func drive(
         initialResponse: AulaFormWalkerResponse,
         client: AulaFormWalkerHTTP,
-        autoFormsOnly: Bool,
         seedCookies: [HTTPCookie],
         expectedState: String,
         codeVerifier: String,
@@ -176,13 +114,13 @@ enum AulaFormWalker {
                     config: config,
                     urlSession: urlSession
                 )
-                // The token authenticates basic reads, but Aula's *sensitive*
-                // endpoints (messaging, calendar) need the real web session:
-                // a `Csrfp-Token` cookie (only ever set by loading the portal,
-                // never by an API response) for the calendar POST's CSRF
-                // header, plus the `PHPSESSID` the session runs on. The OIDC
-                // path minted a code without touching the portal, so warm it
-                // now over the authenticated jar to capture those cookies.
+                // The token is the credential, but the sensitive endpoints
+                // also want a live web session (`PHPSESSID`). The OIDC path
+                // minted a code without touching the portal, so warm it now
+                // over the authenticated jar to seed that session cookie. The
+                // `Csrfp-Token` itself is (re)issued via `Set-Cookie` on API
+                // responses, not portal loads, so the provider re-primes it
+                // there when needed.
                 await warmWebSession(client: client, log: log)
                 let finalCookies = (client as? URLSessionAulaFormWalkerHTTP)?
                     .currentCookies ?? seedCookies
@@ -211,7 +149,7 @@ enum AulaFormWalker {
 
             let nextForm = AulaHTMLParsing.confirmationForm(in: response.body)
                 ?? AulaHTMLParsing.samlForm(in: response.body)
-                ?? (autoFormsOnly ? nil : AulaHTMLParsing.anyForm(in: response.body))
+                ?? AulaHTMLParsing.anyForm(in: response.body)
             guard let nextForm else {
                 // A formless 200 on an aula.dk host is the portal landing
                 // page — and this is where the real browser login *ends*. It
@@ -221,12 +159,6 @@ enum AulaFormWalker {
                 // reaching the portal *is* success; we hand the accumulated jar
                 // to ``AulaConnectionVerifier``, which is the real arbiter of
                 // whether the session works.
-                //
-                // In silent-re-authorize mode, landing anywhere else with no
-                // auto-submit form means the broker session is gone and we've
-                // hit an interactive page (MitID prompt, IdP selection) — that
-                // falls into the same non-aula.dk branch below and surfaces as
-                // `sessionRejected`, same as a genuinely rejected session.
                 let host = response.url.host?.lowercased() ?? ""
                 guard host.hasSuffix("aula.dk") else {
                     log("walk: no form/callback on 200 page — body: \(snippet(response.body))")
@@ -250,10 +182,12 @@ enum AulaFormWalker {
         throw AulaConnectionError.requestFailed("SAML chain exceeded \(maxHops) hops")
     }
 
-    /// Loads `www.aula.dk/portal/` through the authenticated jar so the
-    /// web-session cookies (`PHPSESSID`, `Csrfp-Token`) land in it — needed by
-    /// the sensitive endpoints. Best-effort: a hiccup here is logged and
-    /// swallowed rather than failing login, since we already hold valid tokens.
+    /// Loads `www.aula.dk/portal/` through the authenticated jar to seed the
+    /// web-session cookie (`PHPSESSID`) after the OIDC path minted a code
+    /// without touching the portal. Harmless cookie seeding: the `Csrfp-Token`
+    /// the sensitive endpoints need is (re)issued via `Set-Cookie` on API
+    /// responses, not here. Best-effort: a hiccup is logged and swallowed
+    /// rather than failing login, since we already hold valid tokens.
     private static func warmWebSession(
         client: AulaFormWalkerHTTP,
         log: @escaping @Sendable (String) -> Void
