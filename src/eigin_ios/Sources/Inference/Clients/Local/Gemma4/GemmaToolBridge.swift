@@ -149,7 +149,9 @@ final class BridgedToolBox: @unchecked Sendable {
 /// a warning and skips the tool. Add an entry here when you add a new concrete
 /// bridge struct above.
 enum GemmaToolBridgeRegistry {
-    static let all: [String: any LiteRTLM.Tool.Type] = [
+    /// `nonisolated(unsafe)` is safe here: an immutable `let` mapping names to
+    /// metatypes with no shared mutable state.
+    nonisolated(unsafe) static let all: [String: any LiteRTLM.Tool.Type] = [
         BridgedSearchKnowledge.name: BridgedSearchKnowledge.self,
         BridgedWebSearch.name: BridgedWebSearch.self,
         BridgedWebFetch.name: BridgedWebFetch.self,

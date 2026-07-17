@@ -3,7 +3,10 @@ import Foundation
 
 extension ToolRegistry {
     /// All domain tool kits. Each kit owns its tool construction and capabilities.
-    static let allKits: [any ToolKit.Type] = [
+    ///
+    /// `nonisolated(unsafe)` is safe here: the array is an immutable `let` of
+    /// metatypes with no shared mutable state.
+    nonisolated(unsafe) static let allKits: [any ToolKit.Type] = [
         AgentToolKit.self,
         KnowledgeToolKit.self,
         IntentToolKit.self,
