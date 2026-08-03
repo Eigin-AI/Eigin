@@ -124,14 +124,19 @@ struct ConnectionsView: View {
 
     // MARK: - Integrations
 
-    /// Connected integrations grouped by the capability they were granted for.
-    /// One integration can appear in more than one section (e.g. an account
-    /// that provides both email and, in future, calendar).
+    /// Connected integrations grouped by the capability they were granted for,
+    /// labeled with the capability's ``IntegrationCategory`` display name. An
+    /// integration providing several capabilities appears in a section for each.
     private struct CapabilitySection: Identifiable {
         let capability: Capability
         let providers: [Integration]
         var id: Capability {
             capability
+        }
+
+        var sectionTitle: String {
+            IntegrationCategory.category(for: capability)?.displayName ?? capability.rawValue
+                .titleCased
         }
     }
 
@@ -164,77 +169,53 @@ struct ConnectionsView: View {
         )?.id
     }
 
+    /// One labeled card per category, followed by a single "Add Integration"
+    /// action covering all of them.
     private var integrationsGroup: some View {
-        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            sectionLabel(Localized.Ui.integrations)
+        VStack(spacing: Sizing.PageLayout.gap) {
+            ForEach(capabilitySections) { section in
+                VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                    sectionLabel(section.sectionTitle)
 
-            AppCardSurface(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(
-                        Array(capabilitySections.enumerated()),
-                        id: \.element.capability
-                    ) { sectionIndex, section in
-                        if sectionIndex > 0 {
-                            Divider().padding(.leading, Spacing.n24)
-                        }
+                    AppCardSurface(padding: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(
+                                Array(section.providers.enumerated()),
+                                id: \.element.id
+                            ) { providerIndex, integration in
+                                if providerIndex > 0 {
+                                    Divider().padding(.leading, Spacing.n24)
+                                }
 
-                        capabilityHeaderRow(section.capability)
-
-                        ForEach(
-                            Array(section.providers.enumerated()),
-                            id: \.element.id
-                        ) { providerIndex, integration in
-                            if providerIndex > 0 {
-                                Divider().padding(.leading, Spacing.n24)
+                                integrationRow(
+                                    integration,
+                                    capability: section.capability,
+                                    isActive: activeIntegrationID(for: section) == integration.id,
+                                    showsSelector: section.providers.count > 1
+                                )
                             }
-
-                            integrationRow(
-                                integration,
-                                capability: section.capability,
-                                isActive: activeIntegrationID(for: section) == integration.id,
-                                showsSelector: section.providers.count > 1
-                            )
                         }
                     }
-
-                    if !capabilitySections.isEmpty {
-                        Divider().padding(.leading, Spacing.n24)
-                    }
-
-                    Button { showingAddIntegration = true } label: {
-                        HStack(spacing: Spacing.n16) {
-                            Text(Localized.Settings.Action.addIntegration)
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.accent)
-                            Spacer()
-                            Image(systemName: "plus")
-                                .typography(Typography.miniLabel)
-                                .foregroundStyle(colors.accent)
-                        }
-                        .padding(.horizontal, Spacing.n24)
-                        .padding(.vertical, Spacing.n16)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
                 }
             }
+
+            AppButton(
+                Localized.Settings.Action.addIntegration,
+                variant: .secondary,
+                size: .medium,
+                action: { showingAddIntegration = true },
+                trailing: {
+                    Image(systemName: "plus")
+                        .typography(Typography.miniLabel)
+                }
+            )
         }
     }
 
-    private func capabilityHeaderRow(_ capability: Capability) -> some View {
-        Text(capability.rawValue.titleCased)
-            .typography(Typography.miniLabel)
-            .foregroundStyle(colors.text.standard.muted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.n24)
-            .padding(.top, Spacing.n16)
-            .padding(.bottom, Spacing.n4)
-    }
-
-    /// A single provider row for a capability section. The text area navigates
-    /// to ``IntegrationDetail`` (remove/inspect); the trailing radio (shown
-    /// only when the capability has more than one provider) sets this
-    /// integration as the active one for `capability` without navigating.
+    /// A single provider row for a capability section. The trailing radio
+    /// (shown only when the capability has more than one provider) sets this
+    /// integration as the active one for `capability` without navigating; the
+    /// text area navigates to ``IntegrationDetail`` (remove/inspect).
     private func integrationRow(
         _ integration: Integration,
         capability: Capability,
@@ -242,6 +223,21 @@ struct ConnectionsView: View {
         showsSelector: Bool
     ) -> some View {
         HStack(spacing: Spacing.n16) {
+            if showsSelector {
+                Button {
+                    integrationManager.setActiveProvider(
+                        integration,
+                        for: capability,
+                        in: modelContext
+                    )
+                } label: {
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(isActive ? colors.accent : colors.text.standard.muted)
+                }
+                .buttonStyle(.plain)
+            }
+
             NavigationLink {
                 IntegrationDetail(integration: integration)
                     .hidesTabBar()
@@ -265,21 +261,6 @@ struct ConnectionsView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            if showsSelector {
-                Button {
-                    integrationManager.setActiveProvider(
-                        integration,
-                        for: capability,
-                        in: modelContext
-                    )
-                } label: {
-                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(isActive ? colors.accent : colors.text.standard.muted)
-                }
-                .buttonStyle(.plain)
-            }
         }
         .padding(.horizontal, Spacing.n24)
         .padding(.vertical, Spacing.n16)
@@ -494,4 +475,18 @@ struct ConnectionsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.n8)
     }
+}
+
+#Preview("Connections — integrations connected") {
+    NavigationStack {
+        ConnectionsView()
+    }
+    .previewEnvironment(seed: PreviewIntegrations.seedConnected)
+}
+
+#Preview("Connections — no integrations") {
+    NavigationStack {
+        ConnectionsView()
+    }
+    .previewEnvironment()
 }

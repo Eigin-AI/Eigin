@@ -400,6 +400,12 @@ enum Localized {
         }
 
         enum Fields {
+            /// Field label for a connected integration's account (e.g. email address) in its detail
+            /// view
+            static var account: String {
+                Localized.get("common.fields.account")
+            }
+
             /// TextField placeholder for agent name
             static var agentName: String {
                 Localized.get("common.fields.agentName")
@@ -1108,6 +1114,20 @@ enum Localized {
     }
 
     enum Integrations {
+        enum Action {
+            /// Button label to disconnect a connected integration
+            static var disconnect: String {
+                Localized.get("integrations.action.disconnect")
+            }
+        }
+
+        enum AddSheet {
+            /// Description shown atop the Add Integration sheet's browse screen
+            static var description: String {
+                Localized.get("integrations.addSheet.description")
+            }
+        }
+
         enum Aula {
             /// Subtitle for the Aula integration type in the connect picker
             static var description: String {
@@ -1117,6 +1137,44 @@ enum Localized {
             /// Display name for the Aula school/daycare integration
             static var displayName: String {
                 Localized.get("integrations.aula.displayName")
+            }
+        }
+
+        enum Category {
+            enum Email {
+                /// Display name for the Email integration category (browse grid)
+                static var displayName: String {
+                    Localized.get("integrations.category.email.displayName")
+                }
+            }
+
+            enum FamilyAndSchool {
+                /// Display name for the Family & School integration category (browse grid and
+                /// connected-list header)
+                static var displayName: String {
+                    Localized.get("integrations.category.familyAndSchool.displayName")
+                }
+            }
+
+            enum Health {
+                /// Display name for the Health integration category (browse grid) — no provider yet
+                static var displayName: String {
+                    Localized.get("integrations.category.health.displayName")
+                }
+            }
+
+            enum Music {
+                /// Display name for the Music integration category (browse grid) — no provider yet
+                static var displayName: String {
+                    Localized.get("integrations.category.music.displayName")
+                }
+            }
+        }
+
+        enum Filter {
+            /// Accessibility hint for the removable category filter chip in Add Integration
+            static var clear: String {
+                Localized.get("integrations.filter.clear")
             }
         }
 
@@ -1176,6 +1234,25 @@ enum Localized {
             /// IMAP connect form
             static var usernameField: String {
                 Localized.get("integrations.imap.usernameField")
+            }
+        }
+
+        enum Search {
+            /// Empty state shown when a search in Add Integration matches nothing
+            static var noResults: String {
+                Localized.get("integrations.search.noResults")
+            }
+
+            /// Placeholder text for the integration search field in Add Integration
+            static var placeholder: String {
+                Localized.get("integrations.search.placeholder")
+            }
+        }
+
+        enum Status {
+            /// Pill label shown next to an already-connected integration in search/browse results
+            static var connected: String {
+                Localized.get("integrations.status.connected")
             }
         }
     }
