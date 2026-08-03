@@ -44,6 +44,24 @@ struct PreviewMCPOAuthService: MCPOAuthService {
     func clearTokens(for serverID: UUID) {}
 }
 
+/// An integration OAuth service for previews that resolves instantly with a
+/// dummy token, without a browser session.
+struct PreviewIntegrationOAuthService: IntegrationOAuthService {
+    func authorize(config _: PKCEOAuthConfig, integrationID _: UUID) async throws -> String {
+        "fake-token"
+    }
+
+    func validToken(config _: PKCEOAuthConfig, integrationID _: UUID) async throws -> String? {
+        "fake-token"
+    }
+
+    func grantedScopes(for _: UUID) -> Set<String> {
+        []
+    }
+
+    func clearTokens(for _: UUID) {}
+}
+
 /// A credit wallet manager for previews that holds one sample wallet and never hits the relay.
 struct PreviewCreditWalletManager: CreditWalletManager {
     func wallets() -> [CreditWallet] {
@@ -133,7 +151,9 @@ struct PreviewProviderModelRefresher: ProviderModelRefresher {
 struct PreviewEnvironment: ViewModifier {
     let container: ModelContainer
 
-    init() {
+    /// - Parameter seed: Extra sample data for one preview's own screen,
+    ///   inserted after the shared fixtures.
+    init(seed: ((ModelContext) -> Void)? = nil) {
         // Register preview fakes on the Factory container.
         Container.shared.keychainService.register { PreviewKeychainService() }
         Container.shared.chatService.register { PreviewChatService() }
@@ -148,10 +168,13 @@ struct PreviewEnvironment: ViewModifier {
         }
         Container.shared.creditWalletManager.register { PreviewCreditWalletManager() }
         Container.shared.creditsService.register { PreviewCreditsService() }
+        Container.shared.integrationOAuthService.register { PreviewIntegrationOAuthService() }
 
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        // Matches the schema `CurrentModels` resolves to, so the container
+        // holds every model a view can query.
         let container = try! ModelContainer(
-            for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
+            for: Schema(SchemaV6.models, version: SchemaV6.versionIdentifier),
             configurations: config
         )
 
@@ -189,6 +212,8 @@ struct PreviewEnvironment: ViewModifier {
         msg2.chat = sampleChat
         container.mainContext.insert(msg2)
 
+        seed?(container.mainContext)
+
         self.container = container
     }
 
@@ -202,7 +227,38 @@ struct PreviewEnvironment: ViewModifier {
 
 extension View {
     /// Wraps the view in a full preview environment with fake services and sample data.
-    func previewEnvironment() -> some View {
-        modifier(PreviewEnvironment())
+    ///
+    /// - Parameter seed: Optional extra sample data for this specific preview.
+    func previewEnvironment(seed: ((ModelContext) -> Void)? = nil) -> some View {
+        modifier(PreviewEnvironment(seed: seed))
+    }
+}
+
+/// Sample connected integrations for previewing the integrations UI. Google and
+/// IMAP share the Email category, giving it the two providers the
+/// active-provider radio needs.
+enum PreviewIntegrations {
+    static func seedConnected(_ context: ModelContext) {
+        context.insert(
+            Integration(
+                typeID: "google",
+                accountLabel: "daniel@gmail.com",
+                grantedCapabilities: [Capability.email.rawValue]
+            )
+        )
+        context.insert(
+            Integration(
+                typeID: "imap",
+                accountLabel: "daniel@eigin.ai",
+                grantedCapabilities: [Capability.email.rawValue]
+            )
+        )
+        context.insert(
+            Integration(
+                typeID: "aula",
+                accountLabel: "Ada",
+                grantedCapabilities: [Capability.aula.rawValue]
+            )
+        )
     }
 }

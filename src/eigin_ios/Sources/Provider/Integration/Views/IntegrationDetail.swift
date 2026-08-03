@@ -32,7 +32,9 @@ struct IntegrationDetail: View {
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
                     infoCard
-                    capabilitiesCard
+                    if hasPartialGrant {
+                        capabilitiesCard
+                    }
                     removeCard
                 }
                 .padding(.horizontal, Spacing.n16)
@@ -44,7 +46,7 @@ struct IntegrationDetail: View {
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .alert(integration.accountLabel, isPresented: $showRemoveConfirmation) {
-            Button(Localized.Ui.remove, role: .destructive) { remove() }
+            Button(Localized.Integrations.Action.disconnect, role: .destructive) { remove() }
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
         }
     }
@@ -57,7 +59,7 @@ struct IntegrationDetail: View {
                     value: type?.displayName ?? integration.typeID
                 )
                 Divider().padding(.leading, Spacing.n24)
-                infoRow(label: Localized.Ui.email, value: integration.accountLabel)
+                infoRow(label: Localized.Common.Fields.account, value: integration.accountLabel)
             }
         }
     }
@@ -87,6 +89,12 @@ struct IntegrationDetail: View {
             .providedCapabilities ??
             Set(integration.grantedCapabilities.compactMap(Capability.init))
         return all.sorted { $0.rawValue < $1.rawValue }.map { ($0, granted.contains($0.rawValue)) }
+    }
+
+    /// Whether the account is missing any capability its type provides, which
+    /// happens when consent is given for only some of the requested scopes.
+    private var hasPartialGrant: Bool {
+        allCapabilities.contains { !$0.granted }
     }
 
     private var capabilitiesCard: some View {
@@ -135,7 +143,7 @@ struct IntegrationDetail: View {
     }
 
     private var removeCard: some View {
-        AppButton(Localized.Ui.remove, variant: .destructive) {
+        AppButton(Localized.Integrations.Action.disconnect, variant: .destructive) {
             showRemoveConfirmation = true
         }
     }
@@ -156,4 +164,42 @@ struct IntegrationDetail: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.n8)
     }
+}
+
+#Preview("Fully granted") {
+    let integration = Integration(
+        typeID: "google",
+        accountLabel: "daniel@gmail.com",
+        grantedCapabilities: [Capability.email.rawValue]
+    )
+    return NavigationStack {
+        IntegrationDetail(integration: integration)
+    }
+    .previewEnvironment { $0.insert(integration) }
+}
+
+#Preview("Partial grant") {
+    // Google provides `.email` but nothing was granted, so the
+    // granted-capabilities card appears.
+    let integration = Integration(
+        typeID: "google",
+        accountLabel: "daniel@gmail.com",
+        grantedCapabilities: []
+    )
+    return NavigationStack {
+        IntegrationDetail(integration: integration)
+    }
+    .previewEnvironment { $0.insert(integration) }
+}
+
+#Preview("Aula") {
+    let integration = Integration(
+        typeID: "aula",
+        accountLabel: "Ada",
+        grantedCapabilities: [Capability.aula.rawValue]
+    )
+    return NavigationStack {
+        IntegrationDetail(integration: integration)
+    }
+    .previewEnvironment { $0.insert(integration) }
 }

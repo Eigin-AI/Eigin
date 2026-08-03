@@ -13,6 +13,9 @@ struct IntegrationType: Sendable {
     /// (e.g. a Google account) can provide more than one — later capabilities
     /// can be granted on the same connection via incremental OAuth consent.
     let providedCapabilities: Set<Capability>
+    /// The category this type belongs to, and the source of truth for
+    /// category membership.
+    let category: IntegrationCategory
     let authKind: IntegrationAuthKind
     /// For `.oauth` types: which OAuth scopes each capability actually needs,
     /// so the connect flow can tell which capabilities the user really
@@ -41,6 +44,7 @@ struct IntegrationType: Sendable {
         description: String,
         systemImage: String,
         providedCapabilities: Set<Capability>,
+        category: IntegrationCategory,
         authKind: IntegrationAuthKind,
         requiredScopes: [Capability: Set<String>] = [:],
         toolCapabilities: [ToolCapability],
@@ -52,6 +56,7 @@ struct IntegrationType: Sendable {
         self.description = description
         self.systemImage = systemImage
         self.providedCapabilities = providedCapabilities
+        self.category = category
         self.authKind = authKind
         self.requiredScopes = requiredScopes
         self.toolCapabilities = toolCapabilities
@@ -84,6 +89,7 @@ enum BundledIntegrationType {
         description: "Connect a Google account to read and send email.",
         systemImage: "envelope.fill",
         providedCapabilities: [.email],
+        category: .email,
         authKind: .oauth(configFactory: GoogleOAuth.config),
         requiredScopes: [
             .email: [
@@ -114,6 +120,7 @@ enum BundledIntegrationType {
         description: "Connect a Microsoft account to read and send email.",
         systemImage: "envelope.fill",
         providedCapabilities: [.email],
+        category: .email,
         authKind: .oauth(configFactory: MicrosoftOAuth.config),
         requiredScopes: [
             .email: ["Mail.Read", "Mail.Send"],
@@ -142,6 +149,7 @@ enum BundledIntegrationType {
         description: Localized.Integrations.Imap.description,
         systemImage: "envelope.fill",
         providedCapabilities: [.email],
+        category: .email,
         authKind: .imap,
         // No OAuth scopes to gate on — a connected IMAP account grants every
         // capability it provides, same as any other non-OAuth auth kind (see
@@ -167,6 +175,7 @@ enum BundledIntegrationType {
         description: Localized.Integrations.Aula.description,
         systemImage: "figure.child",
         providedCapabilities: [.aula],
+        category: .familyAndSchool,
         authKind: .webSession(configFactory: AulaOAuth.config),
         // No OAuth scopes to gate on — a connected Aula account grants the
         // capability it provides, same as the IMAP non-OAuth kind.

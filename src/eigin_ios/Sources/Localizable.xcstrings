@@ -13952,6 +13952,193 @@
           }
         }
       }
+    },
+    "integrations.category.email.displayName": {
+      "comment": "Display name for the Email integration category (browse grid)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        }
+      }
+    },
+    "integrations.category.familyAndSchool.displayName": {
+      "comment": "Display name for the Family & School integration category (browse grid and connected-list header)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie & skole"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Family & School"
+          }
+        }
+      }
+    },
+    "integrations.category.health.displayName": {
+      "comment": "Display name for the Health integration category (browse grid) — no provider yet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sundhed"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health"
+          }
+        }
+      }
+    },
+    "integrations.category.music.displayName": {
+      "comment": "Display name for the Music integration category (browse grid) — no provider yet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Music"
+          }
+        }
+      }
+    },
+    "integrations.addSheet.description": {
+      "comment": "Description shown atop the Add Integration sheet's browse screen",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg efter en tjeneste, eller find den ud fra hvad du har brug for."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search for a service, or browse by what you need it to do."
+          }
+        }
+      }
+    },
+    "integrations.search.placeholder": {
+      "comment": "Placeholder text for the integration search field in Add Integration",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg i integrationer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search integrations"
+          }
+        }
+      }
+    },
+    "integrations.status.connected": {
+      "comment": "Pill label shown next to an already-connected integration in search/browse results",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbundet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        }
+      }
+    },
+    "integrations.action.disconnect": {
+      "comment": "Button label to disconnect a connected integration",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afbryd forbindelse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnect"
+          }
+        }
+      }
+    },
+    "common.fields.account": {
+      "comment": "Field label for a connected integration's account (e.g. email address) in its detail view",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "integrations.search.noResults": {
+      "comment": "Empty state shown when a search in Add Integration matches nothing",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen integrationer matcher din søgning."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No integrations match your search."
+          }
+        }
+      }
+    },
+    "integrations.filter.clear": {
+      "comment": "Accessibility hint for the removable category filter chip in Add Integration",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd filter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear filter"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
