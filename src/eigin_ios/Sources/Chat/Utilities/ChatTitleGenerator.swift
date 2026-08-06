@@ -12,6 +12,9 @@ enum ChatTitleGenerator {
         messages: [ChatMessage],
         agent: Agent,
         provider: Provider,
+        // The model the chat is running on. Defaults to the agent's own; pass the routed
+        // model when the turn ran somewhere else, so the request matches `provider`.
+        model: String? = nil,
         chatService: any ChatService,
         retryCount: Int = 0,
         using overrideMessages: [ChatMessage]? = nil
@@ -43,7 +46,7 @@ enum ChatTitleGenerator {
                         baseURL: provider.baseURL,
                         providerID: provider.id,
                         messages: titleMessages,
-                        model: agent.model
+                        model: model ?? agent.model
                     )
                     for try await token in stream {
                         title += token
@@ -57,7 +60,7 @@ enum ChatTitleGenerator {
                 } else if retryCount == 0 {
                     generate(
                         chat: chat, messages: messages,
-                        agent: agent, provider: provider,
+                        agent: agent, provider: provider, model: model,
                         chatService: chatService,
                         retryCount: 1, using: overrideMessages
                     )

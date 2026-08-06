@@ -118,6 +118,13 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         lock.withLock { _inlineToolCalls = calls }
     }
 
+    /// The model of the most recent request, for asserting which one the loop used.
+    var lastModel: String? {
+        lock.withLock { _lastModel }
+    }
+
+    private var _lastModel: String?
+
     func chatCompletionEventStream(
         baseURL: String,
         providerID: UUID,
@@ -127,6 +134,7 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         cacheKey _: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        lock.withLock { _lastModel = model }
         if let thrown: Error = lock.withLock({
             let e = _eventStreamThrow
             _eventStreamThrow = nil

@@ -24,6 +24,7 @@ struct ChatView: View {
     @State private var showLiveCall = false
     @State private var voiceDownloadItem: AssetItem?
     @State private var showNonVisionStagedWarning = false
+    @State private var supportsVision = false
     @Environment(\.dismiss) private var dismiss
     @Injected(\.chatAttachmentStore) private var attachmentStore
 
@@ -63,9 +64,25 @@ struct ChatView: View {
         agent != nil && activeProvider != nil
     }
 
-    private var supportsVision: Bool {
-        guard let model = agent?.model else { return false }
-        return KnownModelCatalog.lookup(model)?.supportsVision ?? false
+    /// Under automatic selection there is no model yet when composing, so the question is
+    /// whether the router *could* find one that sees, not whether the current one does.
+    private func refreshVisionSupport() async {
+        guard let agent, let provider = activeProvider,
+              let request = RouteRequest(
+                  agent: agent,
+                  provider: provider,
+                  requirements: RouteRequirements(needsVision: true)
+              )
+        else {
+            supportsVision = false
+            return
+        }
+        supportsVision = await Container.shared.modelRouter().canSatisfy(request)
+    }
+
+    /// Changes that could alter which models are on offer.
+    private var visionGateKey: String {
+        "\(agent?.model ?? "")|\(agent?.autoModel ?? false)|\(activeProvider?.id.uuidString ?? "")|\(activeProvider?.availableModels.count ?? 0)"
     }
 
     private var showVoiceDownload: Binding<Bool> {
@@ -258,6 +275,13 @@ struct ChatView: View {
                     viewModel.generateTitle(agent: agent, provider: provider)
                 }
             }
+        }
+        .task(id: visionGateKey) { await refreshVisionSupport() }
+        // Attempts are what change model health, so re-ask once each turn settles:
+        // the last vision-capable model may have been quarantined mid-conversation.
+        .onChange(of: viewModel.isTurnInProgress) { _, inProgress in
+            guard !inProgress else { return }
+            Task { await refreshVisionSupport() }
         }
         .onChange(of: showLiveCall) { wasPresented, isPresented in
             if wasPresented, !isPresented {

@@ -271,8 +271,12 @@ struct AgentProfile: View {
 
                         NavigationLink {
                             if let provider = currentProvider {
-                                ModelPicker(provider: provider, selectedModel: $agent.model)
-                                    .hidesTabBar()
+                                ModelPicker(
+                                    provider: provider,
+                                    selectedModel: $agent.model,
+                                    isAuto: $agent.autoModel
+                                )
+                                .hidesTabBar()
                             }
                         } label: {
                             HStack(spacing: Spacing.n16) {
@@ -280,10 +284,14 @@ struct AgentProfile: View {
                                     .typography(Typography.titleXS)
                                     .foregroundStyle(colors.text.standard.base)
                                 Spacer()
-                                Text(modelDisplayName(agent.model))
-                                    .typography(Typography.tag)
-                                    .foregroundStyle(colors.text.standard.muted)
-                                    .lineLimit(1)
+                                Text(
+                                    agent.autoModel
+                                        ? Localized.Model.Picker.Auto.title
+                                        : modelDisplayName(agent.model)
+                                )
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.text.standard.muted)
+                                .lineLimit(1)
                                 Image(systemName: "chevron.right")
                                     .typography(Typography.miniLabel)
                                     .foregroundStyle(colors.text.standard.muted)
@@ -349,6 +357,9 @@ struct AgentProfile: View {
             set: { newID in
                 guard newID != agent.providerID else { return }
                 agent.providerID = newID
+                // A model pinned on the old provider means nothing on the new one, so
+                // seed a sensible starting point and let the router take it from there.
+                agent.autoModel = true
                 if let newProvider = providers.first(where: { $0.id == newID }),
                    let bestModel = KnownModelCatalog.bestModel(from: newProvider.availableModels)
                 {

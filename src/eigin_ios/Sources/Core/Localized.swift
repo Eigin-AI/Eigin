@@ -1665,6 +1665,23 @@ enum Localized {
             static var title: String {
                 Localized.get("model.picker.title")
             }
+
+            enum Auto {
+                /// Shows which model automatic selection is currently using
+                static func current(_ p1: String) -> String {
+                    String(format: Localized.get("model.picker.auto.current"), p1)
+                }
+
+                /// Explains what automatic model selection does
+                static var description: String {
+                    Localized.get("model.picker.auto.description")
+                }
+
+                /// Title of the automatic model selection option
+                static var title: String {
+                    Localized.get("model.picker.auto.title")
+                }
+            }
         }
 
         enum Status {

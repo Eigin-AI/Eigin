@@ -192,6 +192,88 @@ struct AgenticChatLoopTests {
         #expect(produced[0].content == "Recovered!")
     }
 
+    @Test @MainActor func retriesOnTheModelTheRouterOffers() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        provider.availableModels = ["claude-sonnet-5", "gpt-5.6"]
+        agent.model = "claude-sonnet-5"
+
+        let router = FakeModelRouter(retryModels: ["gpt-5.6"])
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+
+        let fakeChatService = FakeChatService()
+        fakeChatService.throwOnEventStream(OpenAICompatibleClientError.httpError(503, body: nil))
+        fakeChatService.enqueueEventStream([.contentDelta("Second try"), .finished(.stop)])
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: FakeToolExecutor()
+        )
+
+        #expect(produced.count == 1)
+        #expect(produced[0].content == "Second try")
+        #expect(agent.model == "gpt-5.6")
+
+        // One failed open, one successful stream.
+        let outcomes = await router.outcomes()
+        #expect(outcomes.count == 2)
+        #expect(outcomes.map(\.model) == ["claude-sonnet-5", "gpt-5.6"])
+    }
+
+    @Test @MainActor func surfacesTheErrorWhenTheRouterHasNothingLeft() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+
+        Container.shared.modelRouter.register { FakeModelRouter(retryModels: []) }
+        defer { Container.shared.modelRouter.reset() }
+
+        let fakeChatService = FakeChatService()
+        fakeChatService.throwOnEventStream(OpenAICompatibleClientError.httpError(503, body: nil))
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        await #expect(throws: OpenAICompatibleClientError.self) {
+            try await loop.run(
+                messages: [ChatMessage(role: "user", content: "Hi")],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: fakeChatService,
+                toolExecutor: FakeToolExecutor()
+            )
+        }
+    }
+
+    @Test @MainActor func anOfflineRouteLeavesTheAgentsOwnModelAlone() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        agent.model = "claude-sonnet-5"
+
+        let fakeChatService = FakeChatService()
+        fakeChatService.enqueueEventStream([.contentDelta("On device"), .finished(.stop)])
+
+        // The router routed to an on-device model for this turn only.
+        let loop = AgenticChatLoop(isBootstrap: false)
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: FakeToolExecutor(),
+            model: "gemma-4-e2b"
+        )
+
+        #expect(fakeChatService.lastModel == "gemma-4-e2b")
+        // The user's own choice is untouched, so the next online turn returns to it.
+        #expect(agent.model == "claude-sonnet-5")
+    }
+
     @Test @MainActor func doesNotRecoverOnUnrelatedError() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container

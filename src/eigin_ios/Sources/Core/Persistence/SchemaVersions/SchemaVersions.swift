@@ -178,6 +178,35 @@ enum SchemaV6: VersionedSchema {
     }
 }
 
+// MARK: - V7: Agent gains automatic model selection
+
+/// Schema V7 adds `autoModel` to `Agent`, recording whether the model is chosen by
+/// ``ModelRouter`` or pinned by the user. Every other model is unchanged and reused
+/// from V6.
+///
+/// Model definitions that changed live in `SchemaV7/SchemaV7+Agent.swift`.
+enum SchemaV7: VersionedSchema {
+    static let versionIdentifier = Schema.Version(7, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV7.Agent.self,
+            SchemaV4.Chat.self,
+            SchemaV4.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV6.MCPServer.self,
+            SchemaV1.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -196,13 +225,23 @@ enum SchemaV6: VersionedSchema {
 ///
 /// V5 → V6 is a lightweight stage: adding `serverInstructions` (defaulting to
 /// `nil`) to `MCPServer`. No existing data is touched.
+///
+/// V6 → V7 is a lightweight stage: adding `autoModel` (defaulting to `true`) to
+/// `Agent`. Existing agents opt into automatic model selection starting from the
+/// model they already have, so nothing changes until a model actually misbehaves.
 enum EiginMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self, SchemaV6.self]
+        [
+            SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
+            SchemaV6.self, SchemaV7.self,
+        ]
     }
 
     static var stages: [MigrationStage] {
-        [migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6]
+        [
+            migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
+            migrateV6toV7,
+        ]
     }
 
     static let migrateV1toV2 = MigrationStage.lightweight(
@@ -228,5 +267,10 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV5toV6 = MigrationStage.lightweight(
         fromVersion: SchemaV5.self,
         toVersion: SchemaV6.self
+    )
+
+    static let migrateV6toV7 = MigrationStage.lightweight(
+        fromVersion: SchemaV6.self,
+        toVersion: SchemaV7.self
     )
 }

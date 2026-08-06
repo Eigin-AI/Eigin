@@ -40,10 +40,29 @@ struct ImageStrippingTests {
         // No attachments remain
         #expect(result.allSatisfy { $0.attachments == nil || $0.attachments!.isEmpty })
         // Placeholder appended to content
-        #expect(result[0].content?.contains("[image omitted]") == true)
-        #expect(result[2].content?.contains("[image omitted]") == true)
+        let placeholder = MessagePipeline.visionUnsupportedPlaceholder
+        #expect(result[0].content?.contains(placeholder) == true)
+        #expect(result[2].content?.contains(placeholder) == true)
         // Assistant is unchanged
         #expect(result[1].content == "ok")
+    }
+
+    @Test("a model that cannot see is told so, rather than just that an image is missing")
+    func nonVisionPlaceholderExplainsWhy() {
+        let blind = MessagePipeline.applyImageStripping(
+            [userWithImage()], supportsVision: false
+        )
+        // The model needs to be able to say it cannot look, not silently ignore the image.
+        #expect(blind[0].content?.contains("cannot view images") == true)
+
+        // An image aged out of the live window is a different situation: the model can
+        // see, this one is just old.
+        let aged = MessagePipeline.applyImageStripping(
+            [userWithImage("old"), userWithImage("a"), userWithImage("b"), userWithImage("c")],
+            supportsVision: true
+        )
+        #expect(aged[0].content?.contains("[image omitted]") == true)
+        #expect(aged[0].content?.contains("cannot view images") == false)
     }
 
     // MARK: - Vision model keeps last N turns
@@ -106,13 +125,14 @@ struct ImageStrippingTests {
             attachments: [imageAttachment()]
         )
         let result = MessagePipeline.applyImageStripping([msg], supportsVision: false)
-        #expect(result[0].content == "Look at this:\n\n[image omitted]")
+        let placeholder = MessagePipeline.visionUnsupportedPlaceholder
+        #expect(result[0].content == "Look at this:\n\n\(placeholder)")
     }
 
     @Test func placeholderUsedAloneWhenContentNil() {
         var msg = ChatMessage(role: "user", content: nil)
         msg.attachments = [imageAttachment()]
         let result = MessagePipeline.applyImageStripping([msg], supportsVision: false)
-        #expect(result[0].content == "[image omitted]")
+        #expect(result[0].content == MessagePipeline.visionUnsupportedPlaceholder)
     }
 }
