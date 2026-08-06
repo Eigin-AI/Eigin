@@ -90,7 +90,11 @@ targets:
 
           if [ -f "${BINARY}" ]; then
             mkdir -p "${DWARF_DSYM_FOLDER_PATH}"
-            dsymutil "${BINARY}" -o "${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
+            # dsymutil cannot place its temporary output into an existing bundle,
+            # so an incremental build fails in lipo unless the old one is cleared.
+            DSYM="${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
+            rm -rf "${DSYM}"
+            dsymutil "${BINARY}" -o "${DSYM}"
           fi
     info:
       path: Sources/Info.plist
@@ -188,7 +192,11 @@ targets:
 
           if [ -f "${BINARY}" ]; then
             mkdir -p "${DWARF_DSYM_FOLDER_PATH}"
-            dsymutil "${BINARY}" -o "${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
+            # dsymutil cannot place its temporary output into an existing bundle,
+            # so an incremental build fails in lipo unless the old one is cleared.
+            DSYM="${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
+            rm -rf "${DSYM}"
+            dsymutil "${BINARY}" -o "${DSYM}"
           fi
     info:
       path: Sources/Info.plist
