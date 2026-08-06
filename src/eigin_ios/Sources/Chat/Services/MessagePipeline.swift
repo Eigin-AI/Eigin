@@ -60,6 +60,9 @@ enum MessagePipeline {
     static func prepareTurn(
         messages: [ChatMessage],
         agent: Agent,
+        // The model the turn will run on, which is the agent's own unless the router
+        // routed elsewhere. Sizes the prompt budget and picks the tool registry.
+        model: String? = nil,
         space: Space?,
         permissionPolicy: AgentPermissionPolicy,
         spaceID: UUID?,
@@ -79,7 +82,8 @@ enum MessagePipeline {
         // server data, no connection needed. Only servers backing an active
         // skill get connected (see ``ActivateSkillTool``) and have tools
         // injected. Skipped for small-context models, which never get MCP tools.
-        let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
+        let turnModel = model ?? agent.model
+        let contextWindow = KnownModelCatalog.lookup(turnModel)?.contextWindow ?? 128_000
         let isSmallContextModel = contextWindow <= smallContextThreshold
         let mcpServerManager = Container.shared.mcpServerManager()
         nonisolated(unsafe) let servers = mcpServers
@@ -235,7 +239,7 @@ enum MessagePipeline {
             activeFlow: activeFlow,
             unavailableSkillNotes: unavailableMCPNotes,
             provider: provider,
-            modelID: agent.model,
+            modelID: turnModel,
             isSmallContext: isSmallContext
         )
         let systemHint = await gatekeeper.beforeTurn(hintInput)
@@ -244,7 +248,7 @@ enum MessagePipeline {
         // Apply image stripping before assembly: keep only the most recent
         // `maxLiveImageTurns` image-bearing user turns; strip all images
         // unconditionally when the model does not support vision.
-        let supportsVision = KnownModelCatalog.lookup(agent.model)?.supportsVision ?? false
+        let supportsVision = KnownModelCatalog.lookup(turnModel)?.supportsVision ?? false
         let strippedConversation = applyImageStripping(
             conversationMessages,
             supportsVision: supportsVision
@@ -393,6 +397,10 @@ enum MessagePipeline {
     /// in the outgoing request. Older image turns are reduced to a text placeholder.
     static let maxLiveImageTurns = 2
 
+    /// Stands in for an image the current model has no way to look at.
+    static let visionUnsupportedPlaceholder =
+        "[an image was attached here, but this model cannot view images]"
+
     /// Applies image stripping to `messages` before they are sent to an inference provider.
     ///
     /// - When `supportsVision` is `false`, **all** image attachments are stripped to a
@@ -412,9 +420,11 @@ enum MessagePipeline {
         }
 
         if !supportsVision {
-            // Strip all images.
+            // Say why, not just that: a model told it cannot see can tell the user so,
+            // instead of ignoring the image they just sent.
             return messages.map { msg in
-                msg.attachments?.isEmpty == false ? msg.withStrippedAttachments() : msg
+                msg.attachments?.isEmpty == false
+                    ? msg.withStrippedAttachments(placeholder: visionUnsupportedPlaceholder) : msg
             }
         }
 

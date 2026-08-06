@@ -3,7 +3,7 @@
 /// All app code uses these unqualified names (e.g. `Agent`, `Chat`).
 /// When a new schema version is introduced, update these aliases to point
 /// to the new version and add a `MigrationStage` in the migration plan.
-typealias Agent = SchemaV1.Agent
+typealias Agent = SchemaV7.Agent
 typealias AgentInitiativeRequest = SchemaV1.AgentInitiativeRequest
 typealias AgentToolGrant = SchemaV1.AgentToolGrant
 typealias CapabilityProviderSelection = SchemaV5.CapabilityProviderSelection

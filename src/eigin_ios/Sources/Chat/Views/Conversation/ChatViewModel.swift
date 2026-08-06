@@ -224,9 +224,15 @@ final class ChatViewModel {
                 mcpServers: servers
             )
 
+            // Route before the turn is built: the prompt budget and tool registry are
+            // sized from the model that ends up running.
+            let (provider, routedModel) = await self.applyRoute(
+                agent: agent, provider: provider, messages: msgs
+            )
+
             let turn = await MessagePipeline.prepareTurn(
                 messages: msgs,
-                agent: agent, space: space,
+                agent: agent, model: routedModel, space: space,
                 permissionPolicy: policy,
                 spaceID: chat?.spaceID, chatID: chat?.id,
                 mcpServers: servers,
@@ -248,7 +254,7 @@ final class ChatViewModel {
             )
 
             let apiMessages = await applyCompactionIfNeeded(
-                turn: turn, provider: provider, agent: agent
+                turn: turn, provider: provider, model: routedModel, agent: agent
             )
 
             persistMessage(userMessage)
@@ -270,7 +276,7 @@ final class ChatViewModel {
                     mcpServers: servers
                 )
 
-                let contextWindow = KnownModelCatalog.lookup(agent.model)?.contextWindow ?? 128_000
+                let contextWindow = KnownModelCatalog.lookup(routedModel)?.contextWindow ?? 128_000
                 let isSmallContext = contextWindow <= MessagePipeline.smallContextThreshold
 
                 let activeOnDemand = updatedSkills.last
@@ -318,7 +324,8 @@ final class ChatViewModel {
                     provider: provider,
                     chatService: Container.shared.chatService(),
                     toolExecutor: registry,
-                    cacheKey: chatID.uuidString
+                    cacheKey: chatID.uuidString,
+                    model: routedModel
                 )
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)
@@ -327,7 +334,7 @@ final class ChatViewModel {
 
                 let assistantCount = window.messages.count(where: { $0.role == "assistant" })
                 if assistantCount >= ChatTitleGenerator.titleGenerationThreshold {
-                    generateTitle(agent: agent, provider: provider)
+                    generateTitle(agent: agent, provider: provider, model: routedModel)
                 }
             } catch {
                 // A user-initiated stop cancels streamTask, which surfaces here as a
@@ -340,6 +347,36 @@ final class ChatViewModel {
                 chatLoop.abort()
             }
         }
+    }
+
+    /// Asks the router where this turn should run and applies the answer.
+    ///
+    /// A route that stays on the user's provider is written back to the agent, so the
+    /// choice survives relaunch and keeps the provider's prompt cache warm. An offline
+    /// detour is not: `providerID` and `model` keep pointing at what the user picked, and
+    /// the next online turn returns there on its own.
+    private func applyRoute(
+        agent: Agent, provider: Provider, messages: [ChatMessage]
+    ) async -> (provider: Provider, model: String) {
+        guard let request = RouteRequest(agent: agent, provider: provider, messages: messages)
+        else {
+            return (provider, agent.model)
+        }
+        let route = await Container.shared.modelRouter().resolve(request)
+
+        guard !route.staysOn(providerID: provider.id) else {
+            agent.model = route.model
+            return (provider, route.model)
+        }
+        let routedID = route.providerID
+        guard let context = agent.modelContext,
+              let routed = try? context.fetch(
+                  FetchDescriptor<Provider>(predicate: #Predicate { $0.id == routedID })
+              ).first
+        else {
+            return (provider, agent.model)
+        }
+        return (routed, route.model)
     }
 
     func handleStop() {
@@ -435,9 +472,13 @@ final class ChatViewModel {
 
     // MARK: - Compaction
 
+    /// `model` is the routed model, which on an offline turn is not `agent.model`. It
+    /// decides the output reservation, so a mismatch here silently starves the input
+    /// budget rather than failing.
     private func applyCompactionIfNeeded(
         turn: MessagePipeline.TurnInputs,
         provider: Provider,
+        model: String,
         agent: Agent
     ) async -> [ChatMessage] {
         let onProgress: @Sendable (CompactionPhase) -> Void = { [weak self] phase in
@@ -468,7 +509,7 @@ final class ChatViewModel {
             needsCompaction: chat?.needsCompaction ?? false,
             baseURL: provider.baseURL,
             providerID: provider.id,
-            model: agent.model,
+            model: model,
             chatService: Container.shared.chatService(),
             onProgress: onProgress
         )
@@ -543,12 +584,13 @@ final class ChatViewModel {
     func generateTitle(
         agent: Agent,
         provider: Provider,
+        model: String? = nil,
         using overrideMessages: [ChatMessage]? = nil
     ) {
         guard let chat else { return }
         ChatTitleGenerator.generate(
             chat: chat, messages: window.messages,
-            agent: agent, provider: provider,
+            agent: agent, provider: provider, model: model,
             chatService: Container.shared.chatService(),
             using: overrideMessages
         )

@@ -131,10 +131,23 @@ final class AgenticChatLoop {
     private var shouldStop = false
 
     @ObservationIgnored
+    @Injected(\.modelRouter) private var modelRouter
+
+    @ObservationIgnored
     @Injected(\.providerModelRefresher) private var modelRefresher
 
-    /// Guards model-not-found recovery so it is attempted at most once per turn.
-    private var didAttemptModelRecovery = false
+    /// Guards the catalog refresh so a turn re-fetches at most once.
+    private var didRefreshCatalog = false
+
+    /// The model this turn is running on. Usually the agent's, but an offline turn runs
+    /// on-device without disturbing the provider and model the user chose.
+    private var activeModel = ""
+
+    /// Model switches spent on this turn, capped by ``maxModelSwitches``.
+    private var modelSwitches = 0
+
+    /// Bounds how far one turn will chase a working model, in both cost and latency.
+    private let maxModelSwitches = 2
 
     /// Block splitter for streaming content.
     private let blockSplitter: StreamingBlockSplitter
@@ -171,9 +184,11 @@ final class AgenticChatLoop {
         provider: Provider,
         chatService: ChatService,
         toolExecutor: ToolExecutor,
-        cacheKey: String? = nil
+        cacheKey: String? = nil,
+        model: String? = nil
     ) async throws -> [ChatMessage] {
         reset()
+        activeModel = model ?? agent.model
         shouldStop = false
         currentMessageID = "msg-\(UUID().uuidString)"
         blockSplitter.setMessageID(currentMessageID)
@@ -243,12 +258,16 @@ final class AgenticChatLoop {
 
             chatPhase = .streamingProse
 
+            let streamStart = ContinuousClock.now
+            var firstTokenAt: ContinuousClock.Instant?
+
             do {
                 for try await event in stream {
                     if shouldStop { return [] }
 
                     switch event {
                     case .contentDelta(let delta):
+                        if firstTokenAt == nil { firstTokenAt = .now }
                         contentBuffer += delta
                         chatPhase = .streamingProse
                         throttler.feed(delta)
@@ -283,8 +302,24 @@ final class AgenticChatLoop {
                     }
                 }
             } catch is CancellationError {
+                await reportAttempt(
+                    provider: provider, start: streamStart,
+                    firstTokenAt: firstTokenAt, result: .cancelled
+                )
                 return []
+            } catch {
+                await reportAttempt(
+                    provider: provider, start: streamStart,
+                    firstTokenAt: firstTokenAt,
+                    result: .failed(RoutingFailure(from: error))
+                )
+                throw error
             }
+
+            await reportAttempt(
+                provider: provider, start: streamStart,
+                firstTokenAt: firstTokenAt, result: .succeeded
+            )
 
             AppLogger.debug(
                 "Stream ended. Content length: \(public: contentBuffer.count), tool calls: \(public: pendingToolCalls.count), reason: \(public: String(describing: finishReason))",
@@ -444,7 +479,8 @@ final class AgenticChatLoop {
         pendingOptions = nil
         isAwaitingUserInteraction = false
         currentMessageID = ""
-        didAttemptModelRecovery = false
+        modelSwitches = 0
+        didRefreshCatalog = false
     }
 
     /// Resolves a pending permission request from the UI.
@@ -518,10 +554,11 @@ final class AgenticChatLoop {
 
     // MARK: - Private
 
-    /// Opens a chat stream, recovering once if the selected model is no longer known to the
-    /// provider. A retired or renamed model surfaces as a model-not-found error; we refresh the
-    /// provider's catalog, re-pick the best available model, and retry so the turn can proceed
-    /// without the user touching settings.
+    /// Opens a chat stream, asking ``ModelRouter`` for another model when one fails.
+    ///
+    /// A stream that never opens has produced nothing, so switching models here is
+    /// invisible to the user. The router decides whether a failure is worth chasing at
+    /// all: a bad key or an empty wallet surfaces instead of burning more attempts.
     ///
     /// `inlineToolRunner` is forwarded to local model clients so they can execute
     /// tools mid-stream. Cloud clients ignore it via the default implementation
@@ -535,50 +572,108 @@ final class AgenticChatLoop {
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        do {
-            return try await chatService.chatCompletionEventStream(
-                baseURL: provider.baseURL,
-                providerID: provider.id,
-                messages: messages,
-                model: agent.model,
-                tools: tools,
-                cacheKey: cacheKey,
-                inlineToolRunner: inlineToolRunner
-            )
-        } catch {
-            guard !didAttemptModelRecovery,
-                  (error as? OpenAICompatibleClientError)?.isModelNotFound == true,
-                  await recoverModel(provider: provider, agent: agent)
-            else {
-                throw error
+        while true {
+            let attemptStart = ContinuousClock.now
+            do {
+                let stream = try await chatService.chatCompletionEventStream(
+                    baseURL: provider.baseURL,
+                    providerID: provider.id,
+                    messages: messages,
+                    model: activeModel,
+                    tools: tools,
+                    cacheKey: cacheKey,
+                    inlineToolRunner: inlineToolRunner
+                )
+                // On-device prefill is legitimately slow, and there is nothing past it to
+                // fall back to.
+                guard !ProviderPreset.isLocal(provider.baseURL) else { return stream }
+                return withFirstEventDeadline(
+                    stream, deadline: DefaultModelRouter.firstTokenCeiling
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled { throw error }
+                let failure = RoutingFailure(from: error)
+                await modelRouter.record(
+                    AttemptOutcome(
+                        providerID: provider.id,
+                        model: activeModel,
+                        timeToFirstToken: nil,
+                        tokensPerSecond: nil,
+                        duration: attemptStart.duration(to: .now),
+                        result: .failed(failure)
+                    )
+                )
+                // A retired model often means a stale catalog, and the cached list may not
+                // hold anything to move to. Re-fetch before asking for an alternative.
+                if failure == .modelNotFound, !didRefreshCatalog {
+                    didRefreshCatalog = true
+                    _ = try? await modelRefresher.refresh(provider, apiKeyOverride: nil)
+                }
+                guard modelSwitches < maxModelSwitches,
+                      let request = RouteRequest(
+                          agent: agent,
+                          provider: provider,
+                          model: activeModel,
+                          requirements: retryRequirements(messages: messages, tools: tools)
+                      ),
+                      let next = await modelRouter.retry(after: error, request: request),
+                      next.model != activeModel
+                else {
+                    throw error
+                }
+                modelSwitches += 1
+                activeModel = next.model
+                // Persist only while on the user's own provider, so an offline turn never
+                // overwrites the model they chose for their cloud provider.
+                if provider.id == agent.providerID { agent.model = next.model }
             }
-            return try await chatService.chatCompletionEventStream(
-                baseURL: provider.baseURL,
-                providerID: provider.id,
-                messages: messages,
-                model: agent.model,
-                tools: tools,
-                cacheKey: cacheKey,
-                inlineToolRunner: inlineToolRunner
-            )
         }
     }
 
-    /// Refreshes the provider's catalog and re-selects the best model. Returns `true` when a
-    /// different, usable model was chosen (worth retrying). Attempted at most once per turn.
-    private func recoverModel(provider: Provider, agent: Agent) async -> Bool {
-        didAttemptModelRecovery = true
-        let refreshed = await (try? modelRefresher.refresh(provider, apiKeyOverride: nil))
-            ?? provider.availableModels
-        guard let best = KnownModelCatalog.bestModel(from: refreshed), best != agent.model else {
-            return false
-        }
-        AppLogger.warning(
-            "Model \(public: agent.model) not found for provider; recovered to \(public: best)",
-            category: .chat
+    /// What a replacement model has to handle to take over mid-turn.
+    ///
+    /// The prompt's measured size, not the outgoing model's window: a million-token model
+    /// could otherwise never be replaced by anything, however short the conversation
+    /// actually is. The router adds each candidate's own output reservation on top.
+    private func retryRequirements(
+        messages: [ChatMessage], tools: [ToolDefinition]?
+    ) -> RouteRequirements {
+        RouteRequirements(
+            needsVision: messages.contains { $0.attachments?.isEmpty == false },
+            promptTokens: TokenEstimator.estimateRequest(
+                messages: messages, toolDefinitions: tools
+            )
         )
-        agent.model = best
-        return true
+    }
+
+    /// Reports one stream's timings to the router.
+    ///
+    /// Throughput is estimated from the prose actually streamed, at the usual four
+    /// characters per token. Tool-call arguments are excluded, so a tool-heavy round
+    /// under-reports rather than inventing precision the stream cannot give us.
+    private func reportAttempt(
+        provider: Provider,
+        start: ContinuousClock.Instant,
+        firstTokenAt: ContinuousClock.Instant?,
+        result: AttemptOutcome.Result
+    ) async {
+        let duration = start.duration(to: .now)
+        let tokensPerSecond: Double? = {
+            guard let firstTokenAt, contentBuffer.count >= 40 else { return nil }
+            let generating = firstTokenAt.duration(to: .now).seconds
+            guard generating > 0 else { return nil }
+            return (Double(contentBuffer.count) / 4) / generating
+        }()
+        await modelRouter.record(
+            AttemptOutcome(
+                providerID: provider.id,
+                model: activeModel,
+                timeToFirstToken: firstTokenAt.map { start.duration(to: $0) },
+                tokensPerSecond: tokensPerSecond,
+                duration: duration,
+                result: result
+            )
+        )
     }
 
     private func updateToolEvent(id: String, status: ToolEventStatus) {

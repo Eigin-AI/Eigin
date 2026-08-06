@@ -35,7 +35,23 @@ Some providers are mostly OpenAI-compatible but have quirks. A provider adapter 
 
 ## Model catalog
 
-A curated list of known models with metadata: display names, context windows, costs, and capabilities (tool calls, reasoning, vision), ranked by fit. When a user adds a provider, Eigin auto-selects the best-fit model; the user can override in the model selector.
+A curated list of known models with metadata: display names, context windows, costs, and capabilities (tool calls, reasoning, vision), ranked by fit. The catalog is what routing ranks against, and what the model selector renders.
+
+## Model routing
+
+When **Automatic** model selection is enabled, a router picks which of the provider's models runs each turn. Picking a specific model turns routing off.
+
+The router is asked before a turn is built, since the prompt budget and tool registry are sized from the model that runs. After the turn it receives performance metrics, and how the turn ended.
+
+The chat loop sends requirements to the router (like whether it needs vision), and the router resolves that to a model based on best-effort. Requirements get progressively relaxed until a model can be found.
+
+Rejected keys, empty wallets, and malformed requests still appear as errors to the user instead.
+
+### Offline
+
+On Automatic, with no network and an on-device model downloaded, the turn runs locally. A user-selected cloud model fails in this scenario.
+
+The detour isn't persisted: the agent's provider and model still point at the best cloud model choice, so the next connected turn returns there.
 
 ## Extending
 

@@ -19,7 +19,7 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV6.models, version: SchemaV6.versionIdentifier),
+                for: Schema(SchemaV7.models, version: SchemaV7.versionIdentifier),
                 migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
@@ -81,6 +81,19 @@ extension Container {
 
     var chatService: Factory<any ChatService> {
         self { DefaultChatService(keychainService: self.keychainService()) }.singleton
+    }
+
+    var networkReachability: Factory<any NetworkReachability> {
+        self { DefaultNetworkReachability() }.singleton
+    }
+
+    var modelRouter: Factory<any ModelRouter> {
+        self {
+            DefaultModelRouter(
+                reachability: self.networkReachability(),
+                localModelReadiness: { GemmaModelDownloader.shared.isDownloaded(.default) }
+            )
+        }.singleton
     }
 
     var chatAttachmentStore: Factory<any ChatAttachmentStoring> {

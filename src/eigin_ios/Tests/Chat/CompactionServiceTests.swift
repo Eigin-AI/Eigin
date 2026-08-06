@@ -249,6 +249,40 @@ struct CompactionServiceTests {
         // A plain per-turn truncation would change on nearly every turn.
         #expect(changes < 20)
     }
+
+    // MARK: - Small-context budget
+
+    @Test("the on-device budget reserves that model's output, not the one it replaced")
+    func smallContextBudgetUsesTheRunningModel() async throws {
+        // An offline turn runs on the on-device model while the agent still points at the
+        // cloud model it will return to. Sizing the reservation from the cloud model's
+        // 128k output leaves a negative budget, which silently strips the conversation
+        // down to a single message.
+        let onDevice = "gemma-4-e2b"
+        let contextWindow = try #require(KnownModelCatalog.lookup(onDevice)?.contextWindow)
+
+        var messages = [ChatMessage(role: "system", content: "You are a helpful agent.")]
+        for i in 0 ..< 16 {
+            messages.append(ChatMessage(
+                role: i.isMultiple(of: 2) ? "user" : "assistant",
+                content: "Message number \(i)"
+            ))
+        }
+
+        let result = await MessagePipeline.compactIfNeeded(
+            apiMessages: messages,
+            estimatedTokens: TokenEstimator.estimate(messages: messages),
+            contextWindow: contextWindow,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: onDevice,
+            chatService: FakeChatService()
+        )
+
+        // A short conversation fits the on-device window, so nothing is dropped.
+        #expect(result.apiMessages.count == messages.count)
+        #expect(result.summary == nil)
+    }
 }
 
 // MARK: - Helpers

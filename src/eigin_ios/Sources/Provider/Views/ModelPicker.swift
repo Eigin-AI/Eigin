@@ -1,10 +1,10 @@
 import Factory
 import SwiftUI
 
-/// Single-select model picker for power-user override.
+/// Model picker: automatic selection at the top, or a specific model for those who want
+/// to choose.
 ///
-/// Shows the auto-selected model prominently at the top, followed by
-/// "Recommended" (ordered by preference ranking) and "Other" sections.
+/// Below the Auto row come "Recommended" (ordered by preference ranking) and "Other".
 ///
 /// The provider's catalog is treated as a refreshable cache: the cached list renders instantly,
 /// then a background refresh updates it so newly added models appear and retired ones disappear.
@@ -13,6 +13,7 @@ import SwiftUI
 struct ModelPicker: View {
     let provider: Provider
     @Binding var selectedModel: String
+    @Binding var isAuto: Bool
 
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -23,7 +24,6 @@ struct ModelPicker: View {
     @State private var metadata: [String: ModelMetadata] = [:]
     @State private var rankedModels: [String] = []
     @State private var unknownModels: [String] = []
-    @State private var autoSelected: String?
     @State private var isLoaded = false
     @State private var isRefreshing = false
     @State private var isOtherCollapsed = true
@@ -89,45 +89,9 @@ struct ModelPicker: View {
 
     @ViewBuilder
     private var content: some View {
-        // Auto-selected model — elevated at the top
-        if let auto = autoSelected, searchText.isEmpty {
+        if searchText.isEmpty {
             Section {
-                Button {
-                    selectedModel = auto
-                    dismiss()
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName(for: auto))
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.text.standard.base)
-
-                            HStack(spacing: Spacing.n4) {
-                                Text(Localized.Provider.recommendedForYou)
-                                    .typography(Typography.miniLabel)
-                                    .foregroundStyle(colors.accent)
-
-                                if let sub = subtitle(for: auto) {
-                                    Text(verbatim: "·")
-                                        .typography(Typography.miniLabel)
-                                        .foregroundStyle(colors.text.standard.muted)
-                                    Text(sub)
-                                        .typography(Typography.miniLabel)
-                                        .foregroundStyle(colors.text.standard.muted)
-                                }
-                            }
-                        }
-
-                        Spacer()
-
-                        if selectedModel == auto {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(colors.accent)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                autoRow
             }
         }
 
@@ -175,6 +139,44 @@ struct ModelPicker: View {
         }
     }
 
+    /// Hands model choice back to the router. The model in use is shown as subtext so a
+    /// curious user can still see what is running.
+    private var autoRow: some View {
+        Button {
+            isAuto = true
+            dismiss()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Localized.Model.Picker.Auto.title)
+                        .typography(Typography.titleXS)
+                        .foregroundStyle(colors.text.standard.base)
+
+                    // On auto, what it picked is the useful thing to show. Off it, the
+                    // offer is.
+                    if isAuto, !selectedModel.isEmpty {
+                        Text(Localized.Model.Picker.Auto.current(displayName(for: selectedModel)))
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.accent)
+                    } else {
+                        Text(Localized.Model.Picker.Auto.description)
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
+                }
+
+                Spacer()
+
+                if isAuto {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(colors.accent)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var loadingPlaceholder: some View {
         Section {
             HStack(spacing: Spacing.n8) {
@@ -210,6 +212,7 @@ struct ModelPicker: View {
     private func modelRow(_ modelID: String) -> some View {
         Button {
             selectedModel = modelID
+            isAuto = false
             dismiss()
         } label: {
             HStack {
@@ -227,7 +230,7 @@ struct ModelPicker: View {
 
                 Spacer()
 
-                if selectedModel == modelID {
+                if !isAuto, selectedModel == modelID {
                     Image(systemName: "checkmark")
                         .foregroundStyle(colors.accent)
                 }
@@ -259,7 +262,6 @@ struct ModelPicker: View {
         // otherwise crash the rank-map build and yield non-unique `ForEach` ids.
         var seen = Set<String>()
         let all = provider.availableModels.filter { seen.insert($0).inserted }
-        autoSelected = KnownModelCatalog.bestModel(from: all)
 
         let known = all.filter { metadata[$0] != nil && matchesSearch($0) }
         let unknown = all.filter { metadata[$0] == nil && matchesSearch($0) }
@@ -280,7 +282,6 @@ struct ModelPicker: View {
         )
 
         rankedModels = known
-            .filter { $0 != autoSelected }
             .sorted { (rankByModel[$0] ?? .max) < (rankByModel[$1] ?? .max) }
         unknownModels = unknown
     }
@@ -343,6 +344,7 @@ private func previewProvider(name: String, models: [String]) -> Provider {
 
 #Preview("Typical catalog") {
     @Previewable @State var selected = "gpt-5.5"
+    @Previewable @State var isAuto = true
     let provider = previewProvider(
         name: "OpenAI",
         models: [
@@ -352,29 +354,31 @@ private func previewProvider(name: String, models: [String]) -> Provider {
         ]
     )
     return NavigationStack {
-        ModelPicker(provider: provider, selectedModel: $selected)
+        ModelPicker(provider: provider, selectedModel: $selected, isAuto: $isAuto)
     }
     .previewEnvironment()
 }
 
 #Preview("Large catalog") {
     @Previewable @State var selected = "claude-sonnet-4-6"
+    @Previewable @State var isAuto = false
     let known = ["claude-sonnet-4-6", "gpt-5.5", "gpt-5.4", "gemini-3.5-flash"]
     let unknown = (1 ... 140).map { "vendor/experimental-model-\($0)" }
     let provider = previewProvider(name: "OpenRouter", models: known + unknown)
     return NavigationStack {
-        ModelPicker(provider: provider, selectedModel: $selected)
+        ModelPicker(provider: provider, selectedModel: $selected, isAuto: $isAuto)
     }
     .previewEnvironment()
 }
 
 #Preview("First connect (loading)") {
     @Previewable @State var selected = ""
+    @Previewable @State var isAuto = true
     // Empty cache: the preview refresher simulates a slow first-connect, so this shows the
     // "Loading models…" state for ~2s and then populates as the catalog is discovered.
     let provider = previewProvider(name: "New Provider", models: [])
     return NavigationStack {
-        ModelPicker(provider: provider, selectedModel: $selected)
+        ModelPicker(provider: provider, selectedModel: $selected, isAuto: $isAuto)
     }
     .previewEnvironment()
 }
