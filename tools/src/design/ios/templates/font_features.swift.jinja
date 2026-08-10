@@ -1,5 +1,6 @@
 {{ header }}import SwiftUI
 import CoreText
+import UIKit
 
 /// OpenType font feature descriptor. Used by generated typography tokens.
 struct FontFeature {
@@ -7,9 +8,9 @@ struct FontFeature {
     let value: Int
 }
 
-extension Font {
+extension UIFont {
     /// Creates a custom font with the given PostScript name, size, and OpenType feature settings.
-    static func featuredFont(name: String, size: CGFloat, features: [FontFeature]) -> Font {
+    static func featured(name: String, size: CGFloat, features: [FontFeature]) -> UIFont {
         let settings: [[String: Any]] = features.map { f in
             [
                 kCTFontOpenTypeFeatureTag as String: f.tag,
@@ -20,6 +21,6 @@ extension Font {
             .addingAttributes([
                 kCTFontFeatureSettingsAttribute as UIFontDescriptor.AttributeName: settings
             ])
-        return Font(UIFont(descriptor: descriptor, size: size))
+        return UIFont(descriptor: descriptor, size: size)
     }
 }

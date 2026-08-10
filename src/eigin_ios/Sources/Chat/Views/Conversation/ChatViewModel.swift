@@ -55,10 +55,6 @@ final class ChatViewModel {
     static let maxStagedAttachments = 4
 
     private var didLoad = false
-    /// ID of the last assistant message that just finished streaming, for footer fade-in.
-    var lastStreamedItemID: String? {
-        chatLoop.lastStreamedItemID
-    }
 
     // MARK: - Computed
 

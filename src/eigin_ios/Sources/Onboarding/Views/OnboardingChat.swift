@@ -93,14 +93,13 @@ struct OnboardingChat: View {
                 ChatFeed(
                     items: chatItems,
                     throttler: chatLoop.throttler,
-                    splitter: chatLoop.splitter,
+                    streamingItemID: chatLoop.streamingItemID,
                     messageText: $messageText,
                     isInputDisabled: isStreaming,
                     onSend: { _ in handleSend() },
                     onStop: nil,
                     showsInputActions: false,
-                    allowsIcebreakers: false,
-                    lastStreamedItemID: chatLoop.lastStreamedItemID
+                    allowsIcebreakers: false
                 )
                 .safeAreaInset(edge: .top, spacing: 0) {
                     Color.clear.frame(height: Spacing.n16)

@@ -2,7 +2,8 @@
 
 | Package | Repository | Version | License |
 |---------|-----------|---------|---------|
-| Textual | https://github.com/42futures/textual | main | MIT |
+| SwiftStreamingMarkdown | https://github.com/microsoft/SwiftStreamingMarkdown | 0.7.0 (pinned by commit, see project.yml) | MIT |
+| HighlightSwift | https://github.com/appstefan/highlightswift | pinned by commit, see project.yml | MIT |
 | MCP Swift SDK | https://github.com/modelcontextprotocol/swift-sdk | 0.11.0 | MIT |
 | Factory | https://github.com/hmlongco/Factory | 2.4.0 | MIT |
 | FluidAudio | https://github.com/42futures/FluidAudio | feature/pocket-tts-sessions | Apache 2.0 |

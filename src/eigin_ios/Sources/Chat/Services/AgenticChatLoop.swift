@@ -79,10 +79,6 @@ final class AgenticChatLoop {
     /// When true the view layer re-enables the input bar and hides the stop button.
     private(set) var isAwaitingUserInteraction = false
 
-    /// ID of the last assistant message from the most recent completed round.
-    /// Read by the view layer for footer fade-in animation. Cleared on `reset()`.
-    private(set) var lastStreamedItemID: String?
-
     let isBootstrap: Bool
     /// Optional callback fired on each content delta (used by live call for streaming TTS).
     var onContentDelta: ((String) -> Void)?
@@ -149,18 +145,13 @@ final class AgenticChatLoop {
     /// Bounds how far one turn will chase a working model, in both cost and latency.
     private let maxModelSwitches = 2
 
-    /// Block splitter for streaming content.
-    private let blockSplitter: StreamingBlockSplitter
-
     /// Message ID for the current streaming turn (used for block ID stability).
     private var currentMessageID: String = ""
 
-    var blocks: [ContentBlock] {
-        blockSplitter.allBlocks
-    }
-
-    var splitter: StreamingBlockSplitter {
-        blockSplitter
+    /// Feed item ID of the streaming message, matching the ID it carries once committed,
+    /// so the feed can render the live turn as the row it becomes.
+    var streamingItemID: String? {
+        currentMessageID.isEmpty ? nil : "msg-\(currentMessageID)"
     }
 
     init(
@@ -170,7 +161,6 @@ final class AgenticChatLoop {
         self.isBootstrap = isBootstrap
         self.throttler = throttler
         self.permissionPolicy = permissionPolicy
-        blockSplitter = StreamingBlockSplitter(throttler: throttler)
     }
 
     // MARK: - API
@@ -191,9 +181,7 @@ final class AgenticChatLoop {
         activeModel = model ?? agent.model
         shouldStop = false
         currentMessageID = "msg-\(UUID().uuidString)"
-        blockSplitter.setMessageID(currentMessageID)
         throttler.start()
-        blockSplitter.start()
 
         var allMessages = messages
         var currentTools = tools
@@ -433,15 +421,11 @@ final class AgenticChatLoop {
         return produced
     }
 
-    /// Commits the current round: captures produced messages, tracks the last
-    /// assistant ID for animation, and settles streaming state.
-    /// Call synchronously before appending to the display message list so SwiftUI
-    /// batches both changes in one update cycle.
+    /// Commits the current round: captures produced messages and settles streaming
+    /// state. Call synchronously before appending to the display message list so
+    /// SwiftUI batches both changes in one update cycle.
     func completeRound() -> [ChatMessage] {
         let messages = produced
-        if let last = messages.last(where: { $0.role == "assistant" }) {
-            lastStreamedItemID = "msg-\(last.localID)"
-        }
         settle()
         return messages
     }
@@ -450,9 +434,7 @@ final class AgenticChatLoop {
     /// Call this synchronously after appending to `displayMessages` so SwiftUI
     /// batches both changes (committed messages appear + streaming item disappears).
     func settle() {
-        blockSplitter.seal()
         throttler.reset()
-        blockSplitter.reset()
         toolEvents = []
         produced = []
         safeProducedCount = 0
@@ -466,7 +448,6 @@ final class AgenticChatLoop {
     /// Resets all state for a new turn.
     func reset() {
         throttler.reset()
-        blockSplitter.reset()
         toolEvents = []
         chatPhase = .idle
         contentBuffer = ""
@@ -474,7 +455,6 @@ final class AgenticChatLoop {
         produced = []
         safeProducedCount = 0
         shouldStop = false
-        lastStreamedItemID = nil
         pendingBrowsing = nil
         pendingOptions = nil
         isAwaitingUserInteraction = false
@@ -535,7 +515,6 @@ final class AgenticChatLoop {
         guard chatPhase != .idle, chatPhase != .done else { return [] }
         shouldStop = true
         throttler.abort()
-        blockSplitter.seal()
         // Cancel any pending permission prompt
         permissionContinuation?.resume(returning: .deny)
         permissionContinuation = nil

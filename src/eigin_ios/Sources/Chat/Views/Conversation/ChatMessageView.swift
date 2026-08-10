@@ -1,15 +1,15 @@
 import Factory
 import SwiftUI
-import Textual
 import UIKit
 
-struct ChatMessageView: View {
+struct ChatMessageView: View, Equatable {
     let role: String
     let content: String
     var attachments: [MessageAttachment] = []
     var messageID: String = ""
+    /// True while this message is the live streaming turn.
+    var isActivelyStreaming: Bool = false
     var showFooter: Bool = false
-    var animateFooter: Bool = false
     var showUserMessageFooter: Bool = false
     var onUserMessageFooterAction: (() -> Void)?
 
@@ -19,7 +19,6 @@ struct ChatMessageView: View {
     @Injected(\.voiceService) private var voiceService
     @Injected(\.languageManager) private var languageManager
     @State private var showCopied = false
-    @State private var footerRevealed = false
     @State private var downloadItem: AssetItem?
 
     init(
@@ -27,8 +26,8 @@ struct ChatMessageView: View {
         content: String,
         attachments: [MessageAttachment] = [],
         messageID: String = "",
+        isActivelyStreaming: Bool = false,
         showFooter: Bool = false,
-        animateFooter: Bool = false,
         showUserMessageFooter: Bool = false,
         onUserMessageFooterAction: (() -> Void)? = nil
     ) {
@@ -36,10 +35,22 @@ struct ChatMessageView: View {
         self.content = content
         self.attachments = attachments
         self.messageID = messageID
+        self.isActivelyStreaming = isActivelyStreaming
         self.showFooter = showFooter
-        self.animateFooter = animateFooter
         self.showUserMessageFooter = showUserMessageFooter
         self.onUserMessageFooterAction = onUserMessageFooterAction
+    }
+
+    /// Compares only what's drawn, not the action closures the feed rebuilds each render.
+    /// Without this, every message re-splits its blocks on every streaming tick.
+    nonisolated static func == (lhs: ChatMessageView, rhs: ChatMessageView) -> Bool {
+        lhs.role == rhs.role
+            && lhs.content == rhs.content
+            && lhs.attachments == rhs.attachments
+            && lhs.messageID == rhs.messageID
+            && lhs.isActivelyStreaming == rhs.isActivelyStreaming
+            && lhs.showFooter == rhs.showFooter
+            && lhs.showUserMessageFooter == rhs.showUserMessageFooter
     }
 
     private var isUser: Bool {
@@ -117,7 +128,10 @@ struct ChatMessageView: View {
         AppChatBrandMessage {
             VStack(alignment: .leading, spacing: Spacing.n16) {
                 ForEach(blocks) { block in
-                    ContentBlockView(block: block)
+                    ContentBlockView(
+                        block: block,
+                        isActivelyStreaming: isActivelyStreaming && block.id == blocks.last?.id
+                    )
                 }
 
                 footerView
@@ -195,21 +209,10 @@ struct ChatMessageView: View {
                 .frame(width: 16)
             }
         }
+        // Height is reserved while empty so the footer fading in doesn't shift the
+        // message. The fade runs only when `showFooter` flips, so history draws it at once.
         .frame(height: 22)
-        .opacity(animateFooter && !footerRevealed ? 0 : 1)
-        .onAppear {
-            if animateFooter {
-                withAnimation(.easeIn(duration: Animations.fast)) {
-                    footerRevealed = true
-                }
-            }
-        }
-        .onChange(of: animateFooter) {
-            if animateFooter, !footerRevealed {
-                withAnimation(.easeIn(duration: Animations.fast)) {
-                    footerRevealed = true
-                }
-            }
-        }
+        .opacity(showFooter ? 1 : 0)
+        .animation(.easeIn(duration: Animations.fast), value: showFooter)
     }
 }

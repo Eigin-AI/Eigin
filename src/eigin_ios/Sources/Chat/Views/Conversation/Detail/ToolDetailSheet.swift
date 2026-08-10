@@ -15,7 +15,7 @@ struct ToolDetailSheet: View {
 
                     if let arguments = tool.arguments, !arguments.isEmpty {
                         DetailSection(title: "Input") {
-                            DetailCodeBlock(
+                            EiginCodeBlock(
                                 code: jsonCode(arguments),
                                 language: jsonLanguage(arguments)
                             )
@@ -96,7 +96,7 @@ struct ToolDetailSheet: View {
         case .completed:
             if let result = tool.result, !result.isEmpty {
                 DetailSection(title: "Output") {
-                    DetailCodeBlock(code: jsonCode(result), language: jsonLanguage(result))
+                    EiginCodeBlock(code: jsonCode(result), language: jsonLanguage(result))
                 }
             }
         case .denied:
@@ -107,7 +107,7 @@ struct ToolDetailSheet: View {
             }
         case .error(let message):
             DetailSection(title: "Output") {
-                DetailCodeBlock(code: message)
+                EiginCodeBlock(code: message)
                     .foregroundStyle(colors.text.standard.error)
             }
         }

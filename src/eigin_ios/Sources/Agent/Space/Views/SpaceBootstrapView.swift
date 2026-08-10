@@ -63,13 +63,12 @@ struct SpaceBootstrapView: View {
             ChatFeed(
                 items: chatItems,
                 throttler: chatLoop.throttler,
-                splitter: chatLoop.splitter,
+                streamingItemID: chatLoop.streamingItemID,
                 messageText: $messageText,
                 isInputDisabled: isStreaming,
                 onSend: { _ in send() },
                 onStop: stopHandler,
-                allowsIcebreakers: false,
-                lastStreamedItemID: chatLoop.lastStreamedItemID
+                allowsIcebreakers: false
             )
             .safeAreaInset(edge: .bottom, spacing: Spacing.n8) {
                 if showFinishButton {

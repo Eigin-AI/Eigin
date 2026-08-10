@@ -1,43 +1,51 @@
 import SwiftUI
-import Textual
 
 struct ContentBlockView: View {
     let block: ContentBlock
-    /// True only for the block currently being streamed (the last block of a live
-    /// message). An actively-streaming table renders as a raw markdown code block to
-    /// avoid the expensive table relayout on every chunk; once the block is sealed
-    /// (a later block starts, or the turn finishes) it renders as a real table.
+    /// True for the block currently streaming (the last block of a live message).
     var isActivelyStreaming: Bool = false
 
     @Environment(\.colors) private var colors
 
+    /// Extra vertical margin on the hard-edged cards (code, tables) so they sit with the
+    /// same visual rhythm as text blocks, which carry the font's line-box leading the cards
+    /// don't. Without it a card reads tighter against a heading or paragraph than two text
+    /// blocks read against each other.
+    private var cardSpacing: CGFloat {
+        Typography.chatMessage.lineBoxInset
+    }
+
     var body: some View {
         switch block.kind {
+        case .heading(let level):
+            MarkdownHeadingView(level: level, text: block.text)
         case .divider:
             Divider()
                 .background(colors.text.standard.muted.opacity(0.3))
                 .padding(.vertical, Spacing.n4)
         case .code:
-            DetailCodeBlock(
+            EiginCodeBlock(
                 code: block.text,
                 language: block.language,
                 highlightSyntax: !isActivelyStreaming
             )
-        case .table where isActivelyStreaming:
-            DetailCodeBlock(code: block.text, language: "markdown", highlightSyntax: false)
+            .padding(.vertical, cardSpacing)
+        case .table:
+            // A block that doesn't parse as a table falls back to the markdown renderer.
+            if let table = MarkdownTable.parse(block.text) {
+                MarkdownTableView(table: table)
+                    .padding(.vertical, cardSpacing)
+            } else {
+                MarkdownBlockView(text: block.text)
+            }
         default:
-            StructuredText(markdown: block.text, syntaxExtensions: [])
-                .font(Typography.chatMessage.font)
-                .foregroundStyle(colors.text.standard.base)
-                .tint(colors.accent)
-                .eiginStructuredText(colors: colors)
-                .textual.tableStyle(.overflow(relativeWidth: 3))
+            MarkdownBlockView(text: block.text)
         }
     }
 }
 
 #Preview {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: Spacing.n16) {
         ContentBlockView(
             block: ContentBlock(id: "1", kind: .paragraph, text: "This is a paragraph.")
         )
@@ -50,7 +58,8 @@ struct ContentBlockView: View {
             block: ContentBlock(
                 id: "3",
                 kind: .code,
-                text: "func hello() {\n    print(\"world\")\n}"
+                text: "func hello() {\n    print(\"world\")\n}",
+                language: "swift"
             )
         )
 
@@ -59,4 +68,5 @@ struct ContentBlockView: View {
         )
     }
     .padding()
+    .resolveTheme()
 }
