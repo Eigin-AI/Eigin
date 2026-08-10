@@ -5,9 +5,17 @@ options:
   xcodeVersion: "17"
 
 packages:
-  Textual:
-    url: https://github.com/42futures/textual
-    branch: main
+  # Pinned by commit (the v0.7.0 tag), not `exactVersion` — SwiftStreamingMarkdown
+  # depends on highlightswift and iosMath by revision, and SwiftPM refuses to
+  # resolve a version-pinned package that transitively depends on a revision-pinned
+  # one. HighlightSwift is pinned to the same revision it resolves, since we use it
+  # directly for the code card's syntax colors.
+  SwiftStreamingMarkdown:
+    url: https://github.com/microsoft/SwiftStreamingMarkdown
+    revision: "5f7c04e0558df6146f90d482edb62cb456986bda"
+  HighlightSwift:
+    url: https://github.com/appstefan/highlightswift
+    revision: "99c431b38a1444a5fd6a4978307fbbefe3a7af53"
   MCP:
     url: https://github.com/modelcontextprotocol/swift-sdk
     exactVersion: "0.11.0"
@@ -63,7 +71,9 @@ targets:
       - Sources
       - Resources
     dependencies:
-      - package: Textual
+      - package: SwiftStreamingMarkdown
+      - package: HighlightSwift
+        product: HighlightSwift
       - package: MCP
       - package: FluidAudio
       - package: swift-transformers
@@ -165,7 +175,9 @@ targets:
       - Sources
       - Resources
     dependencies:
-      - package: Textual
+      - package: SwiftStreamingMarkdown
+      - package: HighlightSwift
+        product: HighlightSwift
       - package: MCP
       - package: FluidAudio
       - package: swift-transformers

@@ -46,7 +46,6 @@ struct FeedInteractions {
 struct ChatFeed: View {
     let items: [ChatItem]
     let throttler: any StreamThrottling
-    let splitter: StreamingBlockSplitter?
     @Binding var messageText: String
     let isInputDisabled: Bool
     let onSend: (InteractionMode) -> Void
@@ -65,8 +64,12 @@ struct ChatFeed: View {
     /// stay hidden so they don't flash on an existing chat whose messages are still
     /// being fetched (the feed is momentarily empty before they populate).
     let isLoaded: Bool
-    /// Item ID whose footer should fade in (set when a streaming turn just ended).
-    var lastStreamedItemID: String?
+    /// Whether the messages' markdown has been parsed. The feed fades in once it has, so
+    /// the first frame is the settled layout.
+    let isContentReady: Bool
+    /// Item ID of the streaming message. Rendered as an ordinary row so committing it
+    /// updates the row in place.
+    var streamingItemID: String?
     /// Action for the trailing user-message footer (e.g. retry last turn).
     /// `nil` hides the footer — set while streaming or when retry is unavailable.
     var onUserMessageFooterAction: (() -> Void)?
@@ -110,7 +113,7 @@ struct ChatFeed: View {
     init(
         items: [ChatItem],
         throttler: any StreamThrottling,
-        splitter: StreamingBlockSplitter? = nil,
+        streamingItemID: String? = nil,
         messageText: Binding<String>,
         isInputDisabled: Bool,
         onSend: @escaping (InteractionMode) -> Void,
@@ -121,12 +124,12 @@ struct ChatFeed: View {
         showsInputActions: Bool = true,
         allowsIcebreakers: Bool = true,
         isLoaded: Bool = true,
-        lastStreamedItemID: String? = nil,
+        isContentReady: Bool = true,
         onUserMessageFooterAction: (() -> Void)? = nil
     ) {
         self.items = items
         self.throttler = throttler
-        self.splitter = splitter
+        self.streamingItemID = streamingItemID
         _messageText = messageText
         self.isInputDisabled = isInputDisabled
         self.onSend = onSend
@@ -137,7 +140,7 @@ struct ChatFeed: View {
         self.showsInputActions = showsInputActions
         self.allowsIcebreakers = allowsIcebreakers
         self.isLoaded = isLoaded
-        self.lastStreamedItemID = lastStreamedItemID
+        self.isContentReady = isContentReady
         self.onUserMessageFooterAction = onUserMessageFooterAction
     }
 
@@ -372,12 +375,10 @@ struct ChatFeed: View {
             .first { role != "user" }
         else { true }
         VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
-            ForEach(items) { item in
+            ForEach(rows(items[...])) { item in
                 itemRow(for: item)
             }
-            AppChatBrandMessage {
-                StreamingContentView(throttler: throttler, splitter: splitter)
-            }
+            typingIndicator
         }
         .frame(
             maxWidth: .infinity,
@@ -424,12 +425,10 @@ struct ChatFeed: View {
                         // When the reply naturally exceeds one viewport, the block
                         // grows past `minHeight` and the user can scroll through it.
                         VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
-                            ForEach(items[pinnedIndex...]) { item in
+                            ForEach(rows(items[pinnedIndex...])) { item in
                                 itemRow(for: item)
                             }
-                            AppChatBrandMessage {
-                                StreamingContentView(throttler: throttler, splitter: splitter)
-                            }
+                            typingIndicator
                         }
                         .frame(
                             maxWidth: .infinity,
@@ -461,6 +460,7 @@ struct ChatFeed: View {
 
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
+            .opacity(isContentReady ? 1 : 0)
             .defaultScrollAnchor(appendAnchorID != nil ? nil : .bottom)
             .scrollDismissesKeyboard(.interactively)
             .onScrollGeometryChange(for: Bool.self) { geometry in
@@ -602,6 +602,38 @@ struct ChatFeed: View {
         }
     }
 
+    /// Appends the live assistant turn as a message row with the ID it keeps once
+    /// committed, so committing diffs the row in place and its parsed markdown survives.
+    private func rows(_ items: ArraySlice<ChatItem>) -> [ChatItem] {
+        var rows = Array(items)
+        guard let streamingItemID,
+              throttler.phase == .streaming || throttler.phase == .done,
+              !throttler.displayedText.isEmpty,
+              !rows.contains(where: { $0.id == streamingItemID })
+        else { return rows }
+        rows.append(
+            .message(id: streamingItemID, role: "assistant", content: throttler.displayedText)
+        )
+        return rows
+    }
+
+    /// Shown while the turn has started but no text has arrived yet.
+    @ViewBuilder private var typingIndicator: some View {
+        if throttler.phase == .waiting
+            || (throttler.phase == .streaming && throttler.displayedText.isEmpty)
+        {
+            AppChatBrandMessage {
+                TypingIndicator()
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.animation(.easeIn(duration: Animations.fast)),
+                            removal: .identity
+                        )
+                    )
+            }
+        }
+    }
+
     @ViewBuilder
     private func itemRow(for item: ChatItem) -> some View {
         let isLive =
@@ -629,16 +661,18 @@ struct ChatFeed: View {
             let retryAction: (() -> Void)? = onUserMessageFooterAction.map { action in
                 { isExpectingSendAppend = true; action() }
             }
+            let isStreamingRow = id == streamingItemID && throttler.phase == .streaming
             ChatMessageView(
                 role: role,
                 content: content,
                 attachments: attachments,
                 messageID: id,
-                showFooter: role == "assistant",
-                animateFooter: id == lastStreamedItemID,
+                isActivelyStreaming: isStreamingRow,
+                showFooter: role == "assistant" && !isStreamingRow,
                 showUserMessageFooter: showsUserMessageFooter,
                 onUserMessageFooterAction: retryAction
             )
+            .equatable()
         case .typing:
             TypingIndicator()
                 .padding(.horizontal, breakpoint.inner)
@@ -683,54 +717,5 @@ struct ChatFeed: View {
         isInputFocused = false
         isExpectingSendAppend = true
         onSend(mode)
-    }
-}
-
-// MARK: - Streaming Content (isolated observation)
-
-/// Renders streaming text or typing indicator.
-///
-/// This is a separate sub-view so that 60fps `displayedText` changes
-/// only re-evaluate this small view — not the entire ForEach of committed messages.
-private struct StreamingContentView: View {
-    let throttler: any StreamThrottling
-    let splitter: StreamingBlockSplitter?
-
-    var body: some View {
-        let phase = throttler.phase
-
-        if let splitter {
-            blockBasedContent(phase: phase, splitter: splitter)
-        }
-    }
-
-    @ViewBuilder
-    private func blockBasedContent(phase: StreamThrottler.Phase, splitter: StreamingBlockSplitter)
-        -> some View
-    {
-        let blocks = splitter.allBlocks
-
-        // Show all blocks. Only the last block is actively streaming; earlier
-        // blocks are already sealed, so they render normally even mid-stream.
-        let activeBlockID = phase == .streaming ? blocks.last?.id : nil
-        if (phase == .streaming || phase == .done) && !blocks.isEmpty {
-            VStack(alignment: .leading, spacing: Spacing.n16) {
-                ForEach(blocks) { block in
-                    ContentBlockView(
-                        block: block,
-                        isActivelyStreaming: block.id == activeBlockID
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else if phase == .waiting || phase == .streaming {
-            TypingIndicator()
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.animation(.easeIn(duration: Animations.fast)),
-                        removal: .identity
-                    )
-                )
-        }
     }
 }

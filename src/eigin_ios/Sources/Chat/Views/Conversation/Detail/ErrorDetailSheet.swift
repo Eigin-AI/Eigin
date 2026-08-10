@@ -27,7 +27,7 @@ struct ErrorDetailSheet: View {
                     }
 
                     if showsRawError {
-                        DetailCodeBlock(code: jsonCode(raw), language: jsonLanguage(raw))
+                        EiginCodeBlock(code: jsonCode(raw), language: jsonLanguage(raw))
                     }
                 }
             }

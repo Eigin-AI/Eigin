@@ -43,12 +43,12 @@ _test-ios env="staging" verbose="false": generate
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
         xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-            -scheme "$scheme" -destination '{{ dest }}' \
+            -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation \
             -skip-testing:EiginTests/ProviderIntegrationTests test
     else
         {{ tools }} run --log "{{ log_dir }}/ios-test.log" --label "Running iOS tests" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-                -scheme "$scheme" -destination '{{ dest }}' \
+                -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation \
                 -skip-testing:EiginTests/ProviderIntegrationTests test
     fi
 
@@ -93,11 +93,11 @@ _build-ios env="staging" verbose="false": generate
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
         xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-            -scheme "$scheme" -destination '{{ dest }}' build
+            -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation build
     else
         {{ tools }} run --log "{{ log_dir }}/ios-build.log" --label "Building Eigin for iOS" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-                -scheme "$scheme" -destination '{{ dest }}' build
+                -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation build
     fi
 
 [private]

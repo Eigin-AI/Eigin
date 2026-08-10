@@ -38,8 +38,12 @@ private struct ThemeResolver: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
-        content
-            .environment(\.colors, themeManager.colors(for: colorScheme))
+        let colors = themeManager.colors(for: colorScheme)
+        // Built here, not per view body: resolving its fonts is costly and it only
+        // changes with the theme.
+        return content
+            .environment(\.colors, colors)
+            .environment(\.markdownRenderConfig, .eigin(colors: colors))
     }
 }
 

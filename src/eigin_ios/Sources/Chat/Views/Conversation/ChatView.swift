@@ -13,6 +13,7 @@ struct ChatView: View {
     @Injected(\.speechService) private var speechService
     @Injected(\.dictationService) private var dictationService
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.markdownRenderConfig) private var markdownRenderConfig
     @Injected(\.languageManager) private var languageManager
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query private var agents: [Agent]
@@ -25,6 +26,9 @@ struct ChatView: View {
     @State private var voiceDownloadItem: AssetItem?
     @State private var showNonVisionStagedWarning = false
     @State private var supportsVision = false
+    /// False until the loaded history has been parsed into ``MarkdownDocumentCache``, so
+    /// the feed's first frame draws at final heights instead of settling into them.
+    @State private var isContentReady = false
     @Environment(\.dismiss) private var dismiss
     @Injected(\.chatAttachmentStore) private var attachmentStore
 
@@ -80,6 +84,22 @@ struct ChatView: View {
         supportsVision = await Container.shared.modelRouter().canSatisfy(request)
     }
 
+    /// Prewarms the loaded history's markdown before the feed is revealed. Only assistant
+    /// messages, and only the blocks the library draws: code, dividers and tables have
+    /// their own views.
+    private func prewarmMarkdown() async {
+        guard viewModel.window.isPreloaded, !isContentReady else { return }
+        // Documents are cached by block text, so the message ID here is immaterial.
+        let texts = viewModel.window.messages
+            .filter { $0.role != "user" }
+            .compactMap(\.content)
+            .flatMap { ContentBlock.split($0, messageID: "") }
+            .filter { $0.kind.usesMarkdownRenderer }
+            .map(\.text)
+        await MarkdownDocumentCache.shared.prewarm(texts, config: markdownRenderConfig)
+        withAnimation(.easeIn(duration: Animations.fast)) { isContentReady = true }
+    }
+
     /// Changes that could alter which models are on offer.
     private var visionGateKey: String {
         "\(agent?.model ?? "")|\(agent?.autoModel ?? false)|\(activeProvider?.id.uuidString ?? "")|\(activeProvider?.availableModels.count ?? 0)"
@@ -121,7 +141,7 @@ struct ChatView: View {
                 ChatFeed(
                     items: viewModel.chatItems,
                     throttler: viewModel.chatLoop.throttler,
-                    splitter: viewModel.chatLoop.splitter,
+                    streamingItemID: viewModel.chatLoop.streamingItemID,
                     messageText: $viewModel.messageText,
                     isInputDisabled: !canSend ||
                         (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction) ||
@@ -180,7 +200,7 @@ struct ChatView: View {
                         }
                     ),
                     isLoaded: viewModel.window.isPreloaded,
-                    lastStreamedItemID: viewModel.lastStreamedItemID,
+                    isContentReady: isContentReady,
                     onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
                         ? {
                             guard let agent, let provider = activeProvider else { return }
@@ -277,6 +297,7 @@ struct ChatView: View {
             }
         }
         .task(id: visionGateKey) { await refreshVisionSupport() }
+        .task(id: viewModel.window.isPreloaded) { await prewarmMarkdown() }
         // Attempts are what change model health, so re-ask once each turn settles:
         // the last vision-capable model may have been quarantined mid-conversation.
         .onChange(of: viewModel.isTurnInProgress) { _, inProgress in

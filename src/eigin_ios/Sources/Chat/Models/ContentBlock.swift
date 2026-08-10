@@ -14,6 +14,16 @@ enum BlockKind: Equatable {
     case math
     case list
     case divider
+    case heading(level: Int)
+
+    /// Whether the shared markdown renderer draws this kind. Code, tables, dividers and
+    /// headings have their own Eigin views.
+    var usesMarkdownRenderer: Bool {
+        switch self {
+        case .paragraph, .list, .math: true
+        case .code, .table, .divider, .heading: false
+        }
+    }
 }
 
 extension ContentBlock {
@@ -28,6 +38,9 @@ extension ContentBlock {
         var inCodeFence = false
         var codeFenceContent = ""
         var codeFenceLanguage: String? = nil
+        // Leading spaces on the opening fence, stripped from each content line so
+        // list-nested code isn't indented inside its card.
+        var codeFenceIndent = 0
         var inMathBlock = false
         var mathContent = ""
         var inTable = false
@@ -36,12 +49,18 @@ extension ContentBlock {
         var listContent = ""
 
         func flushParagraph() {
-            guard !currentText.isEmpty else { return }
+            defer {
+                currentText = ""
+                currentKind = .paragraph
+            }
+            // Blank lines leave a lone newline in `currentText`; don't emit that as an
+            // empty paragraph.
+            guard !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return
+            }
             let id = "\(messageID)-block-\(blockIndex)"
             blocks.append(ContentBlock(id: id, kind: currentKind, text: currentText))
             blockIndex += 1
-            currentText = ""
-            currentKind = .paragraph
         }
 
         func flushCode() {
@@ -90,10 +109,59 @@ extension ContentBlock {
             inList = false
         }
 
+        func appendHeading(level: Int, content: String) {
+            let id = "\(messageID)-block-\(blockIndex)"
+            blocks.append(ContentBlock(id: id, kind: .heading(level: level), text: content))
+            blockIndex += 1
+        }
+
+        /// Parses an ATX heading into its level and text, or nil if the line isn't one.
+        /// 1-6 `#` then a space; any closing run of `#` is dropped.
+        func atxHeading(_ trimmed: String) -> (level: Int, content: String)? {
+            var level = 0
+            for character in trimmed {
+                if character == "#" { level += 1 } else { break }
+            }
+            guard (1 ... 6).contains(level), trimmed.dropFirst(level).first == " " else {
+                return nil
+            }
+            var content = trimmed.dropFirst(level).trimmingCharacters(in: .whitespaces)
+            if let closing = content.range(of: #"\s#+$"#, options: .regularExpression) {
+                content = String(content[..<closing.lowerBound])
+                    .trimmingCharacters(in: .whitespaces)
+            }
+            return (level, content)
+        }
+
         func flushDivider() {
+            // Collapse a run of rules into one; models stack two or three and drawing
+            // each is just noise.
+            guard blocks.last?.kind != .divider else { return }
             let id = "\(messageID)-block-\(blockIndex)"
             blocks.append(ContentBlock(id: id, kind: .divider, text: ""))
             blockIndex += 1
+        }
+
+        /// Opens a fenced code block from its opening line, recording its indentation
+        /// and language. The caller flushes whatever block preceded it first.
+        func openCodeFence(_ line: String, _ trimmed: String) {
+            inCodeFence = true
+            codeFenceContent = ""
+            codeFenceIndent = line.prefix(while: { $0 == " " }).count
+            let lang = trimmed.dropFirst(3).trimmingCharacters(in: .whitespaces)
+            codeFenceLanguage = lang.isEmpty ? nil : lang
+        }
+
+        /// Drops up to `count` leading spaces so list-nested code isn't indented in its card.
+        func stripIndent(_ line: String, by count: Int) -> String {
+            guard count > 0 else { return line }
+            var body = Substring(line)
+            var removed = 0
+            while removed < count, body.first == " " {
+                body = body.dropFirst()
+                removed += 1
+            }
+            return String(body)
         }
 
         func isHorizontalRule(_ line: String) -> Bool {
@@ -103,6 +171,14 @@ extension ContentBlock {
             return trimmed.allSatisfy { $0 == firstChar && ($0 == "-" || $0 == "*" || $0 == "_") }
         }
 
+        /// Whether a rule-shaped line underlines a setext heading: dashes directly
+        /// beneath paragraph text.
+        func isSetextUnderline(_ trimmed: String, precededBy previous: String?) -> Bool {
+            guard trimmed.first == "-", !currentText.isEmpty else { return false }
+            guard let previous else { return false }
+            return !previous.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+
         let lines = text.components(separatedBy: "\n")
         var i = 0
 
@@ -110,12 +186,14 @@ extension ContentBlock {
             let line = lines[i]
 
             if inCodeFence {
-                if line.hasPrefix("```"),
-                   line.dropFirst(3).trimmingCharacters(in: .whitespaces).isEmpty
+                let fence = line.trimmingCharacters(in: .whitespaces)
+                if fence.hasPrefix("```"),
+                   fence.dropFirst(3).trimmingCharacters(in: .whitespaces).isEmpty
                 {
                     flushCode()
                 } else {
-                    codeFenceContent += (codeFenceContent.isEmpty ? "" : "\n") + line
+                    codeFenceContent += (codeFenceContent.isEmpty ? "" : "\n")
+                        + stripIndent(line, by: codeFenceIndent)
                 }
                 i += 1
                 continue
@@ -149,6 +227,33 @@ extension ContentBlock {
 
             if inList {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+                // Code fenced in a list item gets its own card, so end the list and
+                // open the fence.
+                if trimmed.hasPrefix("```") {
+                    flushList()
+                    openCodeFence(line, trimmed)
+                    i += 1
+                    continue
+                }
+
+                // A rule right after a list ends it. Caught here so it renders as our
+                // divider.
+                if isHorizontalRule(trimmed) {
+                    flushList()
+                    flushDivider()
+                    i += 1
+                    continue
+                }
+
+                // A heading right after a list ends it and gets its own block.
+                if let heading = atxHeading(trimmed) {
+                    flushList()
+                    appendHeading(level: heading.level, content: heading.content)
+                    i += 1
+                    continue
+                }
+
                 let isListLine = trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") ||
                     trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil
 
@@ -172,20 +277,23 @@ extension ContentBlock {
 
             if trimmed.hasPrefix("```") {
                 flushParagraph()
-                inCodeFence = true
-                codeFenceContent = ""
-                let lang = trimmed.dropFirst(3).trimmingCharacters(in: .whitespaces)
-                codeFenceLanguage = lang.isEmpty ? nil : lang
+                openCodeFence(line, trimmed)
             } else if trimmed == "$$" {
                 flushParagraph()
                 inMathBlock = true
                 mathContent = ""
+            } else if let heading = atxHeading(trimmed) {
+                // Headings are Eigin's own block, so they can be styled and uppercased.
+                flushParagraph()
+                appendHeading(level: heading.level, content: heading.content)
             } else if trimmed.hasPrefix("|") && i + 1 < lines.count {
                 let nextLine = lines[i + 1].trimmingCharacters(in: .whitespaces)
                 let cleaned = nextLine.replacingOccurrences(of: "|", with: "")
                 let isTableSeparator = cleaned.contains("-")
                     && cleaned.allSatisfy { $0 == "-" || $0 == ":" || $0.isWhitespace }
-                if isTableSeparator {
+                // Models often omit the header or separator. Two pipe rows in a row is
+                // enough: prose doesn't start two lines running with a pipe.
+                if isTableSeparator || nextLine.hasPrefix("|") {
                     flushParagraph()
                     inTable = true
                     tableLines = [line]
@@ -199,8 +307,14 @@ extension ContentBlock {
                 inList = true
                 listContent = line
             } else if isHorizontalRule(trimmed) {
-                flushParagraph()
-                flushDivider()
+                if isSetextUnderline(trimmed, precededBy: i > 0 ? lines[i - 1] : nil) {
+                    // Keep the underline with the paragraph so the parser reads a
+                    // setext heading.
+                    currentText += (currentText.isEmpty ? "" : "\n") + line
+                } else {
+                    flushParagraph()
+                    flushDivider()
+                }
             } else if trimmed.isEmpty {
                 let prevTrimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !prevTrimmed.isEmpty, !currentText.hasSuffix("\n\n") {
