@@ -16,12 +16,12 @@ enum BlockKind: Equatable {
     case divider
     case heading(level: Int)
 
-    /// Whether the shared markdown renderer draws this kind. Code, tables, dividers and
-    /// headings have their own Eigin views.
+    /// Whether the shared markdown renderer draws this kind. Code, tables, dividers,
+    /// headings and math have their own Eigin views.
     var usesMarkdownRenderer: Bool {
         switch self {
-        case .paragraph, .list, .math: true
-        case .code, .table, .divider, .heading: false
+        case .paragraph, .list: true
+        case .code, .table, .divider, .heading, .math: false
         }
     }
 }
@@ -171,14 +171,6 @@ extension ContentBlock {
             return trimmed.allSatisfy { $0 == firstChar && ($0 == "-" || $0 == "*" || $0 == "_") }
         }
 
-        /// Whether a rule-shaped line underlines a setext heading: dashes directly
-        /// beneath paragraph text.
-        func isSetextUnderline(_ trimmed: String, precededBy previous: String?) -> Bool {
-            guard trimmed.first == "-", !currentText.isEmpty else { return false }
-            guard let previous else { return false }
-            return !previous.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-
         let lines = text.components(separatedBy: "\n")
         var i = 0
 
@@ -264,8 +256,12 @@ extension ContentBlock {
                     // line will start a fresh paragraph naturally
                 } else if isListLine {
                     listContent += (listContent.isEmpty ? "" : "\n") + line
+                } else if line.first?.isWhitespace == true {
+                    // Indented content (a nested block quote, a wrapped line, ...) still
+                    // belongs to the open list item, so it stays in the list's text.
+                    listContent += (listContent.isEmpty ? "" : "\n") + line
                 } else {
-                    // Non-list content after a list ends the list and begins a paragraph
+                    // Unindented, non-list content ends the list and begins a paragraph.
                     flushList()
                     currentText += line
                 }
@@ -307,14 +303,9 @@ extension ContentBlock {
                 inList = true
                 listContent = line
             } else if isHorizontalRule(trimmed) {
-                if isSetextUnderline(trimmed, precededBy: i > 0 ? lines[i - 1] : nil) {
-                    // Keep the underline with the paragraph so the parser reads a
-                    // setext heading.
-                    currentText += (currentText.isEmpty ? "" : "\n") + line
-                } else {
-                    flushParagraph()
-                    flushDivider()
-                }
+                // Headings are ATX-only (`#`), so a rule-shaped line is always a divider.
+                flushParagraph()
+                flushDivider()
             } else if trimmed.isEmpty {
                 let prevTrimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !prevTrimmed.isEmpty, !currentText.hasSuffix("\n\n") {

@@ -9,9 +9,10 @@ import SwiftUI
 struct EiginCodeBlock: View {
     let code: String
     var language: String?
-    /// When false the code renders unhighlighted. Set false while streaming: highlighting
-    /// round-trips through an HTML parse, too expensive to repeat per chunk.
-    var highlightSyntax: Bool = true
+    /// While streaming, code renders unhighlighted and unselectable: highlighting
+    /// round-trips through an HTML parse, too expensive to repeat per chunk, and
+    /// selection over growing text would rebuild its geometry on every tick.
+    var isStreaming: Bool = false
 
     @Environment(\.colors) private var colors
     @Environment(\.colorScheme) private var colorScheme
@@ -19,10 +20,7 @@ struct EiginCodeBlock: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            codeText
-                .font(Typography.code.font)
-                .lineSpacing(Typography.code.lineSpacing ?? 0)
-                .foregroundStyle(colors.code.plain)
+            CodeTextView(attributedText: attributedCode, isSelectable: !isStreaming)
                 // Horizontal gains the font's line-box inset so the padding reads as even.
                 .padding(.vertical, Spacing.n16)
                 .padding(.horizontal, Spacing.n16 + Typography.code.lineBoxInset)
@@ -35,22 +33,51 @@ struct EiginCodeBlock: View {
         .task(id: request) { await applyHighlighting() }
     }
 
-    /// Selection is enabled once the block is sealed. On a streaming block it would
-    /// rebuild selection geometry over the growing text every tick, and there's nothing
-    /// to select yet. `highlightSyntax` is false while streaming.
-    @ViewBuilder private var codeText: some View {
-        let text = Text(highlighted ?? AttributedString(code))
-        if highlightSyntax {
-            text.textSelection(.enabled)
-        } else {
-            text
+    /// Font, plain color and line spacing: the styling for unhighlighted code, and the
+    /// defaults filled in under the highlighter's token colors once it's sealed.
+    private var defaultCodeAttributes: [NSAttributedString.Key: Any] {
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: Typography.code.uiFont,
+            .foregroundColor: UIColor(colors.code.plain),
+        ]
+        if let lineSpacing = Typography.code.lineSpacing {
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.lineSpacing = lineSpacing
+            attributes[.paragraphStyle] = paragraphStyle
         }
+        return attributes
+    }
+
+    /// Builds the rendered string: uniform attributes while streaming, or the
+    /// highlighter's output with the defaults layered underneath once sealed.
+    private var attributedCode: NSAttributedString {
+        let attributes = defaultCodeAttributes
+        guard let highlighted else {
+            return NSAttributedString(string: code, attributes: attributes)
+        }
+
+        let base = NSMutableAttributedString(highlighted)
+        let whole = NSRange(location: 0, length: base.length)
+        base.addAttribute(.font, value: Typography.code.uiFont, range: whole)
+        base.enumerateAttribute(.foregroundColor, in: whole) { value, range, _ in
+            if value == nil {
+                base.addAttribute(
+                    .foregroundColor,
+                    value: attributes[.foregroundColor]!,
+                    range: range
+                )
+            }
+        }
+        if let paragraphStyle = attributes[.paragraphStyle] {
+            base.addAttribute(.paragraphStyle, value: paragraphStyle, range: whole)
+        }
+        return base
     }
 
     private var request: HighlightRequest {
         HighlightRequest(
             code: code,
-            language: highlightSyntax ? language : nil,
+            language: isStreaming ? nil : language,
             colorScheme: colorScheme
         )
     }
@@ -61,10 +88,10 @@ struct EiginCodeBlock: View {
             return
         }
         let css = CodeHighlightCSS.stylesheet(for: colors)
-        highlighted = try? await sharedHighlighter.attributedText(
+        highlighted = await HighlightQueue.shared.attributedText(
             code,
             language: language,
-            colors: .custom(css: css)
+            css: css
         )
     }
 }
@@ -79,10 +106,6 @@ private struct HighlightRequest: Equatable {
     let colorScheme: ColorScheme
 }
 
-/// One highlighter for the whole app. Each instance carries its own JavaScript
-/// context, which is expensive to stand up and to hold open.
-private let sharedHighlighter = Highlight()
-
 // MARK: - Previews
 
 private struct CodeBlockPreview: View {
@@ -93,7 +116,7 @@ private struct CodeBlockPreview: View {
             VStack(alignment: .leading, spacing: Spacing.n16) {
                 EiginCodeBlock(code: Self.swift, language: "swift")
                 EiginCodeBlock(code: Self.json, language: "json")
-                EiginCodeBlock(code: Self.swift, language: "swift", highlightSyntax: false)
+                EiginCodeBlock(code: Self.swift, language: "swift", isStreaming: true)
             }
             .padding(Spacing.n24)
         }

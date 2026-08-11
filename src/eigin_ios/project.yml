@@ -5,14 +5,12 @@ options:
   xcodeVersion: "17"
 
 packages:
-  # Pinned by commit (the v0.7.0 tag), not `exactVersion` — SwiftStreamingMarkdown
-  # depends on highlightswift and iosMath by revision, and SwiftPM refuses to
-  # resolve a version-pinned package that transitively depends on a revision-pinned
-  # one. HighlightSwift is pinned to the same revision it resolves, since we use it
-  # directly for the code card's syntax colors.
-  SwiftStreamingMarkdown:
-    url: https://github.com/microsoft/SwiftStreamingMarkdown
-    revision: "5f7c04e0558df6146f90d482edb62cb456986bda"
+  swift-markdown:
+    url: https://github.com/swiftlang/swift-markdown.git
+    exactVersion: "0.7.3"
+  iosMath:
+    url: https://github.com/junyan72/iosMath
+    revision: "ba9ab7729b151329c54fd895a7c1859981d9484c"
   HighlightSwift:
     url: https://github.com/appstefan/highlightswift
     revision: "99c431b38a1444a5fd6a4978307fbbefe3a7af53"
@@ -71,7 +69,10 @@ targets:
       - Sources
       - Resources
     dependencies:
-      - package: SwiftStreamingMarkdown
+      - package: swift-markdown
+        product: Markdown
+      - package: iosMath
+        product: iosMath
       - package: HighlightSwift
         product: HighlightSwift
       - package: MCP
@@ -175,7 +176,10 @@ targets:
       - Sources
       - Resources
     dependencies:
-      - package: SwiftStreamingMarkdown
+      - package: swift-markdown
+        product: Markdown
+      - package: iosMath
+        product: iosMath
       - package: HighlightSwift
         product: HighlightSwift
       - package: MCP

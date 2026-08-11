@@ -1,11 +1,16 @@
 import SwiftUI
 
-struct ContentBlockView: View {
+struct ContentBlockView: View, Equatable {
     let block: ContentBlock
     /// True for the block currently streaming (the last block of a live message).
     var isActivelyStreaming: Bool = false
 
     @Environment(\.colors) private var colors
+
+    /// Lets `.equatable()` skip re-rendering blocks that haven't changed while streaming.
+    nonisolated static func == (lhs: ContentBlockView, rhs: ContentBlockView) -> Bool {
+        lhs.block == rhs.block && lhs.isActivelyStreaming == rhs.isActivelyStreaming
+    }
 
     /// Extra vertical margin on the hard-edged cards (code, tables) so they sit with the
     /// same visual rhythm as text blocks, which carry the font's line-box leading the cards
@@ -27,7 +32,7 @@ struct ContentBlockView: View {
             EiginCodeBlock(
                 code: block.text,
                 language: block.language,
-                highlightSyntax: !isActivelyStreaming
+                isStreaming: isActivelyStreaming
             )
             .padding(.vertical, cardSpacing)
         case .table:
@@ -38,6 +43,9 @@ struct ContentBlockView: View {
             } else {
                 MarkdownBlockView(text: block.text)
             }
+        case .math:
+            // The block already holds pure LaTeX; render it directly.
+            MathBlockView(latex: block.text)
         default:
             MarkdownBlockView(text: block.text)
         }

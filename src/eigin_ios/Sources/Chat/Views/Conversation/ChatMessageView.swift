@@ -132,6 +132,7 @@ struct ChatMessageView: View, Equatable {
                         block: block,
                         isActivelyStreaming: isActivelyStreaming && block.id == blocks.last?.id
                     )
+                    .equatable()
                 }
 
                 footerView

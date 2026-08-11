@@ -113,7 +113,9 @@ struct ContentBlockTests {
 
     // MARK: - Dividers
 
-    @Test func dashesUnderTextUnderlineAHeading() {
+    @Test func dashesUnderTextDrawARuleNotASetextHeading() {
+        // Headings are ATX-only; a `---` line is always a divider, even directly
+        // under paragraph text — never read as a Setext heading underline.
         let markdown = """
         Section title
         ---
@@ -121,9 +123,9 @@ struct ContentBlockTests {
         Body text.
         """
         let blocks = split(markdown)
-        #expect(blocks.allSatisfy { $0.kind != .divider })
-        #expect(blocks[0].text.contains("Section title"))
-        #expect(blocks[0].text.contains("---"))
+        #expect(blocks.contains { $0.kind == .divider })
+        #expect(blocks[0].text == "Section title")
+        #expect(blocks[0].kind == .paragraph)
     }
 
     @Test func dashesAfterBlankLineDrawARule() {
@@ -325,6 +327,44 @@ struct ContentBlockTests {
         """)
         #expect(blocks.contains { $0.kind == .list })
         #expect(blocks.contains { $0.kind == .heading(level: 1) })
+    }
+
+    // MARK: - Adjacent blocks with no blank line between them
+
+    @Test func listInterruptsAParagraphWithoutABlankLine() {
+        // CommonMark: an unordered list can interrupt a paragraph with no blank line
+        // (unlike a heading, which always can, or an ordered list, which can only
+        // interrupt if it starts at 1).
+        let blocks = split("""
+        Some lead-in text:
+        - one
+        - two
+        """)
+        #expect(blocks.contains { $0.kind == .paragraph && $0.text.contains("lead-in") })
+        #expect(blocks.contains { $0.kind == .list })
+    }
+
+    @Test func headingImmediatelyAfterStackedDividersWithNoBlankLine() {
+        let blocks = split("""
+        Some text.
+        ---
+        ---
+        ---
+        # Heading
+        """)
+        #expect(blocks.count(where: { $0.kind == .divider }) == 1)
+        #expect(blocks.contains { $0.kind == .heading(level: 1) })
+    }
+
+    @Test func tableImmediatelyAfterHeadingWithNoBlankLine() {
+        let blocks = split("""
+        # Heading
+        | A | B |
+        |---|---|
+        | 1 | 2 |
+        """)
+        #expect(blocks.contains { $0.kind == .heading(level: 1) })
+        #expect(blocks.contains { $0.kind == .table })
     }
 
     // MARK: - Edge cases
