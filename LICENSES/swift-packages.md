@@ -2,7 +2,9 @@
 
 | Package | Repository | Version | License |
 |---------|-----------|---------|---------|
-| SwiftStreamingMarkdown | https://github.com/microsoft/SwiftStreamingMarkdown | 0.7.0 (pinned by commit, see project.yml) | MIT |
+| SwiftStreamingMarkdown (vendored & modified) | https://github.com/microsoft/SwiftStreamingMarkdown | see [swift-streaming-markdown.md](swift-streaming-markdown.md) | MIT |
+| swift-markdown | https://github.com/swiftlang/swift-markdown | 0.7.3 | Apache 2.0 |
+| iosMath | https://github.com/junyan72/iosMath | pinned by commit, see project.yml | MIT |
 | HighlightSwift | https://github.com/appstefan/highlightswift | pinned by commit, see project.yml | MIT |
 | MCP Swift SDK | https://github.com/modelcontextprotocol/swift-sdk | 0.11.0 | MIT |
 | Factory | https://github.com/hmlongco/Factory | 2.4.0 | MIT |
@@ -18,3 +20,4 @@
 - License types listed are as of the date this file was last updated (2026-07-04).
 - Verify against each repository when upgrading to a new version.
 - LiteRT-LM is vendored as a local package rather than a remote SPM dependency (see `src/eigin_ios/Packages/LiteRTLM/README.md`)
+- SwiftStreamingMarkdown's streaming-critical rendering core is vendored (and heavily modified) in-source under `src/eigin_ios/Sources/Core/Design/Markdown/Rendering` rather than consumed as an SPM dependency. Full attribution and the MIT license text are in [swift-streaming-markdown.md](swift-streaming-markdown.md). It depends only on Apple's swift-markdown and iosMath.

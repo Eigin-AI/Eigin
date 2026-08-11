@@ -1,5 +1,4 @@
 import Foundation
-import SwiftStreamingMarkdown
 
 /// Parsed markdown documents, keyed by source text.
 ///

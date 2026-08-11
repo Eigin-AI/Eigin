@@ -1,0 +1,27 @@
+import Foundation
+
+extension URL {
+    static func fromMixedEncodingString(_ rawValue: String) -> URL? {
+        if let url = URL(string: rawValue) {
+            return url
+        }
+
+        var candidate = rawValue
+        for _ in 0 ..< 3 {
+            guard let decoded = candidate.removingPercentEncoding, decoded != candidate else {
+                break
+            }
+            if let url = URL(string: decoded) {
+                return url
+            }
+            candidate = decoded
+        }
+
+        let cleaned = candidate
+            .replacingOccurrences(of: " ", with: "%20")
+            .replacingOccurrences(of: "\n", with: "")
+            .replacingOccurrences(of: "\t", with: "")
+
+        return URL(string: cleaned)
+    }
+}

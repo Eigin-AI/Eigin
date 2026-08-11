@@ -1,4 +1,3 @@
-import SwiftStreamingMarkdown
 import SwiftUI
 import UIKit
 
@@ -8,14 +7,11 @@ extension EnvironmentValues {
 }
 
 extension MarkdownRenderConfig {
-    /// Eigin's markdown styling for prose, headings, lists, quotes, inline runs and
-    /// tables, drawn from the design tokens. Fenced code is drawn by ``EiginCodeBlock``.
-    ///
-    /// - Parameter animatesText: fades newly appended words in. Off by default; the
-    ///   ``StreamThrottler`` already paces the reveal.
-    static func eigin(colors: ResolvedColors, animatesText: Bool = false) -> MarkdownRenderConfig {
+    /// Eigin's markdown styling for prose, headings, lists, quotes and inline runs,
+    /// drawn from the design tokens. Fenced code is drawn by ``EiginCodeBlock`` and
+    /// tables by ``MarkdownTableView``.
+    static func eigin(colors: ResolvedColors) -> MarkdownRenderConfig {
         MarkdownRenderConfig(
-            shouldAnimateText: animatesText,
             blockQuoteStyle: MarkdownTextStyle(
                 textFonts: Typography.chatMessage.textFonts,
                 textColor: colors.text.standard.muted
@@ -37,14 +33,6 @@ extension MarkdownRenderConfig {
                 textFonts: Typography.chatMessage.textFonts,
                 textColor: colors.text.standard.base
             ),
-            tableStyle: MarkdownTableTextStyle(
-                textFonts: Typography.body.textFonts,
-                headerTextColor: colors.text.standard.base,
-                regularTextColor: colors.text.standard.base,
-                headerBackgroundColor: colors.surface.standard.elevated,
-                borderColor: colors.border.standard.base,
-                actionButtonColor: colors.accent
-            ),
             inlineStyle: MarkdownInlineTextStyle(
                 boldTextColor: colors.text.standard.base,
                 linkTextFont: Typography.chatMessage.uiFont,
@@ -55,9 +43,9 @@ extension MarkdownRenderConfig {
                 codeUnderlineColor: .clear
             ),
             blockSpacing: Spacing.n16,
-            // Drops the library's "Select more text" item.
-            textSelectionConfig: TextSelectionConfig(isEnabled: false),
-            thematicBreakColor: colors.text.standard.muted.opacity(0.3)
+            thematicBreakColor: colors.text.standard.muted.opacity(0.3),
+            listMarkerColor: colors.text.standard.muted,
+            blockQuoteBarColor: colors.border.standard.base
         )
     }
 }

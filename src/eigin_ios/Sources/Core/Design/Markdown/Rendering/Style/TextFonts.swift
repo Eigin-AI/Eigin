@@ -1,0 +1,76 @@
+import Foundation
+import SwiftUI
+
+/// A bundle of font variants (normal/italic/bold/boldItalic) plus optional
+/// preferred letter and line spacing values, used by `MarkdownRenderConfig`
+/// to style a run of text.
+struct TextFonts: Hashable, Sendable {
+    /// Regular variant. Always required.
+    let normal: MDFont
+    /// Italic variant, or `nil` to fall back to `normal` for emphasis.
+    let italic: MDFont?
+    /// Bold variant, or `nil` to fall back to `normal` for strong runs.
+    let bold: MDFont?
+    /// Bold-italic variant, or `nil` to fall back to `bold` then `italic`.
+    let boldItalic: MDFont?
+    /// Optional kerning override applied via `NSAttributedString.Key.kern`.
+    let preferredLetterSpacing: CGFloat?
+    /// Optional preferred line height in points. When greater than the font's
+    /// natural line height, the renderer adds the difference as line spacing.
+    let preferredLineHeight: CGFloat?
+
+    /// Create a font set with explicit variants and optional spacing overrides.
+    init(
+        normal: MDFont,
+        italic: MDFont?,
+        bold: MDFont?,
+        boldItalic: MDFont?,
+        preferredLetterSpacing: CGFloat?,
+        preferredLineHeight: CGFloat?
+    ) {
+        self.normal = normal
+        self.italic = italic
+        self.bold = bold
+        self.boldItalic = boldItalic
+        self.preferredLetterSpacing = preferredLetterSpacing
+        self.preferredLineHeight = preferredLineHeight
+    }
+}
+
+extension TextFonts {
+    func italicize(font: MDFont) -> MDFont? {
+        if font == bold || font == boldItalic {
+            return boldItalic
+        }
+        return italic
+    }
+
+    func bold(font: MDFont) -> MDFont? {
+        if font == italic || font == boldItalic {
+            return boldItalic
+        }
+        return bold
+    }
+}
+
+extension View {
+    func font(_ font: TextFonts, bold: Bool = false, italic: Bool = false) -> some View {
+        let fontToUse: MDFont? = if bold, italic {
+            font.boldItalic
+        } else if bold {
+            font.bold
+        } else if italic {
+            font.italic
+        } else {
+            font.normal
+        }
+        let letterSpacing = font.preferredLetterSpacing
+        let extraLineSpacing: CGFloat? = font.preferredLineHeight.flatMap { lineHeight in
+            lineHeight > font.normal.lineHeight ? lineHeight - font.normal.lineHeight : nil
+        }
+        return self
+            .font(Font(fontToUse ?? font.normal))
+            .if(letterSpacing != nil, content: { $0.kerning(letterSpacing ?? 0) })
+            .if(extraLineSpacing != nil, content: { $0.lineSpacing(extraLineSpacing ?? 0) })
+    }
+}
