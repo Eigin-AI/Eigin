@@ -1,5 +1,4 @@
 import Foundation
-import NaturalLanguage
 
 /// Snapshot of one knowledge entry selected for per-turn hydration.
 ///
@@ -48,12 +47,6 @@ enum KnowledgeHydrator {
 
     /// Minimum word count to attempt hydration.
     static let minMessageWords: Int = 3
-
-    /// Minimum token length on both sides of the name-mention match.
-    ///
-    /// Three is enough to catch short names ("Bob", "Ada") while filtering
-    /// out tiny function words and punctuation artefacts.
-    nonisolated static let nameMentionMinTokenLength: Int = 3
 
     /// Entity types the name-mention pass scans.
     ///
@@ -162,7 +155,7 @@ enum KnowledgeHydrator {
     /// name like "Bob" scores 1.0 on any mention.
     ///
     /// Case-insensitive, language-agnostic. Tokens shorter than
-    /// ``nameMentionMinTokenLength`` are dropped on both sides.
+    /// ``MessageTokenizer/defaultMinTokenLength`` are dropped on both sides.
     static func findByNameMention(
         userText: String,
         knowledgeService: any KnowledgeService,
@@ -218,19 +211,7 @@ enum KnowledgeHydrator {
     /// length-filtered, letters-only (filters out numbers and punctuation
     /// artefacts). Language-agnostic via ``NLTokenizer``.
     nonisolated static func tokenizeForMention(_ text: String) -> Set<String> {
-        var tokens = Set<String>()
-        let tokenizer = NLTokenizer(unit: .word)
-        tokenizer.string = text
-        tokenizer.enumerateTokens(in: text.startIndex ..< text.endIndex) { range, _ in
-            let raw = String(text[range]).lowercased()
-            if raw.count >= nameMentionMinTokenLength,
-               raw.allSatisfy(\.isLetter)
-            {
-                tokens.insert(raw)
-            }
-            return true
-        }
-        return tokens
+        MessageTokenizer.tokenize(text)
     }
 
     /// Tokenises an entity's user-facing text surface (short id plus the

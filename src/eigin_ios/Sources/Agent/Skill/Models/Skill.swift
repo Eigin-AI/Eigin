@@ -17,6 +17,26 @@ struct Skill: Identifiable {
     /// Empty for skills that only use built-in tools.
     var requiredCapabilities: Set<Capability> = []
     let alwaysActive: Bool
+    /// Keyword triggers that eagerly activate this skill from the user's message.
+    /// Empty for always-active skills and skills not yet wired for auto-activation.
+    var triggers: SkillTriggers = .init()
+}
+
+/// Keyword triggers for eager, same-turn skill activation (see ``SkillHydrator``).
+///
+/// Tokens are grouped **by language** for readable authoring, but matching always
+/// reads the flattened ``all`` union — the grouping costs nothing at runtime and
+/// exists purely to keep a growing multilingual list organised.
+struct SkillTriggers {
+    /// Tokens grouped by the language they belong to.
+    var byLanguage: [AppLanguage: Set<String>] = [:]
+    /// Language-neutral tokens (brand/loanwords like "gmail", "aula").
+    var shared: Set<String> = []
+
+    /// Flattened union of every trigger token, used for matching.
+    var all: Set<String> {
+        byLanguage.values.reduce(into: shared) { $0.formUnion($1) }
+    }
 }
 
 // MARK: - Hashable (identity = id)

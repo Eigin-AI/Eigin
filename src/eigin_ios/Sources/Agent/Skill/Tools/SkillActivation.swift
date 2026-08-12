@@ -7,6 +7,9 @@ import Foundation
 /// responsible for deciding whether activation is appropriate (e.g. checking
 /// `isSkillActive`/`alwaysActive` first) — this just performs the mutation.
 enum SkillActivation {
+    /// Marks an activation as triggered by ``SkillHydrator`` rather than a tool call.
+    static let autoActivation = "auto"
+
     /// Activates `skillID` on `chat`. In small-context mode, deactivates any
     /// other on-demand skill first (single slot: only one on-demand skill
     /// active at a time).

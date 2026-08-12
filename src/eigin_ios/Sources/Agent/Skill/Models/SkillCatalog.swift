@@ -11,4 +11,20 @@ enum SkillCatalog {
     static func skill(forID id: String, mcpServers: [MCPServer]) -> Skill? {
         BundledSkill.skill(forID: id) ?? MCPServerSkill.skill(forID: id, servers: mcpServers)
     }
+
+    /// Filters `candidates` down to skills that could be activated right now: on-demand,
+    /// not already active, and capability-satisfied.
+    static func activatable(
+        from candidates: [Skill],
+        activeIDs: Set<String>,
+        connectedCapabilities: Set<Capability>
+    ) -> [Skill] {
+        candidates.filter { skill in
+            guard !skill.alwaysActive, !activeIDs.contains(skill.id) else { return false }
+            guard skill.requiredCapabilities.isEmpty
+                || !skill.requiredCapabilities.isDisjoint(with: connectedCapabilities)
+            else { return false }
+            return true
+        }
+    }
 }

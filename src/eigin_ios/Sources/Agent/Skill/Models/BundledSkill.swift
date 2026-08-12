@@ -116,7 +116,13 @@ enum BundledSkill {
             SetProactivityTool.capability,
             ManageVocabularyTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["personality", "voice", "proactivity", "initiative"],
+                .danish: ["personlighed", "stemme", "proaktivitet", "initiativ"],
+            ]
+        )
     )
 
     static let email = Skill(
@@ -127,7 +133,11 @@ enum BundledSkill {
         smallInstruction: Prompt.Skills.Email.small,
         requiredTools: [],
         requiredCapabilities: [.email],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [.danish: ["indboks"]],
+            shared: ["email", "inbox", "mail", "gmail"]
+        )
     )
 
     static let aula = Skill(
@@ -138,7 +148,14 @@ enum BundledSkill {
         smallInstruction: Prompt.Skills.Aula.small,
         requiredTools: [],
         requiredCapabilities: [.aula],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["school", "daycare", "nursery"],
+                .danish: ["skole", "institution", "vuggestue", "børnehave"],
+            ],
+            shared: ["aula"]
+        )
     )
 
     static let organization = Skill(
@@ -155,7 +172,13 @@ enum BundledSkill {
             ListChatsTool.capability,
             GetChatTranscriptTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["space", "folder", "archive", "transcript"],
+                .danish: ["mappe", "arkiv"],
+            ]
+        )
     )
 
     static let scheduling = Skill(
@@ -171,7 +194,21 @@ enum BundledSkill {
             GetRemindersTool.capability,
             ManageReminderTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: [
+                    "calendar",
+                    "meeting",
+                    "remind",
+                    "reminder",
+                    "appointment",
+                    "schedule",
+                    "event",
+                ],
+                .danish: ["kalender", "møde", "aftale", "påmindelse", "begivenhed"],
+            ]
+        )
     )
 
     static let planning = Skill(
@@ -189,7 +226,13 @@ enum BundledSkill {
             GetRemindersTool.capability,
             ManageReminderTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["trip", "itinerary", "festival", "conference", "gathering"],
+                .danish: ["rejse", "tur", "konference"],
+            ]
+        )
     )
 
     static let health = Skill(
@@ -206,7 +249,13 @@ enum BundledSkill {
             LogSleepTool.capability,
             GetHealthLogTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["nutrition", "calories", "workout", "sleep", "weight", "steps"],
+                .danish: ["kost", "kalorier", "træning", "søvn", "vægt", "skridt", "helbred"],
+            ]
+        )
     )
 
     static let cooking = Skill(
@@ -219,7 +268,13 @@ enum BundledSkill {
             StartFlowTool.capability,
             AdvanceFlowTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["recipe", "cook", "dinner", "meal", "food"],
+                .danish: ["opskrift", "aftensmad", "måltid", "mad"],
+            ]
+        )
     )
 
     static let recommendations = Skill(
@@ -232,6 +287,12 @@ enum BundledSkill {
             StartFlowTool.capability,
             AdvanceFlowTool.capability,
         ],
-        alwaysActive: false
+        alwaysActive: false,
+        triggers: SkillTriggers(
+            byLanguage: [
+                .english: ["recommend", "book", "movie", "album", "game"],
+                .danish: ["anbefal", "bog", "film", "spil"],
+            ]
+        )
     )
 }
