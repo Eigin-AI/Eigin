@@ -6,9 +6,13 @@
  * Feature-context asks "why does this need to exist"; Bug-context asks "how
  * do you reproduce this". Same stage id, different job.
  *
- *   Feature   — context → plan → build → iterate → review → merge
+ *   Feature   — context → plan → build → iterate → merge
  *   Bug       — context → plan → build → test → merge (plan is skippable)
  *   Prototype — context → iterate → merge
+ *
+ * Plan review is collaborative (co-edit a markdown file, no separate UI); code
+ * review happens on the GitLab MR during the Merge stage. There is no distinct
+ * `review` stage.
  */
 
 import { stage, type StageDef, type StageId } from "./stages.ts";
@@ -25,11 +29,25 @@ export interface WorkflowDef {
   stages: StageDef[];
 }
 
+// Shared across all workflows: code review happens on the GitLab MR here in the
+// Merge stage (there is no separate review stage). The comment loop uses
+// wait_for_user + a paginated glab pull; see tools/wait-for-user.ts.
+const MERGE_GUIDANCE = `You are in the Merge stage: open the MR and drive review to a merge.
+Signpost briefly what you expect the user to do — keep the flow self-evident, not a manual.
+- Confirm the branch is pushed. You never run git — the user pushes and merges.
+- Draft a short MR description per \`.gitlab/merge_request_templates/Default.md\` (Summary / Changes / Related / Notes / How to Test; \`Closes #<n>\` if there's an issue). Short and scannable — bullets, not prose. Save to \`.pi/mr/<issue#>-<work-name>.md\` (e.g. \`162-auto-activating-skills.md\`; drop the issue# if none).
+- Create the MR with the \`glab\` CLI (project: dev/eigin on code.eigin.ai), e.g. \`glab mr create --title "..." --description "$(cat <path>)" --source-branch <branch>\`. Title in Conventional Commits form (e.g. \`feat: ...\`). Check \`glab label list\` for the right tags.
+- Write a SHORT review guide to \`.pi/mr/<issue#>-<work-name>-guide.md\` (git-ignored) and post it as an MR comment: what to review together, what matters most and why — files grouped by relationship, story order. Scannable, not exhaustive. Tell the user the guide's path.
+- Then call wait_for_user (prompt "Review the MR and leave comments"; confirmLabel "Pull my comments") instead of explaining at length.
+- When the user signals, pull unresolved comments — PAGINATE so none are missed: \`glab api projects/:id/merge_requests/:iid/discussions --paginate\` (get the iid via \`glab mr view --output json\` on the current branch). Turn actionable comments into tasks (add_tasks) so they stay in context.
+- Fix what's directly fixable and resolve those threads (the user can reopen); answer questions in-thread via \`glab api ...merge_requests/:iid/discussions/:id/notes\`, prefixing replies with "**Agent**:". Summarize anything left in chat. Resolve each task as its thread is handled.
+- Loop (wait_for_user → pull → address) until the user merges. You never merge.`;
+
 const FEATURE: WorkflowDef = {
   id: "feature",
   label: "Feature",
   icon: "🧰",
-  summary: "Careful planning, implementation, iteration, and review.",
+  summary: "Careful planning, implementation, iteration, and MR review.",
   stages: [
     stage(
       "context",
@@ -38,7 +56,7 @@ Goal: build shared understanding of the problem, not the solution.
 - Draw out the *why*: what need/ask/problem is this, where did it come from, what does it contribute to the product?
 - Treat the user's ideas as suggestions, not prescriptions. Explore them.
 - For bigger asks, help decompose into smaller, individually-verifiable pieces.
-- Do NOT write code or produce an implementation plan yet. Load and organize context.
+- Do NOT write code or produce a plan yet — no files. Get introduced to the problem and load context; the plan comes next stage.
 - Ask questions when something is unclear. Stay product-minded: aim for a great product, prefer simple over clever.
 - When you have a few concrete, structured clarifying questions (e.g. multiple-choice decisions about scope or direction), prefer the ask_questions tool over prose Q&A.
 - Delegate codebase/docs/web reconnaissance to the explore sub-agent rather than digging through files inline — keep this stage a focused conversation, not a solo research session.
@@ -47,15 +65,29 @@ Goal: build shared understanding of the problem, not the solution.
     ),
     stage(
       "plan",
-      `You are in the Plan stage: markdown-writable, an interview that narrows the funnel.
-Goal: a *tactical* implementation plan, not a spec.
-- Interview the user: ask specific, clarifying questions about technical scope, constraints, and approach. Narrow toward something concrete enough to implement.
-- This is the funnel-narrowing interview — lean on the ask_questions tool for concrete decision points (options, trade-offs, scope calls). It's built for exactly this: structured questions with a recommended default, rather than a wall of prose questions.
-- Use the explore sub-agent for any codebase spelunking needed to firm up the approach (how something's currently structured, where a piece of logic lives) instead of doing that digging inline.
-- Then produce a technical plan: brief context + direction, then mostly specifics (key components, things that must be done a certain way). Not every line of code.
-- Iterate on the plan with the user's comments/corrections. Push back when you disagree — it's collaborative.
-- Write plans to \`.pi/plans/<short-name>.md\`, then submit with the submit_plan tool.
-- The user must explicitly approve before moving to the Build stage. Do not start building.`,
+      `You are in the Plan stage: co-editing a markdown plan with the user (markdown-writable).
+Goal: a *tactical* implementation plan you both shape — not a doc you present.
+- Interview to narrow scope: lean on the ask_questions tool for concrete decision points (options, trade-offs, scope calls) over a wall of prose questions.
+- Use the explore sub-agent for codebase spelunking needed to firm up the approach, instead of digging inline.
+- Write the plan to \`.pi/plans/<issue#>-<work-name>.md\` (e.g. \`162-auto-activating-skills.md\`; drop the issue# if there's no issue) using EXACTLY this layout, and keep it maintained every round:
+    # Plan: <title>
+
+    ## Summary
+    2–4 lines: what this is and the direction.
+
+    ## Open questions
+    Pinned here; anchor-link to sections (\`[label](#section)\`). Remove each as it's resolved.
+
+    ## <body sections>
+    The design: brief context, then specifics.
+
+    ## Decision log
+    Numbered list, one short line per round. Append an entry EVERY round — required, not optional.
+- Keep prose SHORT — short lines, generous whitespace. No walls of text.
+- It's collaborative: the file is re-read every turn, so you'll see the user's direct edits and free-typed notes as a diff — respond to them. Push back when you disagree.
+- After a round of edits, don't explain at length: call wait_for_user (confirmLabel "Review my plan edits") to hand off for the next pass. Its prompt is about reviewing/editing THIS pass only — never mention advancing or moving to Build in it.
+- When the user signals: strip their inline comments, address them, APPEND a Decision log entry, then hand back with wait_for_user again.
+- Advancing is a SEPARATE step: only when the plan is fully formed and no comments are open, call propose_stage(build) on its own. Never bundle "move to build" into a wait_for_user prompt/label — that dialog is the approval. Don't ask too early; expect several rounds, and never advance on your own.`,
     ),
     stage(
       "build",
@@ -74,29 +106,9 @@ Goal: revisit the build with a concrete product in hand — shape it with the us
 - Make small/medium changes quickly and correctly, with good practice. The user is trying the product right now.
 - Avoid expensive rebuilds (e.g. iOS builds to device) — the user verifies — but cheap verification (e.g. cargo test) is fine. Don't rebuild/retest constantly just to confirm.`,
     ),
-    stage(
-      "review",
-      `You are in the Review stage: code-level review and fixes.
-Behavior/functionality is settled — now make the *code* good.
-- Walk the code with the user. Expect "why is this this way?", "bundle these?", "unclear name", "reads weird", "missing docs".
-- Apply corrections from feedback. Push back when the user is wrong — figure it out together.
-- Keep changes surgical and well-documented per project conventions.`,
-    ),
-    stage(
-      "merge",
-      `You are in the Merge stage: prepare the merge request.
-- Draft the MR description following \`.gitlab/merge_request_templates/Default.md\`: closes-issue line, one-line summary, then Summary / Changes / Related / Notes / How to Test. Keep it short and scannable, not prose — Changes is high-level bullet points of what's relevant, not every diff.
-- Reference the originating issue via \`Closes #<n>\`. If none exists, note that one should be created.
-- Confirm with the user that the branch has been pushed (do NOT run git yourself — the user drives git and pushes themselves).
-- Write MR drafts to \`.pi/mr/<short-name>.md\`.
-- Once pushed, use the \`glab\` CLI to create the merge request (project: dev/eigin on code.eigin.ai), e.g. \`glab mr create --title "..." --description "$(cat <path>)" --source-branch <branch>\` (glab's \`mr create\` has no \`--description-file\` flag — pass the rendered description text).
-- Title the MR using Conventional Commits (e.g. \`feat: pi coding agent\`, \`fix: deal with local model crash\`) — type, colon, short imperative summary.
-- Check existing issues/labels (\`glab label list\`) for the right tags to apply to the MR, following the conventions in \`.gitlab/issue_templates/\`.`,
-    ),
+    stage("merge", MERGE_GUIDANCE),
   ],
 };
-
-const MERGE_GUIDANCE = FEATURE.stages.find((s) => s.id === "merge")!.guidance;
 
 const BUG: WorkflowDef = {
   id: "bug",
@@ -118,14 +130,14 @@ Goal: understand the bug well enough to reason about a fix.
     ),
     stage(
       "plan",
-      `You are in the Plan stage: markdown-writable, lightweight.
-Goal: a small bug-fix proposal, not a spec — this stage is skippable when the fix is obvious.
-- If the cause and fix are clear from Context, say so and propose moving straight to Build (propose_stage) instead of writing a plan.
-- Otherwise, write a short proposal: suspected root cause, the fix, and anything risky or non-obvious about it. A few sentences to a short paragraph, not a document.
+      `You are in the Plan stage: a short, co-edited bug-fix proposal (skippable).
+- If the cause and fix are clear from Context, say so and propose_stage(build) instead of writing a plan.
+- Otherwise write a short proposal to \`.pi/plans/<issue#>-<work-name>.md\` (e.g. \`162-auto-activating-skills.md\`; drop the issue# if none): suspected root cause, the fix, anything risky. Short prose; short lines, generous whitespace.
+- It's collaborative: the file is re-read each turn — respond to the user's direct edits and notes. After a round, call wait_for_user (about reviewing this pass only, never advancing) rather than explaining at length.
 - Use ask_questions if there's a real fork in approach worth the user's call.
-- Lean on the explore sub-agent for any code spelunking needed to firm up the fix approach, rather than doing it inline.
-- Write to \`.pi/plans/<short-name>.md\` and submit with submit_plan only if the fix is non-trivial enough to warrant a look before touching code.
-- The user must approve before moving to Build.`,
+- Lean on the explore sub-agent for code spelunking needed to firm up the fix, rather than doing it inline.
+- When the user signals: strip inline comments, address them, update the Decision log.
+- Approve gate: propose_stage(build) only when fully formed with no open comments. The user's confirmation is the approval.`,
     ),
     stage(
       "build",

@@ -1,6 +1,9 @@
 /**
  * Stage vocabulary shared across workflows: context, plan, build, iterate,
- * test, review, merge.
+ * test, merge.
+ *
+ * (There is no `review` stage: code review happens on the GitLab MR during
+ * the Merge stage — see workflow/workflows.ts.)
  *
  * A *stage* is a mode the agent operates in (read-only exploration, plan
  * writing, implementing, etc). Its metadata — label, whether edit
@@ -19,7 +22,6 @@ export type StageId =
   | "build"
   | "iterate"
   | "test"
-  | "review"
   | "merge";
 
 /** Metadata for a stage that never varies by workflow. */
@@ -49,7 +51,6 @@ export const STAGE_META: Record<StageId, StageMeta> = {
   build: { id: "build", label: "Build", allowsEdits: true, role: "builder" },
   iterate: { id: "iterate", label: "Iterate", allowsEdits: true, role: "builder" },
   test: { id: "test", label: "Test", allowsEdits: true, role: "builder" },
-  review: { id: "review", label: "Review", allowsEdits: true, role: "builder" },
   merge: { id: "merge", label: "Merge", allowsEdits: true, role: "builder" },
 };
 

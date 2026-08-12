@@ -43,12 +43,15 @@ export function buildStageHint(view: WorkflowStageView, guidance: string): strin
 	const sequence = view.stages
 		.map((s) => (s.id === view.currentId ? `[${s.label}]` : s.label))
 		.join(" → ");
-	const targets = view.stages.filter((s) => s.id !== view.currentId).map((s) => s.id);
+	const idx = view.stages.findIndex((s) => s.id === view.currentId);
+	const next = idx >= 0 && idx < view.stages.length - 1 ? view.stages[idx + 1] : undefined;
+	const others = view.stages.filter((s) => s.id !== view.currentId).map((s) => s.id);
 	const current = view.stages.find((s) => s.id === view.currentId);
 	const currentLabel = current ? current.label : view.currentId;
-	const targetsLine =
-		targets.length > 0
-			? `To change stage, call propose_stage with one of: ${targets.join(", ")}. These are the only valid targets in this workflow.`
+	const targetsLine = next
+		? `To advance, call propose_stage with NO stage — it goes to the next stage (${next.id}). Only pass a named stage to skip ahead or step back, which should be rare. Valid stages: ${others.join(", ")}.`
+		: others.length > 0
+			? `You're at the last stage. To step back, call propose_stage with one of: ${others.join(", ")}.`
 			: "This workflow has no other stages to move to.";
 	return (
 		`\n\n---\n[Automatically injected — not part of the user's message]\n` +
