@@ -7,7 +7,7 @@ Skills are how the agent gains capabilities. A skill bundles instructions with t
 | Kind | When active | Examples |
 |---|---|---|
 | **Always-active** | Present in every chat from the start | Knowledge, intents, awareness, web search |
-| **On-demand** | Enabled by the user or agent when the time is right | Email, scheduling, self-modification |
+| **On-demand** | Enabled by the agent, or auto-activated from trigger keywords in the user's message | Email, scheduling, self-modification |
 
 Some on-demand skills also declare a required [capability](../integrations/README.md) rather than (or in addition to) built-in tools. Email is one: it has no tools of its own and only appears once an integration providing the `email` capability is connected.
 
@@ -15,7 +15,7 @@ Some on-demand skills also declare a required [capability](../integrations/READM
 
 The active skill set is additive. Each active skill contributes its instruction to the system hint and its tools to the turn; the agent can call the union of all active skills' tools.
 
-A skill usually owns a coherent group of tools but can reuse another skill's when its framing calls for it: planning reuses the scheduling skill's calendar and reminder tools. Because the tool set is a union, a shared tool is offered once no matter how many skills require it. Activating a skill takes effect on the next turn.
+A skill usually owns a coherent group of tools but can reuse another skill's when its framing calls for it: planning reuses the scheduling skill's calendar and reminder tools. Because the tool set is a union, a shared tool is offered once no matter how many skills require it. Agent-initiated activation takes effect next turn; auto-activation takes effect the same turn.
 
 ## Flows
 

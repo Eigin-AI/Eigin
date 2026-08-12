@@ -18,14 +18,11 @@ final class AvailableSkillsSource: SystemHintSource {
     func render(_ input: SystemHintInput) async -> String? {
         guard !input.isSmallContext else { return nil }
         let activeIDs = Set(input.activeSkills.map(\.id))
-        let activatable = input.availableSkills.filter { skill in
-            guard !skill.alwaysActive, !activeIDs.contains(skill.id) else { return false }
-            // Hide tool-less skills until their required capability is connected.
-            if skill.requiredTools.isEmpty, !skill.requiredCapabilities.isEmpty {
-                return !skill.requiredCapabilities.isDisjoint(with: input.connectedCapabilities)
-            }
-            return true
-        }
+        let activatable = SkillCatalog.activatable(
+            from: input.availableSkills,
+            activeIDs: activeIDs,
+            connectedCapabilities: input.connectedCapabilities
+        )
         guard !activatable.isEmpty else { return nil }
 
         let shown = input.isSmallContext
