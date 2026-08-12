@@ -4,7 +4,7 @@
  * Currently home to the workflow/stage state machine. A *workflow* is a
  * named, ordered subset of the shared stage vocabulary, tuned to a kind of
  * task (see workflow/workflows.ts):
- *   🧰 Feature   — context → plan → build → iterate → review → merge
+ *   🧰 Feature   — context → plan → build → iterate → merge
  *   🐞 Bug       — context → plan → build → test → merge (plan skippable)
  *   🧬 Prototype — context → iterate → merge
  *
@@ -31,7 +31,12 @@
  *   surfaces which session just finished (Zed's integrated terminal ignores
  *   OSC 9/777 notify sequences but does show a bell as an attention
  *   indicator on unfocused tabs).
- * - Integrates Plannotator as a review UI (see tools/plannotator.ts).
+ * - Plan review is collaborative: the Plan stage co-edits a markdown file under
+ *   .pi/plans/ (tracked as the "active plan", see workflow/active-plan.ts). The
+ *   live file + a diff of the user's edits is injected each turn so direct
+ *   edits are picked up without being flagged. Code review happens on the
+ *   GitLab MR in the Merge stage. The wait_for_user tool (tools/wait-for-user.ts)
+ *   hands control back for a signal instead of ending turns with prose.
  * - Persists workflow + stage across session resume (old sessions without a
  *   persisted workflow default to Feature).
  * - Maintains an agent-managed task list (add_tasks / resolve_tasks / clear_tasks),
@@ -75,8 +80,8 @@
  *   tools/               always-on interactive tools
  *     propose.ts           propose_stage (yes/no transition dialog)
  *     tasks.ts              add_tasks / resolve_tasks / clear_tasks (agent-managed checklist)
- *     confirm-dialog.ts    shared inline confirm-with-note dialog (used by propose)
- *     plannotator.ts       submit_plan / submit_review (Plannotator UI)
+ *     confirm-dialog.ts    shared inline confirm-with-note dialog (used by propose + wait_for_user)
+ *     wait-for-user.ts     wait_for_user (hand control back, block until the user signals)
  *     role-command.ts      /eigin:role command: configure role→model assignments
  *     ask/                 ask_questions (structured multi-question dialog)
  *       ask.ts               tool registration, schema, validation, result formatting
@@ -86,6 +91,7 @@
  *       index.ts             the subagent tool: spawns an isolated `pi` subprocess
  *       agents.ts            agent discovery (.pi/agents/*.md), unchanged from upstream
  *       model-role.ts        resolves an agent's `role:<name>` model to a real model id
+ *   workflow/active-plan.ts  tracks the live plan file + diffs the user's edits for per-turn injection
  *   workflow/build-handoff.ts composes the Plan→Build compaction instructions + kickoff message
  *   workflow/task-list.ts pure task-list state (add/resolve/format), rendered with the stage hint
  *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
@@ -105,15 +111,18 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { ringBell } from "./observability/bell.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
+import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
 import {
-  getLastApprovedPlanPath,
-  registerPlannotator,
-  SUBMIT_PLAN_TOOL,
-  SUBMIT_REVIEW_TOOL,
-} from "./tools/plannotator.ts";
+  diffSinceSeen,
+  markSeen,
+  noActivePlan,
+  setActivePlan,
+  type ActivePlanState,
+} from "./workflow/active-plan.ts";
 import { buildCompactionInstructions, buildKickoff } from "./workflow/build-handoff.ts";
 import { PROPOSE_TOOL, registerProposeTool } from "./tools/propose.ts";
 import { ASK_QUESTIONS_TOOL, registerAskQuestionsTool } from "./tools/ask/ask.ts";
@@ -152,8 +161,7 @@ import {
 const EDIT_TOOLS = ["edit", "write"];
 const ALWAYS_ON_TOOLS = [
   PROPOSE_TOOL,
-  SUBMIT_PLAN_TOOL,
-  SUBMIT_REVIEW_TOOL,
+  WAIT_FOR_USER_TOOL,
   ASK_QUESTIONS_TOOL,
   ADD_TASKS_TOOL,
   RESOLVE_TASKS_TOOL,
@@ -164,6 +172,7 @@ const STATUS_KEY = "stage";
 const TASKS_STATUS_KEY = "tasks";
 const STATE_TYPE = "stage-mode";
 const TASK_STATE_TYPE = "task-list";
+const ACTIVE_PLAN_STATE_TYPE = "active-plan";
 const DEFAULT_WORKFLOW: WorkflowId = "feature";
 
 /** Icon + label for a workflow. */
@@ -211,6 +220,8 @@ export default function stageExtension(pi: ExtensionAPI): void {
   let currentWorkflow: WorkflowId = DEFAULT_WORKFLOW;
   let currentStage: StageId = firstStage(getWorkflow(DEFAULT_WORKFLOW));
   let taskListState: TaskListState = emptyTaskList();
+  let activePlanState: ActivePlanState = noActivePlan();
+  let sessionCwd = process.cwd();
   let hasAutoNamed = false;
 
   // --- Workflow/stage lookups ---------------------------------------------
@@ -233,7 +244,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     const next = stage.allowsEdits
       ? [...withoutEdit, ...EDIT_TOOLS]
       : withoutEdit;
-    // The proposal and Plannotator tools stay available in every stage.
+    // The proposal, wait, and other always-on tools stay available every stage.
     pi.setActiveTools([...new Set([...next, ...ALWAYS_ON_TOOLS])]);
   }
 
@@ -312,6 +323,44 @@ export default function stageExtension(pi: ExtensionAPI): void {
     pi.appendEntry(TASK_STATE_TYPE, taskListState);
   }
 
+  // --- Active plan (collaborative plan file) -------------------------------
+
+  /** True for a markdown file under `.pi/plans/` (the ephemeral plan area). */
+  function isPlanFile(path: string): boolean {
+    if (!path.endsWith(".md")) return false;
+    const abs = resolve(sessionCwd, path);
+    return abs.startsWith(`${resolve(sessionCwd, ".pi/plans")}/`);
+  }
+
+  // Only the path is persisted; last-seen content is in-memory (a resumed
+  // session re-injects the plan fresh with no diff, which is correct).
+  function persistActivePlan(): void {
+    pi.appendEntry(ACTIVE_PLAN_STATE_TYPE, { path: activePlanState.path });
+  }
+
+  /**
+   * The per-turn plan injection: the live plan file read fresh from disk, plus
+   * a diff of what changed since the agent last saw it. Returns null when no
+   * plan is active or the file can't be read. Updates last-seen as a side
+   * effect so the next turn diffs against what was just shown.
+   */
+  async function buildPlanInjection(): Promise<string | null> {
+    const path = activePlanState.path;
+    if (!path) return null;
+    let content: string;
+    try {
+      content = await readFile(resolve(sessionCwd, path), "utf-8");
+    } catch {
+      return null; // File gone or unreadable — skip this turn.
+    }
+    const diff = diffSinceSeen(activePlanState, content);
+    activePlanState = markSeen(activePlanState, content);
+    const diffBlock = diff
+      ? `\n\nChanges since you last read it (the user's edits):\n\`\`\`diff\n${diff}\n\`\`\``
+      : "";
+    return `The live plan file (${path}) — re-read fresh each turn; respond to the user's edits/notes:\n\`\`\`markdown\n${content}\n\`\`\`${diffBlock}`;
+  }
+
   // --- Model suggestion --------------------------------------------------
 
   async function suggestModel(
@@ -366,7 +415,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
       return false;
     }
 
-    const planPath = getLastApprovedPlanPath();
+    const planPath = activePlanState.path;
     let planContent: string | null = null;
     if (planPath) {
       try {
@@ -570,9 +619,9 @@ export default function stageExtension(pi: ExtensionAPI): void {
     },
   });
 
-  const cleanupPlannotator = registerPlannotator(pi);
-  pi.on("session_shutdown", async () => {
-    cleanupPlannotator();
+  registerWaitForUserTool(pi, {
+    stage: () => currentStage,
+    planInjection: () => buildPlanInjection(),
   });
 
   // --- Session naming / bell events ---------------------------------------
@@ -622,7 +671,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     // without a per-call confirmation prompt (see tool-defaults.ts).
     applySubagentDefaults(event.toolName, event.input as ToolCallInput);
 
-    // In the Plan stage, restrict write/edit to markdown files only.
+    // Plan stage: restrict write/edit to markdown, and track the live plan file.
     if (
       currentStage === "plan" &&
       (event.toolName === "write" || event.toolName === "edit")
@@ -634,6 +683,14 @@ export default function stageExtension(pi: ExtensionAPI): void {
           reason:
             "Plan stage: writes/edits restricted to markdown files (.md). Code changes are blocked until Build.",
         };
+      }
+      // Track the live plan file when one under .pi/plans/ is written.
+      if (isPlanFile(path)) {
+        const next = setActivePlan(activePlanState, path);
+        if (next !== activePlanState) {
+          activePlanState = next;
+          persistActivePlan();
+        }
       }
     }
   });
@@ -658,7 +715,18 @@ Always blocked (every stage): the agent should not run stateful or destructive g
     const workflow = activeWorkflow();
     const stage = activeStage();
     const taskBlock = formatTaskList(taskListState);
-    const guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
+    let guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
+
+    // Collaborative plan: on a fresh user turn while co-editing, inject the
+    // live plan file + a diff of the user's edits so they're picked up without
+    // being flagged. Rides the same fresh-turn gate as the stage hint.
+    const msgs = event.messages as StageHintMessage[];
+    const lastMsg = msgs[msgs.length - 1];
+    if (lastMsg?.role === "user" && activePlanState.path && stage.id === "plan") {
+      const planBlock = await buildPlanInjection();
+      if (planBlock) guidance = `${guidance}\n\n${planBlock}`;
+    }
+
     const view: WorkflowStageView = {
       workflowLabel: workflow.label,
       workflowIcon: workflow.icon,
@@ -666,13 +734,14 @@ Always blocked (every stage): the agent should not run stateful or destructive g
       currentId: stage.id,
     };
     const hint = buildStageHint(view, guidance);
-    const messages = appendStageHintIfFreshTurn(event.messages as StageHintMessage[], hint);
+    const messages = appendStageHintIfFreshTurn(msgs, hint);
     return { messages: messages as unknown as typeof event.messages };
   });
 
   // --- Persistence / restore ---------------------------------------------
 
   pi.on("session_start", async (_event, ctx) => {
+    sessionCwd = ctx.cwd;
     const entries = ctx.sessionManager.getEntries();
     const last = entries
       .filter(
@@ -702,6 +771,17 @@ Always blocked (every stage): the agent should not run stateful or destructive g
       )
       .pop() as { data?: TaskListState } | undefined;
     if (lastTasks?.data) taskListState = lastTasks.data;
+
+    // Restore the active plan file so a resumed session keeps co-editing it.
+    const lastPlan = entries
+      .filter(
+        (e: { type: string; customType?: string }) =>
+          e.type === "custom" && e.customType === ACTIVE_PLAN_STATE_TYPE,
+      )
+      .pop() as { data?: { path?: string } } | undefined;
+    if (lastPlan?.data?.path) {
+      activePlanState = setActivePlan(noActivePlan(), lastPlan.data.path);
+    }
 
     // Brand-new session (nothing persisted yet): let the user pick a workflow
     // up front instead of silently defaulting to Feature.

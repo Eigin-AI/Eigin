@@ -1,6 +1,6 @@
 # Scratch plans
 #
-# Plan files are ephemeral working artifacts. Approved/denied plans are archived
-# by Plannotator (~/.plannotator/plans) and the decision record lives in the MR.
+# Plan files are ephemeral working artifacts co-edited with the agent. The
+# decision record lives in the plan's Decision log and the MR.
 *
 !.gitignore

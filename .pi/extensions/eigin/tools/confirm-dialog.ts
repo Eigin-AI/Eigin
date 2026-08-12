@@ -32,8 +32,9 @@ export async function confirmWithNote(
   ui: Ui,
   title: string,
   detail: string,
+  labels: [string, string] = ["Yes", "No"],
 ): Promise<ConfirmWithNoteResult | null> {
-  const options = ["Yes", "No"];
+  const options = labels;
 
   return ui.custom<ConfirmWithNoteResult | null>((tui, theme, _kb, done) => {
     let optionIndex = 0;

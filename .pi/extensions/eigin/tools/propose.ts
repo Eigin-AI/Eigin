@@ -15,7 +15,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { confirmWithNote } from "./confirm-dialog.ts";
 import { STAGE_META, type StageId } from "../workflow/stages.ts";
-import { getStageInWorkflow, getWorkflow, hasStage, type WorkflowId } from "../workflow/workflows.ts";
+import { getStageInWorkflow, getWorkflow, hasStage, relativeStageIn, type WorkflowId } from "../workflow/workflows.ts";
 
 export const PROPOSE_TOOL = "propose_stage";
 
@@ -38,7 +38,7 @@ export function registerProposeTool(
   // the *active workflow* at execute time (a workflow may not include every
   // stage, e.g. Bug has no review).
   const schema = Type.Object({
-    stage: StringEnum(Object.keys(STAGE_META) as [string, ...string[]]),
+    stage: Type.Optional(StringEnum(Object.keys(STAGE_META) as [string, ...string[]])),
     reason: Type.Optional(Type.String()),
   });
 
@@ -46,22 +46,22 @@ export function registerProposeTool(
     name: PROPOSE_TOOL,
     label: "Propose Stage",
     description:
-      "Propose moving to a different workflow stage. This tool shows the user a yes/no dialog " +
-      "(they may attach a note) and returns their decision. Use when the current stage's work is done " +
-      "(e.g. plan approved → propose the next stage). Workflows differ in which stages they include — " +
-      "the per-turn stage hint lists the active workflow's sequence and the valid propose_stage targets " +
-      "from here; use those rather than guessing from the full stage vocabulary. Act on the returned " +
-      "result: if approved you are now in the new stage; if declined, honor any note. Never assume the " +
-      "transition happened.",
+      "Propose advancing the workflow. Omit `stage` to move to the NEXT stage — the normal, preferred path. " +
+      "Pass a specific stage only to skip ahead or step back, which should be rare (advance one stage at a " +
+      "time). Shows the user a yes/no dialog (they may attach a note) and returns their decision. The " +
+      "per-turn hint names the next stage and the valid targets. Act on the returned result: if approved " +
+      "you are now in the new stage; if declined, honor any note. Never assume the transition happened.",
     promptSnippet:
       "Propose advancing the workflow to another stage (user confirms in a dialog)",
     promptGuidelines: [
-      `Call ${PROPOSE_TOOL} to advance the workflow when a stage is complete; it prompts the user itself, so do not add your own "here's the dialog" narration.`,
+      `Call ${PROPOSE_TOOL} to advance when a stage is complete — omit \`stage\` to go to the next stage (advance one at a time; only name a stage to skip or go back, which is rare). It prompts the user itself, so do not add your own "here's the dialog" narration.`,
     ],
     parameters: schema,
     async execute(_id, params, _signal, _onUpdate, ctx) {
-      const target = params.stage as StageId;
       const workflow = getWorkflow(controller.currentWorkflow());
+      // Default (no stage) = the next stage in this workflow's sequence.
+      const target = (params.stage as StageId | undefined) ??
+        relativeStageIn(workflow, controller.current(), 1).id;
       const here = () => getStageInWorkflow(workflow, controller.current()).label;
 
       // Target stage isn't part of the active workflow — report the valid
