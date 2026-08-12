@@ -87,26 +87,7 @@ targets:
     postbuildScripts:
       - name: Generate dSYM for CLiteRTLM
         basedOnDependencyAnalysis: false
-        script: |
-          # LiteRT-LM ships CLiteRTLM.framework as a prebuilt dynamic
-          # framework with embedded DWARF but no companion dSYM. Xcode
-          # never builds one since it didn't compile the binary, which
-          # makes App Store Connect reject uploads for the missing UUID.
-          if [ -z "${DWARF_DSYM_FOLDER_PATH:-}" ]; then
-            exit 0
-          fi
-
-          FRAMEWORK="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework"
-          BINARY="${FRAMEWORK}/CLiteRTLM"
-
-          if [ -f "${BINARY}" ]; then
-            mkdir -p "${DWARF_DSYM_FOLDER_PATH}"
-            # dsymutil cannot place its temporary output into an existing bundle,
-            # so an incremental build fails in lipo unless the old one is cleared.
-            DSYM="${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
-            rm -rf "${DSYM}"
-            dsymutil "${BINARY}" -o "${DSYM}"
-          fi
+        path: scripts/generate_clitertlm_dsym.sh
     info:
       path: Sources/Info.plist
       properties:
@@ -194,26 +175,7 @@ targets:
     postbuildScripts:
       - name: Generate dSYM for CLiteRTLM
         basedOnDependencyAnalysis: false
-        script: |
-          # LiteRT-LM ships CLiteRTLM.framework as a prebuilt dynamic
-          # framework with embedded DWARF but no companion dSYM. Xcode
-          # never builds one since it didn't compile the binary, which
-          # makes App Store Connect reject uploads for the missing UUID.
-          if [ -z "${DWARF_DSYM_FOLDER_PATH:-}" ]; then
-            exit 0
-          fi
-
-          FRAMEWORK="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/CLiteRTLM.framework"
-          BINARY="${FRAMEWORK}/CLiteRTLM"
-
-          if [ -f "${BINARY}" ]; then
-            mkdir -p "${DWARF_DSYM_FOLDER_PATH}"
-            # dsymutil cannot place its temporary output into an existing bundle,
-            # so an incremental build fails in lipo unless the old one is cleared.
-            DSYM="${DWARF_DSYM_FOLDER_PATH}/CLiteRTLM.framework.dSYM"
-            rm -rf "${DSYM}"
-            dsymutil "${BINARY}" -o "${DSYM}"
-          fi
+        path: scripts/generate_clitertlm_dsym.sh
     info:
       path: Sources/Info.plist
       properties:
