@@ -37,10 +37,10 @@ function assert(condition: boolean, message: string): void {
 	if (!condition) throw new Error(message);
 }
 
-test("WORKFLOWS has exactly feature, bug, prototype", () => {
+test("WORKFLOWS has exactly feature, bug, prototype, release", () => {
 	assertEqual(
 		WORKFLOWS.map((w) => w.id),
-		["feature", "bug", "prototype"],
+		["feature", "bug", "prototype", "release"],
 	);
 });
 
@@ -78,6 +78,13 @@ test("prototype workflow skips plan", () => {
 	);
 });
 
+test("release workflow has no iterate stage", () => {
+	assertEqual(
+		getWorkflow("release").stages.map((s) => s.id),
+		["context", "plan", "build", "test", "merge"],
+	);
+});
+
 test("isWorkflowId recognizes valid/invalid ids", () => {
 	assert(isWorkflowId("feature"), "feature should be a valid workflow id");
 	assert(!isWorkflowId("nonsense"), "nonsense should not be a valid workflow id");
@@ -87,6 +94,7 @@ test("firstStage returns each workflow's entry stage", () => {
 	assertEqual(firstStage(getWorkflow("feature")), "context");
 	assertEqual(firstStage(getWorkflow("bug")), "context");
 	assertEqual(firstStage(getWorkflow("prototype")), "context");
+	assertEqual(firstStage(getWorkflow("release")), "context");
 });
 
 test("hasStage reflects workflow membership", () => {

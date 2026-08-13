@@ -109,7 +109,7 @@ targets:
       base:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: true
-        MARKETING_VERSION: "0.15.0"
+        MARKETING_VERSION: "0.16.0"
         CURRENT_PROJECT_VERSION: "19"
         INFOPLIST_KEY_CFBundleDisplayName: Eigin
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
@@ -197,7 +197,7 @@ targets:
       base:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: true
-        MARKETING_VERSION: "0.15.0"
+        MARKETING_VERSION: "0.16.0"
         CURRENT_PROJECT_VERSION: "19"
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Dev
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIconDev
