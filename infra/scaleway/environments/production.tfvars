@@ -14,7 +14,9 @@ monthly_pool_size = 5000
 # Production accepts Sandbox too: TestFlight and App Review of the production app
 # always operate in Sandbox. Free Sandbox issuance is bounded by the budget below.
 apple_environments            = ["Production", "Sandbox"]
-apple_bundle_id               = "com.42futures.carrel"
+# Comma-separated set of accepted bundle IDs. Serves the legacy alpha and the
+# new App Store release at once during migration; drop the alpha once retired.
+apple_bundle_id               = "com.42futures.carrel,ai.eigin.finch"
 apple_app_apple_id            = ""
 sandbox_monthly_credit_budget = 25000
 

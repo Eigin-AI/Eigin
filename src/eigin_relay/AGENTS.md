@@ -86,7 +86,7 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | `TOKEN_ENCRYPTION_KEY` | — | 32-byte base64url AEAD key for encrypting credit tokens at rest. Generate with `openssl rand -base64 32`. |
 | `UPSTREAM_API_URL` | — | Base URL of the upstream inference provider. If unset, inference routes return 503. |
 | `UPSTREAM_API_KEY` | — | API key for the upstream inference provider. |
-| `APPLE_BUNDLE_ID` | — | App bundle ID, e.g. `ai.eigin.app`. |
+| `APPLE_BUNDLE_ID` | — | Comma-separated set of accepted app bundle IDs, e.g. `ai.eigin.finch`. List several to serve multiple apps at once, e.g. `com.42futures.carrel,ai.eigin.finch` during a bundle-ID migration. Each bundle ID is verified across every `APPLE_ENVIRONMENTS` entry. |
 | `APPLE_ENVIRONMENTS` | `Sandbox` | Comma-separated environments to accept, e.g. `Sandbox` (staging) or `Production,Sandbox` (production accepts TestFlight/App-Review sandbox purchases). Terraform models this as a `list(string)` and joins it for this var. |
 | `APPLE_APP_APPLE_ID` | — | Numeric App Store app ID. Required in Production. |
 | `SANDBOX_MONTHLY_CREDIT_BUDGET` | `25000` | Max credits issued to Sandbox purchases per rolling window. Bounds free-credit abuse cost. |

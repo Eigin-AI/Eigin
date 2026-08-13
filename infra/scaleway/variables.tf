@@ -50,7 +50,7 @@ variable "provider_api_keys" {
 }
 
 variable "apple_bundle_id" {
-  description = "Apple app bundle ID, e.g. ai.eigin.app"
+  description = "Comma-separated set of accepted Apple bundle IDs, e.g. ai.eigin.finch or com.42futures.carrel,ai.eigin.finch during migration"
   type        = string
   default     = ""
 }

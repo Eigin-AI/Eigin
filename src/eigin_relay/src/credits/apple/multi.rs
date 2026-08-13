@@ -4,13 +4,14 @@ use crate::error::AppError;
 
 use super::verifier::{AppleVerifier, VerifiedNotification, VerifiedTransaction};
 
-/// Accepts transactions and notifications from any of several Apple environments.
+/// Accepts transactions and notifications from any of several pinned verifiers,
+/// spanning both Apple environments and bundle IDs.
 ///
-/// Verification is cryptographically enforced per environment (each underlying
-/// verifier checks the environment claim), so trying each in turn and taking the
-/// first that succeeds is safe — a token cannot pass a verifier for the wrong
-/// environment. This is Apple's recommended StoreKit 2 JWS approach; there is no
-/// `verifyReceipt`-style 21007 fallback.
+/// Verification is cryptographically enforced per verifier (each checks the
+/// environment claim and the bundle ID), so trying each in turn and taking the
+/// first that succeeds is safe — a token cannot pass a verifier pinned to the
+/// wrong environment or bundle ID. This is Apple's recommended StoreKit 2 JWS
+/// approach; there is no `verifyReceipt`-style 21007 fallback.
 pub struct MultiEnvironmentVerifier {
     verifiers: Vec<Box<dyn AppleVerifier>>,
 }
@@ -56,22 +57,33 @@ mod tests {
     use super::*;
     use crate::credits::apple::AppleEnvironment;
 
-    /// A verifier that accepts only its own environment, like a real one keyed
-    /// to a single Apple environment, so we can test selection across a list.
+    /// A verifier pinned to one bundle ID and environment, like a real one, so we
+    /// can test selection across a list spanning both dimensions. It accepts a
+    /// token formatted as `"<bundle_id>|<environment>"` and rejects anything else,
+    /// mirroring how a real verifier rejects the wrong bundle ID or environment.
     struct StubVerifier {
+        bundle_id: &'static str,
         environment: AppleEnvironment,
+    }
+
+    impl StubVerifier {
+        fn token(&self) -> String {
+            format!("{}|{}", self.bundle_id, self.environment.as_str())
+        }
     }
 
     impl AppleVerifier for StubVerifier {
         fn verify_transaction(&self, jws: &str) -> Result<VerifiedTransaction, AppError> {
-            if jws == self.environment.as_str() {
+            if jws == self.token() {
                 Ok(VerifiedTransaction {
                     original_transaction_id: "tx".into(),
                     product_id: "p".into(),
                     environment: self.environment,
                 })
             } else {
-                Err(AppError::UnprocessableEntity("wrong environment".into()))
+                Err(AppError::UnprocessableEntity(
+                    "wrong bundle id or environment".into(),
+                ))
             }
         }
 
@@ -83,23 +95,77 @@ mod tests {
     fn multi() -> MultiEnvironmentVerifier {
         MultiEnvironmentVerifier::new(vec![
             Box::new(StubVerifier {
+                bundle_id: "ai.eigin.finch",
                 environment: AppleEnvironment::Production,
             }),
             Box::new(StubVerifier {
+                bundle_id: "ai.eigin.finch",
                 environment: AppleEnvironment::Sandbox,
             }),
         ])
+    }
+
+    /// Mirrors a migration: one relay serving the legacy alpha and the new App
+    /// Store release, each across both environments — the full bundle×env grid.
+    fn multi_bundle() -> MultiEnvironmentVerifier {
+        let bundles = ["com.42futures.carrel", "ai.eigin.finch"];
+        let environments = [AppleEnvironment::Production, AppleEnvironment::Sandbox];
+        MultiEnvironmentVerifier::new(
+            bundles
+                .iter()
+                .flat_map(|&bundle_id| {
+                    environments.iter().map(move |&environment| {
+                        Box::new(StubVerifier {
+                            bundle_id,
+                            environment,
+                        }) as Box<dyn AppleVerifier>
+                    })
+                })
+                .collect(),
+        )
     }
 
     #[test]
     fn selects_the_environment_that_verifies() {
         // A sandbox token fails the production verifier but is accepted by the
         // sandbox one, and the result carries the matching environment.
-        let tx = multi().verify_transaction("Sandbox").unwrap();
+        let tx = multi()
+            .verify_transaction("ai.eigin.finch|Sandbox")
+            .unwrap();
         assert_eq!(tx.environment, AppleEnvironment::Sandbox);
 
-        let tx = multi().verify_transaction("Production").unwrap();
+        let tx = multi()
+            .verify_transaction("ai.eigin.finch|Production")
+            .unwrap();
         assert_eq!(tx.environment, AppleEnvironment::Production);
+    }
+
+    #[test]
+    fn accepts_tokens_from_any_configured_bundle_id() {
+        // Both the legacy alpha and the new release verify against the same relay,
+        // in either environment — this is what keeps the alpha live during review.
+        for token in [
+            "com.42futures.carrel|Production",
+            "com.42futures.carrel|Sandbox",
+            "ai.eigin.finch|Production",
+            "ai.eigin.finch|Sandbox",
+        ] {
+            assert!(
+                multi_bundle().verify_transaction(token).is_ok(),
+                "expected {token} to verify"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_tokens_from_an_unconfigured_bundle_id() {
+        // A bundle ID the relay was never told about is rejected, even in a valid
+        // environment — verification is not a wildcard.
+        assert!(
+            multi_bundle()
+                .verify_transaction("com.someone.else|Production")
+                .is_err()
+        );
     }
 
     #[test]
