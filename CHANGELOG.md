@@ -1,3 +1,44 @@
+## [0.16.0] - 2026-08-13
+
+### Features
+
+- Pi coding agent workflow
+- Integrations framework + Gmail integration
+- Workflow pipelines (Feature/Bug/Prototype) for the eigin pi extension
+- Pi session observability (auto-naming, trimmed title, idle bell)
+- Guardrails via @aliou/pi-guardrails
+- Add Microsoft email integration
+- Choose active provider per capability
+- Migrate MCP servers onto activatable-catalog gating
+- Add IMAP email integration
+- Aula integration
+- Update model catalog with relay-hosted and newly released models
+- Browse integrations by category
+- Automatic model selection
+- Vendor markdown rendering pipeline
+- Collaborative plan review, GitLab MR review; retire Plannotator
+- Auto-activate bundled skills from trigger keywords
+- Add agent release helper
+
+### Bug Fixes
+
+- Vendor LiteRT-LM as a local Swift package
+- Add pi MR changes that were missed
+- Give propose_stage awareness of the active workflow's stages
+- Update icon for Aula
+- Constrain collapsed user message tap target to visible bounds
+- Rotate initiative intents and stop notifications from collapsing
+- Speak a farewell and hang up gracefully on non-recoverable live call errors
+- Squash three build warnings
+- Token-first Aula sessions, drop the web-session anchor
+- Debug symbols for LiteRT-LM breaking sequential tests
+- Scope CLiteRTLM dSYM generation to Release builds
+
+### Documentation
+
+- Add build from source notes
+- Tidy and restructure technical docs
+- Update contributor docs
 ## [0.15.0] - 2026-07-04
 
 ### Features
@@ -21,6 +62,7 @@
 - Cooking skill
 - Branded icebreaker prompts
 - Recommendations skill
+- Bundle knowledge as an external Firm workspace
 
 ### Bug Fixes
 
@@ -40,7 +82,6 @@
 
 - Migrate system prompts to Jinja templates
 - Centralise hint, skill, and title prompts as templates
-- Bundle knowledge as an external Firm workspace
 
 ### Styling
 

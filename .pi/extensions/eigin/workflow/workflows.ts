@@ -17,7 +17,7 @@
 
 import { stage, type StageDef, type StageId } from "./stages.ts";
 
-export type WorkflowId = "feature" | "bug" | "prototype";
+export type WorkflowId = "feature" | "bug" | "prototype" | "release";
 
 export interface WorkflowDef {
   id: WorkflowId;
@@ -189,7 +189,84 @@ Goal: build and shape the idea one step at a time, together, from scratch.
   ],
 };
 
-export const WORKFLOWS: WorkflowDef[] = [FEATURE, BUG, PROTOTYPE];
+const RELEASE: WorkflowDef = {
+  id: "release",
+  label: "Release",
+  icon: "🚀",
+  summary: "Bump version, regenerate changelog, prep the release.",
+  stages: [
+    stage(
+      "context",
+      `You are in the Context stage: read-only, conversational.
+Goal: figure out what's shipping and what the next version should be.
+- Assume a release branch already exists and is checked out — the user creates it manually. Confirm with \`git branch --show-current\` and note it.
+- Look at what changed since the last tag: \`git tag --list --sort=-v:refname\` for the last semantic tag, then \`git log <last-tag>..HEAD --oneline\`.
+- Decide the version bump with the user: this project is pre-1.0, so bump minor (0.X.0) by default, or patch (0.X.Y) for a small fix-only release. Look at \`src/eigin_ios/project.yml\` for the current MARKETING_VERSION.
+- Note any breaking changes or notable user-facing items worth calling out in release notes later.
+- Do NOT edit any files yet — this stage is just grounding the decision.`,
+    ),
+    stage(
+      "plan",
+      `You are in the Plan stage: co-editing a short markdown release plan with the user (markdown-writable).
+Goal: pin down the version and draft the release notes before touching any files.
+- Write the plan to \`.pi/plans/release-<version>.md\` (e.g. \`release-0.16.0.md\`) using EXACTLY this layout:
+    # Release: <version>
+
+    ## Summary
+    1-2 lines: what this release is (minor/patch), headline items.
+
+    ## What's new
+    Short bullets, user-facing framing — this becomes the GitLab release description.
+
+    ## Breaking changes
+    Bullets, or "None" if there aren't any.
+
+    ## Decision log
+    Numbered list, one short line per round.
+- Keep it short — this drafts the GitLab release notes, not a changelog (git cliff generates that from commits in Build).
+- It's collaborative: re-read every turn, respond to the user's direct edits. After a round, call wait_for_user (confirmLabel "Review my plan edits") rather than explaining at length.
+- Approve gate: propose_stage(build) only when the version and release notes are settled and no comments are open. The user's confirmation is the approval.`,
+    ),
+    stage(
+      "build",
+      `You are in the Build stage: edits enabled, mostly autonomous.
+Goal: bump the version and regenerate the changelog.
+- Update \`MARKETING_VERSION\` in \`src/eigin_ios/project.yml\` to the agreed version — BOTH occurrences (the \`Eigin\` and \`EiginDev\` targets).
+- Run \`git cliff --tag <version> --output CHANGELOG.md\` (check \`cliff.toml\` for exact invocation conventions) to regenerate the changelog from conventional commits.
+- Read the regenerated CHANGELOG.md diff and hand-tune it if git cliff mis-grouped or mis-worded anything — don't just trust it blindly.
+- Do not commit, tag, or push — that's the user's, in Merge.
+- Done when: project.yml is bumped in both places, CHANGELOG.md is regenerated and looks right.`,
+    ),
+    stage(
+      "test",
+      `You are in the Test stage: edits enabled, verification-focused.
+Goal: confirm the bump didn't break anything before it ships.
+- Run \`just build\` and \`just test\` (or the relevant subset) yourself and report what you checked.
+- Verify \`src/eigin_ios/project.yml\` parses and the version shows up right (e.g. \`just generate\` if the Xcode project needs regenerating from project.yml).
+- Small fixups are expected here if verification turns up a typo or formatting issue in the changelog or version bump — keep them scoped to the release.
+- The user does final manual verification (e.g. running the app). Wait for their go-ahead before Merge.`,
+    ),
+    stage(
+      "merge",
+      `You are in the Merge stage: prep everything, then hand the user the exact commands — you never run git.
+Goal: get this release committed, tagged, merged, and published as a GitLab release.
+- Confirm the version bump and changelog are in place (Build) and verified (Test).
+- Draft a short MR description per \`.gitlab/merge_request_templates/Default.md\` and save it to \`.pi/mr/release-<version>.md\`. Title in Conventional Commits form, e.g. \`chore: release <version>\`.
+- Create the MR yourself with \`glab mr create --title "chore: release <version>" --description "$(cat <path>)" --source-branch <branch>\` (project: dev/eigin on code.eigin.ai) — the release branch already exists, so this just opens the MR.
+- You never commit, tag, or push. Give the user this exact checklist to run themselves:
+    1. \`git add -A && git commit -m "chore: release <version>"\`
+    2. \`git tag <version>\`
+    3. \`git push && git push --tags\`
+  (they'll have pushed before you can create the MR above — call this out up front, before step 3 of the checklist, so the ordering is clear)
+- Then call wait_for_user (prompt "Review the MR and merge when ready"; confirmLabel "Continue to the GitLab release") — you never merge.
+- Once merged, draft the GitLab release: pull the plan's "What's new" / "Breaking changes" sections into release notes. Check \`glab release list\` or the GitLab UI for prior releases to match tone/format.
+- Give the user the command to create it, e.g. \`glab release create <version> --tag <version> --notes "$(cat <notes-path>)"\`, or point them to the GitLab UI if that's easier — you don't run it.
+- Note explicitly: App Store submission is a separate, manual, human step — out of scope here.`,
+    ),
+  ],
+};
+
+export const WORKFLOWS: WorkflowDef[] = [FEATURE, BUG, PROTOTYPE, RELEASE];
 
 export function getWorkflow(id: WorkflowId): WorkflowDef {
   const workflow = WORKFLOWS.find((w) => w.id === id);
