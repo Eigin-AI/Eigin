@@ -10,6 +10,7 @@
 - [Development environment](./contributing/development-environment.md)
 - [Build from source](./contributing/build-from-source.md)
 - [Guidelines](./contributing/guidelines.md)
+- [Naming](./contributing/naming.md)
 
 # Platform
 
