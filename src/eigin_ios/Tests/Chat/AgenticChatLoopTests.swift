@@ -109,6 +109,70 @@ struct AgenticChatLoopTests {
         #expect(produced[2].content == "Got it!")
     }
 
+    /// A mid-round prose message's feed row ("msg-<localID>") must match the id the live
+    /// streaming row used while that prose was still displaying (`streamingItemID`).
+    /// If they diverge, the feed sees a new row identity when the round seals and
+    /// re-mounts it — replaying the grow-in animation as a visible flicker (#173).
+    @Test @MainActor func proseSealsKeepStreamingRowIdentity() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let toolCall = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+
+        // Round 1: prose, then a tool call — the flicker-prone mid-round seal.
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Checking your identity..."),
+            .toolCall(toolCall),
+            .finished(.toolCalls),
+        ])
+
+        // Round 2: final prose.
+        fakeChatService.enqueueEventStream([
+            .contentDelta("You are a test agent."),
+            .finished(.stop),
+        ])
+
+        fakeToolExecutor.setResult(for: "call_1", content: "{\"result\":\"I am a test agent.\"}")
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+
+        // Capture the live row id in call order, once per prose segment. Each
+        // enqueued round here emits exactly one contentDelta, so the Nth capture
+        // corresponds to the Nth committed prose message.
+        var streamingIDs: [String] = []
+        loop.onContentDelta = { [weak loop] _ in
+            guard let loop, let id = loop.streamingItemID else { return }
+            streamingIDs.append(id)
+        }
+
+        let messages = [ChatMessage(role: "user", content: "Read my identity")]
+
+        let produced = try await loop.run(
+            messages: messages,
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        let proseMessages = produced.filter { $0.role == "assistant" && $0.content != nil }
+        #expect(proseMessages.count == 2)
+        #expect(streamingIDs.count == 2)
+
+        // Each committed prose message's feed id must equal the id its live row used
+        // while streaming, and the two segments must not collide on the same id.
+        for (message, liveID) in zip(proseMessages, streamingIDs) {
+            #expect(liveID == "msg-\(message.localID)")
+        }
+        #expect(streamingIDs[0] != streamingIDs[1])
+    }
+
     @Test @MainActor func multipleToolCallsExecutedSequentially() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container

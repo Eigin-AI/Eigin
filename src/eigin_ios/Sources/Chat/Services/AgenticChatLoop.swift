@@ -329,13 +329,15 @@ final class AgenticChatLoop {
                     await waitForThrottlerDrain()
                 }
 
-                // Build the assistant message with tool calls (include provider metadata if
-                // present)
+                // Build the assistant message with tool calls (include provider metadata
+                // if present). Reuse currentMessageID as the localID when there's prose, so
+                // the committed row keeps the live streaming row's feed identity.
                 let assistantMessage = ChatMessage(
                     role: "assistant",
                     content: contentBuffer.isEmpty ? nil : contentBuffer,
                     toolCalls: pendingToolCalls,
-                    providerMetadata: capturedProviderMetadata
+                    providerMetadata: capturedProviderMetadata,
+                    localID: contentBuffer.isEmpty ? UUID().uuidString : currentMessageID
                 )
                 allMessages.append(assistantMessage)
                 produced.append(assistantMessage)
@@ -381,10 +383,12 @@ final class AgenticChatLoop {
                     currentExecutor = updated.executor
                 }
 
-                // Prepare for the next round (already in .waiting from resetKeepingPhase)
+                // Prepare for the next round (already in .waiting from resetKeepingPhase).
+                // Regenerate the message id so the next prose segment gets its own feed identity.
                 chatPhase = .streamingProse
                 contentBuffer = ""
                 pendingToolCalls = []
+                currentMessageID = "msg-\(UUID().uuidString)"
                 continue
             }
 
