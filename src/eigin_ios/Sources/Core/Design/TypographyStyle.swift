@@ -22,8 +22,72 @@ struct FontSpec {
         return FontSpec(font: Font(uiFont), uiFont: uiFont)
     }
 
-    // Typography tokens whose font family isn't installed fall back to a system
-    // font expression. None exist today; add the matching factory here if one appears.
+    /// System-font fallback for tokens whose font family isn't installed.
+    static func system(size: CGFloat, weight: Font.Weight = .regular) -> FontSpec {
+        FontSpec(
+            font: .system(size: size, weight: weight),
+            uiFont: .systemFont(ofSize: size, weight: uiWeight(weight))
+        )
+    }
+
+    /// System-font fallback for tokens expressed as a Dynamic Type text style.
+    static func system(
+        _ style: Font.TextStyle,
+        design: Font.Design = .default,
+        weight: Font.Weight = .regular
+    ) -> FontSpec {
+        let base = UIFont.preferredFont(forTextStyle: uiTextStyle(style))
+        var descriptor = base.fontDescriptor.addingAttributes([
+            .traits: [UIFontDescriptor.TraitKey.weight: uiWeight(weight)],
+        ])
+        if let designed = descriptor.withDesign(uiDesign(design)) {
+            descriptor = designed
+        }
+        return FontSpec(
+            font: .system(style, design: design, weight: weight),
+            // Size 0 keeps the descriptor's own (Dynamic Type scaled) size.
+            uiFont: UIFont(descriptor: descriptor, size: 0)
+        )
+    }
+
+    private static func uiWeight(_ weight: Font.Weight) -> UIFont.Weight {
+        switch weight {
+        case .ultraLight: .ultraLight
+        case .thin: .thin
+        case .light: .light
+        case .medium: .medium
+        case .semibold: .semibold
+        case .bold: .bold
+        case .heavy: .heavy
+        case .black: .black
+        default: .regular
+        }
+    }
+
+    private static func uiTextStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
+        switch style {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .callout: .callout
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        default: .body
+        }
+    }
+
+    private static func uiDesign(_ design: Font.Design) -> UIFontDescriptor.SystemDesign {
+        switch design {
+        case .serif: .serif
+        case .rounded: .rounded
+        case .monospaced: .monospaced
+        default: .default
+        }
+    }
 }
 
 struct TypographyStyle {
