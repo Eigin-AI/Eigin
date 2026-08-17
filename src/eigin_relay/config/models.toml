@@ -25,19 +25,10 @@ output_millicredits_per_1m_tokens = 650_000
 [[models]]
 id = "z-ai/glm-5.2"
 provider = "tensorx"
-upstream_id = "zai-org/GLM-5.2"
 aliases = ["glm-5.2", "glm-5-2", "zai-org/GLM-5.2", "GLM-5.2"]
 input_millicredits_per_1m_tokens = 150_000
 cached_input_millicredits_per_1m_tokens = 35_000
 output_millicredits_per_1m_tokens = 400_000
-
-[[models]]
-id = "nvidia/nvidia-nemotron-3-super-120b-a12b"
-provider = "tensorx"
-aliases = []
-input_millicredits_per_1m_tokens = 30_000
-cached_input_millicredits_per_1m_tokens = 10_000
-output_millicredits_per_1m_tokens = 80_000
 
 [[models]]
 id = "moonshotai/kimi-k2.6"
