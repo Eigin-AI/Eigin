@@ -51,7 +51,7 @@ When working on a task, issues typically provide the problem context and expecte
 
 **Formatting** — formatting is standardized and automated. Run `just format` before committing.
 
-**Comments** — document public APIs with summary comments. Use inline comments only for non-obvious logic. Explain what and why, not how. Write for the current state of the code, not what it isn't or how it was. Keep comments short and sharp always.
+**Comments** — document public APIs with summary comments. Use inline comments only for non-obvious logic. Explain what and why, not how. Write for the current state of the code, not what it isn't or how it was. Keep comments short and sharp always: non-summary comments should generally be a single line.
 
 **Naming** — names should reflect behavior. A name describes what something does, not how it's built.
 

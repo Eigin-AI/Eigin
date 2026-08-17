@@ -490,4 +490,33 @@ struct AgenticChatLoopTests {
         // The runner is always built and passed; the fake captures it.
         #expect(fakeChatService.capturedInlineRunner != nil)
     }
+
+    /// The pre-stream wait must land in ``timeToFirstToken``, not be measured away as zero.
+    @Test @MainActor func recordsTimeToFirstTokenFromRequestDispatch() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+
+        let router = FakeModelRouter()
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+
+        let fakeChatService = FakeChatService()
+        // Hold the response, then deliver the first token as soon as the stream opens.
+        fakeChatService.delayBeforeStream(.milliseconds(200))
+        fakeChatService.enqueueEventStream([.contentDelta("Hi"), .finished(.stop)])
+
+        let loop = AgenticChatLoop(isBootstrap: false)
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: FakeToolExecutor()
+        )
+
+        let outcomes = await router.outcomes()
+        let ttft = try #require(outcomes.last?.timeToFirstToken)
+        #expect(ttft > .milliseconds(100))
+    }
 }
