@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::env;
 use std::process::Command;
 
 use crate::config;
@@ -29,6 +30,7 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     run_cmd(
         Command::new("xcodegen")
             .arg("generate")
+            .env("BUNDLE_ID", bundle_id())
             .current_dir(&ios_dir),
         "xcodegen generate",
     )?;
@@ -47,6 +49,16 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+/// Bundle identifier for the generated project. Without one the app builds but
+/// can't be installed, so environments with no `.env` (worktrees, OSS clones)
+/// fall back to the default identifier.
+fn bundle_id() -> String {
+    match env::var("BUNDLE_ID") {
+        Ok(id) if !id.trim().is_empty() => id,
+        _ => "ai.eigin.finch".to_string(),
+    }
 }
 
 fn run_cmd(cmd: &mut Command, label: &str) -> Result<()> {
