@@ -229,7 +229,7 @@ final class AgenticChatLoop {
                 category: .chat
             )
 
-            let stream = try await openStream(
+            let (stream, streamStart) = try await openStream(
                 chatService: chatService,
                 provider: provider,
                 agent: agent,
@@ -246,7 +246,7 @@ final class AgenticChatLoop {
 
             chatPhase = .streamingProse
 
-            let streamStart = ContinuousClock.now
+            // Measured from request dispatch: the first-token wait is spent inside openStream.
             var firstTokenAt: ContinuousClock.Instant?
 
             do {
@@ -546,6 +546,8 @@ final class AgenticChatLoop {
     /// `inlineToolRunner` is forwarded to local model clients so they can execute
     /// tools mid-stream. Cloud clients ignore it via the default implementation
     /// on `ChatService`.
+    ///
+    /// Returns the stream with its request-dispatch instant, the origin for time-to-first-token.
     private func openStream(
         chatService: ChatService,
         provider: Provider,
@@ -554,7 +556,12 @@ final class AgenticChatLoop {
         tools: [ToolDefinition]?,
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner? = nil
-    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+    ) async throws
+        -> (
+            stream: AsyncThrowingStream<ChatStreamEvent, Error>,
+            dispatchedAt: ContinuousClock.Instant
+        )
+    {
         while true {
             let attemptStart = ContinuousClock.now
             do {
@@ -569,10 +576,12 @@ final class AgenticChatLoop {
                 )
                 // On-device prefill is legitimately slow, and there is nothing past it to
                 // fall back to.
-                guard !ProviderPreset.isLocal(provider.baseURL) else { return stream }
-                return withFirstEventDeadline(
+                guard !ProviderPreset.isLocal(provider.baseURL) else {
+                    return (stream, attemptStart)
+                }
+                return (withFirstEventDeadline(
                     stream, deadline: DefaultModelRouter.firstTokenCeiling
-                )
+                ), attemptStart)
             } catch {
                 if error is CancellationError || Task.isCancelled { throw error }
                 let failure = RoutingFailure(from: error)

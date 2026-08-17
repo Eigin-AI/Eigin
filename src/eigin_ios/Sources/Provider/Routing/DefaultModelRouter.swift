@@ -449,7 +449,9 @@ actor DefaultModelRouter: ModelRouter {
 
     private func format(_ duration: Duration?) -> String {
         guard let duration else { return "n/a" }
-        return "\(duration.components.seconds)s"
+        let seconds = Double(duration.components.seconds)
+            + Double(duration.components.attoseconds) / 1e18
+        return String(format: "%.2fs", seconds)
     }
 
     private func format(_ value: Double?) -> String {

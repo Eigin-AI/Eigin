@@ -60,6 +60,14 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         lock.withLock { _eventStreamThrow = error }
     }
 
+    /// Delay before the stream returns, mimicking a provider holding the response.
+    private var _preStreamDelay: Duration = .zero
+
+    /// Make ``chatCompletionEventStream`` wait `delay` before returning the stream.
+    func delayBeforeStream(_ delay: Duration) {
+        lock.withLock { _preStreamDelay = delay }
+    }
+
     func chatCompletionStream(
         baseURL: String,
         providerID: UUID,
@@ -135,6 +143,10 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         lock.withLock { _lastModel = model }
+        let preStreamDelay = lock.withLock { _preStreamDelay }
+        if preStreamDelay > .zero {
+            try await Task.sleep(for: preStreamDelay)
+        }
         if let thrown: Error = lock.withLock({
             let e = _eventStreamThrow
             _eventStreamThrow = nil
