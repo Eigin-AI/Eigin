@@ -13,7 +13,8 @@ monthly_pool_size = 1000
 # Relay: IAP config
 # Staging is the internal dev app; all purchases are Sandbox.
 apple_environments            = ["Sandbox"]
-apple_bundle_id               = "com.42futures.carrel.dev"
+# Comma-separated set of accepted bundle IDs (see production.tfvars).
+apple_bundle_id               = "com.42futures.carrel.dev,ai.eigin.finch.dev"
 apple_app_apple_id            = ""
 sandbox_monthly_credit_budget = 5000
 

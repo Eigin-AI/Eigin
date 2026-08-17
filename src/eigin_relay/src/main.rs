@@ -253,20 +253,28 @@ fn configure_apple_verifier() -> Arc<dyn eigin_relay::credits::apple::AppleVerif
         .and_then(|v| v.parse().ok());
     let root_certs = load_root_certs("config/apple");
 
-    // A relay can accept more than one Apple environment. The production relay
-    // accepts both `Production` (the live App Store) and `Sandbox` (TestFlight
-    // and App Review, which always operate in sandbox); staging accepts only
-    // `Sandbox`. Each environment gets its own pinned verifier; the bundle ID is
-    // shared since it differs per relay, not per environment.
+    // A relay can accept more than one Apple environment and more than one
+    // bundle ID. The production relay accepts both `Production` (the live App
+    // Store) and `Sandbox` (TestFlight and App Review, which always operate in
+    // sandbox); staging accepts only `Sandbox`. Multiple bundle IDs let a single
+    // relay serve several apps at once — e.g. the legacy alpha alongside a new
+    // App Store release during a bundle-ID migration, or per-customer builds.
+    // Each (bundle ID × environment) pair gets its own pinned verifier.
     let environments = env::var("APPLE_ENVIRONMENTS").unwrap_or_else(|_| "Sandbox".into());
 
-    let (bundle_id, warn_missing) = if apple_bundle_id.is_empty() {
+    let (bundle_ids, warn_missing) = if apple_bundle_id.trim().is_empty() {
         tracing::warn!(
             "APPLE_BUNDLE_ID not set — Apple verification will fail for real transactions"
         );
-        ("dev.placeholder".to_string(), true)
+        (vec!["dev.placeholder".to_string()], true)
     } else {
-        (apple_bundle_id, false)
+        let ids: Vec<String> = apple_bundle_id
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect();
+        (ids, false)
     };
     let app_apple_id = if warn_missing {
         None
@@ -274,19 +282,26 @@ fn configure_apple_verifier() -> Arc<dyn eigin_relay::credits::apple::AppleVerif
         apple_app_apple_id
     };
 
-    let verifiers: Vec<Box<dyn eigin_relay::credits::apple::AppleVerifier>> = environments
+    let environments: Vec<String> = environments
         .split(',')
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|environment| {
-            let verifier = AppStoreVerifier::new(
-                root_certs.clone(),
-                bundle_id.clone(),
-                app_apple_id,
-                environment,
-            )
-            .unwrap_or_else(|e| panic!("failed to create Apple verifier: {e}"));
-            Box::new(verifier) as Box<dyn eigin_relay::credits::apple::AppleVerifier>
+        .map(str::to_string)
+        .collect();
+
+    let verifiers: Vec<Box<dyn eigin_relay::credits::apple::AppleVerifier>> = bundle_ids
+        .iter()
+        .flat_map(|bundle_id| {
+            environments.iter().map(|environment| {
+                let verifier = AppStoreVerifier::new(
+                    root_certs.clone(),
+                    bundle_id.clone(),
+                    app_apple_id,
+                    environment,
+                )
+                .unwrap_or_else(|e| panic!("failed to create Apple verifier: {e}"));
+                Box::new(verifier) as Box<dyn eigin_relay::credits::apple::AppleVerifier>
+            })
         })
         .collect();
 

@@ -24,7 +24,7 @@ impl AppStoreVerifier {
     ///
     /// - `root_certs_der`: DER-encoded Apple Root CA certificate bytes. Load these from
     ///   `config/apple/` at startup. They are public certs committed to the repo.
-    /// - `bundle_id`: The app's bundle ID, e.g. `"ai.eigin.app"`.
+    /// - `bundle_id`: The app's bundle ID, e.g. `"ai.eigin.finch"`.
     /// - `app_apple_id`: Required in production; `None` is accepted in sandbox.
     /// - `environment`: `"Production"` or `"Sandbox"`.
     pub fn new(
