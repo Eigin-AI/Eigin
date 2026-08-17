@@ -102,6 +102,8 @@ struct ChatMessageView: View, Equatable {
                     .padding(.trailing, breakpoint.outer + Spacing.n4)
             }
         }
+        // Fill the row so attachments-only turns still right-anchor.
+        .frame(maxWidth: .infinity, alignment: .trailing)
         .animation(Animations.smooth, value: showUserMessageFooter)
     }
 
