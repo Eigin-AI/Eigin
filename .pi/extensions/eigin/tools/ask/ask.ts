@@ -11,6 +11,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { askQuestions, type AskAnswer } from "./ask-dialog.ts";
 import { validateQuestions, type QuestionInput } from "./validation.ts";
+import { withHerdrBlocked } from "../../observability/herdr.ts";
 
 export const ASK_QUESTIONS_TOOL = "ask_questions";
 
@@ -70,7 +71,9 @@ export function registerAskQuestionsTool(pi: ExtensionAPI): void {
 				};
 			}
 
-			const result = await askQuestions(ctx.ui, questions);
+			const result = await withHerdrBlocked(pi, "Answer questions", () =>
+				askQuestions(ctx.ui, questions),
+			);
 
 			// Cancelled
 			if (!result) {

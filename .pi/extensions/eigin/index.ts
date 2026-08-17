@@ -97,6 +97,15 @@
  *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
  *   observability/generate-session-name.ts one-shot LLM call producing the session name
  *   observability/bell.ts            terminal BEL write
+ *   observability/herdr.ts           emits `herdr:blocked` around human-in-the-loop dialogs
+ *
+ * Herdr orchestration: when a pane parks on one of our dialogs (propose_stage,
+ * wait_for_user, ask_questions, the model-switch/Plan→Build confirms, the
+ * fresh-session workflow picker) we emit a `herdr:blocked` event on pi.events
+ * (see observability/herdr.ts). Pi's official Herdr integration
+ * (`herdr integration install pi`) consumes it and shows the pane as blocked —
+ * "needs a decision" — rather than idle. It's a no-op without that integration.
+ * Guardrails approval prompts emit the same event from @aliou/pi-guardrails.
  *
  * Hard-invariant enforcement (destructive git, terraform apply/destroy, `just
  * infra deploy`, secret files, outside-repo path access, dangerous shell
@@ -113,6 +122,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ringBell } from "./observability/bell.ts";
+import { withHerdrBlocked } from "./observability/herdr.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
 import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
@@ -376,9 +386,11 @@ export default function stageExtension(pi: ExtensionAPI): void {
     const model = ctx.modelRegistry.find(pref.provider, pref.id);
     if (!model) return; // Preferred model not configured; skip silently.
 
-    const ok = await ctx.ui.confirm(
-      `Switch model for ${stage.label}?`,
-      `Use ${pref.id} for the ${stage.label} stage? (current: ${ctx.model?.id ?? "none"})`,
+    const ok = await withHerdrBlocked(pi, `Switch model for ${stage.label}?`, () =>
+      ctx.ui.confirm(
+        `Switch model for ${stage.label}?`,
+        `Use ${pref.id} for the ${stage.label} stage? (current: ${ctx.model?.id ?? "none"})`,
+      ),
     );
     if (!ok) return;
 
@@ -406,9 +418,11 @@ export default function stageExtension(pi: ExtensionAPI): void {
    */
   async function offerBuildHandoff(ctx: ExtensionContext): Promise<boolean> {
     const buildStage = activeStage("build");
-    const ok = await ctx.ui.confirm(
-      "Compact context before Build?",
-      "The approved plan is already saved as a file. Summarize the planning discussion (decisions, constraints, discoveries) and start Build from a compacted context + the plan, instead of carrying the full discussion forward.",
+    const ok = await withHerdrBlocked(pi, "Compact context before Build?", () =>
+      ctx.ui.confirm(
+        "Compact context before Build?",
+        "The approved plan is already saved as a file. Summarize the planning discussion (decisions, constraints, discoveries) and start Build from a compacted context + the plan, instead of carrying the full discussion forward.",
+      ),
     );
     if (!ok) {
       await suggestModel(buildStage, ctx);
@@ -787,7 +801,9 @@ Always blocked (every stage): the agent should not run stateful or destructive g
     // up front instead of silently defaulting to Feature.
     if (isFreshSession && ctx.hasUI) {
       const labels = WORKFLOWS.map((w) => workflowOption(w, false, ctx.ui.theme));
-      const choice = await ctx.ui.select("Pick a workflow:", labels);
+      const choice = await withHerdrBlocked(pi, "Pick a workflow", () =>
+        ctx.ui.select("Pick a workflow:", labels),
+      );
       const picked = choice ? WORKFLOWS.find((w) => choice.includes(w.label)) : undefined;
       if (picked) {
         currentWorkflow = picked.id;
