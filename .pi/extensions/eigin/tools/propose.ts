@@ -14,6 +14,7 @@ import type {
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { confirmWithNote } from "./confirm-dialog.ts";
+import { withHerdrBlocked } from "../observability/herdr.ts";
 import { STAGE_META, type StageId } from "../workflow/stages.ts";
 import { getStageInWorkflow, getWorkflow, hasStage, relativeStageIn, type WorkflowId } from "../workflow/workflows.ts";
 
@@ -118,10 +119,8 @@ export function registerProposeTool(
       const detail = params.reason
         ? params.reason
         : `Move to the ${stage.label} stage?`;
-      const result = await confirmWithNote(
-        ctx.ui,
-        `Advance to ${stage.label}?`,
-        detail,
+      const result = await withHerdrBlocked(pi, `Advance to ${stage.label}?`, () =>
+        confirmWithNote(ctx.ui, `Advance to ${stage.label}?`, detail),
       );
 
       // Esc / cancel — stay put, nothing to react to.

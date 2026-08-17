@@ -14,6 +14,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { confirmWithNote } from "./confirm-dialog.ts";
+import { withHerdrBlocked } from "../observability/herdr.ts";
 
 export const WAIT_FOR_USER_TOOL = "wait_for_user";
 
@@ -73,7 +74,9 @@ export function registerWaitForUserTool(pi: ExtensionAPI, controller: WaitForUse
 				};
 			}
 
-			const result = await confirmWithNote(ctx.ui, "Over to you", detail, [confirmLabel, "Stop — I'll type instead"]);
+			const result = await withHerdrBlocked(pi, "Over to you", () =>
+				confirmWithNote(ctx.ui, "Over to you", detail, [confirmLabel, "Stop — I'll type instead"]),
+			);
 
 			// Esc or "Stop" — the user doesn't want to signal now. End the turn
 			// quietly; they'll send a normal message when they're ready.
