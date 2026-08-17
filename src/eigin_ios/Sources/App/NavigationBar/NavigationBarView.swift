@@ -39,7 +39,8 @@ struct NavigationBarView: View {
                 .transition(.move(edge: .bottom))
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
+        // Ignore the keyboard too so the bar stays anchored and never rides it.
+        .ignoresSafeArea([.container, .keyboard], edges: .bottom)
     }
 }
 
