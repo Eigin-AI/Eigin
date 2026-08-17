@@ -30,10 +30,7 @@ struct ChatListView: View {
     @State private var selectedSpaceID: UUID?
 
     private var filteredChats: [Chat] {
-        if let spaceID = selectedSpaceID {
-            return chats.filter { $0.spaceID == spaceID }
-        }
-        return chats
+        ChatListFilter.visibleChats(chats, spaces: spaces, selectedSpaceID: selectedSpaceID)
     }
 
     var body: some View {
