@@ -10,6 +10,9 @@ enum ModelFamily: String {
 /// Metadata for a model family in the curated catalog.
 struct KnownModelEntry {
     let pattern: String
+    /// Alternate ID spellings that resolve to this same entry (e.g. a provider's
+    /// variant of the canonical ID). Matched with the same rules as `pattern`.
+    let aliases: [String]
     let displayName: String
     let family: ModelFamily
     let contextWindow: Int
@@ -20,6 +23,34 @@ struct KnownModelEntry {
     let supportsReasoning: Bool
     let supportsVision: Bool
     let isRecommended: Bool
+
+    init(
+        pattern: String,
+        aliases: [String] = [],
+        displayName: String,
+        family: ModelFamily,
+        contextWindow: Int,
+        maxOutput: Int?,
+        inputCostPerMillion: Double?,
+        outputCostPerMillion: Double?,
+        supportsToolCall: Bool,
+        supportsReasoning: Bool,
+        supportsVision: Bool,
+        isRecommended: Bool
+    ) {
+        self.pattern = pattern
+        self.aliases = aliases
+        self.displayName = displayName
+        self.family = family
+        self.contextWindow = contextWindow
+        self.maxOutput = maxOutput
+        self.inputCostPerMillion = inputCostPerMillion
+        self.outputCostPerMillion = outputCostPerMillion
+        self.supportsToolCall = supportsToolCall
+        self.supportsReasoning = supportsReasoning
+        self.supportsVision = supportsVision
+        self.isRecommended = isRecommended
+    }
 }
 
 /// Curated catalog of models verified to work well with the app.
@@ -40,25 +71,42 @@ enum KnownModelCatalog {
 
     /// Returns the catalog entry matching `modelID`, or `nil` if unknown.
     static func lookup(_ modelID: String) -> KnownModelEntry? {
+        lookup(modelID, in: entries)?.entry
+    }
+
+    /// Resolves `modelID` against an arbitrary entry list, returning the matched
+    /// entry and the specific string (pattern or alias) that matched.
+    /// Callers use ``lookup(_:)``; this seam exists so tests can supply fixtures.
+    static func lookup(
+        _ modelID: String,
+        in entries: [KnownModelEntry]
+    ) -> (entry: KnownModelEntry, matched: String)? {
         let bare = normalize(stripPrefix(modelID))
-        return entries.first { matchesPattern(bare, pattern: normalize($0.pattern)) }
+        for entry in entries {
+            for candidate in [entry.pattern] + entry.aliases
+                where matchesPattern(bare, pattern: normalize(candidate))
+            {
+                return (entry, candidate)
+            }
+        }
+        return nil
     }
 
     /// Extracts a version tag from the suffix of a model ID (e.g. `"20251001"` from
     /// `"claude-haiku-4-5-20251001"`, or `"2025-04-14"` from `"gpt-4.1-2025-04-14"`).
     /// Returns `nil` if the model is unknown or the ID has no suffix beyond the pattern.
     static func versionTag(for modelID: String) -> String? {
+        versionTag(for: modelID, in: entries)
+    }
+
+    /// Version-tag extraction against an arbitrary entry list. Chops the ID by the
+    /// length of whichever string matched (pattern or alias), not always `pattern`.
+    static func versionTag(for modelID: String, in entries: [KnownModelEntry]) -> String? {
         let bare = normalize(stripPrefix(modelID))
-        guard
-            let entry = entries.first(where: {
-                matchesPattern(bare, pattern: normalize($0.pattern))
-            })
-        else {
-            return nil
-        }
-        let patternLength = normalize(entry.pattern).count
-        guard bare.count > patternLength else { return nil }
-        let suffix = bare[bare.index(bare.startIndex, offsetBy: patternLength)...]
+        guard let match = lookup(modelID, in: entries) else { return nil }
+        let matchedLength = normalize(match.matched).count
+        guard bare.count > matchedLength else { return nil }
+        let suffix = bare[bare.index(bare.startIndex, offsetBy: matchedLength)...]
         let tag = String(suffix.drop(while: { $0 == "-" || $0 == "@" || $0 == ":" }))
         return tag.isEmpty ? nil : tag
     }
@@ -77,7 +125,6 @@ enum KnownModelCatalog {
         "gpt-5.5",
         "mistral-medium-latest",
         "mistral-medium-2604",
-        "Mistral-Medium-3.5-128B",
         "gemini-3.5-flash",
         "gpt-5.4",
         "gemini-3.1-pro-preview",
@@ -638,7 +685,8 @@ enum KnownModelCatalog {
             isRecommended: true
         ),
         KnownModelEntry(
-            pattern: "mistral-large-2512", // TODO: also sometimes known as mistral-large-3
+            pattern: "mistral-large-2512",
+            aliases: ["mistral-large-3"],
             displayName: "Mistral Large 3",
             family: .mistral,
             contextWindow: 262_144,
@@ -665,6 +713,8 @@ enum KnownModelCatalog {
         ),
         KnownModelEntry(
             pattern: "mistral-medium-2604",
+            // Canonical Mistral ID plus Berget's variant spelling.
+            aliases: ["mistral-medium-3-5", "Mistral-Medium-3.5-128B"],
             displayName: "Mistral Medium 3.5",
             family: .mistral,
             contextWindow: 262_144,
@@ -677,20 +727,8 @@ enum KnownModelCatalog {
             isRecommended: true
         ),
         KnownModelEntry(
-            pattern: "Mistral-Medium-3.5-128B", // Berget name variant
-            displayName: "Mistral Medium 3.5",
-            family: .mistral,
-            contextWindow: 262_144,
-            maxOutput: 262_144,
-            inputCostPerMillion: 1.50,
-            outputCostPerMillion: 5.0,
-            supportsToolCall: true,
-            supportsReasoning: true,
-            supportsVision: true,
-            isRecommended: true
-        ),
-        KnownModelEntry(
-            pattern: "mistral-medium-2508", // TODO: also sometimes known as mistral-medium-3
+            pattern: "mistral-medium-2508",
+            aliases: ["mistral-medium-3"],
             displayName: "Mistral Medium 3",
             family: .mistral,
             contextWindow: 262_144,
@@ -717,6 +755,7 @@ enum KnownModelCatalog {
         ),
         KnownModelEntry(
             pattern: "mistral-small-2603",
+            aliases: ["mistral-small-4"],
             displayName: "Mistral Small 4",
             family: .mistral,
             contextWindow: 256_000,
@@ -729,7 +768,8 @@ enum KnownModelCatalog {
             isRecommended: false
         ),
         KnownModelEntry(
-            pattern: "mistral-small-2506", // TODO: also sometimes known as mistral-small-3.1
+            pattern: "mistral-small-2506",
+            aliases: ["mistral-small-3-1"],
             displayName: "Mistral Small 3.1",
             family: .mistral,
             contextWindow: 128_000,
@@ -1177,6 +1217,8 @@ enum KnownModelCatalog {
         // NVIDIA (relay-hosted)
         KnownModelEntry(
             pattern: "nvidia-nemotron-3-super-120b-a12b",
+            // Many providers drop the `nvidia-` prefix.
+            aliases: ["nemotron-3-super-120b-a12b"],
             displayName: "Nemotron 3 Super 120B A12B",
             family: .nvidia,
             contextWindow: 262_144,

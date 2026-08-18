@@ -473,4 +473,117 @@ struct KnownModelCatalogTests {
             )
         }
     }
+
+    // MARK: - Aliases (fixture-based, decoupled from the live catalog)
+
+    /// Builds a minimal entry for alias tests. Metadata beyond `pattern`/`aliases`
+    /// is irrelevant here, so only the display name distinguishes fixtures.
+    private func fixture(
+        pattern: String,
+        aliases: [String] = [],
+        displayName: String
+    ) -> KnownModelEntry {
+        KnownModelEntry(
+            pattern: pattern,
+            aliases: aliases,
+            displayName: displayName,
+            family: .mistral,
+            contextWindow: 1000,
+            maxOutput: nil,
+            inputCostPerMillion: nil,
+            outputCostPerMillion: nil,
+            supportsToolCall: false,
+            supportsReasoning: false,
+            supportsVision: false,
+            isRecommended: false
+        )
+    }
+
+    @Test func aliasResolvesToEntry() {
+        let entries = [
+            fixture(
+                pattern: "canonical-model",
+                aliases: ["vendor-variant"],
+                displayName: "Canonical"
+            ),
+        ]
+        let match = KnownModelCatalog.lookup("vendor-variant", in: entries)
+        #expect(match?.entry.displayName == "Canonical")
+        #expect(match?.matched == "vendor-variant")
+    }
+
+    @Test func aliasResolvesWithVersionSuffix() {
+        // matchesPattern reuse: a trailing date/version after the alias still matches.
+        let entries = [
+            fixture(
+                pattern: "canonical-model",
+                aliases: ["vendor-variant"],
+                displayName: "Canonical"
+            ),
+        ]
+        let match = KnownModelCatalog.lookup("vendor-variant-20260101", in: entries)
+        #expect(match?.entry.displayName == "Canonical")
+    }
+
+    @Test func aliasResolvesWithVendorPrefix() {
+        let entries = [
+            fixture(
+                pattern: "canonical-model",
+                aliases: ["vendor-variant"],
+                displayName: "Canonical"
+            ),
+        ]
+        let match = KnownModelCatalog.lookup("berget/vendor-variant", in: entries)
+        #expect(match?.entry.displayName == "Canonical")
+    }
+
+    @Test func versionTagUsesMatchedAliasNotPattern() {
+        // Chopping must use the alias length, not the (longer/shorter) pattern length.
+        let entries = [
+            fixture(pattern: "canonical-model", aliases: ["var"], displayName: "Canonical"),
+        ]
+        let tag = KnownModelCatalog.versionTag(for: "var-20260101", in: entries)
+        #expect(tag == "20260101")
+    }
+
+    @Test func firstMatchOrderingHoldsAcrossAliases() {
+        // An earlier entry's alias wins over a later entry, mirroring pattern ordering.
+        let entries = [
+            fixture(pattern: "first", aliases: ["shared"], displayName: "First"),
+            fixture(pattern: "shared", displayName: "Second"),
+        ]
+        let match = KnownModelCatalog.lookup("shared", in: entries)
+        #expect(match?.entry.displayName == "First")
+    }
+
+    @Test func bergetMistralAliasResolvesInLiveCatalog() {
+        // One smoke test that the real wiring folds Berget's spelling into the canonical entry.
+        let entry = KnownModelCatalog.lookup("Mistral-Medium-3.5-128B")
+        #expect(entry?.displayName == "Mistral Medium 3.5")
+        #expect(entry?.outputCostPerMillion == 7.50)
+    }
+
+    @Test func mistralVersionAliasesResolveInLiveCatalog() {
+        #expect(KnownModelCatalog.lookup("mistral-large-3")?.displayName == "Mistral Large 3")
+        #expect(KnownModelCatalog.lookup("mistral-small-3.1")?.displayName == "Mistral Small 3.1")
+    }
+
+    @Test func mistralSmall4AliasResolvesInLiveCatalog() {
+        // Providers serve Mistral Small 4 by name rather than the 2603 date stamp.
+        #expect(KnownModelCatalog.lookup("mistral-small-4")?.displayName == "Mistral Small 4")
+        #expect(KnownModelCatalog.lookup("mistral-small-4-119b")?.displayName == "Mistral Small 4")
+    }
+
+    @Test func nemotronAliasWithoutVendorPrefixResolves() {
+        // Many providers list Nemotron without the leading `nvidia-`.
+        let entry = KnownModelCatalog.lookup("nemotron-3-super-120b-a12b")
+        #expect(entry?.displayName == "Nemotron 3 Super 120B A12B")
+    }
+
+    @Test func mistralMedium3AliasDoesNotSwallow35() {
+        // "mistral-medium-3" and "mistral-medium-3-5" are aliases on different entries.
+        // Ordering must keep them distinct.
+        #expect(KnownModelCatalog.lookup("mistral-medium-3")?.displayName == "Mistral Medium 3")
+        #expect(KnownModelCatalog.lookup("mistral-medium-3-5")?.displayName == "Mistral Medium 3.5")
+    }
 }
