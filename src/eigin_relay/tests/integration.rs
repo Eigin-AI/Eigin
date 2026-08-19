@@ -123,7 +123,6 @@ async fn test_state_with_keys(
 
 fn router(state: Arc<eigin_relay::AppState>) -> axum::Router {
     let authed = Router::new()
-        .route("/search", get(eigin_relay::search::handle))
         .route("/v1/search", get(eigin_relay::search::handle))
         .route(
             "/v1/credits/redeem",
@@ -184,7 +183,7 @@ async fn search_without_key_returns_401() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search?q=test", None).await;
+    let response = call(&app, "/v1/search?q=test", None).await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
@@ -199,7 +198,7 @@ async fn search_with_wrong_key_returns_401() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search?q=test", Some("wrong-key")).await;
+    let response = call(&app, "/v1/search?q=test", Some("wrong-key")).await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
@@ -221,19 +220,19 @@ async fn search_accepts_either_configured_key_and_rejects_others() {
     };
 
     assert_eq!(
-        call(&make().await, "/search?q=test", Some("primary-key"))
+        call(&make().await, "/v1/search?q=test", Some("primary-key"))
             .await
             .status(),
         StatusCode::OK
     );
     assert_eq!(
-        call(&make().await, "/search?q=test", Some("secondary-key"))
+        call(&make().await, "/v1/search?q=test", Some("secondary-key"))
             .await
             .status(),
         StatusCode::OK
     );
     assert_eq!(
-        call(&make().await, "/search?q=test", Some("retired-key"))
+        call(&make().await, "/v1/search?q=test", Some("retired-key"))
             .await
             .status(),
         StatusCode::UNAUTHORIZED
@@ -246,7 +245,7 @@ async fn search_without_query_returns_400() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search", Some("test-relay-key")).await;
+    let response = call(&app, "/v1/search", Some("test-relay-key")).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
@@ -260,7 +259,7 @@ async fn search_with_empty_query_returns_400() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search?q=%20", Some("test-relay-key")).await;
+    let response = call(&app, "/v1/search?q=%20", Some("test-relay-key")).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
@@ -281,7 +280,7 @@ async fn search_proxies_upstream_response() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search?q=rust", Some("test-relay-key")).await;
+    let response = call(&app, "/v1/search?q=rust", Some("test-relay-key")).await;
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = to_bytes(response.into_body(), 4096).await.unwrap();
@@ -303,7 +302,7 @@ async fn search_forwards_recognised_focus_and_region() {
 
     let response = call(
         &app,
-        "/search?q=pandekager&region=dk&focus=recipes",
+        "/v1/search?q=pandekager&region=dk&focus=recipes",
         Some("test-relay-key"),
     )
     .await;
@@ -322,7 +321,7 @@ async fn search_drops_unrecognised_focus_and_malformed_region() {
 
     let response = call(
         &app,
-        "/search?q=test&region=denmark&focus=bogus",
+        "/v1/search?q=test&region=denmark&focus=bogus",
         Some("test-relay-key"),
     )
     .await;
@@ -339,7 +338,7 @@ async fn search_upstream_error_returns_502() {
     let state = test_state(1000, mock).await;
     let app = router(state);
 
-    let response = call(&app, "/search?q=test", Some("test-relay-key")).await;
+    let response = call(&app, "/v1/search?q=test", Some("test-relay-key")).await;
 
     assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
@@ -359,7 +358,12 @@ async fn search_rate_limited_after_10_requests() {
     let app = router(state);
 
     for i in 0..11 {
-        let response = call(&app, &format!("/search?q=test{i}"), Some("test-relay-key")).await;
+        let response = call(
+            &app,
+            &format!("/v1/search?q=test{i}"),
+            Some("test-relay-key"),
+        )
+        .await;
 
         if i >= 10 {
             assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
