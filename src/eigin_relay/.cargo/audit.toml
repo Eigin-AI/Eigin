@@ -1,0 +1,8 @@
+# Marvin is a timing sidechannel in RSA PKCS#1 v1.5 decryption. The rsa crate is
+# linked via app-store-server-library -> jsonwebtoken (rust_crypto), a feature
+# bundle we cannot narrow from here. No RSA key exists in our trust path: Apple
+# signs JWS with ES256 and our only anchor, config/apple/AppleRootCA-G3.cer, is
+# ECDSA P-384, so the vulnerable routine is never reached. CVSS 5.9.
+# Revisit if app-store-server-library gains selectable crypto backends.
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]
