@@ -175,7 +175,8 @@ final class AgenticChatLoop {
         chatService: ChatService,
         toolExecutor: ToolExecutor,
         cacheKey: String? = nil,
-        model: String? = nil
+        model: String? = nil,
+        initialToolCalls: [ToolCall] = []
     ) async throws -> [ChatMessage] {
         reset()
         activeModel = model ?? agent.model
@@ -220,6 +221,13 @@ final class AgenticChatLoop {
             safeProducedCount = produced.count
             return result
         }
+
+        // Gatekeeper-supplied tool calls (e.g. auto-activated skills) run before
+        // the first model stream so their tools are live for the turn.
+        await runInitialToolCalls(
+            initialToolCalls, agent: agent,
+            allMessages: &allMessages, tools: &currentTools, executor: &currentExecutor
+        )
 
         for round in 0 ..< maxRounds {
             roundsExecuted = round + 1
@@ -423,6 +431,48 @@ final class AgenticChatLoop {
         AppLogger.debug("Done. Produced \(public: produced.count) messages", category: .chat)
         if shouldStop { return [] }
         return produced
+    }
+
+    /// Runs `calls` as a synthetic pre-round: commits a fabricated assistant
+    /// message carrying them, executes each (driving the same tool-card and
+    /// permission path as model-emitted calls), appends the results, then
+    /// rebuilds the registry so any newly-activated tools are live. Mirrors the
+    /// in-loop tool-execution block; used for Gatekeeper-supplied calls that
+    /// don't originate from a model stream.
+    private func runInitialToolCalls(
+        _ calls: [ToolCall],
+        agent: Agent,
+        allMessages: inout [ChatMessage],
+        tools: inout [ToolDefinition]?,
+        executor: inout ToolExecutor
+    ) async {
+        guard !calls.isEmpty, !shouldStop else { return }
+
+        chatPhase = .executingTools
+        let assistantMessage = ChatMessage(
+            role: "assistant", content: nil, toolCalls: calls, localID: UUID().uuidString
+        )
+        allMessages.append(assistantMessage)
+        produced.append(assistantMessage)
+        safeProducedCount = produced.count
+
+        for call in calls {
+            if shouldStop { return }
+            let result = await executeToolCall(call, agent: agent, executor: executor)
+            let toolMessage = ChatMessage(
+                role: "tool", content: result.content,
+                toolCallID: result.toolCallID, name: call.function.name
+            )
+            allMessages.append(toolMessage)
+            produced.append(toolMessage)
+            safeProducedCount = produced.count
+        }
+
+        if let onToolsChanged {
+            let updated = await onToolsChanged()
+            tools = updated.tools
+            executor = updated.executor
+        }
     }
 
     /// Commits the current round: captures produced messages and settles streaming

@@ -69,27 +69,52 @@ final class MCPServerManager: @unchecked Sendable {
             authProvider: authProvider
         )
 
-        do {
-            try await connection.connect()
-            connections[server.id] = connection
-            connectionErrors.removeValue(forKey: server.id)
+        // Bound the connect on the activation/turn path so a slow or dead server
+        // surfaces as an actionable error instead of hanging the turn. Nested
+        // optional: outer `nil` = timed out; inner `nil` = success; inner value
+        // = the connect error's description.
+        let outcome: String?? = await withTimeout(duration: Self.connectTimeout) {
+            do {
+                try await connection.connect()
+                return nil
+            } catch {
+                return error.localizedDescription
+            }
+        }
 
-            // Cache discovered tool names + instructions for the cache-driven catalog.
-            let tools = await connection.tools()
-            server.cachedToolNames = tools.map(\.name)
-            server.serverInstructions = await connection.instructions()
-            server.updatedAt = .now
-            return nil
-        } catch {
+        guard let connectError = outcome else {
+            let message = "Connection timed out"
             AppLogger.error(
-                "Failed to connect MCP server \(public: server.name): \(private: error.localizedDescription)",
+                "Timed out connecting MCP server \(public: server.name)",
                 category: .mcp
             )
-            let message = error.localizedDescription
             connectionErrors[server.id] = message
             return message
         }
+
+        if let connectError {
+            AppLogger.error(
+                "Failed to connect MCP server \(public: server.name): \(private: connectError)",
+                category: .mcp
+            )
+            connectionErrors[server.id] = connectError
+            return connectError
+        }
+
+        connections[server.id] = connection
+        connectionErrors.removeValue(forKey: server.id)
+
+        // Cache discovered tool names + instructions for the cache-driven catalog.
+        let tools = await connection.tools()
+        server.cachedToolNames = tools.map(\.name)
+        server.serverInstructions = await connection.instructions()
+        server.updatedAt = .now
+        return nil
     }
+
+    /// Max time to wait for an MCP connect before failing with an actionable
+    /// error — keeps auto-activation from hanging a turn on a slow/dead server.
+    private static let connectTimeout: Duration = .seconds(8)
 
     /// Connects to servers and returns tool proxies ready for use.
     /// Registers display names on ToolRegistry so both chat and live call stay in sync.
