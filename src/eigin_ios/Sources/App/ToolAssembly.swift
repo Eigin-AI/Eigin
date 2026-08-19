@@ -120,7 +120,7 @@ extension ToolRegistry {
             knowledgeService: knowledgeService, spaceID: nil, agentID: agentID
         )
         searchKnowledge.isSmallContext = true
-        var webSearch = WebSearchTool(onBrowse: onBrowse)
+        var webSearch = WebSearchTool()
         webSearch.isSmallContext = true
         var webFetch = WebFetchTool(onBrowse: onBrowse)
         webFetch.isSmallContext = true

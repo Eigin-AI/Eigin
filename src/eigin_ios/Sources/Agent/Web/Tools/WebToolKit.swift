@@ -8,7 +8,7 @@ enum WebToolKit: ToolKit {
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
         [
-            WebSearchTool(onBrowse: context.onBrowse),
+            WebSearchTool(),
             WebFetchTool(onBrowse: context.onBrowse),
         ]
     }
