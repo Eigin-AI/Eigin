@@ -1,5 +1,7 @@
 @testable import Eigin
+import Factory
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("Web Tools")
@@ -109,5 +111,83 @@ struct WebToolTests {
         #expect(tool.capabilities == [WebFetchTool.capability])
         #expect(tool.category == .external)
         #expect(tool.defaultPermissionLevel == .ask)
+    }
+}
+
+@Suite("Web Search Tool", .serialized)
+struct WebSearchToolBehaviorTests {
+    private let relay = FakeRelayClient()
+
+    init() {
+        let relay = relay
+        Container.shared.reset()
+        Container.shared.relayClient.register { relay }
+    }
+
+    @MainActor
+    private func makeAgent() throws -> (Agent, ModelContainer) {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: Schema(SchemaV1.models, version: SchemaV1.versionIdentifier),
+            configurations: config
+        )
+        let agent = Agent(name: "TestAgent", providerID: UUID(), model: "test-model")
+        container.mainContext.insert(agent)
+        return (agent, container)
+    }
+
+    private func makeCall(query: String) -> ToolCall {
+        ToolCall(
+            id: "call_web_search",
+            type: "function",
+            function: .init(name: "web_search", arguments: "{\"query\":\"\(query)\"}")
+        )
+    }
+
+    @Test @MainActor func returnsMojeekResultsOnSuccess() async throws {
+        let (agent, container) = try makeAgent()
+        _ = container
+        relay.searchHandler = { _, _, _ in "1. Swift Testing — a modern test framework" }
+
+        let result = await WebSearchTool().execute(makeCall(query: "swift testing"), agent: agent)
+
+        #expect(!result.isError)
+        #expect(result.content.contains("Mojeek"))
+        #expect(result.content.contains("Swift Testing"))
+    }
+
+    @Test @MainActor func rateLimitReturnsActionableError() async throws {
+        let (agent, container) = try makeAgent()
+        _ = container
+        relay.searchHandler = { _, _, _ in throw RelayClientError.rateLimit(nil) }
+
+        let result = await WebSearchTool().execute(makeCall(query: "swift"), agent: agent)
+
+        #expect(result.isError)
+        #expect(result.content.contains("at capacity"))
+        #expect(!result.content.contains("DuckDuckGo"))
+    }
+
+    @Test @MainActor func unreachableRelayReturnsActionableError() async throws {
+        let (agent, container) = try makeAgent()
+        _ = container
+        relay.searchHandler = { _, _, _ in throw RelayClientError.network("offline") }
+
+        let result = await WebSearchTool().execute(makeCall(query: "swift"), agent: agent)
+
+        #expect(result.isError)
+        #expect(result.content.contains("temporarily unavailable"))
+        #expect(!result.content.contains("DuckDuckGo"))
+    }
+
+    @Test @MainActor func emptyResponseReturnsGenericError() async throws {
+        let (agent, container) = try makeAgent()
+        _ = container
+        relay.searchHandler = { _, _, _ in "" }
+
+        let result = await WebSearchTool().execute(makeCall(query: "swift"), agent: agent)
+
+        #expect(result.isError)
+        #expect(result.content.contains("unavailable right now"))
     }
 }

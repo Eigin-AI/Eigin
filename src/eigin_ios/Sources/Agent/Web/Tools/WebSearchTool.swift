@@ -30,12 +30,6 @@ struct WebSearchTool: Tool {
         .ask
     }
 
-    let onBrowse: BrowseHandler?
-
-    init(onBrowse: BrowseHandler? = nil) {
-        self.onBrowse = onBrowse
-    }
-
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
@@ -81,108 +75,68 @@ struct WebSearchTool: Tool {
         let focus = args["focus"] as? String
         let region = Locale.current.region?.identifier
 
-        // Try the relay first (background HTTP, no WebView needed)
-        if let json = try? await Container.shared.relayClient()
-            .search(query: query, region: region, focus: focus),
-            !json.isEmpty
-        {
-            var content = json
-            var warnings: [String] = []
-
-            let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
-                .maxOutputLength
-            if content.count > limit {
-                content = String(content.prefix(limit))
-                warnings.append("Content truncated to \(limit) characters.")
-            }
-
-            let result: [String: Any] = [
-                "query": query,
-                "content": content,
-                "source": "Mojeek",
-            ]
+        // Mojeek via the relay is the sole search path (background HTTP, no WebView).
+        let json: String
+        do {
+            json = try await Container.shared.relayClient()
+                .search(query: query, region: region, focus: focus)
+        } catch {
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(
-                    result: result,
-                    warnings: warnings.isEmpty ? nil : warnings
-                ),
-                isError: false
-            )
-        }
-
-        // Relay failed — fall back to DuckDuckGo via browsing
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "https://lite.duckduckgo.com/lite/?q=\(encoded)")
-        else {
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: ["Failed to build search URL"]),
+                content: ToolHelpers.output(errors: [Self.failureMessage(for: error)]),
                 isError: true
             )
         }
 
-        guard let onBrowse else {
+        guard !json.isEmpty else {
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers
-                    .output(
-                        errors: ["Search requires an active chat session — open the app to search."]
-                    ),
+                content: ToolHelpers.output(errors: [Self.genericFailureMessage]),
                 isError: true
             )
         }
 
-        let request = BrowsingRequest(
-            id: id,
-            url: url,
-            toolDisplayName: Self.capability.displayName
+        var content = json
+        var warnings: [String] = []
+
+        let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
+            .maxOutputLength
+        if content.count > limit {
+            content = String(content.prefix(limit))
+            warnings.append("Content truncated to \(limit) characters.")
+        }
+
+        let result: [String: Any] = [
+            "query": query,
+            "content": content,
+            "source": "Mojeek",
+        ]
+        return ToolResult(
+            toolCallID: id,
+            content: ToolHelpers.output(
+                result: result,
+                warnings: warnings.isEmpty ? nil : warnings
+            ),
+            isError: false
         )
-        let browsingResult = await onBrowse(request)
+    }
 
-        switch browsingResult {
-        case .success(var text):
-            var warnings: [String] = []
-
-            // Strip DuckDuckGo navigation preamble (region/time selectors)
-            if let range = text.range(of: "(?m)^1\\.", options: .regularExpression) {
-                text = String(text[range.lowerBound...])
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
-                .maxOutputLength
-            if text.count > limit {
-                text = String(text.prefix(limit))
-                warnings.append("Content truncated to \(limit) characters.")
-            }
-
-            let result: [String: Any] = [
-                "query": query,
-                "content": text,
-                "source": "DuckDuckGo",
-                "source_url": url.absoluteString,
-            ]
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(
-                    result: result,
-                    warnings: warnings.isEmpty ? nil : warnings
-                ),
-                isError: false
-            )
-        case .error(let message):
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: [message]),
-                isError: true
-            )
-        case .cancelled:
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: ["Browsing was cancelled."]),
-                isError: true
-            )
+    /// Agent-facing message for a search failure: gives the cause and a sensible next step,
+    /// and steers the agent away from tight retry loops.
+    static func failureMessage(for error: Error) -> String {
+        guard let relayError = error as? RelayClientError else {
+            return genericFailureMessage
+        }
+        switch relayError {
+        case .rateLimit:
+            return "Web search is temporarily at capacity (rate limited). Retrying in a few minutes may succeed; avoid immediate repeated retries."
+        case .serviceUnavailable, .network, .upstream:
+            return "Web search is temporarily unavailable — the search service could not be reached. It may recover shortly."
+        default:
+            return genericFailureMessage
         }
     }
+
+    static let genericFailureMessage =
+        "Web search is unavailable right now. Try again later; avoid retrying immediately."
 }
