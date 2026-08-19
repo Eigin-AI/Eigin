@@ -789,6 +789,159 @@ async fn chat_after_refund_returns_402() {
     assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
 }
 
+// ── Notification freshness ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn webhook_rejects_stale_signed_date_and_takes_no_action() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-stale-001";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+    let token = redeem(&app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // A refund notification signed 8 days ago — outside the 7-day window.
+    let stale = time::OffsetDateTime::now_utc() - time::Duration::days(8);
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, "notif-stale").signed_at(stale),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+
+    // Still 200 (Apple must not retry), but the wallet is untouched.
+    let status = webhook_refund(&refund_app, tx_id, "notif-stale").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(bal["status"], "active");
+}
+
+#[tokio::test]
+async fn webhook_accepts_signed_date_within_the_window() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-fresh-001";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+    redeem(&app, "fake-jws").await;
+
+    // Signed 6 days ago — inside the 7-day window, mirroring a genuine Apple retry.
+    let almost_stale = time::OffsetDateTime::now_utc() - time::Duration::days(6);
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, "notif-fresh").signed_at(almost_stale),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+
+    webhook_refund(&refund_app, tx_id, "notif-fresh").await;
+
+    // A notification inside the window is acted on: the wallet closes.
+    let fingerprint = eigin_relay::credits::token::hash(tx_id);
+    let wallet = ledger
+        .find_by_fingerprint(
+            &eigin_relay::credits::ledger::WalletOrigin::AppleAppStore,
+            &fingerprint,
+        )
+        .await
+        .unwrap()
+        .expect("wallet exists");
+    assert_eq!(
+        wallet.status,
+        eigin_relay::credits::ledger::WalletStatus::Refunded
+    );
+}
+
+#[tokio::test]
+async fn webhook_rejects_future_signed_date_beyond_skew_tolerance() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-future-001";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+    let token = redeem(&app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // Signed 1 hour in the future — well beyond the 5-minute skew tolerance.
+    let future = time::OffsetDateTime::now_utc() + time::Duration::hours(1);
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, "notif-future").signed_at(future),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+
+    let status = webhook_refund(&refund_app, tx_id, "notif-future").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(bal["status"], "active");
+}
+
+#[tokio::test]
+async fn webhook_rejects_missing_signed_date() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let tx_id = "tx-nodate-001";
+    let ledger: Arc<dyn eigin_relay::credits::CreditLedger> = Arc::new(InMemoryLedger::default());
+
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction(tx_id, "ai.eigin.credits.500"),
+        products.clone(),
+        Arc::clone(&ledger),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+    let token = redeem(&app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    let refund_state = make_state_with_ledger(
+        FakeVerifier::with_refund_notification(tx_id, "notif-nodate").without_signed_date(),
+        products,
+        Arc::clone(&ledger),
+    )
+    .await;
+    let refund_app = build_router(refund_state);
+
+    let status = webhook_refund(&refund_app, tx_id, "notif-nodate").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(bal["status"], "active");
+}
+
 // ── Sandbox issuance budget ─────────────────────────────────────────────────────
 
 use eigin_relay::Quota;

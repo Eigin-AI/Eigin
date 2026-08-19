@@ -63,6 +63,10 @@ pub struct VerifiedNotification {
     pub original_transaction_id: Option<String>,
     /// The environment whose verifier accepted this notification.
     pub environment: AppleEnvironment,
+    /// When Apple signed the payload, inside the signed data itself and so
+    /// unforgeable. Absent only from a malformed payload. Used to bound replay
+    /// to a freshness window (see `webhook::is_fresh`).
+    pub signed_date: Option<time::OffsetDateTime>,
 }
 
 /// Verifies Apple JWS payloads.

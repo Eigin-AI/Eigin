@@ -3,9 +3,10 @@
 //! Apple sends a signed JSON payload when a refund or other event occurs.
 //! We:
 //! 1. Verify the signature.
-//! 2. Deduplicate on notificationUUID (idempotency).
-//! 3. On REFUND: find the wallet by (origin, fingerprint) and close it.
-//! 4. Always respond 200 promptly — Apple retries on non-2xx.
+//! 2. Check `signedDate` is within a freshness window (replay defense-in-depth).
+//! 3. Deduplicate on notificationUUID (idempotency).
+//! 4. On REFUND: find the wallet by (origin, fingerprint) and close it.
+//! 5. Always respond 200 promptly — Apple retries on non-2xx.
 //!
 //! Note: REVOKE (family sharing revocation) is not currently handled — it maps
 //! to `NotificationType::Other` and is logged but takes no credit action.
@@ -17,12 +18,22 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
+use time::OffsetDateTime;
 
-use super::{AppleEnvironment, NotificationType};
+use super::{AppleEnvironment, NotificationType, VerifiedNotification};
 use crate::AppState;
 use crate::credits::ledger::{WalletOrigin, WalletStatus};
 use crate::credits::token;
 use crate::error::AppError;
+
+/// Widest gap between Apple's original notification attempt and its last
+/// retry: 5 retries at 1/12/24/48/72h after the previous attempt (~157h),
+/// plus margin. Notifications signed outside this window are rejected.
+const FRESHNESS_WINDOW: time::Duration = time::Duration::days(7);
+
+/// Tolerance for clock skew between Apple and this server. A `signedDate`
+/// further in the future than this is rejected rather than accepted.
+const FUTURE_SKEW_TOLERANCE: time::Duration = time::Duration::minutes(5);
 
 #[derive(Deserialize)]
 pub struct WebhookRequest {
@@ -46,6 +57,15 @@ pub async fn handle(
             return Ok(StatusCode::OK.into_response());
         }
     };
+
+    if !is_fresh(&notification) {
+        tracing::warn!(
+            uuid = %notification.notification_uuid,
+            signed_date = ?notification.signed_date,
+            "stale or missing signedDate, rejecting notification"
+        );
+        return Ok(StatusCode::OK.into_response());
+    }
 
     // Make sure this is a new notification we want to act on.
     let is_new = state
@@ -76,6 +96,20 @@ pub async fn handle(
     }
 
     Ok(StatusCode::OK.into_response())
+}
+
+/// Whether `signed_date` falls within the freshness window: not missing, not
+/// older than `FRESHNESS_WINDOW`, and not further ahead than
+/// `FUTURE_SKEW_TOLERANCE`. `signedDate` sits inside the signed payload, so a
+/// forged value would invalidate the signature — this only bounds replay of a
+/// genuinely old (or clock-skewed) notification.
+fn is_fresh(notification: &VerifiedNotification) -> bool {
+    let Some(signed_date) = notification.signed_date else {
+        return false;
+    };
+    let now = OffsetDateTime::now_utc();
+    let age = now - signed_date;
+    age <= FRESHNESS_WINDOW && age >= -FUTURE_SKEW_TOLERANCE
 }
 
 /// Look up the wallet for the refunded transaction and close it.
