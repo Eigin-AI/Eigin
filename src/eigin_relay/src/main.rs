@@ -75,12 +75,14 @@ async fn main() {
     let credits = configure_credits(db_pool.clone()).await;
     let quota = configure_quota(db_pool.clone());
     let inference = configure_inference();
+    let webhook_rate_limiter = configure_webhook_rate_limiter();
 
     let state = Arc::new(AppState {
         search_client: search.client,
         mojeek_api_key: search.mojeek_api_key,
         eigin_relay_keys,
         ip_rate_limiter: search.rate_limiter,
+        webhook_rate_limiter,
         search_pool_max: search.pool_max,
         search_window: search.window,
         quota,
@@ -180,6 +182,22 @@ async fn configure_database() -> Option<PgPool> {
             None
         }
     }
+}
+
+/// Per-IP limiter for the unauthenticated Apple webhook. Apple's V2 retry
+/// schedule spaces attempts 1, 12, 24, 48, and 72 hours apart, so real
+/// traffic sits far below the default — generous enough to never block Apple,
+/// low enough to bound the cost of a flood.
+fn configure_webhook_rate_limiter() -> RateLimiter {
+    let requests: u32 = env::var("WEBHOOK_RATE_LIMIT_REQUESTS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(20);
+    let window_secs: u64 = env::var("WEBHOOK_RATE_LIMIT_WINDOW_SECONDS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(60);
+    RateLimiter::new(requests, Duration::from_secs(window_secs))
 }
 
 /// Build the rolling-window quota over the shared pool, or in-memory in dev.

@@ -140,6 +140,7 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),

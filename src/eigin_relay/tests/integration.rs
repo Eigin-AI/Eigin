@@ -101,6 +101,7 @@ async fn test_state_with_keys(
         mojeek_api_key: "test-api-key".to_string(),
         eigin_relay_keys,
         ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
+        webhook_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
         search_pool_max: pool_max,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(InMemoryQuota::default()),
