@@ -342,7 +342,15 @@ async fn missing_provider_returns_service_unavailable() {
     let token = redeem(&app).await;
     let (status, body) = chat(&app, &token, "model-missing").await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-    assert!(body.contains("missing"), "body was: {body}");
+    // Opaque body: provider/config detail must not be disclosed to the client.
+    assert!(
+        body.contains("service temporarily unavailable"),
+        "body was: {body}"
+    );
+    assert!(
+        !body.contains("missing"),
+        "body leaked config detail: {body}"
+    );
 }
 
 #[tokio::test]

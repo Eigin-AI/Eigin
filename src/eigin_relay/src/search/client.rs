@@ -253,7 +253,8 @@ impl SearchClient for ReqwestClient {
             .get(&url)
             .send()
             .await
-            .map_err(|e| crate::AppError::Upstream(e.to_string()))?;
+            // Strip the URL: it carries the search query, which we never log.
+            .map_err(|e| crate::AppError::Upstream(e.without_url().to_string()))?;
 
         if !response.status().is_success() {
             return Err(crate::AppError::Upstream(format!(
@@ -265,7 +266,7 @@ impl SearchClient for ReqwestClient {
         let body = response
             .bytes()
             .await
-            .map_err(|e| crate::AppError::Upstream(e.to_string()))?;
+            .map_err(|e| crate::AppError::Upstream(e.without_url().to_string()))?;
 
         Ok(body.to_vec())
     }
