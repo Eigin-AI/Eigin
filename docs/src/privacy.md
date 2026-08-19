@@ -28,6 +28,10 @@ Speech recognition, text-to-speech, on-device ML, and tools all run on device. S
 
 A [configurable permission system](./tools/permissions.md) controls what the agent can do. Defaults are conservative: read-only actions are allowed; anything that modifies state or uses external services requires consent.
 
+## Vulnerability scanning
+
+Dependencies and server infrastructure are scanned for known vulnerabilities. `just security` audits Rust dependencies with `cargo audit`, and uses Trivy to scan the Relay's container image and its Dockerfile and Terraform for insecure configuration.
+
 ## Prompt injection
 
 External inputs like web search results and MCP tool responses carry risk of prompt injection: instructions embedded in content that try to hijack the agent. 

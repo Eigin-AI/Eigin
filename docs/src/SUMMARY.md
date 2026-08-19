@@ -18,6 +18,7 @@
 - [Inference providers](./providers.md)
 - [Eigin Relay](./relay.md)
 - [Privacy and security](./privacy.md)
+- [CASA](./compliance/casa.md)
 - [Design system](./design.md)
 
 # The Agent

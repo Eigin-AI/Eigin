@@ -22,6 +22,10 @@ format:
 lint:
     {{ tools }} lint
 
+[doc('Scan dependencies and the Relay image for vulnerabilities (all | deps | image)')]
+security scope="all":
+    {{ tools }} security {{ scope }}
+
 [doc('Install git hooks (one-time setup)')]
 hooks:
     {{ tools }} hooks install

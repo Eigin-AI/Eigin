@@ -14,6 +14,7 @@ mod lint;
 mod localize;
 mod prompts;
 mod run;
+mod security;
 
 #[derive(Parser)]
 #[command(name = "eigin-tools")]
@@ -40,6 +41,8 @@ enum Command {
     Localize(localize::Args),
     /// Run a command, capturing output to a log file.
     Run(run::RunArgs),
+    /// Scan dependencies and the Relay image for known vulnerabilities.
+    Security(security::SecurityArgs),
 }
 
 fn main() -> Result<()> {
@@ -53,5 +56,6 @@ fn main() -> Result<()> {
         Command::Lint(args) => lint::run(args),
         Command::Localize(args) => localize::run(args),
         Command::Run(args) => run::run(args),
+        Command::Security(args) => security::run(args),
     }
 }
