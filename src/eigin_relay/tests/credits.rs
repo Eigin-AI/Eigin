@@ -73,6 +73,7 @@ async fn make_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
@@ -350,6 +351,7 @@ async fn make_state_with_ledger(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
@@ -392,6 +394,7 @@ async fn make_grant_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
@@ -789,6 +792,93 @@ async fn chat_after_refund_returns_402() {
     assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
 }
 
+#[tokio::test]
+async fn webhook_rate_limited_after_limit() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let mut canonical_models = HashMap::new();
+    canonical_models.insert("test-model".to_string(), test_model());
+    let mut alias_map = HashMap::new();
+    alias_map.insert("test-model".to_string(), "test-model".to_string());
+    let mut provider_clients = HashMap::new();
+    provider_clients.insert(
+        "default".to_string(),
+        Arc::new(FakeUpstream::with_usage(0, 0)) as Arc<dyn UpstreamClient>,
+    );
+    let mut provider_keys = HashMap::new();
+    provider_keys.insert("default".to_string(), "test-key".to_string());
+
+    // Tight limit so the test can flood it deterministically.
+    let state = Arc::new(AppState {
+        search_client: Arc::new(NoopSearch),
+        mojeek_api_key: String::new(),
+        eigin_relay_keys: vec!["relay-key".into()],
+        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(2, Duration::from_secs(60)),
+        search_pool_max: 1000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
+        ledger: Arc::new(InMemoryLedger::default()),
+        apple_verifier: Arc::new(FakeVerifier::failing()),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits: products,
+        token_encryption_key: [0u8; 32],
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
+        provider_clients,
+        provider_keys,
+        canonical_models,
+        alias_map,
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+    });
+    let app = build_router(state);
+
+    // First two requests exhaust the limit (verification fails, but that's after
+    // the rate check, so it still counts and returns 200 per Apple's contract).
+    assert_eq!(
+        webhook_refund(&app, "tx-flood", "notif-flood-1").await,
+        StatusCode::OK
+    );
+    assert_eq!(
+        webhook_refund(&app, "tx-flood", "notif-flood-2").await,
+        StatusCode::OK
+    );
+    // Third request from the same IP within the window is rate limited.
+    assert_eq!(
+        webhook_refund(&app, "tx-flood", "notif-flood-3").await,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+}
+
+#[tokio::test]
+async fn webhook_malformed_body_returns_ok() {
+    // A body that isn't valid JSON must still return 200 — Apple retries on
+    // non-2xx, and a payload that will never parse should not be retried.
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+    let state = make_state_with_ledger(
+        FakeVerifier::failing(),
+        products,
+        Arc::new(InMemoryLedger::default()),
+    )
+    .await;
+    let app = build_router(state);
+
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let req = Request::builder()
+        .method("POST")
+        .uri("/webhooks/apple/appstore")
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from("not json at all"))
+        .unwrap();
+
+    let status = app.oneshot(req).await.unwrap().status();
+    assert_eq!(status, StatusCode::OK);
+}
+
 // ── Notification freshness ───────────────────────────────────────────────────
 
 #[tokio::test]
@@ -960,6 +1050,7 @@ async fn make_sandbox_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota,

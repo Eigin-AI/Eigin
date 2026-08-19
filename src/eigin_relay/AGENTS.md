@@ -91,6 +91,8 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | `APPLE_APP_APPLE_ID` | — | Numeric App Store app ID. Required in Production. |
 | `SANDBOX_MONTHLY_CREDIT_BUDGET` | `25000` | Max credits issued to Sandbox purchases per rolling window. Bounds free-credit abuse cost. |
 | `SANDBOX_BUDGET_WINDOW_DAYS` | `30` | Trailing window over which the sandbox issuance budget is measured. |
+| `WEBHOOK_RATE_LIMIT_REQUESTS` | `20` | Max Apple webhook requests per window per IP. Sized well above Apple's retry cadence (hours apart), just to bound flood cost on this unauthenticated route. |
+| `WEBHOOK_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for the Apple webhook. |
 | `MODELS_CONFIG_PATH` | `config/models.toml` | Path to the model catalog TOML. |
 | `PRODUCTS_CONFIG_PATH` | `config/products.toml` | Path to the IAP product credit tiers TOML. |
 | `ADMIT_FLOOR_CREDITS` | `50` | Minimum credits required to admit an inference request (≈ €0.50). |

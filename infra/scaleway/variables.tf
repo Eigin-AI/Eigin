@@ -122,3 +122,15 @@ variable "ip_rate_limit_window_seconds" {
   default     = 60
 }
 
+variable "webhook_rate_limit_requests" {
+  description = "Maximum Apple webhook requests per IP per window"
+  type        = number
+  default     = 20
+}
+
+variable "webhook_rate_limit_window_seconds" {
+  description = "Rate limit window in seconds for the Apple webhook"
+  type        = number
+  default     = 60
+}
+

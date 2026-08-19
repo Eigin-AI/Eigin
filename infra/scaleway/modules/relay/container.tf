@@ -21,22 +21,24 @@ resource "scaleway_container" "relay" {
   http_option = "redirected"
 
   environment_variables = {
-    SEARCH_API_URL                  = "https://api.mojeek.com"
-    MONTHLY_POOL_SIZE               = tostring(var.monthly_pool_size)
-    APPLE_ENVIRONMENTS              = join(",", var.apple_environments)
-    APPLE_APP_APPLE_ID              = var.apple_app_apple_id
-    APPLE_BUNDLE_ID                 = var.apple_bundle_id
-    SANDBOX_MONTHLY_CREDIT_BUDGET   = tostring(var.sandbox_monthly_credit_budget)
-    GRANT_PUBLIC_KEY                = tls_private_key.grant.public_key_pem
-    GRANT_ISSUER                    = var.grant_issuer
-    ADMIT_FLOOR_CREDITS             = tostring(var.admit_floor_credits)
-    TOKEN_RATE_LIMIT_REQUESTS       = tostring(var.token_rate_limit_requests)
-    TOKEN_RATE_LIMIT_WINDOW_SECONDS = tostring(var.token_rate_limit_window_seconds)
-    RATE_LIMIT_REQUESTS             = tostring(var.ip_rate_limit_requests)
-    RATE_LIMIT_WINDOW_SECONDS       = tostring(var.ip_rate_limit_window_seconds)
-    MODELS_CONFIG_PATH              = "/config/models.toml"
-    PRODUCTS_CONFIG_PATH            = "/config/products.toml"
-    PROVIDERS_CONFIG_PATH           = "/config/providers.toml"
+    SEARCH_API_URL                    = "https://api.mojeek.com"
+    MONTHLY_POOL_SIZE                 = tostring(var.monthly_pool_size)
+    APPLE_ENVIRONMENTS                = join(",", var.apple_environments)
+    APPLE_APP_APPLE_ID                = var.apple_app_apple_id
+    APPLE_BUNDLE_ID                   = var.apple_bundle_id
+    SANDBOX_MONTHLY_CREDIT_BUDGET     = tostring(var.sandbox_monthly_credit_budget)
+    GRANT_PUBLIC_KEY                  = tls_private_key.grant.public_key_pem
+    GRANT_ISSUER                      = var.grant_issuer
+    ADMIT_FLOOR_CREDITS               = tostring(var.admit_floor_credits)
+    TOKEN_RATE_LIMIT_REQUESTS         = tostring(var.token_rate_limit_requests)
+    TOKEN_RATE_LIMIT_WINDOW_SECONDS   = tostring(var.token_rate_limit_window_seconds)
+    RATE_LIMIT_REQUESTS               = tostring(var.ip_rate_limit_requests)
+    RATE_LIMIT_WINDOW_SECONDS         = tostring(var.ip_rate_limit_window_seconds)
+    WEBHOOK_RATE_LIMIT_REQUESTS       = tostring(var.webhook_rate_limit_requests)
+    WEBHOOK_RATE_LIMIT_WINDOW_SECONDS = tostring(var.webhook_rate_limit_window_seconds)
+    MODELS_CONFIG_PATH                = "/config/models.toml"
+    PRODUCTS_CONFIG_PATH              = "/config/products.toml"
+    PROVIDERS_CONFIG_PATH             = "/config/providers.toml"
   }
 
   # The relay always has a Terraform-generated primary key. A secondary key is

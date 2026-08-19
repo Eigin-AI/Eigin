@@ -2,21 +2,24 @@
 //!
 //! Apple sends a signed JSON payload when a refund or other event occurs.
 //! We:
-//! 1. Verify the signature.
-//! 2. Check `signedDate` is within a freshness window (replay defense-in-depth).
-//! 3. Deduplicate on notificationUUID (idempotency).
-//! 4. On REFUND: find the wallet by (origin, fingerprint) and close it.
-//! 5. Always respond 200 promptly — Apple retries on non-2xx.
+//! 1. Check the per-IP rate limit (this route is unauthenticated by design,
+//!    so nothing costlier runs ahead of it — not even JSON parsing).
+//! 2. Parse the body and verify the signature.
+//! 3. Check `signedDate` is within a freshness window (replay defense-in-depth).
+//! 4. Deduplicate on notificationUUID (idempotency).
+//! 5. On REFUND: find the wallet by (origin, fingerprint) and close it.
+//! 6. Always respond 200 promptly — Apple retries on non-2xx.
 //!
 //! Note: REVOKE (family sharing revocation) is not currently handled — it maps
 //! to `NotificationType::Other` and is logged but takes no credit action.
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::Json;
-use axum::extract::State;
+use axum::extract::{ConnectInfo, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use bytes::Bytes;
 use serde::Deserialize;
 use time::OffsetDateTime;
 
@@ -43,8 +46,26 @@ pub struct WebhookRequest {
 
 pub async fn handle(
     State(state): State<Arc<AppState>>,
-    Json(req): Json<WebhookRequest>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
+    // Bound parse and verification work before either runs — this route is
+    // unauthenticated by design (Apple cannot present a credential). Taking
+    // the body as raw bytes (rather than a `Json` extractor) keeps `serde_json`
+    // parsing behind this check, matching the inference handler's admit-then-parse
+    // order.
+    state.webhook_rate_limiter.check(addr.ip())?;
+
+    let req: WebhookRequest = match serde_json::from_slice(&body) {
+        Ok(req) => req,
+        Err(e) => {
+            // Malformed body — log and return 200 so Apple doesn't retry a payload
+            // that will never parse.
+            tracing::warn!(error = %e, "apple webhook body failed to parse");
+            return Ok(StatusCode::OK.into_response());
+        }
+    };
+
     // Verify the notification signature.
     let notification = match state
         .apple_verifier

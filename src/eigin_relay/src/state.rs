@@ -26,6 +26,10 @@ pub struct AppState {
     pub eigin_relay_keys: Vec<String>,
     /// Per-IP rate limiter (search + inference backstop).
     pub ip_rate_limiter: crate::RateLimiter,
+    /// Per-IP rate limiter for the unauthenticated Apple webhook. Separate from
+    /// `ip_rate_limiter` so its window can be sized to Apple's retry cadence
+    /// independent of search tuning.
+    pub webhook_rate_limiter: crate::RateLimiter,
     /// Max searches the community pool allows within `search_window`.
     pub search_pool_max: u64,
     /// Trailing window over which the search community pool is measured.
