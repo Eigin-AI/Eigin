@@ -13,6 +13,7 @@ pub mod inference;
 pub mod quota;
 mod rate_limit;
 pub mod search;
+pub mod security;
 mod state;
 
 pub use auth::require_eigin_key;
@@ -21,4 +22,5 @@ pub use health::handler as health;
 pub use quota::{Quota, QuotaError};
 pub use rate_limit::RateLimiter;
 pub use search::{SearchClient, SearchFocus, SearchOptions, create_client};
+pub use security::security_headers;
 pub use state::AppState;
