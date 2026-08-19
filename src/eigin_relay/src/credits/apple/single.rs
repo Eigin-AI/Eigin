@@ -91,6 +91,15 @@ impl AppleVerifier for AppStoreVerifier {
 
         let notification_uuid = payload.notification_uuid;
 
+        // Convert via unix millis (an absolute instant, not wall-clock time), so
+        // this never depends on the chrono or time crate's notion of a local zone.
+        let signed_date = payload.signed_date.and_then(|d| {
+            time::OffsetDateTime::from_unix_timestamp_nanos(
+                (d.timestamp_millis() as i128) * 1_000_000,
+            )
+            .ok()
+        });
+
         let notification_type = match payload.notification_type {
             NotificationTypeV2::Refund => NotificationType::Refund,
             other => NotificationType::Other(format!("{other:?}")),
@@ -113,6 +122,7 @@ impl AppleVerifier for AppStoreVerifier {
             notification_type,
             original_transaction_id,
             environment: self.environment,
+            signed_date,
         })
     }
 }

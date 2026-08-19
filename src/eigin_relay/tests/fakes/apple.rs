@@ -34,6 +34,7 @@ impl FakeVerifier {
                 notification_type: NotificationType::Other("INITIAL_BUY".into()),
                 original_transaction_id: None,
                 environment,
+                signed_date: Some(time::OffsetDateTime::now_utc()),
             }),
         }
     }
@@ -61,8 +62,26 @@ impl FakeVerifier {
                 notification_type: NotificationType::Refund,
                 original_transaction_id: Some(original_transaction_id.to_owned()),
                 environment,
+                signed_date: Some(time::OffsetDateTime::now_utc()),
             }),
         }
+    }
+
+    /// Override the notification's `signed_date`, for testing the webhook's
+    /// freshness window. No-op if the fake's notification_result is `Err`.
+    pub fn signed_at(mut self, signed_date: time::OffsetDateTime) -> Self {
+        if let Ok(n) = self.notification_result.as_mut() {
+            n.signed_date = Some(signed_date);
+        }
+        self
+    }
+
+    /// Drop `signed_date` entirely, for testing the fail-closed path.
+    pub fn without_signed_date(mut self) -> Self {
+        if let Ok(n) = self.notification_result.as_mut() {
+            n.signed_date = None;
+        }
+        self
     }
 
     pub fn failing() -> Self {
