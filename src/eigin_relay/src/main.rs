@@ -466,6 +466,7 @@ fn build_router(state: Arc<AppState>) -> Router {
         // Unauthenticated routes like health, docs and webhooks.
         .route("/health", get(health))
         .route("/docs", get(eigin_relay::docs::handler))
+        .route("/docs/scalar.js", get(eigin_relay::docs::scalar::handler))
         .route(
             "/webhooks/apple/appstore",
             post(eigin_relay::credits::apple::webhook::handle),
@@ -474,5 +475,6 @@ fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes_with_bearer)
         .layer(TraceLayer::new_for_http())
         .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
+        .layer(middleware::from_fn(eigin_relay::security_headers))
         .with_state(state)
 }
