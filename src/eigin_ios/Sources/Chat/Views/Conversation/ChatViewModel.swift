@@ -221,13 +221,6 @@ final class ChatViewModel {
                 agent: agent, provider: provider, messages: msgs
             )
 
-            // Auto-activate skills whose trigger keywords match this message, before
-            // resolving active skills / building the tool registry, so a newly
-            // activated skill's tools are live on this same turn.
-            self.hydrateSkills(
-                userText: text, integrations: integrations, routedModel: routedModel
-            )
-
             let activeSkills = self.resolvedActiveSkills(
                 integrations: integrations,
                 mcpServers: servers
@@ -328,7 +321,8 @@ final class ChatViewModel {
                     chatService: Container.shared.chatService(),
                     toolExecutor: registry,
                     cacheKey: chatID.uuidString,
-                    model: routedModel
+                    model: routedModel,
+                    initialToolCalls: turn.initialToolCalls
                 )
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)
@@ -612,34 +606,6 @@ final class ChatViewModel {
     /// would keep injecting instructions ("if an email account is
     /// connected...") and the agent could still try to call its tools, which
     /// ``IntegrationManager`` no longer supplies, landing on "Unknown tool".
-    /// Auto-activates bundled skills matching `userText`'s trigger keywords, live this
-    /// same turn. MCP skills are excluded (see #168).
-    private func hydrateSkills(
-        userText: String, integrations: [Integration], routedModel: String
-    ) {
-        guard let chat else { return }
-        let connectedCapabilities = Container.shared.integrationManager()
-            .connectedCapabilities(integrations: integrations)
-        let activeIDs = Set(chat.activeSkillEntries.map(\.skillID))
-        let candidateSkills = SkillCatalog.activatable(
-            from: BundledSkill.all,
-            activeIDs: activeIDs,
-            connectedCapabilities: connectedCapabilities
-        )
-        let matchedIDs = SkillHydrator.matches(userText: userText, candidates: candidateSkills)
-        guard !matchedIDs.isEmpty else { return }
-
-        let contextWindow = KnownModelCatalog.lookup(routedModel)?.contextWindow ?? 128_000
-        let isSmallContext = contextWindow <= MessagePipeline.smallContextThreshold
-        for skillID in matchedIDs {
-            SkillActivation.activate(
-                skillID: skillID, on: chat,
-                activatingToolCallID: SkillActivation.autoActivation,
-                isSmallContext: isSmallContext
-            )
-        }
-    }
-
     private func resolvedActiveSkills(
         integrations: [Integration],
         mcpServers: [MCPServer]

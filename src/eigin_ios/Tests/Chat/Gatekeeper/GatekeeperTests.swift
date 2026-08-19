@@ -9,6 +9,7 @@ struct GatekeeperTests {
         mode: InteractionMode = .text,
         activeIntents: [IntentSnapshot] = [],
         availableSkills: [Skill] = [],
+        activeSkills: [Skill] = [],
         isSmallContext: Bool = false,
         messages: [ChatMessage] = []
     ) -> SystemHintInput {
@@ -23,7 +24,7 @@ struct GatekeeperTests {
             language: nil,
             mode: mode,
             activeIntents: activeIntents,
-            activeSkills: [],
+            activeSkills: activeSkills,
             availableSkills: availableSkills,
             activeFlow: nil,
             provider: ProviderSnapshot(name: "Test", baseURL: "https://test.com"),
@@ -54,7 +55,7 @@ struct GatekeeperTests {
 
     @Test func firstTurnEmitsFullInteractionMode() async {
         let gatekeeper = makeGatekeeper(proactivity: .reactive)
-        let block = await gatekeeper.beforeTurn(input(mode: .liveCall)) ?? ""
+        let block = await gatekeeper.beforeTurn(input(mode: .liveCall)).hint ?? ""
         #expect(block.contains("## Interaction mode"))
         #expect(block.contains(InteractionMode.liveCall.fullDescription))
     }
@@ -62,7 +63,7 @@ struct GatekeeperTests {
     @Test func secondTurnSameModeEmitsShortReminder() async {
         let gatekeeper = makeGatekeeper(proactivity: .reactive)
         _ = await gatekeeper.beforeTurn(input(mode: .text))
-        let second = await gatekeeper.beforeTurn(input(mode: .text)) ?? ""
+        let second = await gatekeeper.beforeTurn(input(mode: .text)).hint ?? ""
         #expect(second.contains(InteractionMode.text.shortReminder))
         #expect(!second.contains(InteractionMode.text.fullDescription))
     }
@@ -71,7 +72,7 @@ struct GatekeeperTests {
         let gatekeeper = makeGatekeeper(proactivity: .reactive)
         _ = await gatekeeper.beforeTurn(input(mode: .text))
         _ = await gatekeeper.beforeTurn(input(mode: .text))
-        let afterSwitch = await gatekeeper.beforeTurn(input(mode: .liveCall)) ?? ""
+        let afterSwitch = await gatekeeper.beforeTurn(input(mode: .liveCall)).hint ?? ""
         #expect(afterSwitch.contains(InteractionMode.liveCall.fullDescription))
     }
 
@@ -81,7 +82,7 @@ struct GatekeeperTests {
         // first turn. The knowledge source is silent because there's no
         // user message in the input.
         let gatekeeper = makeGatekeeper(proactivity: .reactive)
-        let block = await gatekeeper.beforeTurn(input()) ?? ""
+        let block = await gatekeeper.beforeTurn(input()).hint ?? ""
         #expect(block.contains("## General info"))
         #expect(block.contains("## Interaction mode"))
         #expect(!block.contains("## Active intents"))
@@ -100,7 +101,7 @@ struct GatekeeperTests {
             activeIntents: [intent("Learn Swift")],
             availableSkills: [skill(id: "web", displayName: "Web")],
             isSmallContext: true
-        )) ?? ""
+        )).hint ?? ""
 
         // Small-context uses smallSources: GeneralInfo, Language, Space,
         // InteractionMode, ActiveIntents (truncated), RelevantKnowledge.
@@ -134,7 +135,7 @@ struct GatekeeperTests {
             modelID: "test-model",
             isSmallContext: true
         )
-        let block = await gatekeeper.beforeTurn(inputWithLanguage) ?? ""
+        let block = await gatekeeper.beforeTurn(inputWithLanguage).hint ?? ""
         #expect(block.contains("## Language"))
     }
 
@@ -145,7 +146,54 @@ struct GatekeeperTests {
         // Should not throw, mutate anything observable, or crash.
         gatekeeper.afterTurn([ChatMessage(role: "assistant", content: "hi")])
         // Subsequent beforeTurn still works.
-        let block = await gatekeeper.beforeTurn(input()) ?? ""
+        let block = await gatekeeper.beforeTurn(input()).hint ?? ""
         #expect(block.contains("## Interaction mode"))
+    }
+
+    // MARK: - Activation intents (trigger matching)
+
+    private func userMessage(_ text: String) -> ChatMessage {
+        ChatMessage(role: "user", content: text)
+    }
+
+    @Test func emitsActivationIntentForMatchedSkill() async {
+        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            messages: [userMessage("find this issue on GitLab")]
+        ))
+
+        #expect(result.toolCallIntents.count == 1)
+        let call = result.toolCallIntents.first
+        #expect(call?.function.name == "activate_skill")
+        #expect(call?.function.arguments.contains("gitlab") == true)
+    }
+
+    @Test func noIntentWhenNoTriggerMatch() async {
+        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            messages: [userMessage("what is the weather today")]
+        ))
+        #expect(result.toolCallIntents.isEmpty)
+    }
+
+    @Test func noIntentForAlreadyActiveSkill() async {
+        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+        let gitlab = skill(id: "gitlab", displayName: "GitLab")
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [gitlab],
+            activeSkills: [gitlab],
+            messages: [userMessage("find this issue on GitLab")]
+        ))
+        #expect(result.toolCallIntents.isEmpty)
+    }
+
+    @Test func noIntentWithoutUserMessage() async {
+        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")]
+        ))
+        #expect(result.toolCallIntents.isEmpty)
     }
 }

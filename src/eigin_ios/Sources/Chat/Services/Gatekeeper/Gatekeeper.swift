@@ -1,5 +1,16 @@
 import Foundation
 
+/// Output of the Gatekeeper's per-turn preprocessing pass.
+///
+/// Carries the ephemeral `<system_hint>` block plus any tool-call *intents* to
+/// run immediately before the turn (today: skill activations from trigger
+/// matching, but the channel is generic). Intents are data, not execution: the
+/// agent loop runs them as a synthetic pre-round (see ``AgenticChatLoop/run``).
+struct TurnPreprocessing {
+    let hint: String?
+    let toolCallIntents: [ToolCall]
+}
+
 /// Pre/post-processor sitting between the agent and the LLM.
 ///
 /// `Gatekeeper` is the entry point for unified per-turn context hydration. It
@@ -13,9 +24,10 @@ import Foundation
 /// session) lives on the sources themselves. One instance is constructed per
 /// chat or live-call session and dies with it.
 ///
-/// A `beforeTurn` hook produces the hint block; an `afterTurn` hook is
-/// reserved as a seam for future pre/post-processing (PII scrubbing, local
-/// model delegation, etc.) but is a no-op today.
+/// A `beforeTurn` hook produces the hint block plus any tool-call intents to
+/// run immediately (today: skill activations from trigger matching); an
+/// `afterTurn` hook is reserved as a seam for future pre/post-processing (PII
+/// scrubbing, local model delegation, etc.) but is a no-op today.
 @MainActor
 final class Gatekeeper {
     // MARK: - Source lists
@@ -64,11 +76,40 @@ final class Gatekeeper {
 
     // MARK: - Pre/post hooks
 
-    /// Builds the ephemeral `<system_hint>` block for this turn, or `nil` if
-    /// no source had anything to contribute.
-    func beforeTurn(_ input: SystemHintInput) async -> String? {
+    /// Preprocesses the user turn: builds the ephemeral `<system_hint>` block
+    /// and matches trigger keywords into tool-call intents to run immediately.
+    func beforeTurn(_ input: SystemHintInput) async -> TurnPreprocessing {
         let sources = input.isSmallContext ? smallSources : fullSources
-        return await SystemHintBuilder.build(sources: sources, input: input)
+        let hint = await SystemHintBuilder.build(sources: sources, input: input)
+        return TurnPreprocessing(hint: hint, toolCallIntents: activationIntents(for: input))
+    }
+
+    /// Matches the latest user message against activatable skills' triggers and
+    /// returns `activate_skill` tool-call intents (capped by ``SkillHydrator``).
+    ///
+    /// MCP skills are gated implicitly: for small-context models ``input``
+    /// carries no MCP skills in `availableSkills`, so only bundled skills match.
+    private func activationIntents(for input: SystemHintInput) -> [ToolCall] {
+        guard let userText = input.messages.last(where: { $0.role == "user" })?.content,
+              !userText.isEmpty else { return [] }
+
+        let activeIDs = Set(input.activeSkills.map(\.id))
+        let candidates = SkillCatalog.activatable(
+            from: input.availableSkills,
+            activeIDs: activeIDs,
+            connectedCapabilities: input.connectedCapabilities
+        )
+        let matchedIDs = SkillHydrator.matches(userText: userText, candidates: candidates)
+        return matchedIDs.map { skillID in
+            ToolCall(
+                id: "call_auto_\(UUID().uuidString.prefix(8))",
+                type: "function",
+                function: .init(
+                    name: "activate_skill",
+                    arguments: "{\"skill_id\":\"\(skillID)\"}"
+                )
+            )
+        }
     }
 
     /// Post-processor seam called after a turn completes.
