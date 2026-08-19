@@ -397,6 +397,7 @@ fn configure_inference() -> InferenceConfig {
                         let client = Arc::new(ReqwestUpstreamClient::new(
                             reqwest::Client::new(),
                             provider.base_url,
+                            id.clone(),
                         )) as Arc<dyn UpstreamClient>;
                         provider_clients.insert(id.clone(), client);
                         provider_keys.insert(id, key);
@@ -492,6 +493,7 @@ fn build_router(state: Arc<AppState>) -> Router {
         .merge(routes_with_bearer)
         .layer(TraceLayer::new_for_http())
         .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
+        .layer(middleware::from_fn(eigin_relay::log_errors))
         .layer(middleware::from_fn(eigin_relay::security_headers))
         .with_state(state)
 }

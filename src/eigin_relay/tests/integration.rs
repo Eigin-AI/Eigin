@@ -343,11 +343,13 @@ async fn search_upstream_error_returns_502() {
     assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    // Opaque body: the underlying error detail must not reach the client.
+    assert_eq!(json["error"]["message"], "upstream service error");
     assert!(
-        json["error"]["message"]
+        !json["error"]["message"]
             .as_str()
             .unwrap()
-            .contains("upstream error")
+            .contains("connection refused")
     );
 }
 

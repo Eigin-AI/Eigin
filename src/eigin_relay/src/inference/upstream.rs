@@ -35,11 +35,16 @@ pub enum UpstreamResponse {
 pub struct ReqwestUpstreamClient {
     client: reqwest::Client,
     base_url: String,
+    provider_id: String,
 }
 
 impl ReqwestUpstreamClient {
-    pub fn new(client: reqwest::Client, base_url: String) -> Self {
-        Self { client, base_url }
+    pub fn new(client: reqwest::Client, base_url: String, provider_id: String) -> Self {
+        Self {
+            client,
+            base_url,
+            provider_id,
+        }
     }
 }
 
@@ -79,7 +84,7 @@ impl UpstreamClient for ReqwestUpstreamClient {
             .map_err(|e| {
                 // `{:?}` names the failure kind and source (e.g. Builder / InvalidHeaderValue)
                 // without printing the key. The bare Display is just "builder error".
-                tracing::error!(error = ?e, %url, "upstream request failed");
+                tracing::error!(provider = %self.provider_id, error = ?e, %url, "upstream request failed");
                 if e.is_builder() {
                     // A request we failed to construct (bad URL or header value) is our
                     // own misconfiguration, not an upstream outage.
@@ -95,9 +100,14 @@ impl UpstreamClient for ReqwestUpstreamClient {
 
         if !response.status().is_success() {
             let status = response.status();
-            let msg = response.text().await.unwrap_or_default();
-            tracing::error!(%status, body = %msg, "upstream returned an error status");
-            return Err(AppError::Upstream(format!("upstream {status}: {msg}")));
+            // Never read or log the upstream error body: it can echo the request
+            // (moderation / validation errors), which would leak the user's prompt.
+            // Retain provider + status as safe triage metadata instead.
+            tracing::warn!(provider = %self.provider_id, %status, "upstream returned an error status");
+            let provider = &self.provider_id;
+            return Err(AppError::Upstream(format!(
+                "provider {provider} returned {status}"
+            )));
         }
 
         // Determine from Content-Type whether this is a stream.
@@ -129,7 +139,11 @@ mod tests {
     use super::*;
 
     fn client(base_url: &str) -> ReqwestUpstreamClient {
-        ReqwestUpstreamClient::new(reqwest::Client::new(), base_url.to_owned())
+        ReqwestUpstreamClient::new(
+            reqwest::Client::new(),
+            base_url.to_owned(),
+            "test-provider".to_owned(),
+        )
     }
 
     #[tokio::test]

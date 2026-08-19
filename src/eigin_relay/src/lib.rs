@@ -17,7 +17,7 @@ pub mod security;
 mod state;
 
 pub use auth::require_eigin_key;
-pub use error::AppError;
+pub use error::{AppError, log_errors};
 pub use health::handler as health;
 pub use quota::{Quota, QuotaError};
 pub use rate_limit::RateLimiter;
