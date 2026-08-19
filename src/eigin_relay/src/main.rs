@@ -445,7 +445,6 @@ const MAX_REQUEST_BODY_BYTES: usize = 10 * 1024 * 1024;
 fn build_router(state: Arc<AppState>) -> Router {
     // Routes gated by Eigin Relay key.
     let routes_with_eigin_key = Router::new()
-        .route("/search", get(search::handle)) // legacy — keep until app migrates to /v1/search
         .route("/v1/search", get(search::handle))
         .route(
             "/v1/credits/redeem",
