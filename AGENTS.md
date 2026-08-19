@@ -51,6 +51,8 @@ When working on a task, issues typically provide the problem context and expecte
 
 **Formatting** — formatting is standardized and automated. Run `just format` before committing.
 
+**Communication** — Write in plain, simple English. Keep prose short: short sentences, and lists over dense paragraphs. Make everything easy to parse at a glance.
+
 **Comments** — document public APIs with summary comments. Use inline comments only for non-obvious logic. Explain what and why, not how. Write for the current state of the code, not what it isn't or how it was. Keep comments short and sharp always: non-summary comments should generally be a single line.
 
 **Naming** — names should reflect behavior. A name describes what something does, not how it's built.

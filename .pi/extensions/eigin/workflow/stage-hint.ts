@@ -53,10 +53,13 @@ export function buildStageHint(view: WorkflowStageView, guidance: string): strin
 		: others.length > 0
 			? `You're at the last stage. To step back, call propose_stage with one of: ${others.join(", ")}.`
 			: "This workflow has no other stages to move to.";
+	const proposeDirectly = next
+		? `\nWhen this stage's work is done, call propose_stage directly — that dialog IS the ask. Don't ask in prose ("should we go to ${next.id}?") and then also propose; just propose, and the user can decline.`
+		: "";
 	return (
 		`\n\n---\n[Automatically injected — not part of the user's message]\n` +
 		`Workflow: ${view.workflowIcon} ${view.workflowLabel} — ${sequence}\n` +
-		`Current workflow stage: ${currentLabel}\n${targetsLine}\n${guidance}\n---`
+		`Current workflow stage: ${currentLabel}\n${targetsLine}${proposeDirectly}\n${guidance}\n---`
 	);
 }
 
