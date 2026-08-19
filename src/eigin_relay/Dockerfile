@@ -11,6 +11,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl && rm -rf src
 COPY src ./src
 COPY migrations ./migrations
 COPY api.yaml ./api.yaml
+COPY assets ./assets
 RUN touch src/main.rs && cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine:3.24
