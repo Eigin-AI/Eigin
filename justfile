@@ -212,14 +212,35 @@ clean env="staging":
 
 # --- Infra ---
 
-[doc('Manage infra (command: init | plan | deploy)')]
+[doc('Manage infra (command: bootstrap | init | plan | deploy | migrate)')]
 infra command env="staging":
     #!/usr/bin/env bash
     case "{{ command }}" in
+        bootstrap)
+            # One-time: create the dedicated project + private, versioned state
+            # bucket + scoped key. Uses local state. See the remote-state runbook.
+            cd {{ infra_dir }}/bootstrap
+            terraform init
+            read -p "Create the remote Terraform state bucket? [y/N] " confirm && [ "$confirm" = "y" ] || exit 1
+            terraform apply
+            echo
+            echo "Add these to your repo-root .env, then follow the runbook:"
+            echo "  TFSTATE_ACCESS_KEY=$(terraform output -raw tfstate_access_key)"
+            echo "  TFSTATE_SECRET_KEY=$(terraform output -raw tfstate_secret_key)"
+            echo "  TFSTATE_REGION=$(terraform output -raw tfstate_region)"
+            echo "Backend bucket: $(terraform output -raw tfstate_bucket_name)"
+            ;;
         init)
             eval "$({{ tools }} infra tf-vars {{ env }})"
             cd {{ infra_dir }}
             terraform workspace select -or-create {{ env }} && terraform init
+            ;;
+        migrate)
+            # One-time: copy local state to the remote backend. Migrates all
+            # workspaces at once. Requires backend.tf. See the remote-state runbook.
+            eval "$({{ tools }} infra tf-vars {{ env }})"
+            cd {{ infra_dir }}
+            terraform init -migrate-state
             ;;
         plan)
             eval "$({{ tools }} infra tf-vars {{ env }})"

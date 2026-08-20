@@ -1,0 +1,35 @@
+# Remote state backend (Scaleway Object Storage) — example.
+#
+# Remote state is opt-in. Copy this file to backend.tf (git-ignored), set your
+# bucket, and run `terraform init -migrate-state`.
+#
+# Need a bucket? `just infra bootstrap` creates one — see the runbook:
+# docs/src/runbooks/terraform-remote-state.md. Already have remote storage? Point
+# this at it instead.
+#
+# Credentials come from AWS_* env vars, which `just infra` exports from .env
+# (TFSTATE_*) or your scw config.
+
+terraform {
+  backend "s3" {
+    bucket               = "<your-tfstate-bucket>"
+    key                  = "terraform.tfstate"
+    workspace_key_prefix = "relay"
+    region               = "fr-par"
+
+    endpoints = {
+      s3 = "https://s3.fr-par.scw.cloud"
+    }
+
+    # Native state locking via a lock object in the same bucket. Requires
+    # Terraform >= 1.10 and an S3 endpoint that supports conditional writes,
+    # which Scaleway Object Storage does. No DynamoDB needed.
+    use_lockfile = true
+
+    # Scaleway's S3-compatible endpoint isn't AWS, so skip AWS-specific checks.
+    skip_credentials_validation = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    use_path_style              = true
+  }
+}
