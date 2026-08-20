@@ -24,3 +24,15 @@ output "eigin_relay_primary_key" {
   value       = module.relay.eigin_relay_primary_key
   sensitive   = true
 }
+
+output "token_encryption_key" {
+  description = "Current token encryption key (base64). Read during a rotation to seed the secondary and feed the rotate-key sweep."
+  value       = module.relay.token_encryption_key
+  sensitive   = true
+}
+
+output "database_url" {
+  description = "Relay database connection string. Used by the rotate-key tool during a token-key rotation."
+  value       = module.relay.database_url
+  sensitive   = true
+}

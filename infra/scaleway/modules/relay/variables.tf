@@ -81,6 +81,13 @@ variable "eigin_relay_secondary_key" {
   default     = ""
 }
 
+variable "token_encryption_secondary_key" {
+  description = "Optional previous token encryption key, set only during a token-key rotation so the relay can decrypt tokens minted under the old key. Empty disables it. Supplied (not generated) — sourced from .env via tf-vars."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "sandbox_monthly_credit_budget" {
   description = "Max credits issued to Sandbox (TestFlight/App Review) purchases per rolling window. Bounds free-credit abuse cost."
   type        = number

@@ -49,8 +49,12 @@ pub struct AppState {
     pub grant_verifier: Arc<dyn GrantVerifier>,
     /// Map from productId → millicredits.
     pub product_credits: HashMap<String, i64>,
-    /// 32-byte AEAD key for encrypting tokens at rest.
+    /// 32-byte AEAD key for encrypting tokens at rest (the primary). All new tokens are
+    /// encrypted with this.
     pub token_encryption_key: [u8; 32],
+    /// Optional previous key, set only during a rotation. Restore falls back to it so
+    /// tokens encrypted before the rotation stay readable until a sweep re-encrypts them.
+    pub token_encryption_key_secondary: Option<[u8; 32]>,
     /// Max sandbox credits this relay will issue within `sandbox_budget_window`.
     /// Bounds the cost of free TestFlight/App-Review (Sandbox) purchases.
     pub sandbox_budget_credits: u64,

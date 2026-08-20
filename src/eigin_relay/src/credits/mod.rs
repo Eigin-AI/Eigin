@@ -11,6 +11,6 @@ pub mod redeem;
 pub mod token;
 
 pub use grant::{GrantVerifier, VerifiedGrant};
-pub use ledger::{CreditLedger, LedgerError, Wallet, WalletOrigin, WalletStatus};
+pub use ledger::{CreditLedger, LedgerError, NewWallet, Wallet, WalletOrigin, WalletStatus};
 pub use memory::InMemoryLedger;
 pub use postgres::PostgresLedger;

@@ -85,6 +85,13 @@ variable "eigin_relay_secondary_key" {
   default     = ""
 }
 
+variable "token_encryption_secondary_key" {
+  description = "Optional previous token encryption key, set only during a token-key rotation so the relay can decrypt tokens minted under the old key. Empty disables it. Supplied via .env (TOKEN_ENCRYPTION_SECONDARY_KEY_<ENV>) through tf-vars."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "grant_issuer" {
   description = "Expected issuer (iss) for credit grant tokens"
   type        = string

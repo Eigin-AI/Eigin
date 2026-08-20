@@ -3,7 +3,9 @@
 # API keys) come from .env via variables; non-secret config lives in
 # environments/*.tfvars. Neither of those belongs here.
 
-# Token encryption key — 32 random bytes (base64-encoded for the relay).
+# Token encryption key — 32 random bytes (base64-encoded for the relay), injected as
+# TOKEN_ENCRYPTION_KEY_PRIMARY. Rotate by regenerating this and keeping the old value as
+# the secondary; see docs/src/runbooks/token-key-rotation.md.
 resource "random_bytes" "token_encryption_key" {
   length = 32
 }

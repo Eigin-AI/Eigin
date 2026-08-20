@@ -212,7 +212,7 @@ clean env="staging":
 
 # --- Infra ---
 
-[doc('Manage infra (command: bootstrap | init | plan | deploy | migrate)')]
+[doc('Manage infra (bootstrap | init | plan | deploy | migrate | token-key-status | token-key-replace | token-key-sweep | token-key-retire)')]
 infra command env="staging":
     #!/usr/bin/env bash
     case "{{ command }}" in
@@ -257,6 +257,65 @@ infra command env="staging":
             cd {{ infra_dir }}
             terraform workspace select -or-create {{ env }}
             terraform apply -var-file=environments/{{ env }}.tfvars
+            ;;
+        token-key-status)
+            # Read-only: how many wallets are still on which token encryption key.
+            eval "$({{ tools }} infra tf-vars {{ env }})"
+            terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
+            export DATABASE_URL="$(terraform -chdir={{ infra_dir }} output -raw database_url)"
+            key="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
+            cargo run --quiet --release --manifest-path {{ relay_dir }}/Cargo.toml --bin rotate-key -- check --key "$key"
+            ;;
+        token-key-replace)
+            # Deploy a new primary token key, keeping the current one as the decrypt
+            # fallback. Refuses until the current key is saved as the secondary in .env.
+            [ -f .env ] && source .env
+            suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
+            eval "$({{ tools }} infra tf-vars {{ env }})"
+            terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
+            old="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
+            var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
+            if [ "${!var:-}" != "$old" ]; then
+                echo "Add the current key to your repo-root .env as the secondary, then re-run:"
+                echo "  ${var}=${old}"
+                exit 1
+            fi
+            terraform -chdir={{ infra_dir }} apply -replace=module.relay.random_bytes.token_encryption_key -var-file=environments/{{ env }}.tfvars
+            ;;
+        token-key-sweep)
+            # Re-encrypt every wallet onto the new key (dry-run, confirm, then verify).
+            [ -f .env ] && source .env
+            suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
+            eval "$({{ tools }} infra tf-vars {{ env }})"
+            terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
+            export DATABASE_URL="$(terraform -chdir={{ infra_dir }} output -raw database_url)"
+            new="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
+            var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
+            old="${!var:-}"
+            if [ -z "$old" ]; then
+                echo "No ${var} in .env — run 'just infra token-key-replace {{ env }}' first."
+                exit 1
+            fi
+            bin="cargo run --quiet --release --manifest-path {{ relay_dir }}/Cargo.toml --bin rotate-key --"
+            $bin sweep --new-key "$new" --old-key "$old" --dry-run
+            read -p "Proceed with re-encryption? [y/N] " confirm && [ "$confirm" = "y" ] || exit 1
+            $bin sweep --new-key "$new" --old-key "$old"
+            $bin check --key "$new"
+            ;;
+        token-key-retire)
+            # Drop the old key once the sweep has drained. Refuses until the secondary
+            # is removed from .env, then redeploys.
+            [ -f .env ] && source .env
+            suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
+            var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
+            if [ -n "${!var:-}" ]; then
+                echo "Remove ${var} from your repo-root .env first, then re-run."
+                exit 1
+            fi
+            docker info > /dev/null 2>&1 || (echo "Docker daemon is not running. Start Docker Desktop and try again."; exit 1)
+            eval "$({{ tools }} infra tf-vars {{ env }})"
+            terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
+            terraform -chdir={{ infra_dir }} apply -var-file=environments/{{ env }}.tfvars
             ;;
         *)
             echo "Unknown infra command: {{ command }}"

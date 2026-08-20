@@ -41,17 +41,19 @@ resource "scaleway_container" "relay" {
     PROVIDERS_CONFIG_PATH             = "/config/providers.toml"
   }
 
-  # The relay always has a Terraform-generated primary key. A secondary key is
-  # injected only during a rotation (when supplied) so already-shipped app builds
-  # carrying the previous key keep working; omit it otherwise to avoid an empty secret.
+  # The relay always has a Terraform-generated primary key (both for the client gate and
+  # for token encryption). Secondary keys are injected only during a rotation (when
+  # supplied) so tokens/app builds carrying the previous key keep working; they are omitted
+  # otherwise to avoid an empty secret.
   secret_environment_variables = merge(
     {
-      MOJEEK_API_KEY          = var.mojeek_api_key
-      EIGIN_RELAY_PRIMARY_KEY = random_password.eigin_relay_key.result
-      TOKEN_ENCRYPTION_KEY    = random_bytes.token_encryption_key.base64
-      DATABASE_URL            = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
+      MOJEEK_API_KEY               = var.mojeek_api_key
+      EIGIN_RELAY_PRIMARY_KEY      = random_password.eigin_relay_key.result
+      TOKEN_ENCRYPTION_KEY_PRIMARY = random_bytes.token_encryption_key.base64
+      DATABASE_URL                 = local.database_url
     },
     var.eigin_relay_secondary_key != "" ? { EIGIN_RELAY_SECONDARY_KEY = var.eigin_relay_secondary_key } : {},
+    var.token_encryption_secondary_key != "" ? { TOKEN_ENCRYPTION_KEY_SECONDARY = var.token_encryption_secondary_key } : {},
     {
       for name, key in var.provider_api_keys :
       "PROVIDER_${upper(name)}_API_KEY" => key
