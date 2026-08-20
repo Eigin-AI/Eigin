@@ -83,7 +83,8 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | — | Postgres connection string. If unset, uses `InMemoryLedger` (dev only, logs a warning). |
-| `TOKEN_ENCRYPTION_KEY` | — | 32-byte base64url AEAD key for encrypting credit tokens at rest. Generate with `openssl rand -base64 32`. |
+| `TOKEN_ENCRYPTION_KEY_PRIMARY` | — | 32-byte base64url AEAD key for encrypting credit tokens at rest. Generate with `openssl rand -base64 32`. Terraform-generated in production. |
+| `TOKEN_ENCRYPTION_KEY_SECONDARY` | — | Optional previous token key, set only during a rotation so tokens minted under the old key stay restorable. See the [token key rotation runbook](../../docs/src/runbooks/token-key-rotation.md). |
 | `UPSTREAM_API_URL` | — | Base URL of the upstream inference provider. If unset, inference routes return 503. |
 | `UPSTREAM_API_KEY` | — | API key for the upstream inference provider. |
 | `APPLE_BUNDLE_ID` | — | Comma-separated set of accepted app bundle IDs, e.g. `ai.eigin.finch`. List several to serve multiple apps at once, e.g. `com.42futures.carrel,ai.eigin.finch` during a bundle-ID migration. Each bundle ID is verified across every `APPLE_ENVIRONMENTS` entry. |
@@ -99,7 +100,9 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | `TOKEN_RATE_LIMIT_REQUESTS` | `20` | Max inference completions per token per window. |
 | `TOKEN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for per-token limiting. |
 
-Runtime-tunable values (`UPSTREAM_API_KEY`, `UPSTREAM_API_URL`, `TOKEN_ENCRYPTION_KEY`, `APPLE_BUNDLE_ID`) are stored in Scaleway Secret Manager in production — update them there and restart the container. Model catalog and product tiers (`models.toml`, `products.toml`) are deploy-time config — update them in the repo and redeploy.
+Runtime-tunable values (`UPSTREAM_API_KEY`, `UPSTREAM_API_URL`, `APPLE_BUNDLE_ID`) are stored in Scaleway Secret Manager in production — update them there and restart the container. Model catalog and product tiers (`models.toml`, `products.toml`) are deploy-time config — update them in the repo and redeploy.
+
+`TOKEN_ENCRYPTION_KEY_PRIMARY` and the relay/grant keys are Terraform-generated (owned in state), not hand-edited secrets. Rotating them is a deliberate procedure — see the [runbooks](../../docs/src/runbooks/README.md), in particular [token key rotation](../../docs/src/runbooks/token-key-rotation.md).
 
 ## Design principles
 

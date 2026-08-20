@@ -9,7 +9,7 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use super::ledger::{CreditLedger, LedgerError, Wallet, WalletOrigin, WalletStatus};
+use super::ledger::{CreditLedger, LedgerError, NewWallet, Wallet, WalletOrigin, WalletStatus};
 
 #[derive(Default)]
 pub struct InMemoryLedger {
@@ -24,35 +24,28 @@ struct Inner {
 
 #[async_trait]
 impl CreditLedger for InMemoryLedger {
-    async fn mint(
-        &self,
-        origin: &WalletOrigin,
-        fingerprint: &str,
-        product_id: &str,
-        millicredits: i64,
-        token_hash: &str,
-        token_ciphertext: &str,
-    ) -> Result<Wallet, LedgerError> {
+    async fn mint(&self, new: NewWallet<'_>) -> Result<Wallet, LedgerError> {
         let mut inner = self.inner.lock().unwrap();
 
         // Enforce the (origin, fingerprint) uniqueness constraint.
         if inner
             .wallets
             .iter()
-            .any(|w| w.origin == *origin && w.fingerprint == fingerprint)
+            .any(|w| w.origin == *new.origin && w.fingerprint == new.fingerprint)
         {
             return Err(LedgerError::DuplicateFingerprint);
         }
 
         let wallet = Wallet {
             id: Uuid::new_v4(),
-            token_hash: token_hash.to_owned(),
-            token_ciphertext: token_ciphertext.to_owned(),
-            origin: origin.clone(),
-            fingerprint: fingerprint.to_owned(),
-            product_id: product_id.to_owned(),
-            initial_millicredits: millicredits,
-            balance_millicredits: millicredits,
+            token_hash: new.token_hash.to_owned(),
+            token_ciphertext: new.token_ciphertext.to_owned(),
+            key_fp: new.key_fp.to_owned(),
+            origin: new.origin.clone(),
+            fingerprint: new.fingerprint.to_owned(),
+            product_id: new.product_id.to_owned(),
+            initial_millicredits: new.millicredits,
+            balance_millicredits: new.millicredits,
             status: WalletStatus::Active,
         };
         inner.wallets.push(wallet.clone());
@@ -125,14 +118,15 @@ mod tests {
 
     async fn mint_test_wallet(ledger: &InMemoryLedger, fingerprint: &str) -> Wallet {
         ledger
-            .mint(
-                &origin(),
+            .mint(NewWallet {
+                origin: &origin(),
                 fingerprint,
-                "prod.500",
-                500_000,
-                "hash1",
-                "cipher1",
-            )
+                product_id: "prod.500",
+                millicredits: 500_000,
+                token_hash: "hash1",
+                token_ciphertext: "cipher1",
+                key_fp: "fp0",
+            })
             .await
             .unwrap()
     }
@@ -150,7 +144,15 @@ mod tests {
         let ledger = InMemoryLedger::default();
         mint_test_wallet(&ledger, "fp1").await;
         let err = ledger
-            .mint(&origin(), "fp1", "prod.500", 500_000, "hash2", "cipher2")
+            .mint(NewWallet {
+                origin: &origin(),
+                fingerprint: "fp1",
+                product_id: "prod.500",
+                millicredits: 500_000,
+                token_hash: "hash2",
+                token_ciphertext: "cipher2",
+                key_fp: "fp0",
+            })
             .await
             .unwrap_err();
         assert!(matches!(err, LedgerError::DuplicateFingerprint));
@@ -192,7 +194,15 @@ mod tests {
     async fn debit_can_go_slightly_negative() {
         let ledger = InMemoryLedger::default();
         let wallet = ledger
-            .mint(&origin(), "fp1", "prod.500", 100, "hash1", "cipher1")
+            .mint(NewWallet {
+                origin: &origin(),
+                fingerprint: "fp1",
+                product_id: "prod.500",
+                millicredits: 100,
+                token_hash: "hash1",
+                token_ciphertext: "cipher1",
+                key_fp: "fp0",
+            })
             .await
             .unwrap();
         ledger.debit(wallet.id, 200).await.unwrap();

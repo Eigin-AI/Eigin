@@ -11,7 +11,7 @@ use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use super::ledger::{CreditLedger, LedgerError, Wallet, WalletOrigin, WalletStatus};
+use super::ledger::{CreditLedger, LedgerError, NewWallet, Wallet, WalletOrigin, WalletStatus};
 
 pub struct PostgresLedger {
     pool: PgPool,
@@ -25,6 +25,18 @@ pub async fn connect_and_migrate(database_url: &str) -> Result<PgPool, sqlx::Err
     let pool = PgPool::connect(database_url).await?;
     sqlx::migrate!("./migrations").run(&pool).await?;
     Ok(pool)
+}
+
+/// One-time, pre-rotation migration: stamp any wallet whose `key_fp` is still NULL with
+/// the current key's fingerprint. This runs on startup right after migrations, before any
+/// key rotation has happened, so every unstamped row is necessarily under the current key.
+/// Idempotent — a no-op once every row is stamped.
+pub async fn backfill_key_fp(pool: &PgPool, key_fp: &str) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query("UPDATE wallets SET key_fp = $1 WHERE key_fp IS NULL")
+        .bind(key_fp)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
 }
 
 impl PostgresLedger {
@@ -59,6 +71,9 @@ impl TryFrom<&PgRow> for Wallet {
             id: row.try_get("id")?,
             token_hash: row.try_get("token_hash")?,
             token_ciphertext: row.try_get("token_ciphertext")?,
+            key_fp: row
+                .try_get::<Option<String>, _>("key_fp")?
+                .unwrap_or_default(),
             origin,
             fingerprint: row.try_get("fingerprint")?,
             product_id: row.try_get("product_id")?,
@@ -71,33 +86,26 @@ impl TryFrom<&PgRow> for Wallet {
 
 #[async_trait]
 impl CreditLedger for PostgresLedger {
-    async fn mint(
-        &self,
-        origin: &WalletOrigin,
-        fingerprint: &str,
-        product_id: &str,
-        millicredits: i64,
-        token_hash: &str,
-        token_ciphertext: &str,
-    ) -> Result<Wallet, LedgerError> {
+    async fn mint(&self, new: NewWallet<'_>) -> Result<Wallet, LedgerError> {
         let row = sqlx::query(
             r#"
             INSERT INTO wallets
-                (token_hash, token_ciphertext, origin, fingerprint, product_id,
+                (token_hash, token_ciphertext, key_fp, origin, fingerprint, product_id,
                  initial_millicredits, balance_millicredits, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
             RETURNING
-                id, token_hash, token_ciphertext, origin, fingerprint, product_id,
+                id, token_hash, token_ciphertext, key_fp, origin, fingerprint, product_id,
                 initial_millicredits, balance_millicredits, status
             "#,
         )
-        .bind(token_hash)
-        .bind(token_ciphertext)
-        .bind(origin.as_str())
-        .bind(fingerprint)
-        .bind(product_id)
-        .bind(millicredits) // initial_millicredits
-        .bind(millicredits) // balance_millicredits — starts equal to initial
+        .bind(new.token_hash)
+        .bind(new.token_ciphertext)
+        .bind(new.key_fp)
+        .bind(new.origin.as_str())
+        .bind(new.fingerprint)
+        .bind(new.product_id)
+        .bind(new.millicredits) // initial_millicredits
+        .bind(new.millicredits) // balance_millicredits — starts equal to initial
         .fetch_one(&self.pool)
         .await
         .map_err(|e| {
@@ -120,7 +128,7 @@ impl CreditLedger for PostgresLedger {
     ) -> Result<Option<Wallet>, LedgerError> {
         let row = sqlx::query(
             r#"
-            SELECT id, token_hash, token_ciphertext, origin, fingerprint, product_id,
+            SELECT id, token_hash, token_ciphertext, key_fp, origin, fingerprint, product_id,
                    initial_millicredits, balance_millicredits, status
             FROM wallets
             WHERE origin = $1 AND fingerprint = $2
@@ -137,7 +145,7 @@ impl CreditLedger for PostgresLedger {
     async fn find_by_token_hash(&self, token_hash: &str) -> Result<Option<Wallet>, LedgerError> {
         let row = sqlx::query(
             r#"
-            SELECT id, token_hash, token_ciphertext, origin, fingerprint, product_id,
+            SELECT id, token_hash, token_ciphertext, key_fp, origin, fingerprint, product_id,
                    initial_millicredits, balance_millicredits, status
             FROM wallets
             WHERE token_hash = $1
@@ -230,14 +238,15 @@ mod tests {
         };
         let fp = Uuid::new_v4().to_string();
         let wallet = ledger
-            .mint(
-                &origin(),
-                &fp,
-                "prod.500",
-                500_000,
-                &format!("hash_{fp}"),
-                "cipher",
-            )
+            .mint(NewWallet {
+                origin: &origin(),
+                fingerprint: &fp,
+                product_id: "prod.500",
+                millicredits: 500_000,
+                token_hash: &format!("hash_{fp}"),
+                token_ciphertext: "cipher",
+                key_fp: "fp0",
+            })
             .await
             .unwrap();
         assert_eq!(wallet.balance_millicredits, 500_000);
@@ -254,14 +263,15 @@ mod tests {
         };
         let fp = Uuid::new_v4().to_string();
         let wallet = ledger
-            .mint(
-                &origin(),
-                &fp,
-                "prod.500",
-                500_000,
-                &format!("hash_{fp}"),
-                "cipher",
-            )
+            .mint(NewWallet {
+                origin: &origin(),
+                fingerprint: &fp,
+                product_id: "prod.500",
+                millicredits: 500_000,
+                token_hash: &format!("hash_{fp}"),
+                token_ciphertext: "cipher",
+                key_fp: "fp0",
+            })
             .await
             .unwrap();
         ledger.debit(wallet.id, 1000).await.unwrap();

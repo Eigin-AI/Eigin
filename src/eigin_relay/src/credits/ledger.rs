@@ -93,6 +93,8 @@ pub struct Wallet {
     pub token_hash: String,
     /// AEAD-encrypted token for restore.
     pub token_ciphertext: String,
+    /// Fingerprint of the key that encrypted `token_ciphertext` (see `token::fingerprint`).
+    pub key_fp: String,
     /// How the wallet originated, like from an IAP transaction.
     pub origin: WalletOrigin,
     /// SHA-256 hex of the origin's transaction identifier.
@@ -114,6 +116,21 @@ impl Wallet {
     pub fn credits(&self) -> i64 {
         (self.balance_millicredits / 1000).max(0)
     }
+}
+
+/// The inputs needed to mint a new wallet, grouped so `mint` stays a single-argument call.
+pub struct NewWallet<'a> {
+    pub origin: &'a WalletOrigin,
+    /// SHA-256 hex of the origin's transaction identifier, scoped by origin.
+    pub fingerprint: &'a str,
+    pub product_id: &'a str,
+    pub millicredits: i64,
+    /// SHA-256 hex of the bearer token, used for lookup.
+    pub token_hash: &'a str,
+    /// AEAD-encrypted token for restore.
+    pub token_ciphertext: &'a str,
+    /// Fingerprint of the key that encrypted `token_ciphertext` (see `token::fingerprint`).
+    pub key_fp: &'a str,
 }
 
 /// Errors returned by the credit ledger.
@@ -143,15 +160,7 @@ pub enum LedgerError {
 pub trait CreditLedger: Send + Sync {
     /// Create a new wallet. Returns `DuplicateFingerprint` if (origin, fingerprint)
     /// already exists.
-    async fn mint(
-        &self,
-        origin: &WalletOrigin,
-        fingerprint: &str,
-        product_id: &str,
-        millicredits: i64,
-        token_hash: &str,
-        token_ciphertext: &str,
-    ) -> Result<Wallet, LedgerError>;
+    async fn mint(&self, new: NewWallet<'_>) -> Result<Wallet, LedgerError>;
 
     /// Look up a wallet by (origin, fingerprint). Returns `None` if not found.
     async fn find_by_fingerprint(
@@ -183,6 +192,7 @@ mod tests {
             id: uuid::Uuid::new_v4(),
             token_hash: String::new(),
             token_ciphertext: String::new(),
+            key_fp: String::new(),
             origin: WalletOrigin::AppleAppStore,
             fingerprint: String::new(),
             product_id: String::new(),

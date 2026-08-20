@@ -62,6 +62,34 @@ pub fn encrypt(
     Ok(URL_SAFE_NO_PAD.encode(ciphertext))
 }
 
+/// A short, non-secret identifier for an encryption key: hex of the first 8 bytes of
+/// its SHA-256. Stored per wallet row so a rotation can tell which key encrypted it.
+///
+/// It's one-way and truncated, so it reveals nothing usable about the key. Two keys
+/// collide only with negligible probability, which is all the rotation tooling needs.
+pub fn fingerprint(encryption_key: &[u8; 32]) -> String {
+    let digest = Sha256::digest(encryption_key);
+    hex::encode(&digest[..8])
+}
+
+/// Decrypt a token, trying the primary key first and falling back to an optional
+/// secondary. During a key rotation the secondary holds the previous key, so tokens
+/// encrypted before the rotation are still restorable until a sweep re-encrypts them.
+pub fn decrypt_with_fallback(
+    ciphertext_b64: &str,
+    token_hash: &str,
+    primary: &[u8; 32],
+    secondary: Option<&[u8; 32]>,
+) -> Result<String, AppError> {
+    match decrypt(ciphertext_b64, token_hash, primary) {
+        Ok(token) => Ok(token),
+        Err(primary_err) => match secondary {
+            Some(key) => decrypt(ciphertext_b64, token_hash, key),
+            None => Err(primary_err),
+        },
+    }
+}
+
 /// Decrypt a token previously encrypted by [`encrypt`]. Returns the original token string.
 ///
 /// `encryption_key` must be exactly 32 raw bytes.
@@ -157,6 +185,52 @@ mod tests {
         let token_hash = hash(token);
         let ciphertext = encrypt(token, &token_hash, &key).unwrap();
         assert!(decrypt(&ciphertext, &token_hash, &wrong_key).is_err());
+    }
+
+    #[test]
+    fn fingerprint_is_stable_per_key() {
+        let key = test_key();
+        assert_eq!(fingerprint(&key), fingerprint(&key));
+    }
+
+    #[test]
+    fn different_keys_have_different_fingerprints() {
+        assert_ne!(fingerprint(&test_key()), fingerprint(&[0x99u8; 32]));
+    }
+
+    #[test]
+    fn fallback_uses_secondary_when_primary_fails() {
+        let old_key = test_key();
+        let new_key = [0x99u8; 32];
+        let token = "eict_sometesttoken";
+        let token_hash = hash(token);
+        // Encrypted under the old key; new key is primary, old is the secondary fallback.
+        let ciphertext = encrypt(token, &token_hash, &old_key).unwrap();
+        let recovered =
+            decrypt_with_fallback(&ciphertext, &token_hash, &new_key, Some(&old_key)).unwrap();
+        assert_eq!(recovered, token);
+    }
+
+    #[test]
+    fn fallback_prefers_primary() {
+        let primary = test_key();
+        let token = "eict_sometesttoken";
+        let token_hash = hash(token);
+        let ciphertext = encrypt(token, &token_hash, &primary).unwrap();
+        let recovered =
+            decrypt_with_fallback(&ciphertext, &token_hash, &primary, Some(&[0x99u8; 32])).unwrap();
+        assert_eq!(recovered, token);
+    }
+
+    #[test]
+    fn fallback_fails_when_no_key_matches() {
+        let token = "eict_sometesttoken";
+        let token_hash = hash(token);
+        let ciphertext = encrypt(token, &token_hash, &test_key()).unwrap();
+        assert!(
+            decrypt_with_fallback(&ciphertext, &token_hash, &[0x01u8; 32], Some(&[0x02u8; 32]))
+                .is_err()
+        );
     }
 
     #[test]

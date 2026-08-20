@@ -13,8 +13,8 @@ use tracing_subscriber::EnvFilter;
 
 use eigin_relay::credits::apple::{AppStoreVerifier, MultiEnvironmentVerifier, load_root_certs};
 use eigin_relay::credits::grant::{Ed25519GrantVerifier, GrantVerifier, RejectingGrantVerifier};
-use eigin_relay::credits::postgres::connect_and_migrate;
-use eigin_relay::credits::token::parse_encryption_key;
+use eigin_relay::credits::postgres::{backfill_key_fp, connect_and_migrate};
+use eigin_relay::credits::token::{fingerprint, parse_encryption_key};
 use eigin_relay::credits::{CreditLedger, InMemoryLedger, PostgresLedger};
 use eigin_relay::inference::catalog::{
     ModelsConfig, ProductsConfig, ProvidersConfig, ResolvedCatalog,
@@ -37,6 +37,7 @@ struct SearchConfig {
 struct CreditsConfig {
     ledger: Arc<dyn CreditLedger>,
     token_encryption_key: [u8; 32],
+    token_encryption_key_secondary: Option<[u8; 32]>,
     apple_verifier: Arc<dyn eigin_relay::credits::apple::AppleVerifier>,
     grant_verifier: Arc<dyn eigin_relay::credits::grant::GrantVerifier>,
     product_credits: HashMap<String, i64>,
@@ -91,6 +92,7 @@ async fn main() {
         grant_verifier: credits.grant_verifier,
         product_credits: credits.product_credits,
         token_encryption_key: credits.token_encryption_key,
+        token_encryption_key_secondary: credits.token_encryption_key_secondary,
         sandbox_budget_credits: credits.sandbox_budget_credits,
         sandbox_budget_window: credits.sandbox_budget_window,
         provider_clients: inference.provider_clients,
@@ -212,25 +214,54 @@ fn configure_quota(db_pool: Option<PgPool>) -> Arc<dyn Quota> {
 }
 
 async fn configure_credits(db_pool: Option<PgPool>) -> CreditsConfig {
+    // Treat an empty value as unset: `just run relay` exports the var unconditionally, so
+    // a missing .env entry arrives as "" rather than absent. A non-empty but malformed key
+    // is still a hard error.
+    //
+    // With a database configured (i.e. a real deployment) a missing key is fatal: booting on
+    // the insecure dev key would make existing ciphertext undecryptable and persist tokens
+    // encrypted under all-zeros — damage that survives fixing the config. The dev-key
+    // fallback is kept only for the in-memory ledger path (`just run relay`).
+    let token_encryption_key = env::var("TOKEN_ENCRYPTION_KEY_PRIMARY")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .map(|v| parse_encryption_key(&v).expect("invalid TOKEN_ENCRYPTION_KEY_PRIMARY"))
+        .unwrap_or_else(|| {
+            assert!(
+                db_pool.is_none(),
+                "TOKEN_ENCRYPTION_KEY_PRIMARY must be set when DATABASE_URL is configured"
+            );
+            tracing::warn!(
+                "TOKEN_ENCRYPTION_KEY_PRIMARY not set — using insecure dev key (in-memory ledger only)"
+            );
+            [0u8; 32]
+        });
+
+    // The secondary key is present only during a rotation window; it lets restore decrypt
+    // tokens still encrypted under the previous key until a sweep re-encrypts them.
+    let token_encryption_key_secondary = env::var("TOKEN_ENCRYPTION_KEY_SECONDARY")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .map(|v| parse_encryption_key(&v).expect("invalid TOKEN_ENCRYPTION_KEY_SECONDARY"));
+    if token_encryption_key_secondary.is_some() {
+        tracing::info!("TOKEN_ENCRYPTION_KEY_SECONDARY set — key rotation in progress");
+    }
+
     let ledger: Arc<dyn CreditLedger> = match db_pool {
         Some(pool) => {
             tracing::info!("using PostgresLedger");
+            // One-time, pre-rotation backfill: stamp existing rows with the current key's
+            // fingerprint. Safe because no rotation has happened yet, so every unstamped
+            // row is under this key. Idempotent on subsequent boots.
+            match backfill_key_fp(&pool, &fingerprint(&token_encryption_key)).await {
+                Ok(n) if n > 0 => tracing::info!("backfilled key_fp on {n} wallet(s)"),
+                Ok(_) => {}
+                Err(e) => tracing::error!("key_fp backfill failed: {e}"),
+            }
             Arc::new(PostgresLedger::from_pool(pool))
         }
         None => Arc::new(InMemoryLedger::default()),
     };
-
-    // Treat an empty value as unset: `just run relay` exports the var unconditionally, so
-    // a missing .env entry arrives as "" rather than absent. A non-empty but malformed key
-    // is still a hard error.
-    let token_encryption_key = env::var("TOKEN_ENCRYPTION_KEY")
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .map(|v| parse_encryption_key(&v).expect("invalid TOKEN_ENCRYPTION_KEY"))
-        .unwrap_or_else(|| {
-            tracing::warn!("TOKEN_ENCRYPTION_KEY not set — using insecure dev key");
-            [0u8; 32]
-        });
 
     let apple_verifier = configure_apple_verifier();
     let grant_verifier = configure_grant_verifier();
@@ -256,6 +287,7 @@ async fn configure_credits(db_pool: Option<PgPool>) -> CreditsConfig {
     CreditsConfig {
         ledger,
         token_encryption_key,
+        token_encryption_key_secondary,
         apple_verifier,
         grant_verifier,
         product_credits,

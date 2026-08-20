@@ -38,6 +38,13 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("");
 
+    // Optional previous token encryption key, set only during a token-key rotation so the
+    // relay can decrypt tokens minted under the old key until a sweep re-encrypts them.
+    let token_encryption_secondary_key = dot_env
+        .get(&format!("TOKEN_ENCRYPTION_SECONDARY_KEY_{env_upper}"))
+        .map(String::as_str)
+        .unwrap_or("");
+
     let provider_api_keys_json = serde_json::to_string(&provider_api_keys(&dot_env, &env_upper))?;
 
     let scw_secret = scw_config_get("secret-key").unwrap_or_default();
@@ -53,6 +60,7 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
     println!("export TF_VAR_image_tag=\"{image_tag}\"");
     println!("export TF_VAR_mojeek_api_key=\"{mojeek_key}\"");
     println!("export TF_VAR_eigin_relay_secondary_key=\"{eigin_relay_secondary_key}\"");
+    println!("export TF_VAR_token_encryption_secondary_key=\"{token_encryption_secondary_key}\"");
     println!("export TF_VAR_provider_api_keys='{provider_api_keys_json}'");
 
     // S3 remote-state backend credentials.

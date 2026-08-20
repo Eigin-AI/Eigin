@@ -11,4 +11,8 @@ locals {
     filesha1("${var.relay_src_dir}/api.yaml"),
   ])), 0, 16)
   image_ref = "${local.image_name}:${local.image_tag}"
+
+  # Relay database connection string. Reused by the container secret and the output the
+  # rotate-key tool consumes during a token-key rotation.
+  database_url = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
 }

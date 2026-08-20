@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 use crate::credits::apple::AppleEnvironment;
-use crate::credits::ledger::{LedgerError, WalletOrigin};
+use crate::credits::ledger::{LedgerError, NewWallet, WalletOrigin};
 use crate::credits::token;
 use crate::error::AppError;
 use crate::quota::QuotaError;
@@ -64,17 +64,19 @@ async fn mint_or_restore(
     let new_token = token::generate();
     let new_hash = token::hash(&new_token.0);
     let new_ciphertext = token::encrypt(&new_token.0, &new_hash, &state.token_encryption_key)?;
+    let key_fp = token::fingerprint(&state.token_encryption_key);
 
     match state
         .ledger
-        .mint(
+        .mint(NewWallet {
             origin,
             fingerprint,
             product_id,
             millicredits,
-            &new_hash,
-            &new_ciphertext,
-        )
+            token_hash: &new_hash,
+            token_ciphertext: &new_ciphertext,
+            key_fp: &key_fp,
+        })
         .await
     {
         Ok(wallet) => Ok((new_token.0, wallet)),
@@ -87,10 +89,11 @@ async fn mint_or_restore(
                 .map_err(|e| AppError::Internal(format!("ledger error: {e}")))?
                 .ok_or_else(|| AppError::Internal("wallet vanished after duplicate".into()))?;
 
-            let token = token::decrypt(
+            let token = token::decrypt_with_fallback(
                 &wallet.token_ciphertext,
                 &wallet.token_hash,
                 &state.token_encryption_key,
+                state.token_encryption_key_secondary.as_ref(),
             )?;
             Ok((token, wallet))
         }

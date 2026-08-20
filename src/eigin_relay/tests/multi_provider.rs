@@ -152,6 +152,7 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
         grant_verifier: Arc::new(FakeGrantVerifier::failing()),
         product_credits,
         token_encryption_key: [0u8; 32],
+        token_encryption_key_secondary: None,
         sandbox_budget_credits: 25_000,
         sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
         provider_clients,
