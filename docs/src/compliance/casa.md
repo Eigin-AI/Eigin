@@ -227,7 +227,7 @@ Web search reaches one provider, Mojeek. MCP servers are added by the user and g
 
 **Database.** Terraform creates a dedicated IAM application. Its API key is scoped to that database alone, so no credential is shared.
 
-**State.** Generated secrets live in Terraform state, in a private Object Storage bucket configured through an untracked `backend.tf`. One set per workspace, so staging and production never share a value.
+**State.** Generated secrets live in Terraform state, in a private, versioned Object Storage bucket in a dedicated project, reached only by a project-scoped IAM key, and configured through an untracked `backend.tf` (see the [remote state runbook](../runbooks/terraform-remote-state.md)). One set per workspace, so staging and production never share a value.
 
 **Nothing committed.** `.env`, `backend.tf`, and local signing keys are all ignored. The registry is private.
 
