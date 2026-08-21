@@ -73,4 +73,5 @@
 - [Token key rotation](./runbooks/token-key-rotation.md)
 - [Relay key rotation](./runbooks/relay-key-rotation.md)
 - [Grant key rotation](./runbooks/grant-key-rotation.md)
+- [Database key rotation](./runbooks/database-key-rotation.md)
 - [Terraform remote state](./runbooks/terraform-remote-state.md)
