@@ -24,8 +24,12 @@ pub struct AppState {
     /// (secondary) key so in-flight app builds keep working. A request is admitted
     /// if its `x-eigin-key` matches any of these.
     pub eigin_relay_keys: Vec<String>,
-    /// Per-IP rate limiter (search + inference backstop).
+    /// Global per-IP rate limiter, applied as a blanket layer over every gated
+    /// route (and `/docs`). Keyed on the client IP derived from `X-Forwarded-For`.
     pub ip_rate_limiter: crate::RateLimiter,
+    /// Number of trusted proxy hops in front of the app, used to read the client
+    /// IP from `X-Forwarded-For`. `1` behind Scaleway's ingress.
+    pub trusted_proxy_hops: usize,
     /// Per-IP rate limiter for the unauthenticated Apple webhook. Separate from
     /// `ip_rate_limiter` so its window can be sized to Apple's retry cadence
     /// independent of search tuning.

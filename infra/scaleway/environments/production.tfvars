@@ -6,6 +6,8 @@ scw_region   = "fr-par"
 max_scale                    = 3
 ip_rate_limit_requests       = 500
 ip_rate_limit_window_seconds = 60
+# One trusted hop: Scaleway's ingress. Verify empirically before changing.
+trusted_proxy_hops = 1
 
 # Relay: Search config
 monthly_pool_size = 5000
@@ -13,7 +15,7 @@ monthly_pool_size = 5000
 # Relay: IAP config
 # Production accepts Sandbox too: TestFlight and App Review of the production app
 # always operate in Sandbox. Free Sandbox issuance is bounded by the budget below.
-apple_environments            = ["Production", "Sandbox"]
+apple_environments = ["Production", "Sandbox"]
 # Comma-separated set of accepted bundle IDs. Serves the legacy alpha and the
 # new App Store release at once during migration; drop the alpha once retired.
 apple_bundle_id               = "com.42futures.carrel,ai.eigin.finch"

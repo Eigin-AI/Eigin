@@ -6,13 +6,15 @@ scw_region   = "fr-par"
 max_scale                    = 1
 ip_rate_limit_requests       = 250
 ip_rate_limit_window_seconds = 60
+# One trusted hop: Scaleway's ingress. Verify empirically before changing.
+trusted_proxy_hops = 1
 
 # Relay: Search config
 monthly_pool_size = 1000
 
 # Relay: IAP config
 # Staging is the internal dev app; all purchases are Sandbox.
-apple_environments            = ["Sandbox"]
+apple_environments = ["Sandbox"]
 # Comma-separated set of accepted bundle IDs (see production.tfvars).
 apple_bundle_id               = "com.42futures.carrel.dev,ai.eigin.finch.dev"
 apple_app_apple_id            = ""

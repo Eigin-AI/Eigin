@@ -2,7 +2,7 @@
 //!
 //! Flow:
 //! 1. Validate bearer token and wallet status + balance (admit floor check).
-//! 2. Per-token + per-IP rate limiting.
+//! 2. Per-token rate limiting (per-IP is applied by the router layer).
 //! 3. Parse body minimally: extract `model` (must be in catalog) and `stream` flag.
 //!    If streaming, inject `stream_options: {include_usage: true}`.
 //!    Never log the body content.
@@ -10,11 +10,10 @@
 //! 5. While relaying, scan SSE lines for the usage block.
 //! 6. After stream completes, debit based on actual usage (or fallback).
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::body::Body;
-use axum::extract::{ConnectInfo, State};
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
@@ -36,12 +35,11 @@ const STREAM_CHANNEL_BUFFER: usize = 64;
 
 pub async fn handle(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     WalletBearer(wallet): WalletBearer,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    // Admit check and rate limiting.
-    admit(&state, &wallet, addr)?;
+    // Admit check and per-token rate limiting.
+    admit(&state, &wallet)?;
 
     // Parse body to extract `model` and `stream`. Don't log the prompts.
     let (model_config, forwarded_body, estimated_usage) = prepare_body(body, &state)?;
@@ -69,15 +67,15 @@ pub async fn handle(
     }
 }
 
-/// Check that the wallet is active and above the admit floor, then apply rate limits.
-fn admit(state: &AppState, wallet: &Wallet, addr: SocketAddr) -> Result<(), AppError> {
+/// Check that the wallet is active and above the admit floor, then apply the
+/// per-token rate limit. Per-IP limiting is handled by the router layer.
+fn admit(state: &AppState, wallet: &Wallet) -> Result<(), AppError> {
     if wallet.status != WalletStatus::Active
         || wallet.balance_millicredits < state.admit_floor_millicredits
     {
         return Err(AppError::InsufficientCredits);
     }
     state.token_rate_limiter.check(wallet.id)?;
-    state.ip_rate_limiter.check(addr.ip())?;
     Ok(())
 }
 

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::extract::{ConnectInfo, Query, State};
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
@@ -61,12 +61,12 @@ struct MojeekResult {
 
 /// Handles search requests.
 ///
-/// Validates the query, checks rate limits and quota, then proxies the
+/// Validates the query and checks the shared search quota, then proxies the
 /// request to the upstream search API and reshapes the response into a
 /// small, stable shape rather than passing Mojeek's raw payload through.
+/// Per-IP rate limiting is applied by the router layer, not here.
 pub async fn handle(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
     Query(params): Query<SearchParams>,
 ) -> Result<Response, AppError> {
     let query = params
@@ -76,9 +76,6 @@ pub async fn handle(
 
     let options = SearchOptions::parse(params.region.as_deref(), params.focus.as_deref());
 
-    let ip = addr.ip();
-
-    state.ip_rate_limiter.check(ip)?;
     match state
         .quota
         .try_consume(

@@ -119,7 +119,7 @@ variable "token_rate_limit_window_seconds" {
 }
 
 variable "ip_rate_limit_requests" {
-  description = "Maximum search + inference requests per IP per window"
+  description = "Maximum requests per client IP per window, applied as a blanket layer to every gated route"
   type        = number
   default     = 40
 }
@@ -128,6 +128,12 @@ variable "ip_rate_limit_window_seconds" {
   description = "Rate limit window in seconds for per-IP limiting"
   type        = number
   default     = 60
+}
+
+variable "trusted_proxy_hops" {
+  description = "Number of trusted proxy hops in front of the app, used to read the client IP from X-Forwarded-For. 1 behind Scaleway's ingress; verify empirically before changing."
+  type        = number
+  default     = 1
 }
 
 variable "webhook_rate_limit_requests" {

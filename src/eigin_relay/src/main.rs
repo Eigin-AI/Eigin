@@ -4,11 +4,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::Router;
-use axum::extract::DefaultBodyLimit;
-use axum::middleware;
-use axum::routing::{get, post};
-use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 use eigin_relay::credits::apple::{AppStoreVerifier, MultiEnvironmentVerifier, load_root_certs};
@@ -21,7 +16,7 @@ use eigin_relay::inference::catalog::{
 };
 use eigin_relay::inference::upstream::{ReqwestUpstreamClient, UpstreamClient};
 use eigin_relay::quota::{InMemoryQuota, PostgresQuota, Quota};
-use eigin_relay::{AppState, RateLimiter, create_client, health, require_eigin_key, search};
+use eigin_relay::{AppState, RateLimiter, build_router, create_client};
 use sqlx::PgPool;
 
 // ── Config structs ────────────────────────────────────────────────────────────
@@ -78,11 +73,19 @@ async fn main() {
     let inference = configure_inference();
     let webhook_rate_limiter = configure_webhook_rate_limiter();
 
+    // Trusted proxy hops in front of the app, for reading the client IP from
+    // `X-Forwarded-For`. Defaults to 1 (Scaleway's ingress); verify empirically.
+    let trusted_proxy_hops: usize = env::var("TRUSTED_PROXY_HOPS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1);
+
     let state = Arc::new(AppState {
         search_client: search.client,
         mojeek_api_key: search.mojeek_api_key,
         eigin_relay_keys,
         ip_rate_limiter: search.rate_limiter,
+        trusted_proxy_hops,
         webhook_rate_limiter,
         search_pool_max: search.pool_max,
         search_window: search.window,
@@ -465,67 +468,4 @@ fn configure_inference() -> InferenceConfig {
         admit_floor_millicredits,
         token_rate_limiter,
     }
-}
-
-// ── Router ────────────────────────────────────────────────────────────────────
-
-/// Chat completions carry base64-encoded image attachments, so the default
-/// 2 MB Axum body limit rejects legitimate multi-image requests. 10 MB
-/// comfortably covers several normalised images while still bounding request
-/// size on this anonymous, open endpoint.
-const MAX_REQUEST_BODY_BYTES: usize = 10 * 1024 * 1024;
-
-fn build_router(state: Arc<AppState>) -> Router {
-    // Routes gated by Eigin Relay key.
-    let routes_with_eigin_key = Router::new()
-        .route("/v1/search", get(search::handle))
-        .route(
-            "/v1/credits/redeem",
-            post(eigin_relay::credits::redeem::handle),
-        )
-        .route(
-            "/v1/credits/products",
-            get(eigin_relay::credits::products::handle),
-        )
-        // The model catalog is static and free to read, so it needs no wallet — only the relay key.
-        .route(
-            "/v1/models",
-            get(eigin_relay::inference::catalog::handle_list),
-        )
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            require_eigin_key,
-        ));
-
-    // Routes gated by Eigin Relay key + credit token.
-    let routes_with_bearer = Router::new()
-        .route(
-            "/v1/credits/balance",
-            get(eigin_relay::credits::balance::handle),
-        )
-        .route(
-            "/v1/chat/completions",
-            post(eigin_relay::inference::handler::handle),
-        )
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            require_eigin_key,
-        ));
-
-    Router::new()
-        // Unauthenticated routes like health, docs and webhooks.
-        .route("/health", get(health))
-        .route("/docs", get(eigin_relay::docs::handler))
-        .route("/docs/scalar.js", get(eigin_relay::docs::scalar::handler))
-        .route(
-            "/webhooks/apple/appstore",
-            post(eigin_relay::credits::apple::webhook::handle),
-        )
-        .merge(routes_with_eigin_key)
-        .merge(routes_with_bearer)
-        .layer(TraceLayer::new_for_http())
-        .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
-        .layer(middleware::from_fn(eigin_relay::log_errors))
-        .layer(middleware::from_fn(eigin_relay::security_headers))
-        .with_state(state)
 }
