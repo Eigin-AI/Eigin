@@ -1,10 +1,39 @@
 //! Upstream inference provider client.
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::Stream;
 
 use crate::error::AppError;
+
+/// Time allowed to establish the connection to an upstream provider.
+const UPSTREAM_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Max silence between streamed chunks before the upstream is treated as
+/// stalled. Resets on each read, so long healthy generations are unaffected.
+const UPSTREAM_READ_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Builds the production HTTP client for upstream inference.
+///
+/// Uses connect + read timeouts and no total cap: a long streaming generation
+/// survives as long as chunks keep arriving, while a hung handshake or a
+/// silent connection is cut. A fired read timeout surfaces as
+/// `AppError::Upstream` via the `is_timeout()` branch in `chat_completions`.
+pub fn http_client() -> reqwest::Client {
+    build_client(UPSTREAM_CONNECT_TIMEOUT, UPSTREAM_READ_TIMEOUT)
+}
+
+/// Builds an upstream client with explicit timeouts. Split out so tests can use
+/// short durations without waiting on the production constants.
+fn build_client(connect_timeout: Duration, read_timeout: Duration) -> reqwest::Client {
+    reqwest::Client::builder()
+        .connect_timeout(connect_timeout)
+        .read_timeout(read_timeout)
+        .build()
+        .expect("upstream HTTP client build failed")
+}
 
 /// A streaming response from the upstream provider.
 pub type BoxStream = Box<dyn Stream<Item = Result<Bytes, AppError>> + Send + Unpin>;
@@ -158,5 +187,47 @@ mod tests {
             .chat_completions(Bytes::new(), "key")
             .await;
         assert!(matches!(result, Err(AppError::ServiceUnavailable(_))));
+    }
+
+    // A server that accepts connections but never replies. Before timeouts were
+    // configured this pinned the request forever; now the read timeout fires.
+    #[tokio::test]
+    async fn stalled_upstream_hits_read_timeout() {
+        use std::time::Duration;
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Accept and hold sockets open, sending nothing back.
+        tokio::spawn(async move {
+            let mut held = Vec::new();
+            loop {
+                if let Ok((sock, _)) = listener.accept().await {
+                    held.push(sock);
+                }
+            }
+        });
+
+        let stalling_client = ReqwestUpstreamClient::new(
+            build_client(Duration::from_secs(5), Duration::from_millis(200)),
+            format!("http://{addr}"),
+            "test-provider".to_owned(),
+        );
+
+        // Outer guard: if the read timeout were ever dropped, the call would hang
+        // forever. This makes that regression a fast, clear failure instead.
+        let result = tokio::time::timeout(
+            Duration::from_secs(5),
+            stalling_client.chat_completions(Bytes::from_static(b"{}"), "key"),
+        )
+        .await
+        .expect("request should hit the read timeout, not hang");
+
+        match result {
+            Err(AppError::Upstream(msg)) => assert!(msg.contains("timed out"), "got: {msg}"),
+            Err(other) => panic!("expected upstream timeout, got: {other:?}"),
+            Ok(_) => panic!("expected upstream timeout, got a response"),
+        }
     }
 }

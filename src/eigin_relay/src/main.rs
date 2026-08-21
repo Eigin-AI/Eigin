@@ -158,7 +158,7 @@ async fn configure_search() -> SearchConfig {
         .and_then(|v| v.parse().ok())
         .unwrap_or(30);
 
-    let client = create_client(reqwest::Client::new(), &search_api_url);
+    let client = create_client(eigin_relay::search::http_client(), &search_api_url);
     let rate_limiter = RateLimiter::new(
         rate_limit_requests,
         Duration::from_secs(rate_limit_window_secs),
@@ -430,7 +430,7 @@ fn configure_inference() -> InferenceConfig {
                             "configured upstream provider"
                         );
                         let client = Arc::new(ReqwestUpstreamClient::new(
-                            reqwest::Client::new(),
+                            eigin_relay::inference::upstream::http_client(),
                             provider.base_url,
                             id.clone(),
                         )) as Arc<dyn UpstreamClient>;

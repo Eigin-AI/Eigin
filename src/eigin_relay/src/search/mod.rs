@@ -3,5 +3,5 @@
 mod client;
 mod handler;
 
-pub use client::{SearchClient, SearchFocus, SearchOptions, create_client};
+pub use client::{SearchClient, SearchFocus, SearchOptions, create_client, http_client};
 pub use handler::handle;

@@ -5,11 +5,14 @@
 //! and the Apple webhook keeps its own retry-cadence limiter.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
+use axum::http::StatusCode;
 use axum::middleware;
 use axum::routing::{get, post};
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::{
@@ -22,6 +25,12 @@ use crate::{
 /// comfortably covers several normalised images while still bounding request
 /// size on this anonymous, open endpoint.
 const MAX_REQUEST_BODY_BYTES: usize = 10 * 1024 * 1024;
+
+/// Inbound request ceiling for every route except streaming chat completions.
+/// A slow client or handler can't pin a request past this. The streaming
+/// inference route is deliberately excluded — it has no fixed duration and is
+/// bounded instead by the upstream read timeout.
+const INBOUND_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Build the application router with all middleware layered.
 pub fn build_router(state: Arc<AppState>) -> Router {
@@ -39,6 +48,12 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         // The model catalog is static and free to read, so it needs no wallet — only the relay key.
         .route("/v1/models", get(crate::inference::catalog::handle_list))
         .route("/v1/credits/balance", get(crate::credits::balance::handle))
+        // Inbound timeout covers the routes above. `.layer` only wraps routes
+        // added before it, so the streaming route below stays uncapped.
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            INBOUND_REQUEST_TIMEOUT,
+        ))
         .route(
             "/v1/chat/completions",
             post(crate::inference::handler::handle),
@@ -54,6 +69,11 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     let rate_limited = Router::new()
         .route("/docs", get(crate::docs::handler))
         .route("/docs/scalar.js", get(crate::docs::scalar::handler))
+        // Docs are static but still get the inbound ceiling.
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            INBOUND_REQUEST_TIMEOUT,
+        ))
         .merge(key_gated)
         .layer(middleware::from_fn_with_state(
             state.clone(),
