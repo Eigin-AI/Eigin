@@ -101,9 +101,10 @@ impl std::error::Error for AppError {}
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         // Each variant yields its status, the client-facing message, and an ErrorLog.
-        // For client errors (4xx) the message and log detail are the same client input
-        // (logged at debug). For server faults (5xx) the client sees a fixed message
-        // while the internal detail is kept for logs only (CASA 6.2.1).
+        // Most client errors (4xx) echo their own input as both message and log detail
+        // (logged at debug). UnprocessableEntity and all server faults (5xx) instead send
+        // a fixed message while keeping the internal detail for logs only (CASA 6.2.1):
+        // its detail carries verification-library internals that must not reach the client.
         let (status, message, log) = match self {
             Self::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
@@ -123,13 +124,15 @@ impl IntoResponse for AppError {
                     detail: msg,
                 },
             ),
-            Self::UnprocessableEntity(msg) => (
+            Self::UnprocessableEntity(detail) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                msg.clone(),
+                "request could not be processed".to_string(),
                 ErrorLog {
-                    severity: Severity::Debug,
+                    // Warn (not Debug) so verification failures stay visible in prod logs —
+                    // repeated failures on the redeem route signal forged-proof probing.
+                    severity: Severity::Warn,
                     error_type: "invalid_request_error",
-                    detail: msg,
+                    detail,
                 },
             ),
             Self::InsufficientCredits => (
@@ -235,6 +238,15 @@ mod tests {
             .clone()
     }
 
+    /// The log severity carried on the response extension.
+    fn log_severity(response: &Response) -> Severity {
+        response
+            .extensions()
+            .get::<ErrorLog>()
+            .expect("ErrorLog extension")
+            .severity
+    }
+
     #[tokio::test]
     async fn unauthorized_returns_401() {
         let response = AppError::Unauthorized.into_response();
@@ -249,6 +261,31 @@ mod tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let json = extract_json(response).await;
         assert_eq!(json["error"]["message"], "test error");
+    }
+
+    #[tokio::test]
+    async fn unprocessable_entity_returns_opaque_422() {
+        let response =
+            AppError::UnprocessableEntity("grant verification failed: ExpiredSignature".into())
+                .into_response();
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        // Detail is kept for logging in the extension, not the body.
+        assert_eq!(
+            log_detail(&response),
+            "grant verification failed: ExpiredSignature"
+        );
+        // Warn severity so forged-proof probing stays visible under the info filter.
+        assert!(matches!(log_severity(&response), Severity::Warn));
+        let json = extract_json(response).await;
+        assert_eq!(json["error"]["message"], "request could not be processed");
+        assert_eq!(json["error"]["type"], "invalid_request_error");
+        // The carried detail must never reach the client body.
+        assert!(
+            !json["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("verification")
+        );
     }
 
     #[tokio::test]
