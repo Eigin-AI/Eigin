@@ -39,12 +39,24 @@ pub async fn enforce_ip_rate_limit(
     Ok(next.run(request).await)
 }
 
+/// How many checks between full map sweeps.
+const SWEEP_INTERVAL: u32 = 1_000;
+
+/// Mutex-guarded limiter state.
+///
+/// The sweep counter lives alongside the map so both stay consistent under
+/// concurrent `check` calls behind the single lock.
+struct LimiterState<K> {
+    requests: HashMap<K, VecDeque<Instant>>,
+    checks_since_sweep: u32,
+}
+
 /// Sliding window rate limiter.
 pub struct RateLimiter<K = std::net::IpAddr>
 where
     K: Hash + Eq + Clone,
 {
-    requests: Mutex<HashMap<K, VecDeque<Instant>>>,
+    state: Mutex<LimiterState<K>>,
     max_requests: u32,
     window: Duration,
 }
@@ -55,7 +67,10 @@ where
 {
     pub fn new(max_requests: u32, window: Duration) -> Self {
         Self {
-            requests: Mutex::new(HashMap::new()),
+            state: Mutex::new(LimiterState {
+                requests: HashMap::new(),
+                checks_since_sweep: 0,
+            }),
             max_requests,
             window,
         }
@@ -66,11 +81,11 @@ where
     /// Records the request timestamp if allowed. Returns `AppError::RateLimited`
     /// if the key has exceeded the rate limit within the window.
     pub fn check(&self, key: K) -> Result<(), AppError> {
-        let mut map = self.requests.lock().unwrap();
+        let mut state = self.state.lock().unwrap();
         let now = Instant::now();
         let cutoff = now - self.window;
 
-        let timestamps = map.entry(key.clone()).or_default();
+        let timestamps = state.requests.entry(key).or_default();
 
         // Drain expired entries from the front.
         while timestamps.front().is_some_and(|&t| t < cutoff) {
@@ -83,13 +98,29 @@ where
 
         timestamps.push_back(now);
 
-        // Evict empty entries to prevent unbounded map growth.
-        if timestamps.is_empty() {
-            map.remove(&key);
+        // Periodically sweep expired keys to bound map growth. A quiet key is
+        // never revisited, so per-call eviction can't reclaim it; the sweep does.
+        state.checks_since_sweep += 1;
+        if state.checks_since_sweep >= SWEEP_INTERVAL {
+            state.checks_since_sweep = 0;
+            sweep_expired(&mut state.requests, cutoff);
         }
 
         Ok(())
     }
+}
+
+/// Drain expired timestamps from every key and drop any left empty.
+fn sweep_expired<K>(requests: &mut HashMap<K, VecDeque<Instant>>, cutoff: Instant)
+where
+    K: Hash + Eq,
+{
+    requests.retain(|_, timestamps| {
+        while timestamps.front().is_some_and(|&t| t < cutoff) {
+            timestamps.pop_front();
+        }
+        !timestamps.is_empty()
+    });
 }
 
 #[cfg(test)]
@@ -150,16 +181,49 @@ mod tests {
     }
 
     #[test]
-    fn empty_deque_is_evicted_on_next_check() {
-        let limiter = RateLimiter::new(2, Duration::from_millis(50));
-        assert!(limiter.check(ip(1)).is_ok());
+    fn sweep_removes_expired_keys_and_keeps_active_ones() {
+        let window = Duration::from_millis(50);
+        let mut requests: HashMap<IpAddr, VecDeque<Instant>> = HashMap::new();
+        let now = Instant::now();
+
+        // Expired key: its only timestamp predates the window.
+        requests
+            .entry(ip(1))
+            .or_default()
+            .push_back(now - Duration::from_millis(100));
+        // Active key: timestamp within the window.
+        requests.entry(ip(2)).or_default().push_back(now);
+
+        sweep_expired(&mut requests, now - window);
+
+        assert!(!requests.contains_key(&ip(1)), "expired key removed");
+        assert!(requests.contains_key(&ip(2)), "active key kept");
+    }
+
+    #[test]
+    fn expired_key_is_evicted_by_sweep() {
+        // High limit so every driving check is admitted and counts toward the sweep.
+        let limiter = RateLimiter::new(u32::MAX, Duration::from_millis(50));
         assert!(limiter.check(ip(1)).is_ok());
         thread::sleep(Duration::from_millis(60));
-        let map = limiter.requests.lock().unwrap();
-        assert!(map.contains_key(&ip(1)), "entry exists before next check");
-        drop(map);
-        assert!(limiter.check(ip(1)).is_ok());
-        let map = limiter.requests.lock().unwrap();
-        assert!(map.contains_key(&ip(1)), "entry recreated after check");
+
+        let state = limiter.state.lock().unwrap();
+        assert!(
+            state.requests.contains_key(&ip(1)),
+            "entry exists before sweep"
+        );
+        drop(state);
+
+        // Drive enough checks from another key to trigger a sweep. ip(1) is
+        // never revisited yet still gets reclaimed.
+        for _ in 0..SWEEP_INTERVAL {
+            assert!(limiter.check(ip(2)).is_ok());
+        }
+
+        let state = limiter.state.lock().unwrap();
+        assert!(
+            !state.requests.contains_key(&ip(1)),
+            "expired entry evicted by sweep"
+        );
     }
 }
