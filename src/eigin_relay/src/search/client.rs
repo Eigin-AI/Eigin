@@ -3,8 +3,23 @@
 //! Provides a trait-based interface for making search requests, allowing
 //! different implementations (real HTTP client, mock for tests).
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use reqwest::Client;
+
+/// Total request timeout for the search client. Search is a single small
+/// request/response, so one deadline over the whole call (connect included)
+/// is enough.
+const SEARCH_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Builds the production HTTP client for search, with a total request timeout.
+pub fn http_client() -> Client {
+    Client::builder()
+        .timeout(SEARCH_TIMEOUT)
+        .build()
+        .expect("search HTTP client build failed")
+}
 
 /// Result type returned by search operations.
 pub type SearchResult = Vec<u8>;
