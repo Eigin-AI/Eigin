@@ -7,10 +7,37 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::hash::Hash;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use axum::extract::{Request, State};
+use axum::middleware::Next;
+use axum::response::Response;
+
+use crate::AppState;
+use crate::client_ip::ClientIp;
 use crate::error::AppError;
+
+/// Blanket per-IP rate-limit layer.
+///
+/// Reads the [`ClientIp`] resolved upstream and applies the shared per-IP
+/// limiter. Applied as a router layer so every route it wraps is capped by
+/// default — new routes included. Runs before the relay-key check so
+/// unauthenticated floods are bounded too.
+pub async fn enforce_ip_rate_limit(
+    State(state): State<Arc<AppState>>,
+    request: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    let ip = request
+        .extensions()
+        .get::<ClientIp>()
+        .map(|c| c.0)
+        .ok_or_else(|| AppError::Internal("client IP not resolved".into()))?;
+    state.ip_rate_limiter.check(ip)?;
+    Ok(next.run(request).await)
+}
 
 /// Sliding window rate limiter.
 pub struct RateLimiter<K = std::net::IpAddr>

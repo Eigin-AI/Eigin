@@ -17,8 +17,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::to_bytes;
 use axum::http::{Request, StatusCode};
-use axum::middleware;
-use axum::routing::{get, post};
 use tower::util::ServiceExt;
 
 use eigin_relay::AppState;
@@ -73,6 +71,7 @@ async fn make_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -94,40 +93,10 @@ async fn make_state(
     })
 }
 
+// Exercise the real, fully-layered router so credit-flow tests run through the
+// deployed middleware stack (client-IP resolution + blanket per-IP limiting).
 fn build_router(state: Arc<AppState>) -> Router {
-    let authed = Router::new()
-        .route(
-            "/v1/credits/redeem",
-            post(eigin_relay::credits::redeem::handle),
-        )
-        .route(
-            "/v1/credits/products",
-            get(eigin_relay::credits::products::handle),
-        )
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            eigin_relay::require_eigin_key,
-        ));
-
-    Router::new()
-        .route(
-            "/v1/credits/balance",
-            get(eigin_relay::credits::balance::handle),
-        )
-        .route(
-            "/v1/models",
-            get(eigin_relay::inference::catalog::handle_list),
-        )
-        .route(
-            "/v1/chat/completions",
-            post(eigin_relay::inference::handler::handle),
-        )
-        .route(
-            "/webhooks/apple/appstore",
-            post(eigin_relay::credits::apple::webhook::handle),
-        )
-        .merge(authed)
-        .with_state(state)
+    eigin_relay::build_router(state)
 }
 
 async fn redeem(app: &Router, jws: &str) -> serde_json::Value {
@@ -151,6 +120,7 @@ async fn balance(app: &Router, token: &str) -> (StatusCode, serde_json::Value) {
     let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
     let req = Request::builder()
         .uri("/v1/credits/balance")
+        .header("x-eigin-key", "relay-key")
         .header("Authorization", format!("Bearer {token}"))
         .extension(connect_info)
         .body(axum::body::Body::empty())
@@ -171,6 +141,7 @@ async fn chat(app: &Router, token: &str, model: &str) -> StatusCode {
     let req = Request::builder()
         .method("POST")
         .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
         .header("Authorization", format!("Bearer {token}"))
         .header("content-type", "application/json")
         .extension(connect_info)
@@ -195,6 +166,7 @@ async fn chat_non_streaming(app: &Router, token: &str, model: &str) -> StatusCod
     let req = Request::builder()
         .method("POST")
         .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
         .header("Authorization", format!("Bearer {token}"))
         .header("content-type", "application/json")
         .extension(connect_info)
@@ -352,6 +324,7 @@ async fn make_state_with_ledger(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -396,6 +369,7 @@ async fn make_grant_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -601,6 +575,7 @@ async fn chat_forwards_prompt_cache_key_to_upstream() {
     let req = Request::builder()
         .method("POST")
         .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
         .header("Authorization", format!("Bearer {token}"))
         .header("content-type", "application/json")
         .extension(connect_info)
@@ -818,6 +793,7 @@ async fn webhook_rate_limited_after_limit() {
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(2, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -1054,6 +1030,7 @@ async fn make_sandbox_state(
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),

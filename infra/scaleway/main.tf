@@ -29,6 +29,7 @@ module "relay" {
   token_rate_limit_window_seconds   = var.token_rate_limit_window_seconds
   ip_rate_limit_requests            = var.ip_rate_limit_requests
   ip_rate_limit_window_seconds      = var.ip_rate_limit_window_seconds
+  trusted_proxy_hops                = var.trusted_proxy_hops
   webhook_rate_limit_requests       = var.webhook_rate_limit_requests
   webhook_rate_limit_window_seconds = var.webhook_rate_limit_window_seconds
 }

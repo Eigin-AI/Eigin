@@ -9,8 +9,6 @@ use std::time::Duration;
 
 use axum::body::to_bytes;
 use axum::http::{Request, StatusCode};
-use axum::middleware;
-use axum::routing::{get, post};
 use bytes::Bytes;
 use tower::util::ServiceExt;
 
@@ -140,6 +138,7 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
         mojeek_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -164,28 +163,9 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
     })
 }
 
+// Exercise the real, fully-layered router as deployed.
 fn router(state: Arc<eigin_relay::AppState>) -> axum::Router {
-    let authed = axum::Router::new()
-        .route(
-            "/v1/models",
-            get(eigin_relay::inference::catalog::handle_list),
-        )
-        .route(
-            "/v1/credits/redeem",
-            post(eigin_relay::credits::redeem::handle),
-        )
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            eigin_relay::require_eigin_key,
-        ));
-
-    axum::Router::new()
-        .route(
-            "/v1/chat/completions",
-            post(eigin_relay::inference::handler::handle),
-        )
-        .merge(authed)
-        .with_state(state)
+    eigin_relay::build_router(state)
 }
 
 async fn redeem(app: &axum::Router) -> String {

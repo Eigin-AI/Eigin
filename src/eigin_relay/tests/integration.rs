@@ -2,12 +2,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::Router;
 use axum::body::to_bytes;
 use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode};
-use axum::middleware;
-use axum::routing::{get, post};
 use tower::util::ServiceExt;
 
 mod mock_client {
@@ -101,6 +98,7 @@ async fn test_state_with_keys(
         mojeek_api_key: "test-api-key".to_string(),
         eigin_relay_keys,
         ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
         webhook_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
         search_pool_max: pool_max,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
@@ -122,26 +120,10 @@ async fn test_state_with_keys(
     })
 }
 
+// Exercise the real, fully-layered router so tests cover the middleware stack
+// (client-IP resolution + blanket per-IP limiting) exactly as deployed.
 fn router(state: Arc<eigin_relay::AppState>) -> axum::Router {
-    let authed = Router::new()
-        .route("/v1/search", get(eigin_relay::search::handle))
-        .route(
-            "/v1/credits/redeem",
-            post(eigin_relay::credits::redeem::handle),
-        )
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            eigin_relay::require_eigin_key,
-        ));
-
-    Router::new()
-        .route("/health", get(eigin_relay::health))
-        .route(
-            "/webhooks/apple/appstore",
-            post(eigin_relay::credits::apple::webhook::handle),
-        )
-        .merge(authed)
-        .with_state(state)
+    eigin_relay::build_router(state)
 }
 
 async fn call(app: &axum::Router, uri: &str, key: Option<&str>) -> axum::response::Response {
@@ -352,6 +334,142 @@ async fn search_upstream_error_returns_502() {
             .unwrap()
             .contains("connection refused")
     );
+}
+
+// --- Blanket per-IP layer + client-IP derivation ---
+
+async fn test_state_with_ip_limit(
+    ip_max: u32,
+    client: impl eigin_relay::SearchClient + 'static,
+) -> Arc<eigin_relay::AppState> {
+    use eigin_relay::credits::InMemoryLedger;
+    use eigin_relay::quota::InMemoryQuota;
+
+    Arc::new(eigin_relay::AppState {
+        search_client: Arc::new(client),
+        mojeek_api_key: "test-api-key".to_string(),
+        eigin_relay_keys: vec!["test-relay-key".to_string()],
+        ip_rate_limiter: eigin_relay::RateLimiter::new(ip_max, Duration::from_secs(60)),
+        trusted_proxy_hops: 1,
+        webhook_rate_limiter: eigin_relay::RateLimiter::new(100, Duration::from_secs(60)),
+        search_pool_max: 1_000_000,
+        search_window: Duration::from_secs(30 * 24 * 60 * 60),
+        quota: Arc::new(InMemoryQuota::default()),
+        ledger: Arc::new(InMemoryLedger::default()),
+        apple_verifier: Arc::new(FakeVerifier::failing()),
+        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+        product_credits: HashMap::new(),
+        token_encryption_key: [0u8; 32],
+        token_encryption_key_secondary: None,
+        sandbox_budget_credits: 25_000,
+        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
+        provider_clients: HashMap::new(),
+        provider_keys: HashMap::new(),
+        canonical_models: HashMap::new(),
+        alias_map: HashMap::new(),
+        admit_floor_millicredits: 50_000,
+        token_rate_limiter: eigin_relay::RateLimiter::new(100, Duration::from_secs(60)),
+    })
+}
+
+/// Like `call`, but sets an `X-Forwarded-For` header so the layer derives the
+/// client IP from it rather than the (fixed) peer address.
+async fn call_with_xff(
+    app: &axum::Router,
+    uri: &str,
+    key: Option<&str>,
+    xff: &str,
+) -> axum::response::Response {
+    let connect_info = ConnectInfo(std::net::SocketAddr::from(([10, 0, 0, 1], 8080)));
+    let mut req = Request::builder()
+        .uri(uri)
+        .extension(connect_info)
+        .header("x-forwarded-for", xff)
+        .body(axum::body::Body::empty())
+        .unwrap();
+    if let Some(k) = key {
+        req.headers_mut().insert(
+            axum::http::header::HeaderName::from_static("x-eigin-key"),
+            axum::http::HeaderValue::from_str(k).unwrap(),
+        );
+    }
+    app.clone().oneshot(req).await.unwrap()
+}
+
+// The blanket layer caps a route that had no in-handler limiter (`/v1/models`),
+// proving new routes are covered by default.
+#[tokio::test]
+async fn blanket_layer_caps_previously_uncapped_route() {
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let state = test_state_with_ip_limit(3, mock).await;
+    let app = router(state);
+
+    for _ in 0..3 {
+        let response = call(&app, "/v1/models", Some("test-relay-key")).await;
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+    let response = call(&app, "/v1/models", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+}
+
+// The limiter keys on the forwarded client IP, not the shared proxy peer:
+// distinct clients get independent buckets, and a spoofed leftmost entry can't
+// win a fresh bucket (the trusted rightmost hop decides the key).
+#[tokio::test]
+async fn rate_limit_keys_on_forwarded_client_not_proxy() {
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let state = test_state_with_ip_limit(2, mock).await;
+    let app = router(state);
+
+    let key = Some("test-relay-key");
+
+    // Client A (1.1.1.1) uses its two allowed requests, then is capped.
+    assert_eq!(
+        call_with_xff(&app, "/v1/models", key, "1.1.1.1")
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        call_with_xff(&app, "/v1/models", key, "1.1.1.1")
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        call_with_xff(&app, "/v1/models", key, "1.1.1.1")
+            .await
+            .status(),
+        StatusCode::TOO_MANY_REQUESTS
+    );
+
+    // Client B (2.2.2.2) has its own bucket and is unaffected.
+    assert_eq!(
+        call_with_xff(&app, "/v1/models", key, "2.2.2.2")
+            .await
+            .status(),
+        StatusCode::OK
+    );
+
+    // A spoofed leftmost entry is ignored; this keys on 1.1.1.1 (already capped).
+    assert_eq!(
+        call_with_xff(&app, "/v1/models", key, "9.9.9.9, 1.1.1.1")
+            .await
+            .status(),
+        StatusCode::TOO_MANY_REQUESTS
+    );
+}
+
+// `/health` is deliberately excluded from the blanket limiter (Scaleway probes it).
+#[tokio::test]
+async fn health_is_never_rate_limited() {
+    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let state = test_state_with_ip_limit(2, mock).await;
+    let app = router(state);
+
+    for _ in 0..5 {
+        assert_eq!(call(&app, "/health", None).await.status(), StatusCode::OK);
+    }
 }
 
 #[tokio::test]

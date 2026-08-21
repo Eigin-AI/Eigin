@@ -34,6 +34,7 @@ resource "scaleway_container" "relay" {
     TOKEN_RATE_LIMIT_WINDOW_SECONDS   = tostring(var.token_rate_limit_window_seconds)
     RATE_LIMIT_REQUESTS               = tostring(var.ip_rate_limit_requests)
     RATE_LIMIT_WINDOW_SECONDS         = tostring(var.ip_rate_limit_window_seconds)
+    TRUSTED_PROXY_HOPS                = tostring(var.trusted_proxy_hops)
     WEBHOOK_RATE_LIMIT_REQUESTS       = tostring(var.webhook_rate_limit_requests)
     WEBHOOK_RATE_LIMIT_WINDOW_SECONDS = tostring(var.webhook_rate_limit_window_seconds)
     MODELS_CONFIG_PATH                = "/config/models.toml"

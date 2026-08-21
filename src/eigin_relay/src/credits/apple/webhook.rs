@@ -13,10 +13,9 @@
 //! Note: REVOKE (family sharing revocation) is not currently handled — it maps
 //! to `NotificationType::Other` and is logged but takes no credit action.
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::extract::{ConnectInfo, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use bytes::Bytes;
@@ -25,6 +24,7 @@ use time::OffsetDateTime;
 
 use super::{AppleEnvironment, NotificationType, VerifiedNotification};
 use crate::AppState;
+use crate::client_ip::ClientIp;
 use crate::credits::ledger::{WalletOrigin, WalletStatus};
 use crate::credits::token;
 use crate::error::AppError;
@@ -46,7 +46,7 @@ pub struct WebhookRequest {
 
 pub async fn handle(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    ClientIp(ip): ClientIp,
     body: Bytes,
 ) -> Result<impl IntoResponse, AppError> {
     // Bound parse and verification work before either runs — this route is
@@ -54,7 +54,7 @@ pub async fn handle(
     // the body as raw bytes (rather than a `Json` extractor) keeps `serde_json`
     // parsing behind this check, matching the inference handler's admit-then-parse
     // order.
-    state.webhook_rate_limiter.check(addr.ip())?;
+    state.webhook_rate_limiter.check(ip)?;
 
     let req: WebhookRequest = match serde_json::from_slice(&body) {
         Ok(req) => req,
