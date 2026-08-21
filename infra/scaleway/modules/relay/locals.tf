@@ -14,5 +14,10 @@ locals {
 
   # Relay database connection string. Reused by the container secret and the output the
   # rotate-key tool consumes during a token-key rotation.
-  database_url = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://")}"
+  # sslmode=verify-full enforces TLS and validates the server certificate (chain + hostname);
+  # without it sqlx defaults to sslmode=prefer, which skips certificate validation.
+  # The endpoint already ships "?sslmode=require", so strip its query before setting ours.
+  # https://www.scaleway.com/en/docs/serverless-sql-databases/api-cli/secure-connection-ssl-tls/
+  db_endpoint  = split("?", trimprefix(scaleway_sdb_sql_database.db.endpoint, "postgres://"))[0]
+  database_url = "postgresql://${scaleway_iam_application.db.id}:${scaleway_iam_api_key.db.secret_key}@${local.db_endpoint}?sslmode=verify-full"
 }
