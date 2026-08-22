@@ -77,6 +77,7 @@ extension View {
         title: String,
         label: String? = nil,
         description: String? = nil,
+        descriptionContent: AnyView? = nil,
         detents: Set<PresentationDetent> = [.medium, .large],
         fitsContent: Bool = false,
         showsDismissButton: Bool = true,
@@ -89,6 +90,7 @@ extension View {
                 label: label,
                 title: title,
                 description: description,
+                descriptionContent: descriptionContent,
                 detents: detents,
                 fitsContent: fitsContent,
                 onDismiss: showsDismissButton ? { isPresented.wrappedValue = false } : nil,
@@ -107,6 +109,7 @@ private struct AppSheetContainer<Primary: View, Secondary: View>: View {
     let label: String?
     let title: String
     let description: String?
+    let descriptionContent: AnyView?
     let detents: Set<PresentationDetent>
     let fitsContent: Bool
     let onDismiss: (() -> Void)?
@@ -129,6 +132,7 @@ private struct AppSheetContainer<Primary: View, Secondary: View>: View {
                     label: label,
                     title: title,
                     description: description,
+                    descriptionContent: descriptionContent,
                     onDismiss: onDismiss
                 )
             },

@@ -17,6 +17,7 @@ struct PermissionRequest: Identifiable, Equatable {
     let id: String // tool call ID
     let toolName: String
     let toolDisplayName: String
+    let disclosure: ToolDisclosure?
 }
 
 /// The user's response to a permission request.
@@ -791,7 +792,8 @@ final class AgenticChatLoop {
                 pendingPermission = PermissionRequest(
                     id: call.id,
                     toolName: toolName,
-                    toolDisplayName: ToolRegistry.displayName(for: toolName)
+                    toolDisplayName: ToolRegistry.displayName(for: toolName),
+                    disclosure: executor.disclosure(for: call)
                 )
                 updateToolEvent(id: eventID, status: .awaitingPermission)
 

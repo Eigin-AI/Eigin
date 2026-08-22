@@ -83,6 +83,35 @@ struct CreateCalendarEventTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let title = ToolHelpers.stringArgument(toolCall, "title") else { return nil }
+
+        var summary = title
+        if let startString = ToolHelpers.stringArgument(toolCall, "start_date"),
+           let start = LocalDateFormatter.parse(startString)
+        {
+            let when: String = if let endString = ToolHelpers.stringArgument(toolCall, "end_date"),
+                                  let end = LocalDateFormatter.parse(endString)
+            {
+                Localized.Permission.Disclosure.range(
+                    LocalDateFormatter.string(from: start),
+                    LocalDateFormatter.string(from: end)
+                )
+            } else {
+                LocalDateFormatter.string(from: start)
+            }
+            summary = "\(title) (\(when))"
+        }
+        if let location = ToolHelpers.stringArgument(toolCall, "location") {
+            summary += ", \(location)"
+        }
+
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.addCalendarEvent,
+            detail: .inline(summary)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

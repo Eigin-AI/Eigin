@@ -88,6 +88,33 @@ struct ManageReminderTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let action = ToolHelpers.stringArgument(toolCall, "action") else { return nil }
+        let phrase: String
+        switch action {
+        case "create": phrase = Localized.Permission.Disclosure.reminderAdd
+        case "update": phrase = Localized.Permission.Disclosure.reminderUpdate
+        case "complete": phrase = Localized.Permission.Disclosure.reminderComplete
+        case "delete": phrase = Localized.Permission.Disclosure.reminderRemove
+        default: return nil
+        }
+        let title = ToolHelpers.stringArgument(toolCall, "title")
+        var due: String?
+        if let dueString = ToolHelpers.stringArgument(toolCall, "due_date"),
+           let date = LocalDateFormatter.parse(dueString)
+        {
+            due = Localized.Permission.Disclosure.due(LocalDateFormatter.string(from: date))
+        }
+
+        let summary: String? = switch (title, due) {
+        case (let title?, let due?): "\(title) (\(due))"
+        case (let title?, nil): title
+        case (nil, let due?): due
+        case (nil, nil): nil
+        }
+        return ToolDisclosure(actionPhrase: phrase, detail: summary.map { .inline($0) })
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

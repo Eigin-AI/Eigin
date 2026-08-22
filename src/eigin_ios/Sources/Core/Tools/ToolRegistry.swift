@@ -30,6 +30,10 @@ struct ToolRegistry: ToolExecutor {
         toolsByName[toolName]?.executionMode ?? .background
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        toolsByName[toolCall.function.name]?.disclosure(for: toolCall)
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         guard let tool = toolsByName[toolCall.function.name] else {
             return ToolResult(

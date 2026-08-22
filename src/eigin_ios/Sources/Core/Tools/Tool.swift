@@ -26,6 +26,9 @@ protocol Tool: Sendable {
     var defaultPermissionLevel: ToolPermissionLevel { get }
     /// How the loop handles this tool's execution. Defaults to `.background`.
     var executionMode: ToolExecutionMode { get }
+    /// Optional disclosure for the permission sheet, built from the call args.
+    /// Default `nil` keeps the generic "wants to use {tool}" prompt.
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure?
     func definition() -> ToolDefinition
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult
 }
@@ -50,5 +53,9 @@ extension Tool {
 
     var executionMode: ToolExecutionMode {
         .background
+    }
+
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        nil
     }
 }

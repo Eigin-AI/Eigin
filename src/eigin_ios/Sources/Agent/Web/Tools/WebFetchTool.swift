@@ -52,6 +52,14 @@ struct WebFetchTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let url = ToolHelpers.stringArgument(toolCall, "url") else { return nil }
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.fetchPageFrom,
+            detail: .inline(url)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

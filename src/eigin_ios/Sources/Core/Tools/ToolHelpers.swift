@@ -9,6 +9,17 @@ enum ToolHelpers {
         return obj
     }
 
+    /// A trimmed, non-empty string argument from a tool call, or nil.
+    /// Convenient for building permission disclosures.
+    static func stringArgument(_ toolCall: ToolCall, _ key: String) -> String? {
+        guard let args = parseArguments(toolCall.function.arguments),
+              let value = (args[key] as? String)?
+              .trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty
+        else { return nil }
+        return value
+    }
+
     /// Build a standardised tool result JSON string.
     ///
     /// Envelope: `{ "result": {…}, "errors": […], "warnings": […] }`

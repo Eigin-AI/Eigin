@@ -176,19 +176,28 @@ struct ChatFeed: View {
                     set: { if !$0 { presentedPermissionRequest = nil } }
                 ),
                 title: Localized.Permission.sheetTitle,
-                description: presentedPermissionRequest.map {
-                    Localized.Permission.wantsToUseFormat(context.agentName, $0.toolDisplayName)
+                descriptionContent: presentedPermissionRequest.map { request in
+                    AnyView(PermissionDisclosureText(
+                        agentName: context.agentName,
+                        toolDisplayName: request.toolDisplayName,
+                        disclosure: request.disclosure
+                    ))
                 },
-                detents: [.medium]
+                fitsContent: true
             ) {
-                PermissionRequestSheetContent(
-                    allowOnceLabel: Localized.Permission.allowOnce,
-                    allowForChatLabel: Localized.Permission.allowForChat,
-                    denyLabel: Localized.Permission.deny,
-                    onResponse: { response in
-                        interactions.onPermissionResponse?(response)
-                    }
-                )
+                if let request = presentedPermissionRequest {
+                    PermissionRequestSheetContent(
+                        agentName: context.agentName,
+                        toolDisplayName: request.toolDisplayName,
+                        disclosure: request.disclosure,
+                        allowOnceLabel: Localized.Permission.allowOnce,
+                        allowForChatLabel: Localized.Permission.allowForChat,
+                        denyLabel: Localized.Permission.deny,
+                        onResponse: { response in
+                            interactions.onPermissionResponse?(response)
+                        }
+                    )
+                }
             }
             .appSheet(
                 isPresented: Binding(
