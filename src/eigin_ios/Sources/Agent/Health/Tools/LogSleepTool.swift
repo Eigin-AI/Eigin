@@ -48,6 +48,26 @@ struct LogSleepTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let startString = ToolHelpers.stringArgument(toolCall, "start"),
+              let start = LocalDateFormatter.parse(startString),
+              let endString = ToolHelpers.stringArgument(toolCall, "end"),
+              let end = LocalDateFormatter.parse(endString)
+        else {
+            return ToolDisclosure(actionPhrase: Localized.Permission.Disclosure.logSleep)
+        }
+        let time = DateFormatter()
+        time.timeStyle = .short
+        time.dateStyle = .none
+        let range = Localized.Permission.Disclosure.range(
+            time.string(from: start), time.string(from: end)
+        )
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.logSleep,
+            detail: .inline(range)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

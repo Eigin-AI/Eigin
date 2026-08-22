@@ -47,6 +47,15 @@ struct CreateSpaceTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let name = ToolHelpers.stringArgument(toolCall, "name") else { return nil }
+        let instructions = ToolHelpers.stringArgument(toolCall, "instructions")
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.createSpaceNamed(name),
+            detail: instructions.map { .block($0) }
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

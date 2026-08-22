@@ -4,6 +4,9 @@ struct AppSheetHeader: View {
     var label: String?
     let title: String
     var description: String?
+    /// Rich, dynamic description in place of the plain `description` string.
+    /// Rendered in the header group so it inherits description spacing/inset.
+    var descriptionContent: AnyView?
     var onDismiss: (() -> Void)?
 
     @Environment(\.colors) private var colors
@@ -16,7 +19,9 @@ struct AppSheetHeader: View {
     }
 
     var body: some View {
-        HStack(alignment: label != nil || description != nil ? .top : .center) {
+        HStack(alignment: label != nil || description != nil || descriptionContent != nil ? .top :
+            .center)
+        {
             VStack(alignment: .leading, spacing: Sizing.PageLayout.HeaderGrouping.gap) {
                 if let label {
                     Text(label)
@@ -27,7 +32,9 @@ struct AppSheetHeader: View {
                     Text(title)
                         .typography(Typography.titleS)
                         .foregroundStyle(colors.text.standard.base)
-                    if let description {
+                    if let descriptionContent {
+                        descriptionContent
+                    } else if let description {
                         Text(description)
                             .typography(Typography.description)
                             .foregroundStyle(colors.text.standard.muted)

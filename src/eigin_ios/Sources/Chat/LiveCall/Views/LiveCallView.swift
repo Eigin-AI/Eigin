@@ -103,19 +103,28 @@ struct LiveCallView: View {
                 set: { if !$0 { presentedPermission = nil } }
             ),
             title: Localized.Permission.sheetTitle,
-            description: presentedPermission.map {
-                Localized.Permission.wantsToUseFormat(agent.name, $0.toolDisplayName)
+            descriptionContent: presentedPermission.map { request in
+                AnyView(PermissionDisclosureText(
+                    agentName: agent.name,
+                    toolDisplayName: request.toolDisplayName,
+                    disclosure: request.disclosure
+                ))
             },
-            detents: [.medium]
+            fitsContent: true
         ) {
-            PermissionRequestSheetContent(
-                allowOnceLabel: Localized.Permission.allowOnce,
-                allowForChatLabel: Localized.Permission.allowForChat,
-                denyLabel: Localized.Permission.deny,
-                onResponse: { response in
-                    service.chatLoop.resolvePermission(response)
-                }
-            )
+            if let request = presentedPermission {
+                PermissionRequestSheetContent(
+                    agentName: agent.name,
+                    toolDisplayName: request.toolDisplayName,
+                    disclosure: request.disclosure,
+                    allowOnceLabel: Localized.Permission.allowOnce,
+                    allowForChatLabel: Localized.Permission.allowForChat,
+                    denyLabel: Localized.Permission.deny,
+                    onResponse: { response in
+                        service.chatLoop.resolvePermission(response)
+                    }
+                )
+            }
         }
     }
 

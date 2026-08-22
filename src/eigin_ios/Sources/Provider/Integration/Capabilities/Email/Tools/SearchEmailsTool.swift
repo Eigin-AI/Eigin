@@ -58,6 +58,14 @@ struct SearchEmailsTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let query = ToolHelpers.stringArgument(toolCall, "query") else { return nil }
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.searchEmailFor,
+            detail: .inline(query)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
         guard let args = ToolHelpers.parseArguments(toolCall.function.arguments),

@@ -2385,10 +2385,124 @@ enum Localized {
             Localized.get("permission.waitingForUser")
         }
 
+        /// Permission sheet sentence with a tool-supplied action phrase. First argument is the
+        /// agent name, second is the action phrase.
+        static func wantsToFormat(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("permission.wantsToFormat"), p1, p2)
+        }
+
         /// A message explaining that a user has granted or denied permission to use a tool. The
         /// argument is a user-visible name for the tool.
         static func wantsToUseFormat(_ p1: String, _ p2: String) -> String {
             String(format: Localized.get("permission.wantsToUseFormat"), p1, p2)
+        }
+
+        enum Disclosure {
+            /// Action phrase shown on the permission sheet for a web search. Followed by the search
+            /// query.
+            static var searchWebFor: String {
+                Localized.get("permission.disclosure.searchWebFor")
+            }
+
+            /// "fetch a page from" (followed by the URL).
+            static var fetchPageFrom: String {
+                Localized.get("permission.disclosure.fetchPageFrom")
+            }
+
+            /// "send an email to {recipients}".
+            static func sendEmailTo(_ p1: String) -> String {
+                String(format: Localized.get("permission.disclosure.sendEmailTo"), p1)
+            }
+
+            /// "reply to an email".
+            static var replyToEmail: String {
+                Localized.get("permission.disclosure.replyToEmail")
+            }
+
+            /// "search your email for" (followed by the query).
+            static var searchEmailFor: String {
+                Localized.get("permission.disclosure.searchEmailFor")
+            }
+
+            /// "look up a food" (followed by the query).
+            static var lookUpFood: String {
+                Localized.get("permission.disclosure.lookUpFood")
+            }
+
+            /// "add a calendar event" (followed by the title).
+            static var addCalendarEvent: String {
+                Localized.get("permission.disclosure.addCalendarEvent")
+            }
+
+            /// "add a reminder" (followed by the title).
+            static var reminderAdd: String {
+                Localized.get("permission.disclosure.reminderAdd")
+            }
+
+            /// "update a reminder".
+            static var reminderUpdate: String {
+                Localized.get("permission.disclosure.reminderUpdate")
+            }
+
+            /// "complete a reminder".
+            static var reminderComplete: String {
+                Localized.get("permission.disclosure.reminderComplete")
+            }
+
+            /// "remove a reminder".
+            static var reminderRemove: String {
+                Localized.get("permission.disclosure.reminderRemove")
+            }
+
+            /// "log a meal" (followed by the meal name).
+            static var logMeal: String {
+                Localized.get("permission.disclosure.logMeal")
+            }
+
+            /// "log sleep".
+            static var logSleep: String {
+                Localized.get("permission.disclosure.logSleep")
+            }
+
+            /// "log a body measurement" (followed by the value).
+            static var logBodyMeasurement: String {
+                Localized.get("permission.disclosure.logBodyMeasurement")
+            }
+
+            /// "create a space called {name}".
+            static func createSpaceNamed(_ p1: String) -> String {
+                String(format: Localized.get("permission.disclosure.createSpaceNamed"), p1)
+            }
+
+            /// "update a core memory".
+            static var updateMemory: String {
+                Localized.get("permission.disclosure.updateMemory")
+            }
+
+            /// "change its name to" (followed by the new name).
+            static var changeNameTo: String {
+                Localized.get("permission.disclosure.changeNameTo")
+            }
+
+            /// "update its appearance".
+            static var updateAppearance: String {
+                Localized.get("permission.disclosure.updateAppearance")
+            }
+
+            /// "set its initiative to" (followed by the level).
+            static var setProactivityTo: String {
+                Localized.get("permission.disclosure.setProactivityTo")
+            }
+
+            /// A time or date range: "{start} to {end}".
+            static func range(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("permission.disclosure.rangeFormat"), p1, p2)
+            }
+
+            /// A reminder due date: "due {date}".
+            static func due(_ p1: String) -> String {
+                String(format: Localized.get("permission.disclosure.dueFormat"), p1)
+            }
         }
     }
 

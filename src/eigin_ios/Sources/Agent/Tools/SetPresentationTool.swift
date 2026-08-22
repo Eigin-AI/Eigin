@@ -67,6 +67,16 @@ struct SetPresentationTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        if let name = ToolHelpers.stringArgument(toolCall, "name") {
+            return ToolDisclosure(
+                actionPhrase: Localized.Permission.Disclosure.changeNameTo,
+                detail: .inline(name)
+            )
+        }
+        return ToolDisclosure(actionPhrase: Localized.Permission.Disclosure.updateAppearance)
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

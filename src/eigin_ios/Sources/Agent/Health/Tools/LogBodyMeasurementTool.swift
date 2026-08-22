@@ -49,6 +49,16 @@ struct LogBodyMeasurementTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let args = ToolHelpers.parseArguments(toolCall.function.arguments),
+              let weight = args["weight_kg"] as? Double
+        else { return nil }
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.logBodyMeasurement,
+            detail: .inline("\(weight.formatted()) kg")
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

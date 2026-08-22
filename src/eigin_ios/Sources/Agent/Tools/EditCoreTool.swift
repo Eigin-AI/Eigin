@@ -51,6 +51,14 @@ struct EditCoreTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        let newString = ToolHelpers.stringArgument(toolCall, "new_string")
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.updateMemory,
+            detail: newString.map { .block($0) }
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

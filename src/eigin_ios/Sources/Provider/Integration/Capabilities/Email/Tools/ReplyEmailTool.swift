@@ -45,6 +45,14 @@ struct ReplyEmailTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        let body = ToolHelpers.stringArgument(toolCall, "body")
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.replyToEmail,
+            detail: body.map { .block($0) }
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let args = ToolHelpers.parseArguments(toolCall.function.arguments) ?? [:]
 

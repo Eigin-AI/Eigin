@@ -7057,6 +7057,363 @@
         }
       }
     },
+    "permission.disclosure.addCalendarEvent" : {
+      "comment" : "Action phrase: add a calendar event. Followed by the title.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tilføje en kalenderbegivenhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "add a calendar event"
+          }
+        }
+      }
+    },
+    "permission.disclosure.changeNameTo" : {
+      "comment" : "Action phrase: change the agent's name. Followed by the new name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ændre sit navn til"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "change its name to"
+          }
+        }
+      }
+    },
+    "permission.disclosure.createSpaceNamed" : {
+      "comment" : "Action phrase: create a space. Argument is the space name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oprette et rum kaldet %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "create a space called %@"
+          }
+        }
+      }
+    },
+    "permission.disclosure.dueFormat" : {
+      "comment" : "A reminder's due date in a disclosure.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "forfalder %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "due %@"
+          }
+        }
+      }
+    },
+    "permission.disclosure.fetchPageFrom" : {
+      "comment" : "Action phrase: fetch a web page. Followed by the URL.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hente en side fra"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "fetch a page from"
+          }
+        }
+      }
+    },
+    "permission.disclosure.logBodyMeasurement" : {
+      "comment" : "Action phrase: log a body measurement. Followed by the value.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "registrere en kropsmåling"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "log a body measurement"
+          }
+        }
+      }
+    },
+    "permission.disclosure.logMeal" : {
+      "comment" : "Action phrase: log a meal. Followed by the meal name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "registrere et måltid"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "log a meal"
+          }
+        }
+      }
+    },
+    "permission.disclosure.logSleep" : {
+      "comment" : "Action phrase: log sleep.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "registrere søvn"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "log sleep"
+          }
+        }
+      }
+    },
+    "permission.disclosure.lookUpFood" : {
+      "comment" : "Action phrase: look up a food. Followed by the query.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "slå en fødevare op"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "look up a food"
+          }
+        }
+      }
+    },
+    "permission.disclosure.rangeFormat" : {
+      "comment" : "A time or date range shown in a disclosure.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ til %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "permission.disclosure.reminderAdd" : {
+      "comment" : "Action phrase: add a reminder. Followed by the title.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tilføje en påmindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "add a reminder"
+          }
+        }
+      }
+    },
+    "permission.disclosure.reminderComplete" : {
+      "comment" : "Action phrase: complete a reminder.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "fuldføre en påmindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "complete a reminder"
+          }
+        }
+      }
+    },
+    "permission.disclosure.reminderRemove" : {
+      "comment" : "Action phrase: remove a reminder.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "fjerne en påmindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "remove a reminder"
+          }
+        }
+      }
+    },
+    "permission.disclosure.reminderUpdate" : {
+      "comment" : "Action phrase: update a reminder.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "opdatere en påmindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "update a reminder"
+          }
+        }
+      }
+    },
+    "permission.disclosure.replyToEmail" : {
+      "comment" : "Action phrase: reply to an email.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "svare på en e-mail"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reply to an email"
+          }
+        }
+      }
+    },
+    "permission.disclosure.searchEmailFor" : {
+      "comment" : "Action phrase: search email. Followed by the query.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "søge i din e-mail efter"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "search your email for"
+          }
+        }
+      }
+    },
+    "permission.disclosure.searchWebFor" : {
+      "comment" : "Action phrase shown on the permission sheet for a web search. Followed by the search query.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "søge på nettet efter"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "search the web for"
+          }
+        }
+      }
+    },
+    "permission.disclosure.sendEmailTo" : {
+      "comment" : "Action phrase: send an email. Argument is the recipient(s).",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sende en e-mail til %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "send an email to %@"
+          }
+        }
+      }
+    },
+    "permission.disclosure.setProactivityTo" : {
+      "comment" : "Action phrase: set proactivity. Followed by the level.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sætte sit initiativ til"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "set its initiative to"
+          }
+        }
+      }
+    },
+    "permission.disclosure.updateAppearance" : {
+      "comment" : "Action phrase: change the agent's appearance.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "opdatere sit udseende"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "update its appearance"
+          }
+        }
+      }
+    },
+    "permission.disclosure.updateMemory" : {
+      "comment" : "Action phrase: the agent edits its own saved memory.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "opdatere en kernehukommelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "update a core memory"
+          }
+        }
+      }
+    },
     "permission.never" : {
       "comment" : "Permission level label — action is never allowed",
       "localizations" : {
@@ -7155,6 +7512,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Waiting for user permission..."
+          }
+        }
+      }
+    },
+    "permission.wantsToFormat" : {
+      "comment" : "Permission sheet sentence with a tool-supplied action phrase. First argument is the agent name, second is the action phrase.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ vil %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wants to %2$@"
           }
         }
       }

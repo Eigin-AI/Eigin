@@ -44,6 +44,14 @@ struct SetProactivityTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let level = ToolHelpers.stringArgument(toolCall, "level") else { return nil }
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.setProactivityTo,
+            detail: .inline(level)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

@@ -50,6 +50,21 @@ struct SendEmailTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let to = ToolHelpers.stringArgument(toolCall, "to") else { return nil }
+        // Include cc in the recipient line so every destination is disclosed.
+        let cc = ToolHelpers.stringArgument(toolCall, "cc")
+        let recipients = cc.map { "\(to), cc: \($0)" } ?? to
+        // Show subject and body together so the operator reviews what's sent.
+        let subject = ToolHelpers.stringArgument(toolCall, "subject")
+        let body = ToolHelpers.stringArgument(toolCall, "body")
+        let content = [subject, body].compactMap { $0 }.joined(separator: "\n\n")
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.sendEmailTo(recipients),
+            detail: content.isEmpty ? nil : .block(content)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let args = ToolHelpers.parseArguments(toolCall.function.arguments) ?? [:]
 

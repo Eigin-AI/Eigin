@@ -83,6 +83,22 @@ struct LogFoodTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let args = ToolHelpers.parseArguments(toolCall.function.arguments) else { return nil }
+        let mealName = ToolHelpers.stringArgument(toolCall, "meal_name")
+
+        var summary = mealName
+        if let calories = args["calories"] as? Double {
+            let kcal = "\(Int(calories.rounded()).formatted()) kcal"
+            summary = summary.map { "\($0) (\(kcal))" } ?? kcal
+        }
+
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.logMeal,
+            detail: summary.map { .inline($0) }
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 

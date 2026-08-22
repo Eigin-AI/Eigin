@@ -52,6 +52,18 @@ struct WebSearchTool: Tool {
         )
     }
 
+    func disclosure(for toolCall: ToolCall) -> ToolDisclosure? {
+        guard let args = ToolHelpers.parseArguments(toolCall.function.arguments),
+              let query = (args["query"] as? String)?
+              .trimmingCharacters(in: .whitespacesAndNewlines),
+              !query.isEmpty
+        else { return nil }
+        return ToolDisclosure(
+            actionPhrase: Localized.Permission.Disclosure.searchWebFor,
+            detail: .inline(query)
+        )
+    }
+
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 
