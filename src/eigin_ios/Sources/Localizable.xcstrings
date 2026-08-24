@@ -11318,6 +11318,23 @@
         }
       }
     },
+    "tools.contest.knowledge" : {
+      "comment" : "Display name for the contest-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markér viden som uafklaret"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flag Knowledge Conflict"
+          }
+        }
+      }
+    },
     "tools.delete.knowledge" : {
       "comment" : "Display name for the delete-knowledge tool",
       "localizations" : {
@@ -11331,6 +11348,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete Knowledge"
+          }
+        }
+      }
+    },
+    "tools.forget.knowledge" : {
+      "comment" : "Display name for the forget-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glem viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forget Knowledge"
+          }
+        }
+      }
+    },
+    "tools.merge.knowledge" : {
+      "comment" : "Display name for the merge-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flet viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merge Knowledge"
+          }
+        }
+      }
+    },
+    "tools.supersede.knowledge" : {
+      "comment" : "Display name for the supersede-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstat viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supersede Knowledge"
           }
         }
       }

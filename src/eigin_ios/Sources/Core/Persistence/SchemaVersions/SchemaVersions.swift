@@ -207,6 +207,65 @@ enum SchemaV7: VersionedSchema {
     }
 }
 
+// MARK: - V8: FirmSource gains memory signals
+
+/// Schema V8 turns `FirmSource` from a static store into a memory record: it
+/// gains `accessCount` and `lastAccessedAt` (use signals), `importance` (a
+/// safety net for rare-but-critical facts), and `expired` (soft-hidden state).
+/// Every other model is unchanged and reused from V7.
+///
+/// Model definitions that changed live in `SchemaV8/SchemaV8+FirmSource.swift`.
+enum SchemaV8: VersionedSchema {
+    static let versionIdentifier = Schema.Version(8, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV7.Agent.self,
+            SchemaV4.Chat.self,
+            SchemaV4.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV6.MCPServer.self,
+            SchemaV8.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
+        ]
+    }
+}
+
+// MARK: - V9: FirmSource gains a consolidation-review stamp
+
+/// Schema V9 adds `lastReviewedAt` to `FirmSource`, letting background
+/// consolidation rotate through the base least-recently-reviewed first. Every
+/// other model is unchanged and reused from V8.
+///
+/// Model definitions that changed live in `SchemaV9/SchemaV9+FirmSource.swift`.
+enum SchemaV9: VersionedSchema {
+    static let versionIdentifier = Schema.Version(9, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV7.Agent.self,
+            SchemaV4.Chat.self,
+            SchemaV4.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV6.MCPServer.self,
+            SchemaV9.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -229,18 +288,30 @@ enum SchemaV7: VersionedSchema {
 /// V6 → V7 is a lightweight stage: adding `autoModel` (defaulting to `true`) to
 /// `Agent`. Existing agents opt into automatic model selection starting from the
 /// model they already have, so nothing changes until a model actually misbehaves.
+///
+/// V7 → V8 is a custom stage: adding `accessCount`, `lastAccessedAt`,
+/// `importance` (0.5), and `expired` (false) to `FirmSource`. Existing memories
+/// are seeded as if touched once at upgrade time (`accessCount = 1`,
+/// `lastAccessedAt = now`) — a "migration-as-access" grace period. This mirrors
+/// creation-as-access for new memories, keeps ranking relevance-ordered (a
+/// uniform floor), and, crucially, stops pre-existing knowledge from looking
+/// ancient-and-unused the day eviction ships. Disuse from upgrade forward is
+/// what drives forgetting, not age that predates the feature.
+///
+/// V8 → V9 is a lightweight stage: adding `lastReviewedAt` (defaulting to `nil`)
+/// to `FirmSource`. No existing data is touched.
 enum EiginMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
-            SchemaV6.self, SchemaV7.self,
+            SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self,
         ]
     }
 
     static var stages: [MigrationStage] {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
-            migrateV6toV7,
+            migrateV6toV7, migrateV7toV8, migrateV8toV9,
         ]
     }
 
@@ -272,5 +343,27 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV6toV7 = MigrationStage.lightweight(
         fromVersion: SchemaV6.self,
         toVersion: SchemaV7.self
+    )
+
+    static let migrateV7toV8 = MigrationStage.custom(
+        fromVersion: SchemaV7.self,
+        toVersion: SchemaV8.self,
+        willMigrate: nil,
+        didMigrate: { context in
+            // Seed existing entries as touched once at upgrade time, so later
+            // eviction sweeps don't mistake them for ancient-and-unused.
+            let now = Date()
+            let sources = try context.fetch(FetchDescriptor<SchemaV8.FirmSource>())
+            for source in sources {
+                source.accessCount = 1
+                source.lastAccessedAt = now
+            }
+            try context.save()
+        }
+    )
+
+    static let migrateV8toV9 = MigrationStage.lightweight(
+        fromVersion: SchemaV8.self,
+        toVersion: SchemaV9.self
     )
 }

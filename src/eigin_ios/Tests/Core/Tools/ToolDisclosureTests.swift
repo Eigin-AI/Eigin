@@ -87,7 +87,7 @@ struct ToolDisclosureTests {
     // MARK: - Tier 2 (local writes)
 
     @Test func reminderActionMapsToPhrase() {
-        let tool = ManageReminderTool(canPromptUser: false)
+        let tool = ManageReminderTool(reminderService: nil, canPromptUser: false)
         let create = tool.disclosure(for: call(
             name: "manage_reminder",
             arguments: "{\"action\":\"create\",\"title\":\"Call mum\"}"
@@ -103,7 +103,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func bodyMeasurementFormatsWeight() {
-        let tool = LogBodyMeasurementTool(canPromptUser: false)
+        let tool = LogBodyMeasurementTool(healthService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(
             for: call(name: "log_body_measurement", arguments: "{\"weight_kg\":72.5}")
         )
@@ -111,7 +111,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func logFoodIncludesCalories() {
-        let tool = LogFoodTool(canPromptUser: false)
+        let tool = LogFoodTool(healthService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(
             name: "log_food", arguments: "{\"calories\":650,\"meal_name\":\"Lunch\"}"
         ))
@@ -119,7 +119,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func logFoodIgnoresMacros() {
-        let tool = LogFoodTool(canPromptUser: false)
+        let tool = LogFoodTool(healthService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(
             name: "log_food",
             arguments: "{\"calories\":650,\"meal_name\":\"Lunch\",\"protein_g\":30}"
@@ -128,7 +128,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func calendarEventIncludesWhenAndLocation() {
-        let tool = CreateCalendarEventTool(canPromptUser: false)
+        let tool = CreateCalendarEventTool(calendarService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(
             name: "create_calendar_event",
             arguments: "{\"title\":\"Dentist\",\"start_date\":\"2026-08-21 14:00\",\"end_date\":\"2026-08-21 15:00\",\"location\":\"Main St\"}"
@@ -139,7 +139,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func reminderIncludesDueDate() {
-        let tool = ManageReminderTool(canPromptUser: false)
+        let tool = ManageReminderTool(reminderService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(
             name: "manage_reminder",
             arguments: "{\"action\":\"create\",\"title\":\"Call mum\",\"due_date\":\"2026-08-21 09:00\"}"
@@ -150,7 +150,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func logSleepShowsRangeWhenValid() {
-        let tool = LogSleepTool(canPromptUser: false)
+        let tool = LogSleepTool(healthService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(
             name: "log_sleep",
             arguments: "{\"start\":\"2026-08-21 23:00\",\"end\":\"2026-08-22 07:00\"}"
@@ -159,7 +159,7 @@ struct ToolDisclosureTests {
     }
 
     @Test func logSleepFallsBackToActionOnlyOnInvalidDates() {
-        let tool = LogSleepTool(canPromptUser: false)
+        let tool = LogSleepTool(healthService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(
             for: call(name: "log_sleep", arguments: "{\"start\":\"a\",\"end\":\"b\"}")
         )

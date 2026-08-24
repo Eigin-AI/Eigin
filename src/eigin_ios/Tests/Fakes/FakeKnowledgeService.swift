@@ -100,6 +100,46 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
         entities["\(type).\(id)"] = nil
     }
 
+    /// Qualified IDs (`"fact.x"`) currently soft-hidden via ``setExpired``.
+    private(set) var expiredIDs: Set<String> = []
+
+    func setExpired(
+        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        record(spaceID: spaceID, agentID: agentID)
+        let key = "\(type).\(id)"
+        if expired { expiredIDs.insert(key) } else { expiredIDs.remove(key) }
+    }
+
+    /// Qualified IDs (`"fact.x"`) currently flagged via ``setContested``.
+    private(set) var contestedIDs: Set<String> = []
+
+    func setContested(
+        type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        record(spaceID: spaceID, agentID: agentID)
+        let key = "\(type).\(id)"
+        if contested { contestedIDs.insert(key) } else { contestedIDs.remove(key) }
+    }
+
+    /// Importance values (`"fact.x"` → value) set via ``setImportance``.
+    private(set) var importanceByID: [String: Double] = [:]
+
+    func setImportance(
+        type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        record(spaceID: spaceID, agentID: agentID)
+        importanceByID["\(type).\(id)"] = importance
+    }
+
+    /// Qualified IDs stamped via ``markReviewed``.
+    private(set) var reviewedIDs: [String] = []
+
+    func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws {
+        record(spaceID: spaceID, agentID: agentID)
+        reviewedIDs.append(contentsOf: qualifiedIDs)
+    }
+
     func isBundled(path: String) -> Bool {
         false
     }
@@ -130,16 +170,24 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
         nil
     }
 
+    func recordAccess(
+        type: String,
+        id: String,
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {}
+
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
         record(spaceID: spaceID, agentID: agentID)
         return sources
     }
 
-    func validEntities(
-        type: String, spaceID: UUID?, agentID: UUID?, at date: Date
+    func unexpiredEntities(
+        type: String, spaceID: UUID?, agentID: UUID?
     ) async throws -> [FirmEntity] {
         record(spaceID: spaceID, agentID: agentID)
-        return entities.values.filter { $0.entityType == type }
+        return entities.values.filter { $0.entityType == type && !expiredIDs.contains($0.id) }
     }
 
     // MARK: - Helpers

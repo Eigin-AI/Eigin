@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import SwiftData
 
@@ -148,13 +149,18 @@ enum BackgroundPromptService {
             category: .backgroundPrompt
         )
 
+        // For consolidation, compute the candidate list (duplicates, conflicts,
+        // stale entries) fresh and inject it into the prompt.
+        let knowledgeSection = await knowledgeConsolidationSection(mode: mode)
+
         let systemPrompt = await MainActor.run {
             BackgroundPrompt.build(
                 agent: agentRef,
                 proactivity: proactivity,
                 activeIntents: promptIntents,
                 recentNotifications: recentNotifications,
-                mode: mode
+                mode: mode,
+                additionalContext: knowledgeSection
             )
         }
 
@@ -265,6 +271,29 @@ enum BackgroundPromptService {
 
     private static func recordRun(mode: BackgroundRunMode) {
         UserDefaults.standard.set(Date(), forKey: mode.lastRunKey)
+    }
+
+    /// Deterministic consolidation candidates for the maintenance run, rendered
+    /// for prompt injection. Uses the shared knowledge service so it sees the
+    /// same graph the background tools will act on (global scope). Empty for
+    /// other modes or when nothing is flagged.
+    private static func knowledgeConsolidationSection(mode: BackgroundRunMode) async -> String {
+        guard mode == .maintenance else { return "" }
+        let knowledgeService = await MainActor.run { Container.shared.knowledgeService() }
+        let candidates = await MemoryConsolidation.candidates(
+            knowledgeService: knowledgeService, spaceID: nil, agentID: nil
+        )
+        // Stamp everything surfaced this run so the next run rotates to different
+        // work, even if the agent decided some items needed no action.
+        try? await knowledgeService.markReviewed(
+            candidates.reviewedIDs, spaceID: nil, agentID: nil
+        )
+        let section = candidates.promptSection()
+        // Empty list still needs an explicit stop, so the agent doesn't wander
+        // off and start browsing the base (e.g. read-only bundled knowledge).
+        return section.isEmpty
+            ? "Nothing stood out in your knowledge this time — there's nothing to consolidate. Stop."
+            : section
     }
 
     /// `UserDefaults` key for a given agent's initiative focus-rotation history.

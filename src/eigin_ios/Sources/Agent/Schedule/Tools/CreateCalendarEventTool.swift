@@ -93,7 +93,7 @@ struct CreateCalendarEventTool: Tool {
             let when: String = if let endString = ToolHelpers.stringArgument(toolCall, "end_date"),
                                   let end = LocalDateFormatter.parse(endString)
             {
-                Localized.Permission.Disclosure.range(
+                Localized.Permission.Disclosure.rangeFormat(
                     LocalDateFormatter.string(from: start),
                     LocalDateFormatter.string(from: end)
                 )

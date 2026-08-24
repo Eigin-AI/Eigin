@@ -64,6 +64,13 @@ struct FirmSourceTransfer: Codable {
     var embedding: [Double]?
     var createdAt: Date
     var updatedAt: Date
+    // Memory signals (SchemaV8). Optional so older exports still decode.
+    var accessCount: Double?
+    var lastAccessedAt: Date?
+    var importance: Double?
+    var expired: Bool?
+    var contested: Bool?
+    var lastReviewedAt: Date?
 }
 
 struct ProviderTransfer: Codable {
@@ -173,7 +180,10 @@ enum DataExportService {
                     id: f.id, path: f.path, content: f.content,
                     spaceID: f.spaceID, agentID: f.agentID,
                     chatID: f.chatID, embedding: f.embedding,
-                    createdAt: f.createdAt, updatedAt: f.updatedAt
+                    createdAt: f.createdAt, updatedAt: f.updatedAt,
+                    accessCount: f.accessCount, lastAccessedAt: f.lastAccessedAt,
+                    importance: f.importance, expired: f.expired,
+                    contested: f.contested, lastReviewedAt: f.lastReviewedAt
                 )
             },
             agentToolGrants: agentGrants.map { g in
@@ -312,6 +322,12 @@ enum DataExportService {
             source.embedding = f.embedding
             source.createdAt = f.createdAt
             source.updatedAt = f.updatedAt
+            source.accessCount = f.accessCount ?? 0
+            source.lastAccessedAt = f.lastAccessedAt
+            source.importance = f.importance ?? 0.5
+            source.expired = f.expired ?? false
+            source.contested = f.contested ?? false
+            source.lastReviewedAt = f.lastReviewedAt
             context.insert(source)
         }
 

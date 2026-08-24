@@ -42,6 +42,10 @@ enum BundledSkill {
             AddKnowledgeTool.capability,
             UpdateKnowledgeTool.capability,
             DeleteKnowledgeTool.capability,
+            ForgetKnowledgeTool.capability,
+            SupersedeKnowledgeTool.capability,
+            MergeKnowledgeTool.capability,
+            ContestKnowledgeTool.capability,
         ],
         alwaysActive: true
     )

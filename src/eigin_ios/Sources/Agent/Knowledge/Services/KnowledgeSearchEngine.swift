@@ -20,7 +20,9 @@ enum KnowledgeSearchEngine {
         /// Normalised `type.shortID` form, regardless of whether the
         /// underlying ``FirmEntity/id`` is already qualified.
         let qualifiedID: String
-        /// `max(cosine, keyword)` in the range `[0, 1]`.
+        /// Cue relevance `max(cosine, keyword)` plus memory boosts (recency ×
+        /// frequency + importance). Relevance stays primary; boosts reorder
+        /// near-ties. See ``MemoryRanking``.
         let score: Double
         /// Chat the underlying entity was created in, if any.
         let chatID: UUID?
@@ -76,7 +78,6 @@ enum KnowledgeSearchEngine {
             let entities = try await fetchEntities(
                 schemaName: schemaName,
                 includeExpired: includeExpired,
-                at: now,
                 knowledgeService: knowledgeService,
                 spaceID: spaceID,
                 agentID: agentID
@@ -103,14 +104,30 @@ enum KnowledgeSearchEngine {
                     )
                 }
 
-                let finalScore = max(embeddingScore, keywordScore)
-                guard finalScore > 0 else { continue }
+                // Cue relevance gates ranking: only cue-matched memories are
+                // considered, then reordered by their memory boosts.
+                let relevance = max(embeddingScore, keywordScore)
+                guard relevance > 0 else { continue }
+
+                // Hide expired memories unless explicitly requested.
+                if !includeExpired, source?.expired == true { continue }
+
+                let boost: Double = if let source {
+                    MemoryRanking.boost(
+                        accessCount: source.accessCount,
+                        lastAccessedAt: source.lastAccessedAt,
+                        importance: source.importance,
+                        now: now
+                    )
+                } else {
+                    0
+                }
 
                 let qualifiedID = "\(schemaName).\(shortID)"
                 results.append(ScoredEntity(
                     entity: entity,
                     qualifiedID: qualifiedID,
-                    score: finalScore,
+                    score: relevance + boost,
                     chatID: source?.chatID
                 ))
             }
@@ -178,7 +195,6 @@ enum KnowledgeSearchEngine {
     private static func fetchEntities(
         schemaName: String,
         includeExpired: Bool,
-        at date: Date,
         knowledgeService: any KnowledgeService,
         spaceID: UUID?,
         agentID: UUID?
@@ -199,8 +215,8 @@ enum KnowledgeSearchEngine {
             }
             return fetched
         } else {
-            return try await knowledgeService.validEntities(
-                type: schemaName, spaceID: spaceID, agentID: agentID, at: date
+            return try await knowledgeService.unexpiredEntities(
+                type: schemaName, spaceID: spaceID, agentID: agentID
             )
         }
     }

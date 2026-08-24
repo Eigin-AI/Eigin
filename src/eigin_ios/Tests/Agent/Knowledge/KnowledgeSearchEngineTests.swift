@@ -26,6 +26,40 @@ struct KnowledgeSearchEngineTests {
         return fs
     }
 
+    /// Make a FirmSource with an embedding and memory signals set.
+    private func source(
+        type: String,
+        id: String,
+        embedding: [Double],
+        accessCount: Double,
+        lastAccessedAt: Date?,
+        importance: Double = 0.5,
+        expired: Bool = false
+    ) -> FirmSource {
+        let fs = source(type: type, id: id, embedding: embedding)
+        fs.accessCount = accessCount
+        fs.lastAccessedAt = lastAccessedAt
+        fs.importance = importance
+        fs.expired = expired
+        return fs
+    }
+
+    /// Fake with two same-axis actors so both score identical relevance and
+    /// only the memory boosts differ.
+    private func twoActorsSameAxis() -> FakeKnowledgeService {
+        let fake = FakeKnowledgeService()
+        fake.entities["actor.a"] = namedEntity(type: "actor", id: "a", name: "A")
+        fake.entities["actor.b"] = namedEntity(type: "actor", id: "b", name: "B")
+        return fake
+    }
+
+    private func scoreOf(
+        _ results: [KnowledgeSearchEngine.ScoredEntity],
+        _ qid: String
+    ) -> Double? {
+        results.first { $0.qualifiedID == qid }?.score
+    }
+
     /// Unit vector along axis `i` in a 3-dim vector space. Cosine similarity
     /// between any two such vectors is 1 if the same axis, 0 if different.
     private func unit(_ i: Int) -> [Double] {
@@ -154,6 +188,123 @@ struct KnowledgeSearchEngineTests {
         )
         #expect(fake.receivedSpaceIDs.allSatisfy { $0 == spaceID })
         #expect(fake.receivedAgentIDs.allSatisfy { $0 == agentID })
+    }
+
+    // MARK: - Memory boosts
+
+    @Test func recentlyAndOftenUsedOutranksNeutralAtEqualRelevance() async throws {
+        let now = Date()
+        let fake = twoActorsSameAxis()
+        fake.sources = [
+            source(
+                type: "actor",
+                id: "a",
+                embedding: unit(0),
+                accessCount: 10,
+                lastAccessedAt: now
+            ),
+            source(
+                type: "actor",
+                id: "b",
+                embedding: unit(0),
+                accessCount: 0,
+                lastAccessedAt: nil
+            ),
+        ]
+        let results = try await KnowledgeSearchEngine.score(
+            queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        // Same relevance (1.0). A is used; B is neutral (boost 0).
+        #expect(scoreOf(results, "actor.b") == 1.0)
+        #expect(try #require(scoreOf(results, "actor.a")) > scoreOf(results, "actor.b")!)
+    }
+
+    @Test func freshUseOutranksStaleUseAtEqualFrequency() async throws {
+        let now = Date()
+        let fake = twoActorsSameAxis()
+        fake.sources = [
+            source(
+                type: "actor",
+                id: "a",
+                embedding: unit(0),
+                accessCount: 5,
+                lastAccessedAt: now
+            ),
+            source(
+                type: "actor",
+                id: "b",
+                embedding: unit(0),
+                accessCount: 5,
+                lastAccessedAt: now.addingTimeInterval(-90 * 86400)
+            ),
+        ]
+        let results = try await KnowledgeSearchEngine.score(
+            queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        #expect(try #require(scoreOf(results, "actor.a")) > scoreOf(results, "actor.b")!)
+        // Both used, so both above the neutral 1.0 baseline.
+        #expect(try #require(scoreOf(results, "actor.b")) > 1.0)
+    }
+
+    @Test func importanceBreaksTiesAroundNeutral() async throws {
+        let fake = twoActorsSameAxis()
+        fake.sources = [
+            source(
+                type: "actor",
+                id: "a",
+                embedding: unit(0),
+                accessCount: 0,
+                lastAccessedAt: nil,
+                importance: 0.9
+            ),
+            source(
+                type: "actor",
+                id: "b",
+                embedding: unit(0),
+                accessCount: 0,
+                lastAccessedAt: nil,
+                importance: 0.1
+            ),
+        ]
+        let results = try await KnowledgeSearchEngine.score(
+            queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        // Default importance (0.5) is neutral: high lifts above 1.0, low sinks below.
+        #expect(try #require(scoreOf(results, "actor.a")) > 1.0)
+        #expect(try #require(scoreOf(results, "actor.b")) < 1.0)
+    }
+
+    @Test func expiredHiddenByDefaultButQueryable() async throws {
+        let fake = twoActorsSameAxis()
+        fake.sources = [
+            source(
+                type: "actor",
+                id: "a",
+                embedding: unit(0),
+                accessCount: 0,
+                lastAccessedAt: nil,
+                expired: true
+            ),
+            source(
+                type: "actor",
+                id: "b",
+                embedding: unit(0),
+                accessCount: 0,
+                lastAccessedAt: nil,
+                expired: false
+            ),
+        ]
+        let hidden = try await KnowledgeSearchEngine.score(
+            queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        #expect(hidden.contains { $0.qualifiedID == "actor.b" })
+        #expect(!hidden.contains { $0.qualifiedID == "actor.a" })
+
+        let shown = try await KnowledgeSearchEngine.score(
+            queryEmbedding: unit(0), includeExpired: true,
+            knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        #expect(shown.contains { $0.qualifiedID == "actor.a" })
     }
 
     // MARK: - search()

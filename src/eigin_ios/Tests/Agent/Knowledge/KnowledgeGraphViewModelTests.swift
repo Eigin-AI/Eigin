@@ -98,18 +98,36 @@ struct KnowledgeGraphViewModelTests {
             nil
         }
 
+        func recordAccess(
+            type: String,
+            id: String,
+            kind: KnowledgeAccessKind,
+            spaceID: UUID?,
+            agentID: UUID?
+        ) async {}
+
         func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
             []
         }
 
-        func validEntities(
+        func unexpiredEntities(
             type: String,
             spaceID: UUID?,
-            agentID: UUID?,
-            at date: Date
+            agentID: UUID?
         ) async throws -> [FirmEntity] {
             []
         }
+
+        func setExpired(
+            type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+        ) async throws {}
+        func setContested(
+            type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
+        ) async throws {}
+        func setImportance(
+            type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
+        ) async throws {}
+        func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws {}
     }
 
     // MARK: - Helpers

@@ -74,12 +74,17 @@ struct UpdateKnowledgeTool: Tool {
                     ),
                     "data": .init(
                         type: "object",
-                        description: "Field name-value pairs to update. Use plain strings for text, enum, and reference values. References are strings like \"actor.alice\". Lists are arrays of strings. Set valid_until to expire entries (e.g. \"2026-03-25\" or \"2026-03-25 14:00\")."
+                        description: "Field name-value pairs to update. Use plain strings for text, enum, and reference values. References are strings like \"actor.alice\". Lists are arrays of strings. To retire an entry, use forget_knowledge or supersede_knowledge rather than editing it here."
                     ),
                     "tags": .init(
                         type: "array",
                         description: "Optional: replaces the entry's tags with this list.",
                         items: .init(type: "string")
+                    ),
+                    "importance": .init(
+                        type: "number",
+                        description: "Optional 0–1 importance. Raise above 0.5 for "
+                            + "rare-but-critical facts so they surface even when seldom used."
                     ),
                 ],
                 required: ["type", "id", "data"]
@@ -192,12 +197,33 @@ struct UpdateKnowledgeTool: Tool {
                 agentID: agentID,
                 chatID: chatID
             )
+            var result: [String: Any] = [
+                "id": "\(entityType).\(entityID)",
+                "status": "updated",
+            ]
+
+            if let importance = (args["importance"] as? NSNumber)?.doubleValue {
+                try? await knowledgeService.setImportance(
+                    type: entityType, id: entityID, importance: importance,
+                    spaceID: spaceID, agentID: agentID
+                )
+                result["importance"] = importance
+            }
+
+            // Gentle, non-blocking nudge if the updated entry now looks like a
+            // duplicate or contradiction of something else already known.
+            let similar = await KnowledgeConflictHint.similarExisting(
+                to: updated, knowledgeService: knowledgeService,
+                spaceID: spaceID, agentID: agentID
+            )
+            if !similar.isEmpty {
+                result["similar_existing"] = similar
+                result["reconcile_hint"] = KnowledgeConflictHint.message
+            }
+
             return ToolResult(
                 toolCallID: callID,
-                content: ToolHelpers.output(result: [
-                    "id": "\(entityType).\(entityID)",
-                    "status": "updated",
-                ]),
+                content: ToolHelpers.output(result: result),
                 isError: false
             )
         } catch {

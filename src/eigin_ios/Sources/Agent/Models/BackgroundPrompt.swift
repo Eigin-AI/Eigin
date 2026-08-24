@@ -34,7 +34,8 @@ enum BackgroundPrompt {
         activeIntents: [IntentSnapshot] = [],
         activeSkills: [Skill] = [],
         recentNotifications: [NotificationSnapshot] = [],
-        mode: BackgroundRunMode = .initiative
+        mode: BackgroundRunMode = .initiative,
+        additionalContext: String = ""
     ) -> String {
         // Background context (moment + proactivity)
         let context: String = switch proactivity {
@@ -102,6 +103,12 @@ enum BackgroundPrompt {
         for skill in skills {
             prompt += "\n\n" + skill.instruction
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        // Optional extra section (e.g. consolidation candidates), injected here.
+        let trimmedExtra = additionalContext.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedExtra.isEmpty {
+            prompt += "\n\n" + trimmedExtra
         }
 
         return prompt

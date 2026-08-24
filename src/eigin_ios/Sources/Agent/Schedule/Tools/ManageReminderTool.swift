@@ -103,7 +103,7 @@ struct ManageReminderTool: Tool {
         if let dueString = ToolHelpers.stringArgument(toolCall, "due_date"),
            let date = LocalDateFormatter.parse(dueString)
         {
-            due = Localized.Permission.Disclosure.due(LocalDateFormatter.string(from: date))
+            due = Localized.Permission.Disclosure.dueFormat(LocalDateFormatter.string(from: date))
         }
 
         let summary: String? = switch (title, due) {

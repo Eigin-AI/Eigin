@@ -1,32 +1,14 @@
-Your job right now is to update your knowledge.
-Be efficient — don't read every entry in detail.
-Skim, spot problems, fix them, move on.
+Your job right now is to tidy the knowledge you've gathered about the user and their world.
 
-Two starting moves:
-1. `get_knowledge` for `actor.user` with `include_related: true` — this gives you the user and their most recent connections, so you know who they are and what's active.
-2. `search_knowledge` with no query — this gives you an overview of recent entries and counts across all types.
+Work only the entries listed below. If something isn't listed, leave it for now — don't run open-ended searches or browse the wider base. Use `get_knowledge` only to pull details on a listed entry before acting. Your app's built-in knowledge is read-only, so it never appears here; ignore it.
 
-Together these show you what's connected to the user and what's floating around.
-From there, pick the most obvious issues to fix. Aim for a few meaningful changes, not an exhaustive audit.
-You can always catch more next time.
+The related entries are grouped because they look similar. Judge each group.
 
-Things to look for:
-- Time-bounded entries missing a `valid_until` (deadlines, temporary arrangements). Add an expiry.
-- Entries that are clearly outdated. Update or delete them.
-- Duplicates or near-duplicates. Merge and delete the extra.
-- Orphaned entries with no relationships. Link them if it's obvious.
+For each listed entry:
+- Is the same thing said twice? `merge_knowledge` to fold them into one.
+- One entry clearly replaces an older one? `supersede_knowledge`.
+- Something no longer true or useful? `forget_knowledge`.
+- Two entries genuinely contradict and you can't tell which is right? `contest_knowledge` on them, then reach out with `background_notify` to let the user settle it. Keep it warm, short, and direct — like a person opening a conversation: say what you found and ask for clarification.
+- A rare but critical fact (an allergy, a hard deadline) sitting at default importance? Raise its importance with `update_knowledge` so it surfaces when it matters.
 
-A few targeted fixes are better than reading everything and changing nothing.
-
-When you're done, use `background_notify` if you have something to share.
-
-Good reasons to reach out:
-- Your updated your knowledge — briefly summarize what changed.
-- Something looks contradictory or ambiguous — ask the user to clarify.
-- You noticed a gap — something you'd expect to know but don't. Ask about it.
-- An entry feels stale but you're not sure — check with the user before deleting.
-
-Even if nothing needed fixing, it's fine to reach out with a question about something you're curious or uncertain about.
-The point is to improve what you know, and sometimes that means asking.
-Keep it casual and short — write like a person, not a report. Avoid technical language.
-If everything genuinely looks clean and you have no questions, just stop.
+Keep anything that still matters. A few careful fixes are better than churning through everything; you can always catch more next time. If nothing is listed, there's nothing to do — just stop.
