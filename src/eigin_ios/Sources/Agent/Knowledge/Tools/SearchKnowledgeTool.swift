@@ -49,8 +49,8 @@ struct SearchKnowledgeTool: Tool {
             With a query: returns ranked results scored by semantic similarity and keyword match. \
             Without a query: returns an overview of what you know (counts and recent entries per type). \
             Results are summaries — use get_knowledge to retrieve full details. \
-            By default, only currently-valid entries are returned (expired entries are hidden). \
-            Set include_expired to true to search all entries regardless of validity.
+            By default, expired (forgotten or superseded) entries are hidden. \
+            Set include_expired to true to search them too.
             """,
             parameters: JSONSchema(
                 type: "object",
@@ -70,7 +70,7 @@ struct SearchKnowledgeTool: Tool {
                     ),
                     "include_expired": .init(
                         type: "boolean",
-                        description: "Include expired entries (valid_until in the past). Defaults to false."
+                        description: "Include expired (forgotten or superseded) entries. Defaults to false."
                     ),
                 ]
             )
@@ -204,6 +204,17 @@ struct SearchKnowledgeTool: Tool {
             spaceID: spaceID,
             agentID: agentID
         )
+
+        // Surfacing by search is an indirect use signal for each result shown.
+        for result in scored {
+            await knowledgeService.recordAccess(
+                type: result.entity.entityType,
+                id: result.qualifiedID,
+                kind: .indirect,
+                spaceID: spaceID,
+                agentID: agentID
+            )
+        }
 
         let entries: [[String: Any]] = scored.map { result in
             var entry: [String: Any] = [

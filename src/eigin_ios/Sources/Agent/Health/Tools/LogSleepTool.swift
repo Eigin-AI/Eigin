@@ -59,7 +59,7 @@ struct LogSleepTool: Tool {
         let time = DateFormatter()
         time.timeStyle = .short
         time.dateStyle = .none
-        let range = Localized.Permission.Disclosure.range(
+        let range = Localized.Permission.Disclosure.rangeFormat(
             time.string(from: start), time.string(from: end)
         )
         return ToolDisclosure(

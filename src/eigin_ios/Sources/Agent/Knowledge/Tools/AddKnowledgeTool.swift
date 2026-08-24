@@ -77,9 +77,7 @@ struct AddKnowledgeTool: Tool {
                         Use plain strings for text, enum, and reference values. \
                         References are strings like "actor.alice" or "thing.eigin". \
                         Lists are arrays of strings. \
-                        For notes, only "content" is required. \
-                        Optional: valid_from / valid_until for time-bounded knowledge \
-                        (e.g. "2026-03-25" or "2026-03-25 14:00").
+                        For notes, only "content" is required.
                         """
                     ),
                     "tags": .init(
@@ -87,6 +85,14 @@ struct AddKnowledgeTool: Tool {
                         description:
                         "Optional tags for searchability (e.g. [\"work\", \"preference\"]).",
                         items: .init(type: "string")
+                    ),
+                    "importance": .init(
+                        type: "number",
+                        description: """
+                        Optional 0–1 importance (default 0.5). Raise above 0.5 for \
+                        rare-but-critical facts (e.g. an allergy) so they surface \
+                        even when seldom used; lower for low-stakes trivia.
+                        """
                     ),
                 ],
                 required: ["type", "id", "data"]
@@ -175,7 +181,13 @@ struct AddKnowledgeTool: Tool {
         fields.append(FirmField(name: "created_at", value: .dateTime(value: now)))
 
         // Auto-link if no relationships provided.
-        let relationshipFields: Set = ["relates_to", "belongs_to", "uses", "describes"]
+        let relationshipFields: Set = [
+            "relates_to",
+            "belongs_to",
+            "uses",
+            "describes",
+            "supersedes",
+        ]
         let hasRelationships = fields.contains { relationshipFields.contains($0.name) }
 
         var autoLinkedIDs: [String] = []
@@ -208,8 +220,27 @@ struct AddKnowledgeTool: Tool {
                 "id": "\(entityType).\(entityID)", "status": "created",
             ]
 
+            if let importance = (args["importance"] as? NSNumber)?.doubleValue {
+                try? await knowledgeService.setImportance(
+                    type: entityType, id: entityID, importance: importance,
+                    spaceID: spaceID, agentID: agentID
+                )
+                result["importance"] = importance
+            }
+
             if !autoLinkedIDs.isEmpty {
                 result["auto_linked"] = autoLinkedIDs
+            }
+
+            // Gentle, non-blocking nudge if this looks like a duplicate or
+            // contradiction of something already known.
+            let similar = await KnowledgeConflictHint.similarExisting(
+                to: entity, knowledgeService: knowledgeService,
+                spaceID: spaceID, agentID: agentID
+            )
+            if !similar.isEmpty {
+                result["similar_existing"] = similar
+                result["reconcile_hint"] = KnowledgeConflictHint.message
             }
 
             return ToolResult(
@@ -277,12 +308,11 @@ struct AddKnowledgeTool: Tool {
         let sharedRelations: [String: String] = [
             "tags": "list",
             "created_at": "datetime",
-            "valid_from": "datetime",
-            "valid_until": "datetime",
             "relates_to": "list",
             "belongs_to": "list",
             "uses": "list",
             "describes": "list",
+            "supersedes": "list",
         ]
         return [
             "actor": sharedRelations.merging(["name": "string", "type": "enum"]) { _, new in new },

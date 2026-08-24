@@ -2398,110 +2398,110 @@ enum Localized {
         }
 
         enum Disclosure {
+            /// Action phrase: add a calendar event. Followed by the title.
+            static var addCalendarEvent: String {
+                Localized.get("permission.disclosure.addCalendarEvent")
+            }
+
+            /// Action phrase: change the agent's name. Followed by the new name.
+            static var changeNameTo: String {
+                Localized.get("permission.disclosure.changeNameTo")
+            }
+
+            /// Action phrase: create a space. Argument is the space name.
+            static func createSpaceNamed(_ p1: String) -> String {
+                String(format: Localized.get("permission.disclosure.createSpaceNamed"), p1)
+            }
+
+            /// A reminder's due date in a disclosure.
+            static func dueFormat(_ p1: String) -> String {
+                String(format: Localized.get("permission.disclosure.dueFormat"), p1)
+            }
+
+            /// Action phrase: fetch a web page. Followed by the URL.
+            static var fetchPageFrom: String {
+                Localized.get("permission.disclosure.fetchPageFrom")
+            }
+
+            /// Action phrase: log a body measurement. Followed by the value.
+            static var logBodyMeasurement: String {
+                Localized.get("permission.disclosure.logBodyMeasurement")
+            }
+
+            /// Action phrase: log a meal. Followed by the meal name.
+            static var logMeal: String {
+                Localized.get("permission.disclosure.logMeal")
+            }
+
+            /// Action phrase: log sleep.
+            static var logSleep: String {
+                Localized.get("permission.disclosure.logSleep")
+            }
+
+            /// Action phrase: look up a food. Followed by the query.
+            static var lookUpFood: String {
+                Localized.get("permission.disclosure.lookUpFood")
+            }
+
+            /// A time or date range shown in a disclosure.
+            static func rangeFormat(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("permission.disclosure.rangeFormat"), p1, p2)
+            }
+
+            /// Action phrase: add a reminder. Followed by the title.
+            static var reminderAdd: String {
+                Localized.get("permission.disclosure.reminderAdd")
+            }
+
+            /// Action phrase: complete a reminder.
+            static var reminderComplete: String {
+                Localized.get("permission.disclosure.reminderComplete")
+            }
+
+            /// Action phrase: remove a reminder.
+            static var reminderRemove: String {
+                Localized.get("permission.disclosure.reminderRemove")
+            }
+
+            /// Action phrase: update a reminder.
+            static var reminderUpdate: String {
+                Localized.get("permission.disclosure.reminderUpdate")
+            }
+
+            /// Action phrase: reply to an email.
+            static var replyToEmail: String {
+                Localized.get("permission.disclosure.replyToEmail")
+            }
+
+            /// Action phrase: search email. Followed by the query.
+            static var searchEmailFor: String {
+                Localized.get("permission.disclosure.searchEmailFor")
+            }
+
             /// Action phrase shown on the permission sheet for a web search. Followed by the search
             /// query.
             static var searchWebFor: String {
                 Localized.get("permission.disclosure.searchWebFor")
             }
 
-            /// "fetch a page from" (followed by the URL).
-            static var fetchPageFrom: String {
-                Localized.get("permission.disclosure.fetchPageFrom")
-            }
-
-            /// "send an email to {recipients}".
+            /// Action phrase: send an email. Argument is the recipient(s).
             static func sendEmailTo(_ p1: String) -> String {
                 String(format: Localized.get("permission.disclosure.sendEmailTo"), p1)
             }
 
-            /// "reply to an email".
-            static var replyToEmail: String {
-                Localized.get("permission.disclosure.replyToEmail")
-            }
-
-            /// "search your email for" (followed by the query).
-            static var searchEmailFor: String {
-                Localized.get("permission.disclosure.searchEmailFor")
-            }
-
-            /// "look up a food" (followed by the query).
-            static var lookUpFood: String {
-                Localized.get("permission.disclosure.lookUpFood")
-            }
-
-            /// "add a calendar event" (followed by the title).
-            static var addCalendarEvent: String {
-                Localized.get("permission.disclosure.addCalendarEvent")
-            }
-
-            /// "add a reminder" (followed by the title).
-            static var reminderAdd: String {
-                Localized.get("permission.disclosure.reminderAdd")
-            }
-
-            /// "update a reminder".
-            static var reminderUpdate: String {
-                Localized.get("permission.disclosure.reminderUpdate")
-            }
-
-            /// "complete a reminder".
-            static var reminderComplete: String {
-                Localized.get("permission.disclosure.reminderComplete")
-            }
-
-            /// "remove a reminder".
-            static var reminderRemove: String {
-                Localized.get("permission.disclosure.reminderRemove")
-            }
-
-            /// "log a meal" (followed by the meal name).
-            static var logMeal: String {
-                Localized.get("permission.disclosure.logMeal")
-            }
-
-            /// "log sleep".
-            static var logSleep: String {
-                Localized.get("permission.disclosure.logSleep")
-            }
-
-            /// "log a body measurement" (followed by the value).
-            static var logBodyMeasurement: String {
-                Localized.get("permission.disclosure.logBodyMeasurement")
-            }
-
-            /// "create a space called {name}".
-            static func createSpaceNamed(_ p1: String) -> String {
-                String(format: Localized.get("permission.disclosure.createSpaceNamed"), p1)
-            }
-
-            /// "update a core memory".
-            static var updateMemory: String {
-                Localized.get("permission.disclosure.updateMemory")
-            }
-
-            /// "change its name to" (followed by the new name).
-            static var changeNameTo: String {
-                Localized.get("permission.disclosure.changeNameTo")
-            }
-
-            /// "update its appearance".
-            static var updateAppearance: String {
-                Localized.get("permission.disclosure.updateAppearance")
-            }
-
-            /// "set its initiative to" (followed by the level).
+            /// Action phrase: set proactivity. Followed by the level.
             static var setProactivityTo: String {
                 Localized.get("permission.disclosure.setProactivityTo")
             }
 
-            /// A time or date range: "{start} to {end}".
-            static func range(_ p1: String, _ p2: String) -> String {
-                String(format: Localized.get("permission.disclosure.rangeFormat"), p1, p2)
+            /// Action phrase: change the agent's appearance.
+            static var updateAppearance: String {
+                Localized.get("permission.disclosure.updateAppearance")
             }
 
-            /// A reminder due date: "due {date}".
-            static func due(_ p1: String) -> String {
-                String(format: Localized.get("permission.disclosure.dueFormat"), p1)
+            /// Action phrase: the agent edits its own saved memory.
+            static var updateMemory: String {
+                Localized.get("permission.disclosure.updateMemory")
             }
         }
     }
@@ -3763,6 +3763,13 @@ enum Localized {
             }
         }
 
+        enum Contest {
+            /// Display name for the contest-knowledge tool
+            static var knowledge: String {
+                Localized.get("tools.contest.knowledge")
+            }
+        }
+
         enum Custom {
             /// Display name for the custom-provider tool
             static var provider: String {
@@ -3866,6 +3873,11 @@ enum Localized {
         }
 
         enum Forget {
+            /// Display name for the forget-knowledge tool
+            static var knowledge: String {
+                Localized.get("tools.forget.knowledge")
+            }
+
             /// Display name for the forget-memory tool
             static var memory: String {
                 Localized.get("tools.forget.memory")
@@ -3957,6 +3969,13 @@ enum Localized {
             /// Display name for the manage-vocabulary tool
             static var vocabulary: String {
                 Localized.get("tools.manage.vocabulary")
+            }
+        }
+
+        enum Merge {
+            /// Display name for the merge-knowledge tool
+            static var knowledge: String {
+                Localized.get("tools.merge.knowledge")
             }
         }
 
@@ -4162,6 +4181,13 @@ enum Localized {
             /// Display name for the move-chat-to-space tool
             static var moveChat: String {
                 Localized.get("tools.space.moveChat")
+            }
+        }
+
+        enum Supersede {
+            /// Display name for the supersede-knowledge tool
+            static var knowledge: String {
+                Localized.get("tools.supersede.knowledge")
             }
         }
 

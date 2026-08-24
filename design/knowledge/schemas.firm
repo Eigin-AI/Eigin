@@ -21,16 +21,6 @@ schema actor {
         required = false
     }
     field {
-        name = "valid_from"
-        type = "datetime"
-        required = false
-    }
-    field {
-        name = "valid_until"
-        type = "datetime"
-        required = false
-    }
-    field {
         name = "relates_to"
         type = "list"
         required = false
@@ -47,6 +37,11 @@ schema actor {
     }
     field {
         name = "describes"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "supersedes"
         type = "list"
         required = false
     }
@@ -75,16 +70,6 @@ schema thing {
         required = false
     }
     field {
-        name = "valid_from"
-        type = "datetime"
-        required = false
-    }
-    field {
-        name = "valid_until"
-        type = "datetime"
-        required = false
-    }
-    field {
         name = "relates_to"
         type = "list"
         required = false
@@ -101,6 +86,11 @@ schema thing {
     }
     field {
         name = "describes"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "supersedes"
         type = "list"
         required = false
     }
@@ -133,16 +123,6 @@ schema fact {
         required = false
     }
     field {
-        name = "valid_from"
-        type = "datetime"
-        required = false
-    }
-    field {
-        name = "valid_until"
-        type = "datetime"
-        required = false
-    }
-    field {
         name = "relates_to"
         type = "list"
         required = false
@@ -159,6 +139,11 @@ schema fact {
     }
     field {
         name = "describes"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "supersedes"
         type = "list"
         required = false
     }
@@ -191,16 +176,6 @@ schema output {
         required = false
     }
     field {
-        name = "valid_from"
-        type = "datetime"
-        required = false
-    }
-    field {
-        name = "valid_until"
-        type = "datetime"
-        required = false
-    }
-    field {
         name = "relates_to"
         type = "list"
         required = false
@@ -217,6 +192,11 @@ schema output {
     }
     field {
         name = "describes"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "supersedes"
         type = "list"
         required = false
     }
@@ -239,16 +219,6 @@ schema note {
         required = false
     }
     field {
-        name = "valid_from"
-        type = "datetime"
-        required = false
-    }
-    field {
-        name = "valid_until"
-        type = "datetime"
-        required = false
-    }
-    field {
         name = "relates_to"
         type = "list"
         required = false
@@ -265,6 +235,11 @@ schema note {
     }
     field {
         name = "describes"
+        type = "list"
+        required = false
+    }
+    field {
+        name = "supersedes"
         type = "list"
         required = false
     }

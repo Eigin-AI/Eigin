@@ -1,6 +1,21 @@
 import Foundation
 import SwiftData
 
+/// How deliberate a knowledge retrieval was. Direct recall (fetch by ID) is a
+/// stronger signal of usefulness than being surfaced by search or the hydrator,
+/// so it counts for more toward a memory's activation.
+enum KnowledgeAccessKind: Sendable {
+    case direct
+    case indirect
+
+    var weight: Double {
+        switch self {
+        case .direct: 1.0
+        case .indirect: 0.3
+        }
+    }
+}
+
 /// Manages the agent's unified knowledge base backed by Firm.
 ///
 /// Loads bundled schemas and seed entities first, then user/agent-created
@@ -29,6 +44,18 @@ protocol KnowledgeService: Sendable {
         -> [FirmEntity]
     func addEntity(_ entity: FirmEntity, spaceID: UUID?, agentID: UUID?, chatID: UUID?) async throws
     func deleteEntity(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws
+    func setExpired(
+        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws
+    func setContested(
+        type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws
+    func setImportance(
+        type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
+    ) async throws
+    /// Stamp `lastReviewedAt` on the given entries (qualified IDs like
+    /// `"fact.x"`), marking that consolidation surfaced them this run.
+    func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws
     func isBundled(path: String) -> Bool
     func getSource(path: String, spaceID: UUID?, agentID: UUID?) async throws -> String?
     func findEntitySource(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws
@@ -36,8 +63,15 @@ protocol KnowledgeService: Sendable {
     func getSchema(entityType: String, spaceID: UUID?, agentID: UUID?) async throws -> FirmSchema?
     func getFirmSource(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws
         -> FirmSource?
+    func recordAccess(
+        type: String,
+        id: String,
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource]
-    func validEntities(type: String, spaceID: UUID?, agentID: UUID?, at date: Date) async throws
+    func unexpiredEntities(type: String, spaceID: UUID?, agentID: UUID?) async throws
         -> [FirmEntity]
 }
 
@@ -50,6 +84,16 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     private var activeAgentID: UUID?
     private var activeAccessPolicy: SpaceAccessPolicy?
     private let modelContainer: ModelContainer
+
+    /// Recently recorded accesses, keyed by scope + entity. Used to debounce
+    /// repeat retrievals of the same entry within a single turn so one turn
+    /// can't inflate an entry's frequency (see ``recordAccess``).
+    private var recentAccess: [String: (weight: Double, at: Date)] = [:]
+
+    /// Window within which repeat accesses to the same entry are coalesced.
+    /// Sized to span a single agent turn (surface then fetch), not real elapsed
+    /// use across turns.
+    private let accessDebounceWindow: TimeInterval = 90
 
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -388,6 +432,10 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
                 chatID: chatID
             )
             source.embedding = embedding
+            // Treat creation as an implicit first access, so freshly-made
+            // entries start with some recency instead of neutral-zero.
+            source.accessCount = 1
+            source.lastAccessedAt = source.createdAt
             context.insert(source)
         }
         try context.save()
@@ -444,6 +492,119 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         try await rebuild(spaceID: spaceID, agentID: agentID, accessPolicy: activeAccessPolicy)
     }
 
+    /// Soft-hide (`expired = true`) or restore a memory. Expiry is a SwiftData
+    /// flag, not part of the Firm DSL, so no rebuild is needed — search reads it
+    /// live from the source. Acts on the shadow-winner visible in the scope.
+    func setExpired(
+        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+
+        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
+            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
+        }
+
+        let context = ModelContext(modelContainer)
+        let allSources = try context.fetch(
+            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        let visible = visibleSources(
+            from: allSources, spaceID: spaceID, agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        guard let source = visible.first(where: { $0.path == sourcePath }) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+
+        source.expired = expired
+        source.updatedAt = .now
+        try context.save()
+    }
+
+    /// Mark or clear the `contested` flag on a memory. Used by consolidation to
+    /// stop re-asking about a conflict it already surfaced to the user. Acts on
+    /// the shadow-winner visible in the scope; no rebuild needed.
+    func setContested(
+        type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+
+        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
+            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
+        }
+
+        let context = ModelContext(modelContainer)
+        let allSources = try context.fetch(
+            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        let visible = visibleSources(
+            from: allSources, spaceID: spaceID, agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        guard let source = visible.first(where: { $0.path == sourcePath }) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+
+        source.contested = contested
+        source.updatedAt = .now
+        try context.save()
+    }
+
+    func setImportance(
+        type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+
+        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
+            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
+        }
+
+        let context = ModelContext(modelContainer)
+        let allSources = try context.fetch(
+            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        let visible = visibleSources(
+            from: allSources, spaceID: spaceID, agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        guard let source = visible.first(where: { $0.path == sourcePath }) else {
+            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
+        }
+
+        source.importance = min(1, max(0, importance))
+        source.updatedAt = .now
+        try context.save()
+    }
+
+    func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws {
+        guard !qualifiedIDs.isEmpty else { return }
+        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+
+        let targets = Set(qualifiedIDs)
+        let context = ModelContext(modelContainer)
+        let allSources = try context.fetch(
+            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        )
+        let visible = visibleSources(
+            from: allSources, spaceID: spaceID, agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        let now = Date()
+        for source in visible where targets.contains(entityKey(for: source.path)) {
+            source.lastReviewedAt = now
+        }
+        try context.save()
+    }
+
     // MARK: - Source access
 
     func isBundled(path: String) -> Bool {
@@ -491,6 +652,66 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             ?? allSources.first { $0.path == targetPath }
     }
 
+    /// Record a retrieval of a memory, bumping its use signals.
+    ///
+    /// Resolves the shadow-winner ``FirmSource`` for `(type, id)` in the active
+    /// scope, adds the access weight to `accessCount`, and refreshes
+    /// `lastAccessedAt`. Debounced per turn: repeat accesses to the same memory
+    /// within ``accessDebounceWindow`` are coalesced, keeping the strongest kind
+    /// (direct beats indirect). Failures are swallowed — access tracking must
+    /// never break a retrieval.
+    func recordAccess(
+        type: String,
+        id: String,
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {
+        do {
+            try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+        } catch {
+            return
+        }
+
+        let shortID = id.hasPrefix("\(type).") ? String(id.dropFirst(type.count + 1)) : id
+        let targetKey = "\(type).\(shortID)"
+
+        // Per-turn debounce, keeping the strongest kind. If we already counted
+        // this memory this turn at an equal-or-stronger weight, skip; if this
+        // access is stronger (indirect → direct), apply only the upgrade delta.
+        let spaceLabel = spaceID?.uuidString ?? "nil"
+        let agentLabel = agentID?.uuidString ?? "nil"
+        let debounceKey = "\(spaceLabel)|\(agentLabel)|\(targetKey)"
+        let now = Date()
+        var deltaWeight = kind.weight
+        if let prior = recentAccess[debounceKey],
+           now.timeIntervalSince(prior.at) < accessDebounceWindow
+        {
+            if kind.weight <= prior.weight { return }
+            deltaWeight = kind.weight - prior.weight
+        }
+
+        let context = ModelContext(modelContainer)
+        guard let allSources = try? context.fetch(
+            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        ) else { return }
+
+        let visible = visibleSources(
+            from: allSources,
+            spaceID: spaceID,
+            agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        guard let winner = visible.first(where: { entityKey(for: $0.path) == targetKey })
+        else { return }
+
+        winner.accessCount += deltaWeight
+        winner.lastAccessedAt = now
+        try? context.save()
+
+        recentAccess[debounceKey] = (weight: kind.weight, at: now)
+    }
+
     /// Returns all visible FirmSource records for the current scope.
     /// Used by search to compute embedding scores across all knowledge.
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
@@ -507,25 +728,26 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         )
     }
 
-    func validEntities(
+    /// Entities of `type` visible in the scope, excluding soft-hidden
+    /// (`expired`) memories. Expiry lives on the `FirmSource` row, resolved to
+    /// the shadow winner, so a scoped copy can expire independently.
+    func unexpiredEntities(
         type: String,
         spaceID: UUID?,
-        agentID: UUID?,
-        at date: Date
+        agentID: UUID?
     ) async throws -> [FirmEntity] {
+        let visible = try await allVisibleSources(spaceID: spaceID, agentID: agentID)
+        let expiredKeys = Set(visible.filter(\.expired).map { entityKey(for: $0.path) })
         let entityIDs = try await listEntities(type: type, spaceID: spaceID, agentID: agentID)
         var result: [FirmEntity] = []
         for entityID in entityIDs {
+            let shortID = entityID.hasPrefix("\(type).")
+                ? String(entityID.dropFirst(type.count + 1)) : entityID
+            if expiredKeys.contains("\(type).\(shortID)") { continue }
             guard let entity = try await getEntity(
-                type: type,
-                id: entityID,
-                spaceID: spaceID,
-                agentID: agentID
-            )
-            else { continue }
-            if entity.isValid(at: date) {
-                result.append(entity)
-            }
+                type: type, id: entityID, spaceID: spaceID, agentID: agentID
+            ) else { continue }
+            result.append(entity)
         }
         return result
     }
@@ -534,6 +756,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
 enum KnowledgeServiceError: LocalizedError {
     case entityNotFound(type: String, id: String)
     case cannotDeleteBundled(type: String, id: String)
+    case cannotModifyBundled(type: String, id: String)
 
     var errorDescription: String? {
         switch self {
@@ -541,6 +764,8 @@ enum KnowledgeServiceError: LocalizedError {
             "Could not find a deletable source file for \(type).\(id). It may be stored in a legacy multi-entity file that needs manual cleanup."
         case .cannotDeleteBundled(let type, let id):
             "Cannot delete \(type).\(id) because it is a bundled knowledge entry."
+        case .cannotModifyBundled(let type, let id):
+            "Cannot modify \(type).\(id) because it is a bundled knowledge entry."
         }
     }
 }
@@ -598,6 +823,16 @@ struct PreviewKnowledgeService: KnowledgeService {
         chatID: UUID? = nil
     ) async throws {}
     func deleteEntity(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws {}
+    func setExpired(
+        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {}
+    func setContested(
+        type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {}
+    func setImportance(
+        type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
+    ) async throws {}
+    func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws {}
     func isBundled(path: String) -> Bool {
         false
     }
@@ -628,15 +863,22 @@ struct PreviewKnowledgeService: KnowledgeService {
         nil
     }
 
+    func recordAccess(
+        type: String,
+        id: String,
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {}
+
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
         []
     }
 
-    func validEntities(
+    func unexpiredEntities(
         type: String,
         spaceID: UUID?,
-        agentID: UUID?,
-        at date: Date
+        agentID: UUID?
     ) async throws -> [FirmEntity] {
         []
     }

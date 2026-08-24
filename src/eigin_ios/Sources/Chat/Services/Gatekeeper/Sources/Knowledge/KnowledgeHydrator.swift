@@ -144,6 +144,15 @@ enum KnowledgeHydrator {
                 agentID: agentID
             )
             results.append(entry)
+
+            // Surfacing to the agent is an indirect use signal.
+            await knowledgeService.recordAccess(
+                type: scored.entity.entityType,
+                id: scored.qualifiedID,
+                kind: .indirect,
+                spaceID: spaceID,
+                agentID: agentID
+            )
         }
         return results
     }
@@ -166,15 +175,13 @@ enum KnowledgeHydrator {
         guard !messageTokens.isEmpty else { return [] }
 
         var results: [KnowledgeSearchEngine.ScoredEntity] = []
-        let now = Date()
 
         for schemaName in nameMentionTypes {
             let entities: [FirmEntity]
             do {
-                entities = try await knowledgeService.validEntities(
+                entities = try await knowledgeService.unexpiredEntities(
                     type: schemaName,
-                    spaceID: spaceID, agentID: agentID,
-                    at: now
+                    spaceID: spaceID, agentID: agentID
                 )
             } catch {
                 // Missing schema or scoped-out type — silently skip.

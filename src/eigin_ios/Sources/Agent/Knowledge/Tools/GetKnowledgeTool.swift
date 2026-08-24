@@ -139,6 +139,15 @@ struct GetKnowledgeTool: Tool {
                 )
             }
 
+            // Direct recall — the strongest use signal.
+            await knowledgeService.recordAccess(
+                type: entityType,
+                id: entityID,
+                kind: .direct,
+                spaceID: spaceID,
+                agentID: agentID
+            )
+
             var result = await formatKnowledgeEntityWithRelations(
                 entity,
                 knowledgeService: knowledgeService,

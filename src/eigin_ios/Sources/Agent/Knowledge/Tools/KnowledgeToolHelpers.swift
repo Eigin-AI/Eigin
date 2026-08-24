@@ -72,6 +72,55 @@ func knowledgeShortID(from qualifiedID: String, type: String) -> String {
     return qualifiedID.hasPrefix(prefix) ? String(qualifiedID.dropFirst(prefix.count)) : qualifiedID
 }
 
+/// The five knowledge entity types.
+let knowledgeEntityTypes: Set<String> = ["actor", "thing", "fact", "output", "note"]
+
+/// Parse a qualified ID ("fact.likes_tea") into `(type, id)`, validating the
+/// type. Returns nil if the string isn't `type.id` with a known type.
+func parseQualifiedKnowledgeID(_ raw: String) -> (type: String, id: String)? {
+    let parts = raw.split(separator: ".", maxSplits: 1)
+    guard parts.count == 2 else { return nil }
+    let type = String(parts[0])
+    guard knowledgeEntityTypes.contains(type) else { return nil }
+    return (type, String(parts[1]))
+}
+
+/// Append entity references to a list relation on `entity`, then upsert it.
+/// Existing references are preserved; duplicates are skipped. No-op if every
+/// target is already linked.
+@MainActor
+func appendKnowledgeRelation(
+    _ relation: String,
+    targets: [String],
+    on entity: FirmEntity,
+    knowledgeService: any KnowledgeService,
+    spaceID: UUID?,
+    agentID: UUID?,
+    chatID: UUID?
+) async throws {
+    var fields = entity.fields
+    var existing: [FirmFieldValue] = []
+    if let field = fields.first(where: { $0.name == relation }),
+       case .list(let items) = field.value
+    {
+        existing = items
+    }
+    let existingIDs = Set(existing.compactMap { value -> String? in
+        if case .entityReference(let id) = value { id } else { nil }
+    })
+    let newRefs = targets
+        .filter { !existingIDs.contains($0) }
+        .map { FirmFieldValue.entityReference(entityId: $0) }
+    guard !newRefs.isEmpty else { return }
+
+    fields.removeAll { $0.name == relation }
+    fields.append(FirmField(name: relation, value: .list(items: existing + newRefs)))
+    let updated = FirmEntity(id: entity.id, entityType: entity.entityType, fields: fields)
+    try await knowledgeService.addEntity(
+        updated, spaceID: spaceID, agentID: agentID, chatID: chatID
+    )
+}
+
 /// Parse a created_at date from an entity's fields for sorting purposes.
 private func dateFromEntity(_ entity: FirmEntity) -> Date {
     if let field = entity.fields.first(where: { $0.name == "created_at" }),
