@@ -7,14 +7,13 @@ struct OnboardingAssessmentParseTests {
     @Test("Parses a clean JSON object")
     func parsesClean() {
         let raw = """
-        {"knows_user": true, "knows_values": false, "knows_identity": false, \
-        "sentiment": "engaged", "readiness": 0.4}
+        {"knows_user": true, "knows_identity": false, \
+        "pace": "eager", "readiness": 0.4}
         """
         let result = OnboardingAssessment.parse(raw)
         #expect(result?.knowsUser == true)
-        #expect(result?.knowsValues == false)
         #expect(result?.knowsIdentity == false)
-        #expect(result?.sentiment == .engaged)
+        #expect(result?.pace == .eager)
         #expect(result?.readiness == 0.4)
     }
 
@@ -23,13 +22,12 @@ struct OnboardingAssessmentParseTests {
         let raw = """
         Here is the assessment:
         ```json
-        {"knows_user": true, "knows_values": true, "knows_identity": true, \
-        "sentiment": "neutral", "readiness": 0.9}
+        {"knows_user": true, "knows_identity": true, \
+        "pace": "steady", "readiness": 0.9}
         ```
         """
         let result = OnboardingAssessment.parse(raw)
         #expect(result?.knowsUser == true)
-        #expect(result?.knowsValues == true)
         #expect(result?.knowsIdentity == true)
         #expect(result?.readiness == 0.9)
     }
@@ -38,7 +36,7 @@ struct OnboardingAssessmentParseTests {
     func defaultsAndClamps() {
         let result = OnboardingAssessment.parse(#"{"readiness": 1.7}"#)
         #expect(result?.knowsUser == false)
-        #expect(result?.sentiment == .neutral)
+        #expect(result?.pace == .steady)
         #expect(result?.readiness == 1.0)
     }
 
@@ -47,25 +45,25 @@ struct OnboardingAssessmentParseTests {
         #expect(OnboardingAssessment.parse("I could not assess this.") == nil)
     }
 
-    @Test("Unknown sentiment falls back to neutral")
-    func unknownSentiment() {
-        let result = OnboardingAssessment.parse(#"{"sentiment": "grumpy"}"#)
-        #expect(result?.sentiment == .neutral)
+    @Test("Unknown pace falls back to steady")
+    func unknownPace() {
+        let result = OnboardingAssessment.parse(#"{"pace": "frantic"}"#)
+        #expect(result?.pace == .steady)
     }
 }
 
 @Suite("OnboardingAssessment.Result")
 struct OnboardingAssessmentResultTests {
-    @Test("Missing lists only what is not yet known")
+    @Test("Missing lists only what is not yet known, and never lists values")
     func missing() {
         let result = OnboardingAssessment.Result(
-            knowsUser: true,
-            knowsValues: false,
+            knowsUser: false,
             knowsIdentity: false,
-            sentiment: .engaged,
+            pace: .steady,
             readiness: 0.3
         )
         #expect(result.missing.count == 2)
+        #expect(!result.missing.joined().lowercased().contains("value"))
     }
 
     @Test("Fill target starts above the setup baseline and reaches the full ring")
@@ -74,9 +72,8 @@ struct OnboardingAssessmentResultTests {
 
         let ready = OnboardingAssessment.Result(
             knowsUser: true,
-            knowsValues: true,
             knowsIdentity: true,
-            sentiment: .engaged,
+            pace: .steady,
             readiness: 1.0
         )
         #expect(ready.fillTarget == 1.0)
@@ -85,7 +82,7 @@ struct OnboardingAssessmentResultTests {
 
 @Suite("OnboardingPacing")
 struct OnboardingPacingTests {
-    let pacing = OnboardingPacing(maxTurns: 6)
+    let pacing = OnboardingPacing(maxTurns: 6, minTurns: 2)
     let language = "English"
 
     @Test("Forces finish once the budget is spent")
@@ -102,39 +99,62 @@ struct OnboardingPacingTests {
         #expect(hint.contains("done"))
     }
 
-    @Test("Reluctant sentiment tells the agent not to push")
-    func reluctantHint() {
+    @Test("Eager pace below the turn floor asks for one more exchange first")
+    func eagerBelowFloor() {
+        let result = OnboardingAssessment.Result(
+            knowsUser: false,
+            knowsIdentity: false,
+            pace: .eager,
+            readiness: 0.2
+        )
+        let hint = pacing.hint(result: result, turnsTaken: 1, language: language)
+        #expect(hint.lowercased().contains("brief"))
+        #expect(!hint.lowercased().contains("seal"))
+    }
+
+    @Test("Eager pace past the turn floor converges and seals without permission")
+    func eagerPastFloor() {
         let result = OnboardingAssessment.Result(
             knowsUser: true,
-            knowsValues: true,
             knowsIdentity: false,
-            sentiment: .reluctant,
+            pace: .eager,
             readiness: 0.5
         )
         let hint = pacing.hint(result: result, turnsTaken: 2, language: language)
-        #expect(hint.lowercased().contains("reluctant"))
+        #expect(hint.lowercased().contains("seal"))
+        #expect(hint.lowercased().contains("change it anytime"))
     }
 
-    @Test("High readiness nudges toward converging")
+    @Test("Reluctant pace past the turn floor also converges")
+    func reluctantPastFloor() {
+        let result = OnboardingAssessment.Result(
+            knowsUser: true,
+            knowsIdentity: false,
+            pace: .reluctant,
+            readiness: 0.5
+        )
+        let hint = pacing.hint(result: result, turnsTaken: 3, language: language)
+        #expect(hint.lowercased().contains("seal"))
+    }
+
+    @Test("Steady pace with high readiness nudges toward converging")
     func convergeHint() {
         let result = OnboardingAssessment.Result(
             knowsUser: true,
-            knowsValues: true,
             knowsIdentity: false,
-            sentiment: .engaged,
+            pace: .steady,
             readiness: 0.8
         )
         let hint = pacing.hint(result: result, turnsTaken: 2, language: language)
         #expect(hint.contains("identity for yourself"))
     }
 
-    @Test("Early on, the hint names what is still unknown")
+    @Test("Steady pace early on names what is still unknown")
     func earlyHint() {
         let result = OnboardingAssessment.Result(
             knowsUser: false,
-            knowsValues: false,
             knowsIdentity: false,
-            sentiment: .neutral,
+            pace: .steady,
             readiness: 0.1
         )
         let hint = pacing.hint(result: result, turnsTaken: 1, language: language)
