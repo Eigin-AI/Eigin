@@ -7,25 +7,24 @@ import Foundation
 /// The result drives the avatar's fill, the per-turn pacing hints, and the
 /// turn-budget backstop. It is never shown to the user.
 struct OnboardingAssessment {
-    enum Sentiment: String, Equatable {
-        case engaged
-        case neutral
+    /// How the user seems to want the conversation to move.
+    enum Pace: String, Equatable {
+        case eager
+        case steady
         case reluctant
     }
 
     struct Result: Equatable {
         var knowsUser: Bool
-        var knowsValues: Bool
         var knowsIdentity: Bool
-        var sentiment: Sentiment
-        /// How ready the agent is to wrap up and introduce itself, 0...1.
+        var pace: Pace
+        /// How far along this first meeting feels, 0...1.
         var readiness: Double
 
         /// What the agent still needs to establish, in plain language.
         var missing: [String] {
             var items: [String] = []
-            if !knowsUser { items.append("who they are and what matters to them") }
-            if !knowsValues { items.append("the shared values to build on") }
+            if !knowsUser { items.append("a little about who they are") }
             if !knowsIdentity { items.append("a name and identity for yourself") }
             return items
         }
@@ -39,9 +38,8 @@ struct OnboardingAssessment {
 
         static let empty = Result(
             knowsUser: false,
-            knowsValues: false,
             knowsIdentity: false,
-            sentiment: .neutral,
+            pace: .steady,
             readiness: 0
         )
     }
@@ -100,18 +98,16 @@ struct OnboardingAssessment {
 
         return Result(
             knowsUser: dto.knows_user ?? false,
-            knowsValues: dto.knows_values ?? false,
             knowsIdentity: dto.knows_identity ?? false,
-            sentiment: dto.sentiment.flatMap(Sentiment.init) ?? .neutral,
+            pace: dto.pace.flatMap(Pace.init) ?? .steady,
             readiness: min(max(dto.readiness ?? 0, 0), 1)
         )
     }
 
     private struct DTO: Decodable {
         let knows_user: Bool?
-        let knows_values: Bool?
         let knows_identity: Bool?
-        let sentiment: String?
+        let pace: String?
         let readiness: Double?
     }
 }

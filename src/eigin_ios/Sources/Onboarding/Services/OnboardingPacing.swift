@@ -9,6 +9,10 @@ struct OnboardingPacing {
     /// agent to ask permission and then seal on the following turn.
     var maxTurns: Int = 10
 
+    /// Minimum exchanges before an eager or reluctant pace can seal things.
+    /// Guards against wrapping up in error after a single message.
+    var minTurns: Int = 2
+
     func turnsRemaining(turnsTaken: Int) -> Int {
         max(0, maxTurns - turnsTaken)
     }
@@ -27,33 +31,33 @@ struct OnboardingPacing {
         var parts = ["Speak in \(language)."]
         let remaining = turnsRemaining(turnsTaken: turnsTaken)
         let missing = result.missing
+        let belowFloor = turnsTaken < minTurns
 
-        if result.sentiment == .reluctant {
-            parts.append(
-                "The user seems reluctant to share more. Don't push — work with "
-                    + "what you have and move toward wrapping up."
-            )
-        }
-
-        if remaining <= 1 {
-            parts.append(
-                "This is your last message. Propose your name and identity now "
-                    + "with set_presentation, then call done."
-            )
-        } else if remaining <= 2 || result.readiness >= 0.7 {
-            if missing.isEmpty {
-                parts.append(
-                    "You have what you need. Propose who you should be and wrap up "
-                        + "within about \(remaining) more exchange(s)."
-                )
+        switch result.pace {
+        case .eager, .reluctant:
+            if belowFloor {
+                parts.append(Prompt.Onboarding.Pacing.eagerBelowFloor)
             } else {
-                parts.append(
-                    "About \(remaining) exchange(s) left. Still to establish: "
-                        + missing.joined(separator: "; ") + ". Start converging."
-                )
+                parts.append(Prompt.Onboarding.Pacing.eagerConverge)
             }
-        } else if !missing.isEmpty {
-            parts.append("Still to learn: " + missing.joined(separator: "; ") + ".")
+
+        case .steady:
+            if remaining <= 1 {
+                parts.append(Prompt.Onboarding.Pacing.steadyLastMessage)
+            } else if remaining <= 2 || result.readiness >= 0.7 {
+                if missing.isEmpty {
+                    parts.append(Prompt.Onboarding.Pacing.steadyReady)
+                } else {
+                    parts.append(Prompt.Onboarding.Pacing.steadyProgress(
+                        remaining: String(remaining),
+                        missing: missing.joined(separator: "; ")
+                    ))
+                }
+            } else if !missing.isEmpty {
+                parts.append(Prompt.Onboarding.Pacing.steadyEarly(
+                    missing: missing.joined(separator: "; ")
+                ))
+            }
         }
 
         return parts.joined(separator: "\n")

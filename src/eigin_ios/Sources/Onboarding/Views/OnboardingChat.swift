@@ -276,7 +276,7 @@ struct OnboardingChat: View {
         )
 
         _ = try? await intentService.create(
-            content: "Get to know \(name) from scratch — be curious, ask questions, and build a real picture of who they are. Update knowledge as I learn. Resolve this once I have a solid foundation.",
+            content: Prompt.Onboarding.getToKnowIntent(name: name),
             agentID: agentID,
             spaceID: nil,
             chatID: chatID,

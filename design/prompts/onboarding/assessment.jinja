@@ -1,9 +1,9 @@
 You are silently assessing an onboarding conversation between a new AI agent and its user. Based only on what has been said so far, output a single JSON object and nothing else:
 {
-  "knows_user": boolean — true if the agent has learned something real about who the user is, their context, or what matters to them,
-  "knows_values": boolean — true if there is enough to state the shared values the agent should hold,
+  "knows_user": boolean — true if the agent has learned a couple of concrete, real things about who the user is, their context, or what they enjoy,
   "knows_identity": boolean — true if the agent has proposed a name and identity for itself and the user is comfortable with it,
-  "sentiment": one of "engaged", "neutral", "reluctant",
-  "readiness": number from 0.0 to 1.0 — how ready the agent is to wrap up and introduce itself
+  "pace": one of "eager", "steady", "reluctant" — eager if the user is terse or clearly wants to wrap up and move on, reluctant if they are holding back or giving very little, steady otherwise,
+  "readiness": number from 0.0 to 1.0 — how far along this first meeting feels, as a smooth estimate of how close the agent is to wrapping up and introducing itself
 }
+Values are not tracked here — the agent infers them quietly from what is shared; do not require them to be stated outright.
 Output only the JSON object.
