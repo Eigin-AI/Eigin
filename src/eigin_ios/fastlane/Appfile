@@ -1,0 +1,6 @@
+# Env-driven identity, same as project.yml. The per-env bundle id (base vs
+# `.dev`) is resolved in the Fastfile's `profile` helper, not here.
+app_identifier ENV.fetch("BUNDLE_ID")
+team_id ENV.fetch("DEVELOPMENT_TEAM")
+
+itc_team_id ENV["DEVELOPMENT_TEAM"]
