@@ -24,6 +24,8 @@ Top-level folders are **domain verticals**. Each domain owns its models, service
 - Xcode (with `xcode-select -s /Applications/Xcode.app/Contents/Developer`)
 - XcodeGen (`brew install xcodegen`)
 - SwiftFormat (`brew install swiftformat`)
+- Ruby 3.3.0 via [rbenv](https://github.com/rbenv/rbenv) (`brew install rbenv`),
+  for releasing with Fastlane. See `fastlane/README.md`.
 
 ## Environments
 

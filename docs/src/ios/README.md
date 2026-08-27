@@ -25,3 +25,6 @@ just generate       # Regenerate the project
 just build ios      # Build the iOS app
 just test ios       # Run the iOS test suite
 ```
+
+Releasing to TestFlight / the App Store is automated via Fastlane — see
+[Releasing](releasing.md).

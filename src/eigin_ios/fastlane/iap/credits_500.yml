@@ -1,0 +1,19 @@
+# Product IDs and credit amounts are the source of truth in
+# src/eigin_relay/config/products.toml — keep these in sync with it.
+# Apple requires unique product IDs across the whole team, so each env gets
+# its own id (same credit amount, so sandbox testing matches production).
+reference_name: 500 Credits
+type: CONSUMABLE
+review_note: Grants 500 Eigin credits for inference usage.
+product_id:
+  staging: eigin.credits.v1.apple.dev.500
+  production: eigin.credits.v2.apple.500
+# App Store-facing display name/description per locale. Apple requires at
+# least one non-empty localization and rejects an empty description.
+localizations:
+  en-US:
+    name: 500 Credits
+    description: Credits can be spent on cloud AI in Eigin.
+  da:
+    name: 500 credits
+    description: Credits kan bruges på cloud AI i Eigin.

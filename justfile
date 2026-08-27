@@ -119,6 +119,23 @@ build target="all" env="staging" verbose="false":
     @if [ "{{ target }}" = "ios"   ] || [ "{{ target }}" = "all" ]; then just _build-ios {{ env }} {{ verbose }}; fi
     @if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then just _build-relay {{ verbose }}; fi
 
+# --- Release ---
+
+# `env`/`track` default to the least public target: no args means staging beta.
+[doc('Build, sign and upload a release (target: ios, env: staging | production, track: beta | metadata | iap)')]
+release target="ios" env="staging" track="beta": generate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{ target }}" != "ios" ]; then echo "Unknown release target: {{ target }}"; exit 1; fi
+    case "{{ track }}" in
+        beta)     lane=beta ;;
+        metadata) lane=sync_metadata ;;
+        iap)      lane=sync_iap ;;
+        *) echo "Unknown release track: {{ track }}"; exit 1 ;;
+    esac
+    {{ tools }} run --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ({{ env }}/{{ track }})" -- \
+        sh -c 'cd {{ ios_dir }} && bundle exec fastlane ios '"$lane"' env:{{ env }}'
+
 # --- Grants ---
 
 # Generate or sign credit grant tokens.

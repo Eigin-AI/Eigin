@@ -1,0 +1,85 @@
+default_platform(:ios)
+skip_docs # fastlane overwrites fastlane/README.md with a lane listing otherwise
+
+# Resolves everything a release needs from the staging/production selector,
+# mirroring `just build ios <env>`. A future app is just a new BUNDLE_ID/team.
+def profile(env)
+  base = ENV.fetch("BUNDLE_ID")
+  production = env == "production"
+  {
+    env: env,
+    scheme: production ? "Eigin" : "EiginDev",
+    bundle_id: production ? base : "#{base}.dev",
+    team_id: ENV.fetch("DEVELOPMENT_TEAM"),
+  }
+end
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH"),
+  )
+end
+
+# Derives the build number from the latest TestFlight build + 1.
+def next_build_number(api_key, bundle_id)
+  latest_testflight_build_number(api_key: api_key, app_identifier: bundle_id) + 1
+end
+
+# Defaults let sync_metadata run out of the box (worktrees, OSS clones); real
+# releases should set these in .env, especially the phone number.
+def app_review_information
+  {
+    first_name: ENV.fetch("APP_REVIEW_FIRST_NAME", "App"),
+    last_name: ENV.fetch("APP_REVIEW_LAST_NAME", "Reviewer"),
+    email_address: ENV.fetch("EIGIN_SUPPORT_EMAIL", "support@eigin.ai"),
+    phone_number: ENV.fetch("APP_REVIEW_PHONE_NUMBER", "+44 844 209 0611"), # Apple's own format-example number
+  }
+end
+
+platform :ios do
+  desc "Build and upload to TestFlight (env: staging | production)"
+  lane :beta do |options|
+    p = profile(options.fetch(:env, "staging"))
+    api_key = asc_api_key
+
+    gym(
+      scheme: p[:scheme],
+      export_method: "app-store",
+      xcargs: "CURRENT_PROJECT_VERSION=#{next_build_number(api_key, p[:bundle_id])} -allowProvisioningUpdates",
+    )
+
+    pilot(
+      api_key: api_key,
+      app_identifier: p[:bundle_id],
+      skip_waiting_for_build_processing: true,
+    )
+  end
+
+  desc "Push App Store listing metadata (env: staging | production)"
+  lane :sync_metadata do |options|
+    p = profile(options.fetch(:env, "staging"))
+    api_key = asc_api_key
+    UI.important("Updating App Store listing for #{p[:bundle_id]} (#{p[:env]}) — check this exact app in App Store Connect")
+
+    deliver(
+      api_key: api_key,
+      app_identifier: p[:bundle_id], # no `name:` — app name is a one-time identity setting, managed by hand
+      app_review_information: app_review_information,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      force: true, # skip the interactive HTML diff prompt
+      run_precheck_before_submit: false,
+    )
+
+    UI.success("Updated App Store listing for #{p[:bundle_id]} (#{p[:env]})")
+  end
+
+  desc "Push in-app purchase definitions (env: staging | production)"
+  lane :sync_iap do |options|
+    p = profile(options.fetch(:env, "staging"))
+    sync_in_app_purchases(bundle_id: p[:bundle_id], env: p[:env], api_key: asc_api_key)
+  end
+end

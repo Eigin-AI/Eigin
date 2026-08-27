@@ -1,0 +1,4 @@
+# App Store Connect API private key. Never commit it: it can act on the whole
+# Apple Developer account. Download it once from App Store Connect (it can't
+# be re-downloaded later) and keep a personal backup outside the repo too.
+*.p8
