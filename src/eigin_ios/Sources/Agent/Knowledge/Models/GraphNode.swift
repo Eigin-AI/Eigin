@@ -28,6 +28,8 @@ struct GraphNode: Identifiable, Equatable {
     /// Number of other nodes within the label crowding radius. Used to suppress labels in dense
     /// areas.
     var nearbyCount: Int = 0
+    /// Whether this is a synthetic "+N more" node standing in for hidden neighbors.
+    var isExpander: Bool = false
 
     /// Whether this node has unexplored connections beyond what's visible.
     var hasUnexploredConnections: Bool {

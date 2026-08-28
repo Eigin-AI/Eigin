@@ -206,6 +206,62 @@ struct KnowledgeGraphViewModelTests {
         #expect(vm.nodes.contains { $0.id == "actor.alice" })
     }
 
+    // MARK: - Neighborhood Limits
+
+    @Test("Hop-1 neighbors are capped and overflow collapses into an expander node")
+    @MainActor
+    func hop1CapAddsExpander() async {
+        let service = FakeGraphKnowledgeService()
+        let user = makeEntity(type: "actor", id: "user", name: "User")
+        service.entities["actor.user"] = user
+
+        // Attach more neighbors than the cap allows.
+        let total = GraphConfig.maxHop1Neighbors + 4
+        var neighbors: [FirmEntity] = []
+        for index in 0 ..< total {
+            let thing = makeEntity(type: "thing", id: "t\(index)", name: "Thing \(index)")
+            service.entities[thing.id] = thing
+            service.relations[thing.id] = [user]
+            neighbors.append(thing)
+        }
+        service.relations["actor.user"] = neighbors
+
+        let vm = KnowledgeGraphViewModel(knowledgeService: service, agentID: nil)
+        await vm.loadInitialGraph()
+
+        let realHop1 = vm.nodes.filter { $0.hop == 1 && !$0.isExpander }
+        let expanders = vm.nodes.filter(\.isExpander)
+        #expect(realHop1.count == GraphConfig.maxHop1Neighbors)
+        #expect(expanders.count == 1)
+        #expect(expanders.first?.displayName == "+4 more")
+    }
+
+    @Test("Expanding reveals the hidden neighbors and removes the expander")
+    @MainActor
+    func expandRevealsHiddenNeighbors() async {
+        let service = FakeGraphKnowledgeService()
+        let user = makeEntity(type: "actor", id: "user", name: "User")
+        service.entities["actor.user"] = user
+
+        let total = GraphConfig.maxHop1Neighbors + 4
+        var neighbors: [FirmEntity] = []
+        for index in 0 ..< total {
+            let thing = makeEntity(type: "thing", id: "t\(index)", name: "Thing \(index)")
+            service.entities[thing.id] = thing
+            service.relations[thing.id] = [user]
+            neighbors.append(thing)
+        }
+        service.relations["actor.user"] = neighbors
+
+        let vm = KnowledgeGraphViewModel(knowledgeService: service, agentID: nil)
+        await vm.loadInitialGraph()
+        await vm.expandMore()
+
+        let realHop1 = vm.nodes.filter { $0.hop == 1 && !$0.isExpander }
+        #expect(realHop1.count == total)
+        #expect(!vm.nodes.contains { $0.isExpander })
+    }
+
     // MARK: - Edges
 
     @Test("Edges are deduplicated between connected nodes")

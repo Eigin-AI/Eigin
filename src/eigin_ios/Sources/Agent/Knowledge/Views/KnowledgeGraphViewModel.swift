@@ -30,6 +30,10 @@ final class KnowledgeGraphViewModel {
     private var nodeCache: [String: GraphNode] = [:]
     /// Maps entity ID to its neighbor IDs.
     private var neighborCache: [String: Set<String>] = [:]
+    /// Focus node's hop-1 neighbor IDs, ranked by connectedness (most first).
+    private var hop1Ranked: [String] = []
+    /// How many top-ranked hop-1 neighbors are currently revealed.
+    private var hop1VisibleCount: Int = 0
 
     /// The live force simulation state.
     private var simulation: ForceLayout?
@@ -101,6 +105,8 @@ final class KnowledgeGraphViewModel {
 
         // Clear previous neighborhood — each focus is a clean slate.
         neighborCache.removeAll()
+        // Drop any stale expander node from a previous focus.
+        nodeCache = nodeCache.filter { !$0.key.hasPrefix(Self.expanderPrefix) }
 
         focusID = entityID
 
@@ -109,36 +115,105 @@ final class KnowledgeGraphViewModel {
             await loadEntity(entityID)
         }
 
-        // Load hop-1 neighbors.
+        // Load hop-1 neighbors (one query).
         await loadNeighbors(for: entityID)
 
-        // Load hop-2: each hop-1 neighbor's connections.
-        let hop1IDs = neighborCache[entityID] ?? []
-        for hop1ID in hop1IDs {
-            await loadNeighbors(for: hop1ID)
+        // Rank hop-1 neighbors by connectedness so the most relevant show first.
+        // Uses the cheap in-memory estimate already stored on cached nodes, so we
+        // avoid a getRelated query per neighbor just to rank them.
+        hop1Ranked = (neighborCache[entityID] ?? []).sorted {
+            (nodeCache[$0]?.relationCount ?? 0) > (nodeCache[$1]?.relationCount ?? 0)
+        }
+        hop1VisibleCount = min(GraphConfig.maxHop1Neighbors, hop1Ranked.count)
+
+        let (allIDs, hopMap) = await buildNeighborhood(focus: entityID)
+        applyNeighborhood(
+            allIDs: allIDs,
+            hopMap: hopMap,
+            previouslyVisible: previouslyVisible,
+            animated: animated
+        )
+    }
+
+    /// Reveal the next page of hidden hop-1 neighbors (tapped the "+N more" node).
+    func expandMore() async {
+        guard let focus = focusID else { return }
+        let previouslyVisible = Set(simVisibleIDs)
+
+        hop1VisibleCount = min(
+            hop1VisibleCount + GraphConfig.maxHop1Neighbors,
+            hop1Ranked.count
+        )
+
+        // Drop the old expander so it's re-created (or omitted) with a fresh count.
+        let eid = Self.expanderID(for: focus)
+        nodeCache.removeValue(forKey: eid)
+        neighborCache.removeValue(forKey: eid)
+
+        let (allIDs, hopMap) = await buildNeighborhood(focus: focus)
+        applyNeighborhood(
+            allIDs: allIDs,
+            hopMap: hopMap,
+            previouslyVisible: previouslyVisible,
+            animated: true
+        )
+    }
+
+    /// Build the visible node set for `focus`: capped hop-1, capped hop-2 per
+    /// neighbor, plus a "+N more" expander node when hop-1 overflows.
+    private func buildNeighborhood(focus: String) async -> ([String], [String: Int]) {
+        let visibleHop1 = Array(hop1Ranked.prefix(hop1VisibleCount))
+
+        // Load hop-2 only for the visible hop-1 neighbors (cached after first use).
+        for id in visibleHop1 {
+            await loadNeighbors(for: id)
         }
 
-        // Build the full target neighborhood.
-        var allIDs: [String] = [entityID]
-        var hopMap: [String: Int] = [entityID: 0]
+        var allIDs: [String] = [focus]
+        var hopMap: [String: Int] = [focus: 0]
 
-        for neighborID in hop1IDs {
-            guard nodeCache[neighborID] != nil else { continue }
-            allIDs.append(neighborID)
-            hopMap[neighborID] = 1
+        for id in visibleHop1 where nodeCache[id] != nil {
+            allIDs.append(id)
+            hopMap[id] = 1
         }
-        for hop1ID in hop1IDs {
-            let hop2IDs = neighborCache[hop1ID] ?? []
-            for hop2ID in hop2IDs {
-                guard !hopMap.keys.contains(hop2ID) else { continue }
-                guard nodeCache[hop2ID] != nil else { continue }
+
+        // Hop-2, capped per neighbor and ranked by connectedness.
+        for hop1ID in visibleHop1 {
+            let hop2Ranked = (neighborCache[hop1ID] ?? []).sorted {
+                (nodeCache[$0]?.relationCount ?? 0) > (nodeCache[$1]?.relationCount ?? 0)
+            }
+            var added = 0
+            for hop2ID in hop2Ranked {
+                guard added < GraphConfig.maxHop2PerNeighbor else { break }
+                guard !hopMap.keys.contains(hop2ID), nodeCache[hop2ID] != nil else { continue }
                 allIDs.append(hop2ID)
                 hopMap[hop2ID] = 2
+                added += 1
             }
         }
 
+        // Collapse hidden hop-1 neighbors into a single expander node.
+        let hiddenCount = hop1Ranked.count - visibleHop1.count
+        if hiddenCount > 0 {
+            let eid = Self.expanderID(for: focus)
+            nodeCache[eid] = Self.makeExpanderNode(id: eid, hiddenCount: hiddenCount)
+            neighborCache[eid] = [focus]
+            allIDs.append(eid)
+            hopMap[eid] = 1
+        }
+
+        return (allIDs, hopMap)
+    }
+
+    /// Seed pop-in state, rebuild the simulation, and schedule staggered reveals.
+    private func applyNeighborhood(
+        allIDs: [String],
+        hopMap: [String: Int],
+        previouslyVisible: Set<String>,
+        animated: Bool
+    ) {
         // Split into: nodes already on screen (instant) vs new nodes (staggered reveal).
-        let newIDs = allIDs.filter { !previouslyVisible.contains($0) && $0 != entityID }
+        let newIDs = allIDs.filter { !previouslyVisible.contains($0) && $0 != focusID }
 
         // Pre-set new nodes to invisible so the simulation includes them at zero presence.
         if animated {
@@ -457,7 +532,10 @@ final class KnowledgeGraphViewModel {
             var nearby = 0
             for (j, otherPos) in positions.enumerated() where j != index {
                 let dx = simNode.position.x - otherPos.x
+                // Cheap bounding-box reject before the squared-distance test.
+                if abs(dx) > GraphConfig.labelCrowdingRadius { continue }
                 let dy = simNode.position.y - otherPos.y
+                if abs(dy) > GraphConfig.labelCrowdingRadius { continue }
                 if dx * dx + dy * dy < crowdingRadiusSq {
                     nearby += 1
                 }
@@ -475,7 +553,8 @@ final class KnowledgeGraphViewModel {
                     position: node.position,
                     appearScale: node.appearScale,
                     displaySize: node.displaySize,
-                    nearbyCount: node.nearbyCount
+                    nearbyCount: node.nearbyCount,
+                    isExpander: node.isExpander
                 )
             }
             resultNodes.append(node)
@@ -486,9 +565,19 @@ final class KnowledgeGraphViewModel {
     // MARK: - Data Loading
 
     private func findStartingEntity() async throws -> FirmEntity? {
+        // Prefer the user's own actor when present.
+        if let user = try? await knowledgeService.getEntity(
+            type: "actor", id: "user", spaceID: nil, agentID: agentID
+        ) {
+            return user
+        }
+
+        // Otherwise pick the best candidate by a cheap in-memory score, avoiding a
+        // getRelated query per entity. Actors are strongly preferred; ties break on
+        // the estimated relation count from the entity's own fields.
         let types = ["actor", "thing", "fact", "output", "note"]
         var bestEntity: FirmEntity?
-        var bestRelCount = -1
+        var bestScore = -1
 
         for type in types {
             let ids = try await knowledgeService.listEntities(
@@ -501,26 +590,11 @@ final class KnowledgeGraphViewModel {
                     )
                 else { continue }
 
-                if entity.id == "actor.user" {
-                    return entity
-                }
-
-                // Prefer actor entities (user's actor).
-                if type == "actor", bestEntity?.entityType != "actor" {
+                let actorBonus = type == "actor" ? 1000 : 0
+                let score = Self.estimateRelationCount(entity) + actorBonus
+                if score > bestScore {
                     bestEntity = entity
-                    let related = try await knowledgeService.getRelated(
-                        type: type, id: id, direction: .both, spaceID: nil, agentID: agentID
-                    )
-                    bestRelCount = related.count
-                    continue
-                }
-
-                let related = try await knowledgeService.getRelated(
-                    type: type, id: id, direction: .both, spaceID: nil, agentID: agentID
-                )
-                if related.count > bestRelCount, bestEntity?.entityType != "actor" {
-                    bestEntity = entity
-                    bestRelCount = related.count
+                    bestScore = score
                 }
             }
         }
@@ -592,6 +666,28 @@ final class KnowledgeGraphViewModel {
             relationCount: relCount,
             hop: hop,
             position: .zero
+        )
+    }
+
+    // MARK: - Expander Node
+
+    /// Prefix used for synthetic "+N more" node IDs so they can be filtered out.
+    static let expanderPrefix = "__expander__."
+
+    static func expanderID(for focus: String) -> String {
+        expanderPrefix + focus
+    }
+
+    private static func makeExpanderNode(id: String, hiddenCount: Int) -> GraphNode {
+        GraphNode(
+            id: id,
+            entityType: "__expander__",
+            displayName: "+\(hiddenCount) more",
+            isBundled: false,
+            relationCount: hiddenCount,
+            hop: 1,
+            position: .zero,
+            isExpander: true
         )
     }
 
