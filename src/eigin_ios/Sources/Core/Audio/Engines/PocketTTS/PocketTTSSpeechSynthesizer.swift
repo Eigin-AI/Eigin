@@ -17,9 +17,8 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     private let modelManager: PocketTTSModelManager
     private let voiceName: String
 
-    // Audio engine (persistent across utterances)
-    private var audioEngine: AVAudioEngine?
-    private var playerNode: AVAudioPlayerNode?
+    /// Audio output that resumes across route changes without repeating.
+    private var resumablePlayer: ResumableAudioPlayer?
 
     // Session state
     private var session: PocketTtsSession?
@@ -114,51 +113,45 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         pendingTexts.removeAll()
         scheduledUtterances.removeAll()
         finishWhenReady = false
-        if let player = playerNode {
-            player.stop()
-            player.reset()
-        }
         tearDownAudio()
         modelManager.scheduleUnload()
+    }
+
+    /// Rebuild the output engine on the new route, resuming the unplayed tail
+    /// of the current utterance. No re-speak, so nothing repeats and the
+    /// finish markers still fire, keeping the caller's turn bookkeeping intact.
+    func handleRouteChange() {
+        resumablePlayer?.handleRouteChange()
     }
 
     // MARK: - Audio Engine
 
     private func ensureEngineRunning() {
-        guard audioEngine == nil else { return }
+        guard resumablePlayer == nil else { return }
+        let player = ResumableAudioPlayer(sampleRate: Self.outputSampleRate)
         do {
-            let engine = AVAudioEngine()
-            let player = AVAudioPlayerNode()
-            engine.attach(player)
-
-            let outputFormat = AVAudioFormat(
-                standardFormatWithSampleRate: Self.outputSampleRate,
-                channels: 1
-            )!
-            engine.connect(player, to: engine.mainMixerNode, format: outputFormat)
-            try engine.start()
-            player.play()
-
-            // Converter: model sample rate → engine sample rate
-            let inputFormat = AVAudioFormat(
-                standardFormatWithSampleRate: Self.modelSampleRate,
-                channels: 1
-            )!
-            converter = AVAudioConverter(from: inputFormat, to: outputFormat)
-
-            audioEngine = engine
-            playerNode = player
+            try player.start()
         } catch {
-            // Fall through — generation will fail gracefully
+            return // Generation will fail gracefully.
         }
+
+        // Converter: model sample rate → engine sample rate
+        let inputFormat = AVAudioFormat(
+            standardFormatWithSampleRate: Self.modelSampleRate,
+            channels: 1
+        )!
+        let outputFormat = AVAudioFormat(
+            standardFormatWithSampleRate: Self.outputSampleRate,
+            channels: 1
+        )!
+        converter = AVAudioConverter(from: inputFormat, to: outputFormat)
+        resumablePlayer = player
     }
 
     /// Full teardown — stops engine, releases resources.
     private func tearDownAudio() {
-        playerNode?.stop()
-        audioEngine?.stop()
-        audioEngine = nil
-        playerNode = nil
+        resumablePlayer?.stop()
+        resumablePlayer = nil
         converter = nil
     }
 
@@ -264,7 +257,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                                 for frame in frames {
                                     if let buffer = Self.createBuffer(from: frame) {
                                         await MainActor.run {
-                                            self.playerNode?.scheduleBuffer(buffer)
+                                            self.resumablePlayer?.schedule(buffer)
                                         }
                                     }
                                 }
@@ -296,7 +289,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
             for frame in tailFrames {
                 if let buffer = Self.createBuffer(from: frame) {
                     await MainActor.run {
-                        self.playerNode?.scheduleBuffer(buffer)
+                        self.resumablePlayer?.schedule(buffer)
                     }
                 }
             }
@@ -383,7 +376,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
 
     /// Schedules a silent buffer that fires `onWillSpeak` when playback reaches it.
     private func scheduleTextMarker(text: String, charCount: Int) {
-        guard let player = playerNode else { return }
+        guard let resumablePlayer else { return }
         let myID = generationID
         let format = AVAudioFormat(
             standardFormatWithSampleRate: Self.outputSampleRate,
@@ -393,16 +386,15 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         marker.frameLength = 1
         marker.floatChannelData![0][0] = 0
 
-        player.scheduleBuffer(marker) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, generationID == myID else { return }
-                onWillSpeak?(NSRange(location: 0, length: charCount), text)
-            }
+        // Completion runs on the main actor via ResumableAudioPlayer.
+        resumablePlayer.schedule(marker) { [weak self] in
+            guard let self, generationID == myID else { return }
+            onWillSpeak?(NSRange(location: 0, length: charCount), text)
         }
     }
 
     private func scheduleFinishMarker(for text: String) {
-        guard let player = playerNode else {
+        guard let resumablePlayer else {
             onFinish?(text)
             return
         }
@@ -418,21 +410,19 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         marker.frameLength = 1
         marker.floatChannelData![0][0] = 0
 
-        player.scheduleBuffer(marker) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, generationID == myID else { return }
-                if let idx = scheduledUtterances.firstIndex(of: text) {
-                    scheduledUtterances.remove(at: idx)
-                }
-                if let idx = pendingTexts.firstIndex(of: text) {
-                    pendingTexts.remove(at: idx)
-                }
-                if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
-                    modelManager.scheduleUnload()
-                }
-
-                onFinish?(text)
+        resumablePlayer.schedule(marker) { [weak self] in
+            guard let self, generationID == myID else { return }
+            if let idx = scheduledUtterances.firstIndex(of: text) {
+                scheduledUtterances.remove(at: idx)
             }
+            if let idx = pendingTexts.firstIndex(of: text) {
+                pendingTexts.remove(at: idx)
+            }
+            if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
+                modelManager.scheduleUnload()
+            }
+
+            onFinish?(text)
         }
     }
 }

@@ -4861,6 +4861,12 @@ enum Localized {
             Localized.get("voice.listening")
         }
 
+        /// Error shown when the live call cannot recover audio after a route change (e.g. Bluetooth
+        /// handover) and has to end.
+        static var recoveryFailed: String {
+            Localized.get("voice.recoveryFailed")
+        }
+
         /// Status label shown while the TTS engine is speaking
         static var speaking: String {
             Localized.get("voice.speaking")

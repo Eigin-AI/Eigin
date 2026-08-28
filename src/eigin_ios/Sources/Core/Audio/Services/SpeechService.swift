@@ -30,6 +30,10 @@ protocol SpeechService {
     func cancel()
     func reset()
 
+    /// Rebuild the output engine on a new audio route by restarting the
+    /// in-flight utterance(s). No-op outside streaming playback.
+    func recover()
+
     /// Warm up the service ahead of the first utterance, e.g. preload a model.
     func prepare()
 }
@@ -248,6 +252,17 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
         refreshSynthesizerIfNeeded()
         let synth = synthesizer
         Task { await synth.prepare() }
+    }
+
+    /// Resume the current utterance on the new audio route.
+    ///
+    /// Delegates to the synthesizer, which rebuilds its engine and replays only
+    /// the unplayed tail. No `stopSpeaking`, no re-speak: nothing repeats and
+    /// the finish callbacks still fire, so the turn completes normally. The
+    /// system engine follows the route itself (no-op).
+    func recover() {
+        guard isSpeaking, !isOneShotMode else { return }
+        synthesizer.handleRouteChange()
     }
 
     /// Zero all state for the next turn.
@@ -549,6 +564,7 @@ struct PreviewSpeechService: SpeechService {
     func finish() {}
     func cancel() {}
     func reset() {}
+    func recover() {}
     func prepare() {}
 }
 

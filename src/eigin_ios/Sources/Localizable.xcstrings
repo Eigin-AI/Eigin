@@ -14633,6 +14633,23 @@
         }
       }
     },
+    "voice.recoveryFailed" : {
+      "comment" : "Error shown when the live call cannot recover audio after a route change (e.g. Bluetooth handover) and has to end.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyden kunne ikke gendannes efter et skift af lydenhed."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't restore audio after the device changed."
+          }
+        }
+      }
+    },
     "voice.installHint" : {
       "comment" : "A footer text that encourages users to install more voices if they haven't already.",
       "localizations" : {

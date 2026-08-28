@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import Factory
 import SwiftData
 import SwiftUI
@@ -110,12 +111,22 @@ final class LiveCallService: @unchecked Sendable {
 
     private let dictation = DefaultDictationService()
 
+    // MARK: - Audio Route
+
+    private let routeCoordinator = AudioRouteCoordinator()
+
     // MARK: - Silence Detection
 
     private var silenceTask: Task<Void, Never>?
     private var lastTranscription = ""
     private var lastTranscriptionUpdate: Date = .now
     private var recoveringStartedAt: Date?
+
+    /// Upper bound on route-change recovery before we treat it as a hard
+    /// failure. Longer than DictationService's internal retry ladder so a slow
+    /// but working handover isn't cut off, while a wedged one surfaces instead
+    /// of being masked.
+    private static let recoveryTimeout: TimeInterval = 12.0
 
     // MARK: - Chat
 
@@ -206,6 +217,13 @@ final class LiveCallService: @unchecked Sendable {
         UIApplication.shared.isIdleTimerDisabled = true
         soundManager.preparePlayers()
 
+        // Watch for Bluetooth/headphone/car route changes for the whole call
+        // and rebuild the active audio graph when they settle.
+        routeCoordinator.onRecover = { [weak self] in
+            self?.handleRouteRecovery()
+        }
+        routeCoordinator.start()
+
         // Wire up callbacks on the shared CallManager for this session.
         callManager.onAudioActivated = { [weak self] in
             self?.handleAudioActivated()
@@ -242,6 +260,7 @@ final class LiveCallService: @unchecked Sendable {
         isEndingCall = false
         UIApplication.shared.isIdleTimerDisabled = false
 
+        routeCoordinator.stop()
         callManager.clearCallbacks()
         callManager.endCall()
     }
@@ -286,10 +305,48 @@ final class LiveCallService: @unchecked Sendable {
         chatLoop.abort()
         chatLoop.settle()
 
+        routeCoordinator.stop()
         callManager.clearCallbacks()
         phase = .idle
         isEndingCall = false
         UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    // MARK: - Audio Route Recovery
+
+    /// Rebuild the active phase's audio graph after a route change, and keep the
+    /// call off the ear receiver when nothing external is connected.
+    private func handleRouteRecovery() {
+        updateSpeakerRouting()
+        switch phase {
+        case .listening:
+            AppLogger.info("Route changed — recovering dictation", category: .livecall)
+            dictation.recover()
+        case .speaking:
+            AppLogger.info("Route changed — recovering speech", category: .livecall)
+            speech.recover()
+        case .processing, .idle:
+            break
+        }
+    }
+
+    /// Force the built-in speaker only when the sole output is the ear receiver;
+    /// otherwise release any override so a connected Bluetooth/car route wins.
+    private func updateSpeakerRouting() {
+        let session = AVAudioSession.sharedInstance()
+        let outputs = session.currentRoute.outputs
+        let external = outputs.contains {
+            $0.portType != .builtInReceiver && $0.portType != .builtInSpeaker
+        }
+        let receiverOnly = !external && outputs.contains { $0.portType == .builtInReceiver }
+        do {
+            try session.overrideOutputAudioPort(receiverOnly ? .speaker : .none)
+        } catch {
+            AppLogger.warning(
+                "Speaker routing override failed: \(private: error.localizedDescription)",
+                category: .livecall
+            )
+        }
     }
 
     private func handleMuteChanged(_ muted: Bool) {
@@ -397,18 +454,21 @@ final class LiveCallService: @unchecked Sendable {
             if recoveringStartedAt == nil {
                 recoveringStartedAt = .now
             }
-            // If recovering for more than 5 seconds, give up and proceed
+            // Keep the turn alive while recovery is genuinely in progress.
+            lastTranscriptionUpdate = .now
+            // Only give up if recovery is wedged well past the retry ladder —
+            // surface it as an error rather than silently proceeding deaf.
             if let started = recoveringStartedAt,
-               Date.now.timeIntervalSince(started) < 5.0
+               Date.now.timeIntervalSince(started) >= Self.recoveryTimeout
             {
-                lastTranscriptionUpdate = .now
-                return
+                recoveringStartedAt = nil
+                AppLogger.error("Audio route recovery timed out", category: .livecall)
+                error = Localized.Voice.recoveryFailed
+                stop()
             }
-            // Recovery timeout — clear the flag and continue
-            recoveringStartedAt = nil
-        } else {
-            recoveringStartedAt = nil
+            return
         }
+        recoveringStartedAt = nil
 
         if case .error(let message) = dictation.state {
             if dictationRetries < maxDictationRetries {
