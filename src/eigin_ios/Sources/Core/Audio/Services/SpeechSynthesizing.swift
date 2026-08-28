@@ -24,10 +24,20 @@ protocol SpeechSynthesizing: AnyObject {
 
     /// Warm up the engine ahead of the first `speak()`, e.g. load a model.
     func prepare() async
+
+    /// React to an audio route change (Bluetooth connect/disconnect, car
+    /// handover) by resuming the current utterance on the new route.
+    /// Engines that follow the route on their own (e.g. `AVSpeechSynthesizer`)
+    /// need no work.
+    func handleRouteChange()
 }
 
 extension SpeechSynthesizing {
     func prepare() async {}
+
+    /// Default: nothing to do. Neural engines that own an `AVAudioEngine`
+    /// override this to rebuild output on the new route.
+    func handleRouteChange() {}
 }
 
 // MARK: - System Implementation

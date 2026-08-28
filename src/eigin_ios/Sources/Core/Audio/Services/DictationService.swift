@@ -93,6 +93,22 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         state.isActive
     }
 
+    /// Rebuilds the audio graph after a route change or interruption, preserving
+    /// the committed transcription so the turn continues seamlessly. Driven by
+    /// ``AudioRouteCoordinator`` during live calls and by this service's own
+    /// observers during standalone dictation. Must be called on the main actor.
+    func recover() {
+        guard isRecording else { return }
+        tearDownAudio()
+        generation += 1
+        committedTranscription = transcription
+        state = .preparing
+        let gen = generation
+        Task { [weak self] in
+            await self?.beginRecording(generation: gen)
+        }
+    }
+
     func start() {
         guard case .idle = state else { return }
         generation += 1
@@ -416,7 +432,11 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             guard gen == generation else { return }
             state = .listening
             UIApplication.shared.isIdleTimerDisabled = true
-            startObservingAudioNotifications()
+            // In live-call mode an external AudioRouteCoordinator owns route
+            // recovery; only self-observe during standalone dictation.
+            if !keepSessionActive {
+                startObservingAudioNotifications()
+            }
         }
     }
 
@@ -484,20 +504,14 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
     }
 
     /// Called by the system when the audio hardware configuration changes
-    /// (e.g. speaker → Bluetooth). Tears down and restarts.
+    /// (e.g. speaker → Bluetooth). Hops to the main actor so recovery is
+    /// serialized and never races a concurrent restart.
     @objc private func handleEngineConfigChange(_ notification: Notification) {
-        guard isRecording else { return }
-        tearDownAudio()
-        generation += 1
-        committedTranscription = transcription
-        state = .preparing
-        let gen = generation
-        Task { [weak self] in
-            await self?.beginRecording(generation: gen)
-        }
+        Task { @MainActor [weak self] in self?.recover() }
     }
 
-    /// Called when car BT or another app claims the audio session.
+    /// Called when car BT or another app claims the audio session. Hops to the
+    /// main actor so state transitions stay serialized and on-actor.
     @objc private func handleAudioInterruption(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -506,31 +520,26 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
 
         switch type {
         case .began:
-            guard isRecording else { return }
-            tearDownAudio()
-            generation += 1
-            committedTranscription = transcription
-            state = .preparing
+            Task { @MainActor [weak self] in
+                guard let self, isRecording else { return }
+                tearDownAudio()
+                generation += 1
+                committedTranscription = transcription
+                state = .preparing
+            }
 
         case .ended:
-            guard isRecovering else { return }
-            let delay: TimeInterval = {
-                if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt,
-                   AVAudioSession.InterruptionOptions(rawValue: optionsValue).contains(
-                       .shouldResume
-                   )
-                {
-                    return 0
-                }
-                return 0.5
-            }()
-            let gen = generation
-            Task { [weak self] in
-                if delay > 0 {
-                    try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-                }
+            let shouldResume =
+                (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt).map {
+                    AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume)
+                } ?? false
+            Task { @MainActor [weak self] in
                 guard let self, isRecovering else { return }
-                await beginRecording(generation: gen)
+                if !shouldResume {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                guard isRecovering else { return }
+                await beginRecording(generation: generation)
             }
 
         @unknown default:

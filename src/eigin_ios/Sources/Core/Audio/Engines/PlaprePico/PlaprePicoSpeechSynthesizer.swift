@@ -19,8 +19,8 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
     private let modelManager: PlaprePicoModelManager
     private let voiceName: String
 
-    private var audioEngine: AVAudioEngine?
-    private var playerNode: AVAudioPlayerNode?
+    /// Audio output that resumes across route changes without repeating.
+    private var resumablePlayer: ResumableAudioPlayer?
 
     private var session: PlaprePicoSession?
     private var utteranceTexts: [Int: String] = [:]
@@ -99,49 +99,43 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         pendingTexts.removeAll()
         scheduledUtterances.removeAll()
         finishWhenReady = false
-        if let player = playerNode {
-            player.stop()
-            player.reset()
-        }
         tearDownAudio()
         modelManager.scheduleUnload()
+    }
+
+    /// Rebuild the output engine on the new route, resuming the unplayed tail
+    /// of the current utterance. No re-speak, so nothing repeats and the
+    /// finish markers still fire, keeping the caller's turn bookkeeping intact.
+    func handleRouteChange() {
+        resumablePlayer?.handleRouteChange()
     }
 
     // MARK: - Audio Engine
 
     private func ensureEngineRunning() {
-        guard audioEngine == nil else { return }
+        guard resumablePlayer == nil else { return }
+        let player = ResumableAudioPlayer(sampleRate: Self.outputSampleRate)
         do {
-            let engine = AVAudioEngine()
-            let player = AVAudioPlayerNode()
-            engine.attach(player)
-
-            let outputFormat = AVAudioFormat(
-                standardFormatWithSampleRate: Self.outputSampleRate,
-                channels: 1
-            )!
-            engine.connect(player, to: engine.mainMixerNode, format: outputFormat)
-            try engine.start()
-            player.play()
-
-            let inputFormat = AVAudioFormat(
-                standardFormatWithSampleRate: Self.modelSampleRate,
-                channels: 1
-            )!
-            converter = AVAudioConverter(from: inputFormat, to: outputFormat)
-
-            audioEngine = engine
-            playerNode = player
+            try player.start()
         } catch {
-            // Generation will fail gracefully.
+            return // Generation will fail gracefully.
         }
+
+        let inputFormat = AVAudioFormat(
+            standardFormatWithSampleRate: Self.modelSampleRate,
+            channels: 1
+        )!
+        let outputFormat = AVAudioFormat(
+            standardFormatWithSampleRate: Self.outputSampleRate,
+            channels: 1
+        )!
+        converter = AVAudioConverter(from: inputFormat, to: outputFormat)
+        resumablePlayer = player
     }
 
     private func tearDownAudio() {
-        playerNode?.stop()
-        audioEngine?.stop()
-        audioEngine = nil
-        playerNode = nil
+        resumablePlayer?.stop()
+        resumablePlayer = nil
         converter = nil
     }
 
@@ -256,7 +250,7 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                                 for frame in frames {
                                     if let buffer = Self.createBuffer(from: frame) {
                                         await MainActor.run {
-                                            self.playerNode?.scheduleBuffer(buffer)
+                                            self.resumablePlayer?.schedule(buffer)
                                         }
                                     }
                                 }
@@ -277,7 +271,7 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
             for frame in tailFrames {
                 if let buffer = Self.createBuffer(from: frame) {
                     await MainActor.run {
-                        self.playerNode?.scheduleBuffer(buffer)
+                        self.resumablePlayer?.schedule(buffer)
                     }
                 }
             }
@@ -363,7 +357,7 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
     /// small enough to avoid feeling laggy but large enough to restore natural
     /// sentence pacing and mask any residual chunk-boundary glitch.
     private func scheduleInterUtteranceSilence() {
-        guard let player = playerNode else { return }
+        guard resumablePlayer != nil else { return }
         let format = AVAudioFormat(
             standardFormatWithSampleRate: Self.outputSampleRate,
             channels: 1
@@ -377,11 +371,11 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         if let data = buffer.floatChannelData {
             memset(data[0], 0, Int(frameCount) * MemoryLayout<Float>.size)
         }
-        player.scheduleBuffer(buffer)
+        resumablePlayer?.schedule(buffer)
     }
 
     private func scheduleTextMarker(text: String, charCount: Int) {
-        guard let player = playerNode else { return }
+        guard let resumablePlayer else { return }
         let myID = generationID
         let format = AVAudioFormat(
             standardFormatWithSampleRate: Self.outputSampleRate,
@@ -391,16 +385,15 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         marker.frameLength = 1
         marker.floatChannelData![0][0] = 0
 
-        player.scheduleBuffer(marker) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, generationID == myID else { return }
-                onWillSpeak?(NSRange(location: 0, length: charCount), text)
-            }
+        // Completion runs on the main actor via ResumableAudioPlayer.
+        resumablePlayer.schedule(marker) { [weak self] in
+            guard let self, generationID == myID else { return }
+            onWillSpeak?(NSRange(location: 0, length: charCount), text)
         }
     }
 
     private func scheduleFinishMarker(for text: String) {
-        guard let player = playerNode else {
+        guard let resumablePlayer else {
             onFinish?(text)
             return
         }
@@ -416,20 +409,18 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         marker.frameLength = 1
         marker.floatChannelData![0][0] = 0
 
-        player.scheduleBuffer(marker) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, generationID == myID else { return }
-                if let idx = scheduledUtterances.firstIndex(of: text) {
-                    scheduledUtterances.remove(at: idx)
-                }
-                if let idx = pendingTexts.firstIndex(of: text) {
-                    pendingTexts.remove(at: idx)
-                }
-                if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
-                    modelManager.scheduleUnload()
-                }
-                onFinish?(text)
+        resumablePlayer.schedule(marker) { [weak self] in
+            guard let self, generationID == myID else { return }
+            if let idx = scheduledUtterances.firstIndex(of: text) {
+                scheduledUtterances.remove(at: idx)
             }
+            if let idx = pendingTexts.firstIndex(of: text) {
+                pendingTexts.remove(at: idx)
+            }
+            if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
+                modelManager.scheduleUnload()
+            }
+            onFinish?(text)
         }
     }
 }
