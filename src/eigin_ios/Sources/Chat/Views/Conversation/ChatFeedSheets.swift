@@ -105,7 +105,8 @@ struct ChatFeedSheets: ViewModifier {
             .appSheet(
                 isPresented: $state.showActionSheet,
                 title: Localized.Actions.title,
-                detents: [.medium]
+                detents: [.medium],
+                fitsContent: true
             ) {
                 ActionSheetContent(actions: actionSheetItems)
             }
@@ -139,7 +140,8 @@ struct ChatFeedSheets: ViewModifier {
             .appSheet(
                 isPresented: $state.showSpacePicker,
                 title: Localized.Debug.moveToSpaceTitle,
-                detents: [.medium, .large]
+                detents: [.medium, .large],
+                fitsContent: true
             ) {
                 SpacePickerSheetContent(
                     spaces: context.spaces,
