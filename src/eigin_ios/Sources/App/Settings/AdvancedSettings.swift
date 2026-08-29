@@ -182,6 +182,7 @@ struct EngineAssetRow: View {
             isPresented: $showDownloadPrompt,
             title: asset.displayName,
             detents: [.medium],
+            fitsContent: true,
             showsDismissButton: false
         ) {
             AssetDownloadSheetContent(

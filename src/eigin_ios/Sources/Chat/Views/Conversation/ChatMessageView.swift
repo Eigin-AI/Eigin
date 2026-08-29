@@ -144,6 +144,7 @@ struct ChatMessageView: View, Equatable {
             isPresented: showDownloadSheet,
             title: downloadItem?.asset.displayName ?? "",
             detents: [.medium],
+            fitsContent: true,
             showsDismissButton: false
         ) {
             AssetDownloadSheetContent(

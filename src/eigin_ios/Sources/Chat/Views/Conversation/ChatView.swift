@@ -260,6 +260,7 @@ struct ChatView: View {
             isPresented: showVoiceDownload,
             title: voiceDownloadItem?.asset.displayName ?? "",
             detents: [.medium],
+            fitsContent: true,
             showsDismissButton: false
         ) {
             AssetDownloadSheetContent(
@@ -324,7 +325,8 @@ struct ChatView: View {
             isPresented: $showNonVisionStagedWarning,
             title: Localized.Attachment.imageStagedOnNonVisionTitle,
             description: Localized.Attachment.imageStagedOnNonVisionMessage,
-            detents: [.medium]
+            detents: [.medium],
+            fitsContent: true
         ) {
             EmptyView()
         }
