@@ -74,10 +74,16 @@ struct KnowledgeGraph: View {
             let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
 
             Canvas { context, _ in
+                // Index nodes by ID once so edge drawing stays O(E) instead of O(E·N).
+                let nodeByID = Dictionary(
+                    viewModel.nodes.map { ($0.id, $0) },
+                    uniquingKeysWith: { first, _ in first }
+                )
+
                 // Draw edges first (behind nodes).
                 for edge in viewModel.edges {
-                    guard let source = viewModel.nodes.first(where: { $0.id == edge.sourceID }),
-                          let target = viewModel.nodes.first(where: { $0.id == edge.targetID })
+                    guard let source = nodeByID[edge.sourceID],
+                          let target = nodeByID[edge.targetID]
                     else { continue }
 
                     let from = transformedPoint(source.position, center: center)
@@ -155,7 +161,7 @@ struct KnowledgeGraph: View {
         // 3. How crowded the neighborhood is (zoom-adjusted)
         // Focus node always gets full visibility.
         let labelVisibility: Double
-        if node.hop == 0 {
+        if node.hop == 0 || node.isExpander {
             labelVisibility = Double(appear)
         } else {
             // Size factor: 0 below labelMinNodeSize, quickly ramps to 1 just above it.
@@ -360,6 +366,10 @@ struct KnowledgeGraph: View {
     // MARK: - Actions
 
     private func handleNodeTap(_ node: GraphNode) {
+        if node.isExpander {
+            Task { await viewModel.expandMore() }
+            return
+        }
         if node.hop == 0 {
             Task {
                 if let entity = await viewModel.getEntity(id: node.id) {
@@ -399,6 +409,7 @@ struct KnowledgeGraph: View {
         case "fact": "checkmark.seal.fill"
         case "output": "doc.text.fill"
         case "note": "note.text"
+        case "__expander__": "ellipsis"
         default: "circle.fill"
         }
     }

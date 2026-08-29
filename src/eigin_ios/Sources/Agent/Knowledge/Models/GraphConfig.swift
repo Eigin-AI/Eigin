@@ -6,6 +6,14 @@ import Foundation
 /// All tuning knobs live here so they're easy to find and tweak in one place.
 /// Grouped by subsystem: physics, appearance, animation.
 enum GraphConfig {
+    // MARK: - Neighborhood Limits
+
+    /// Max hop-1 neighbors drawn around the focus node. Overflow collapses into
+    /// a single "+N more" expander node that reveals the next page on tap.
+    static let maxHop1Neighbors: Int = 16
+    /// Max hop-2 nodes drawn per visible hop-1 neighbor.
+    static let maxHop2PerNeighbor: Int = 4
+
     // MARK: - Physics
 
     /// Ideal distance for hop-1 nodes from center.
