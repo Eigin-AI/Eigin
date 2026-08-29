@@ -338,7 +338,7 @@ enum DataExportService {
                 key: g.key,
                 displayName: g.key,
                 defaultPermissionLevel: .ask,
-                category: .external
+                category: .extensions
             )
             let grant = AgentToolGrant(
                 agentID: g.agentID,
@@ -356,7 +356,7 @@ enum DataExportService {
                 key: g.key,
                 displayName: g.key,
                 defaultPermissionLevel: .ask,
-                category: .external
+                category: .extensions
             )
             let grant = ChatToolGrant(
                 chatID: g.chatID,

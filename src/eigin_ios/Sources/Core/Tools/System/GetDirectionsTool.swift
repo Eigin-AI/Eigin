@@ -6,7 +6,7 @@ struct GetDirectionsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_directions",
         displayName: Localized.Tools.System.getDirections,
-        defaultPermissionLevel: .always, category: .system
+        defaultPermissionLevel: .always, category: .timeAndPlace
     )
 
     let name = "get_directions"
@@ -26,7 +26,7 @@ struct GetDirectionsTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .timeAndPlace
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

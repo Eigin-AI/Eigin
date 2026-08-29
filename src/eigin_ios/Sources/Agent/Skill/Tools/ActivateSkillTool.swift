@@ -6,7 +6,7 @@ struct ActivateSkillTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "activate_skill",
         displayName: Localized.Tools.Agent.activateSkill,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .skills, isUserConfigurable: false
     )
 
     let name = "activate_skill"
@@ -19,7 +19,7 @@ struct ActivateSkillTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .skills
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

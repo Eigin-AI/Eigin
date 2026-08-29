@@ -15,6 +15,26 @@ struct ToolCapability {
     let displayName: String
     let defaultPermissionLevel: ToolPermissionLevel
     let category: Category
+    /// Whether the user can grant or deny this in the permissions UI.
+    /// `false` for agent machinery (done, background notify, skill flows) that
+    /// has no meaningful user-facing permission decision — the app always allows it.
+    let isUserConfigurable: Bool
+
+    init(
+        kind: GrantKind,
+        key: String,
+        displayName: String,
+        defaultPermissionLevel: ToolPermissionLevel,
+        category: Category,
+        isUserConfigurable: Bool = true
+    ) {
+        self.kind = kind
+        self.key = key
+        self.displayName = displayName
+        self.defaultPermissionLevel = defaultPermissionLevel
+        self.category = category
+        self.isUserConfigurable = isUserConfigurable
+    }
 
     // MARK: - Category
 
@@ -23,15 +43,31 @@ struct ToolCapability {
     enum Category: String, CaseIterable {
         case agent
         case chats
-        case system
-        case external
+        case knowledge
+        case skills
+        case web
+        case email
+        case familyAndSchool
+        case timeAndPlace
+        case calendar
+        case reminders
+        case health
+        case extensions
 
         var displayName: String {
             switch self {
             case .agent: Localized.ToolCategory.agent
             case .chats: Localized.ToolCategory.chats
-            case .system: Localized.ToolCategory.system
-            case .external: Localized.ToolCategory.external
+            case .knowledge: Localized.ToolCategory.knowledge
+            case .skills: Localized.ToolCategory.skills
+            case .web: Localized.ToolCategory.web
+            case .email: Localized.ToolCategory.email
+            case .familyAndSchool: Localized.ToolCategory.familyAndSchool
+            case .timeAndPlace: Localized.ToolCategory.timeAndPlace
+            case .calendar: Localized.ToolCategory.calendar
+            case .reminders: Localized.ToolCategory.reminders
+            case .health: Localized.ToolCategory.health
+            case .extensions: Localized.ToolCategory.extensions
             }
         }
 
@@ -39,8 +75,16 @@ struct ToolCapability {
             switch self {
             case .agent: "person.crop.circle.fill"
             case .chats: "bubble.fill"
-            case .system: "gearshape.fill"
-            case .external: "globe"
+            case .knowledge: "brain.fill"
+            case .skills: "star.fill"
+            case .web: "globe"
+            case .email: "envelope.fill"
+            case .familyAndSchool: "figure.child"
+            case .timeAndPlace: "clock.fill"
+            case .calendar: "calendar"
+            case .reminders: "checklist"
+            case .health: "heart.fill"
+            case .extensions: "puzzlepiece.fill"
             }
         }
 
@@ -48,8 +92,16 @@ struct ToolCapability {
             switch self {
             case .agent: .purple
             case .chats: .blue
-            case .system: .green
-            case .external: .orange
+            case .knowledge: .indigo
+            case .skills: .yellow
+            case .web: .orange
+            case .email: .red
+            case .familyAndSchool: .pink
+            case .timeAndPlace: .mint
+            case .calendar: .green
+            case .reminders: .teal
+            case .health: .pink
+            case .extensions: .gray
             }
         }
     }
@@ -81,10 +133,12 @@ extension ToolCapability: Codable {
             displayName = known.displayName
             defaultPermissionLevel = known.defaultPermissionLevel
             category = known.category
+            isUserConfigurable = known.isUserConfigurable
         } else {
             displayName = key
             defaultPermissionLevel = .ask
-            category = .external
+            category = .extensions
+            isUserConfigurable = true
         }
     }
 

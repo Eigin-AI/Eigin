@@ -78,7 +78,7 @@ struct ToolRegistry: ToolExecutor {
                 kind: .discovered, key: toolName,
                 displayName: display,
                 defaultPermissionLevel: MCPToolProxy.defaultCapability.defaultPermissionLevel,
-                category: .external
+                category: .extensions
             )]
         }
         return []
@@ -107,8 +107,10 @@ struct ToolRegistry: ToolExecutor {
     }
 
     /// Built-in capabilities grouped by category (for permissions UI).
+    /// Non-user-configurable machinery (done, background notify, skill flows)
+    /// is excluded — it has no permission decision for the user to make.
     static func capabilities(for category: ToolCapability.Category) -> [ToolCapability] {
-        allBuiltInCapabilities.filter { $0.category == category }
+        allBuiltInCapabilities.filter { $0.category == category && $0.isUserConfigurable }
     }
 
     // MARK: - Static Metadata
@@ -118,12 +120,7 @@ struct ToolRegistry: ToolExecutor {
     static let allToolMetadata: [String: ToolMetadata] = {
         var map = [String: ToolMetadata]()
         for cap in allKitCapabilities {
-            if cap == DoneTool.capability || cap == BackgroundNotifyTool.capability {
-                // System tools: not user-configurable, but need display names for chat UI
-                map[cap.key] = ToolMetadata(displayName: cap.displayName, capabilities: [])
-            } else {
-                map[cap.key] = ToolMetadata(displayName: cap.displayName, capabilities: [cap])
-            }
+            map[cap.key] = ToolMetadata(displayName: cap.displayName, capabilities: [cap])
         }
         return map
     }()

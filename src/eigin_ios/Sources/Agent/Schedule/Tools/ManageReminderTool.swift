@@ -4,7 +4,7 @@ struct ManageReminderTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "manage_reminder",
         displayName: Localized.Tools.Schedule.manageReminder,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .reminders
     )
 
     let name = "manage_reminder"
@@ -20,7 +20,7 @@ struct ManageReminderTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .reminders
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

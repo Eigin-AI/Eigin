@@ -4,7 +4,7 @@ struct GetHealthLogTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_health_log",
         displayName: Localized.Tools.Get.Health.log,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .health
     )
 
     let name = "get_health_log"
@@ -20,7 +20,7 @@ struct GetHealthLogTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .health
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

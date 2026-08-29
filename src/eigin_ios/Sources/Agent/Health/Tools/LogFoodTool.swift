@@ -4,7 +4,7 @@ struct LogFoodTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "log_food",
         displayName: Localized.Tools.Log.food,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .health
     )
 
     let name = "log_food"
@@ -20,7 +20,7 @@ struct LogFoodTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .health
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

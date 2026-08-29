@@ -101,7 +101,7 @@ struct WebToolTests {
         let tool = WebSearchTool()
         #expect(tool.name == "web_search")
         #expect(tool.capabilities == [WebSearchTool.capability])
-        #expect(tool.category == .external)
+        #expect(tool.category == .web)
         #expect(tool.defaultPermissionLevel == .ask)
     }
 
@@ -109,7 +109,7 @@ struct WebToolTests {
         let tool = WebFetchTool()
         #expect(tool.name == "web_fetch")
         #expect(tool.capabilities == [WebFetchTool.capability])
-        #expect(tool.category == .external)
+        #expect(tool.category == .web)
         #expect(tool.defaultPermissionLevel == .ask)
     }
 }

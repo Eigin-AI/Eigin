@@ -11,12 +11,12 @@ private struct FakeMCPTool: Tool {
     var capabilities: [ToolCapability] {
         [ToolCapability(
             kind: .discovered, key: name, displayName: displayName,
-            defaultPermissionLevel: .ask, category: .external
+            defaultPermissionLevel: .ask, category: .extensions
         )]
     }
 
     var category: ToolCapability.Category {
-        .external
+        .extensions
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {
@@ -51,7 +51,7 @@ struct ToolAssemblyMCPGatingTests {
             instruction: "Use GitLab tools.",
             requiredTools: [ToolCapability(
                 kind: .discovered, key: toolName, displayName: "List Issues",
-                defaultPermissionLevel: .ask, category: .external
+                defaultPermissionLevel: .ask, category: .extensions
             )],
             alwaysActive: false
         )
@@ -92,7 +92,7 @@ struct ToolAssemblyMCPGatingTests {
             instruction: "Use Linear tools.",
             requiredTools: [ToolCapability(
                 kind: .discovered, key: "mcp__linear__list_tickets", displayName: "List Tickets",
-                defaultPermissionLevel: .ask, category: .external
+                defaultPermissionLevel: .ask, category: .extensions
             )],
             alwaysActive: false
         )

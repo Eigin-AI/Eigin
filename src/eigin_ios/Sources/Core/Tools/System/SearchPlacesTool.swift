@@ -5,7 +5,7 @@ struct SearchPlacesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "search_places",
         displayName: Localized.Tools.System.searchPlaces,
-        defaultPermissionLevel: .always, category: .system
+        defaultPermissionLevel: .always, category: .timeAndPlace
     )
 
     let name = "search_places"
@@ -25,7 +25,7 @@ struct SearchPlacesTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .timeAndPlace
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

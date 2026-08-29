@@ -44,6 +44,9 @@ struct AlwaysAllowPolicy: ToolPermissionPolicy {
 ///
 /// Resolution for built-in capabilities:
 ///   agent grant → capability default
+///
+/// Non-user-configurable capabilities (agent machinery like `done` or skill
+/// flows) always resolve `.always` — no stored grant can break them.
 struct AgentPermissionPolicy: ToolPermissionPolicy {
     /// Built-in capability key → configured level from agent-level grants.
     let builtInGrants: [String: ToolPermissionLevel]
@@ -79,6 +82,9 @@ struct AgentPermissionPolicy: ToolPermissionPolicy {
 
         // Built-in capabilities (existing merge logic)
         guard !capabilities.isEmpty else { return .ask }
+
+        // Agent machinery is always allowed — grants for it are never consulted
+        if capabilities.allSatisfy(\.isUserConfigurable) == false { return .always }
 
         var effective: ToolPermissionLevel = .always
         for cap in capabilities {

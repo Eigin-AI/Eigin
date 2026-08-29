@@ -10961,6 +10961,23 @@
         }
       }
     },
+    "toolCategory.calendar" : {
+      "comment" : "Tool category label for calendar tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalender"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar"
+          }
+        }
+      }
+    },
     "toolCategory.chats" : {
       "comment" : "Tool category label for chat-related tools",
       "localizations" : {
@@ -10978,36 +10995,155 @@
         }
       }
     },
-    "toolCategory.external" : {
-      "comment" : "Tool category label for external/MCP tools",
+    "toolCategory.email" : {
+      "comment" : "Tool category label for email tools",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ekstern"
+            "value" : "E-mail"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "External"
+            "value" : "Email"
           }
         }
       }
     },
-    "toolCategory.system" : {
-      "comment" : "Tool category label for system-level tools",
+    "toolCategory.extensions" : {
+      "comment" : "Tool category label for extension (MCP) tools",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System"
+            "value" : "Udvidelser"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System"
+            "value" : "Extensions"
+          }
+        }
+      }
+    },
+    "toolCategory.familyAndSchool" : {
+      "comment" : "Tool category label for family and school tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Familie & skole"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Family & School"
+          }
+        }
+      }
+    },
+    "toolCategory.health" : {
+      "comment" : "Tool category label for health tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sundhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health"
+          }
+        }
+      }
+    },
+    "toolCategory.knowledge" : {
+      "comment" : "Tool category label for knowledge tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knowledge"
+          }
+        }
+      }
+    },
+    "toolCategory.reminders" : {
+      "comment" : "Tool category label for reminder tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Påmindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminders"
+          }
+        }
+      }
+    },
+    "toolCategory.skills" : {
+      "comment" : "Tool category label for skill tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kompetencer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skills"
+          }
+        }
+      }
+    },
+    "toolCategory.timeAndPlace" : {
+      "comment" : "Tool category label for time and place tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tid & sted"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time & Place"
+          }
+        }
+      }
+    },
+    "toolCategory.web" : {
+      "comment" : "Tool category label for web tools",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web"
           }
         }
       }

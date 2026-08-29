@@ -3,7 +3,7 @@ import SwiftUI
 /// A theme that defers to the standard iOS system colors and semantic tokens.
 struct SystemTheme: Theme {
     var name: String {
-        Localized.ToolCategory.system
+        Localized.Settings.Section.system
     }
 
     let id = "system"

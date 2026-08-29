@@ -62,7 +62,13 @@ struct ToolRegistryFilterTests {
         )
         let registry = ToolRegistry.chat(permissionPolicy: policy)
         let toolNames = Set(registry.definitions.map(\.function.name))
+        // Non-configurable machinery ignores grants by design (see the policy
+        // tests) — but only skill-flow tools are actually instantiated in chat;
+        // done/background_notify resolve .always yet aren't in this registry.
         for capability in ToolRegistry.allBuiltInCapabilities {
+            if !capability.isUserConfigurable {
+                continue
+            }
             #expect(!toolNames.contains(capability.key))
         }
     }

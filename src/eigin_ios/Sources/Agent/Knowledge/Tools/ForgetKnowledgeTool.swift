@@ -8,7 +8,7 @@ struct ForgetKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "forget_knowledge",
         displayName: Localized.Tools.Forget.knowledge,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .knowledge
     )
 
     let name = "forget_knowledge"
@@ -25,7 +25,7 @@ struct ForgetKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

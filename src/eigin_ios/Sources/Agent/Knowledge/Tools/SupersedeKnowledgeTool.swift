@@ -6,7 +6,7 @@ struct SupersedeKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "supersede_knowledge",
         displayName: Localized.Tools.Supersede.knowledge,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .knowledge
     )
 
     let name = "supersede_knowledge"
@@ -24,7 +24,7 @@ struct SupersedeKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {
