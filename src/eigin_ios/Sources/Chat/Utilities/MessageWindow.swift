@@ -336,6 +336,34 @@ final class MessageWindow {
         windowStartIndex += safeTrim
     }
 
+    /// Removes the trailing user message so the caller can re-send it.
+    ///
+    /// Returns that message and, when safe, its persisted row for the caller to
+    /// delete. Returns nil if the tail isn't a non-empty user message.
+    ///
+    /// The persisted row is only returned when the window sits at the bottom
+    /// (`!hasNewerMessages`); otherwise SwiftData is left untouched and the next
+    /// send reconciles it. `allPersisted` is trimmed before `messages` so the
+    /// counts stay in step — otherwise `hasNewerMessages` briefly reads true and
+    /// `send` would re-add the message.
+    func rewindTrailingUserMessage() -> (message: ChatMessage, persisted: Message?)? {
+        guard let last = messages.last,
+              last.role == "user",
+              let content = last.content?.trimmingCharacters(in: .whitespaces),
+              !content.isEmpty
+        else { return nil }
+
+        var persisted: Message?
+        if isPreloaded, !hasNewerMessages,
+           let tail = allPersisted.last, tail.role == "user"
+        {
+            allPersisted.removeLast()
+            persisted = tail
+        }
+        messages.removeLast()
+        return (last, persisted)
+    }
+
     func snapToBottom() {
         guard isPreloaded else { return }
         let start = walkBackForBudget(

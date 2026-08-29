@@ -1,5 +1,4 @@
 import Factory
-import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -77,37 +76,12 @@ struct ChatFeed: View {
     @Environment(\.colors) private var colors
     @Environment(\.gridBreakpoint) private var breakpoint
     @Injected(\.speechService) private var speechService
-    @State private var isAtBottom = true
-    @State private var appendAnchorID: String?
-    @State private var selectedError: ConnectionError?
-    @State private var presentedPermissionRequest: PermissionRequest?
-    @State private var presentedBrowsingRequest: BrowsingRequest?
-    @State private var browsingPageReady = false
-    @State private var showActionSheet = false
-    @State private var showSpacePicker = false
-    @State private var showPhotoPicker = false
-    @State private var showCamera = false
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var showNonVisionWarning = false
-    /// Item IDs that existed before the current streaming turn started.
-    /// Items not in this set appeared mid-turn and get `.growIn()` animation.
-    @State private var preStreamItemIDs: Set<String> = []
-    /// ID of the user message pinned to the top of the viewport for the current turn.
-    /// Set on send; overwritten by the next send. The current turn block uses
-    /// `viewportHeight` as its `minHeight`, which keeps the user message at the
-    /// top until the assistant reply naturally exceeds one viewport.
-    @State private var pinnedUserMessageID: String?
-    /// Set in `sendMessage` right before `onSend` fires, and consumed by the
-    /// `onChange(of: items.last?.id)` handler. Without this gate, pagination
-    /// appends (e.g. a `loadNewerMessages` batch ending in a user message)
-    /// would be mistaken for a send and pin the message to the top with the
-    /// viewport-sized spacer — producing the "new chat" whitespace in windowed
-    /// views. Only a real send should trigger the pin.
-    @State private var isExpectingSendAppend = false
-    /// Measured ScrollView container height. Used as `minHeight` of the
-    /// current-turn VStack so the pinned region always fills at least one
-    /// viewport.
-    @State private var viewportHeight: CGFloat = 0
+    /// Presentation state for every sheet, picker, and cover the feed hosts.
+    /// Owned here because the feed's rows and input trigger them; presented by
+    /// the ``ChatFeedSheets`` modifier.
+    @State private var sheets = ChatFeedSheetState()
+    /// Owns scroll position, the current-turn pin, and grow-in tracking.
+    @State private var scroll = FeedScrollCoordinator()
     @FocusState private var isInputFocused: Bool
 
     init(
@@ -146,152 +120,11 @@ struct ChatFeed: View {
 
     var body: some View {
         feedContent
-            .onChange(of: interactions.permissionRequest) { _, new in
-                if let new {
-                    presentedPermissionRequest = new
-                }
-            }
-            .onChange(of: interactions.browsingRequest) { _, new in
-                if let new {
-                    presentedBrowsingRequest = new
-                    browsingPageReady = false
-                }
-            }
-            .appSheet(
-                isPresented: Binding(
-                    get: { selectedError != nil },
-                    set: { if !$0 { selectedError = nil } }
-                ),
-                title: selectedError?.title ?? "Error",
-                description: selectedError?.suggestion,
-                detents: [.medium, .large]
-            ) {
-                if let error = selectedError {
-                    ErrorDetailSheet(error: error)
-                }
-            }
-            .appSheet(
-                isPresented: Binding(
-                    get: { presentedPermissionRequest != nil },
-                    set: { if !$0 { presentedPermissionRequest = nil } }
-                ),
-                title: Localized.Permission.sheetTitle,
-                descriptionContent: presentedPermissionRequest.map { request in
-                    AnyView(PermissionDisclosureText(
-                        agentName: context.agentName,
-                        toolDisplayName: request.toolDisplayName,
-                        disclosure: request.disclosure
-                    ))
-                },
-                fitsContent: true
-            ) {
-                if let request = presentedPermissionRequest {
-                    PermissionRequestSheetContent(
-                        agentName: context.agentName,
-                        toolDisplayName: request.toolDisplayName,
-                        disclosure: request.disclosure,
-                        allowOnceLabel: Localized.Permission.allowOnce,
-                        allowForChatLabel: Localized.Permission.allowForChat,
-                        denyLabel: Localized.Permission.deny,
-                        onResponse: { response in
-                            interactions.onPermissionResponse?(response)
-                        }
-                    )
-                }
-            }
-            .appSheet(
-                isPresented: Binding(
-                    get: { presentedBrowsingRequest != nil },
-                    set: { if !$0 { presentedBrowsingRequest = nil } }
-                ),
-                title: Localized.Browsing.title,
-                description: browsingPageReady
-                    ? Localized.Agent.Status.readingPage(actorName)
-                    : Localized.Agent.Status.loadingPage(actorName),
-                detents: [.medium],
-                showsDismissButton: false,
-                onDismiss: {
-                    dismissBrowsing(
-                        result: .error("User dismissed the browser before request completed.")
-                    )
-                }
-            ) {
-                WebBrowsingSheetContent(
-                    request: presentedBrowsingRequest!,
-                    onComplete: dismissBrowsing,
-                    onPageReadyChanged: { ready in browsingPageReady = ready }
-                )
-            }
-            .appSheet(
-                isPresented: $showActionSheet,
-                title: Localized.Actions.title,
-                detents: [.medium]
-            ) {
-                ActionSheetContent(
-                    actions: actionSheetItems
-                )
-            }
-            .photosPicker(
-                isPresented: $showPhotoPicker,
-                selection: $selectedPhotoItems,
-                maxSelectionCount: 1,
-                matching: .images
-            )
-            .onChange(of: selectedPhotoItems) { _, items in
-                guard let item = items.first else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data)
-                    {
-                        context.onStageImage?(image)
-                    }
-                    selectedPhotoItems = []
-                }
-            }
-            .fullScreenCover(isPresented: $showCamera) {
-                CameraPickerView(
-                    onCapture: { image in
-                        showCamera = false
-                        context.onStageImage?(image)
-                    },
-                    onCancel: {
-                        showCamera = false
-                    }
-                )
-                .ignoresSafeArea()
-            }
-            .appSheet(
-                isPresented: $showNonVisionWarning,
-                title: Localized.Attachment.imageStagedOnNonVisionTitle,
-                description: Localized.Attachment.imageStagedOnNonVisionMessage,
-                detents: [.medium]
-            ) {
-                // Empty body — the description in the sheet header is sufficient.
-                EmptyView()
-            }
-            .appSheet(
-                isPresented: $showSpacePicker,
-                title: Localized.Debug.moveToSpaceTitle,
-                detents: [.medium, .large]
-            ) {
-                SpacePickerSheetContent(
-                    spaces: context.spaces,
-                    currentSpaceID: context.currentSpaceID,
-                    onSelect: { spaceID in
-                        context.onMoveToSpace?(spaceID)
-                    }
-                )
-            } secondary: {
-                if context.currentSpaceID != nil {
-                    AppButton(
-                        Localized.Space.removeFromSpace,
-                        variant: .destructive
-                    ) {
-                        context.onMoveToSpace?(nil)
-                    }
-                    .padding(.horizontal, Sizing.PageLayout.ContentGrouping.Px.mobile)
-                }
-            }
+            .modifier(ChatFeedSheets(
+                state: sheets,
+                context: context,
+                interactions: interactions
+            ))
             .background(colors.surface.standard.base.ignoresSafeArea())
             .toolbar(.hidden, for: .tabBar)
             .onDisappear {
@@ -308,52 +141,7 @@ struct ChatFeed: View {
         let canAttachImage = context.supportsVision
             && context.stagedAttachments.count < ChatViewModel.maxStagedAttachments
         guard hasMoveToSpace || canAttachImage else { return nil }
-        return { showActionSheet = true }
-    }
-
-    /// Builds the action items for the action sheet based on available capabilities.
-    private var actionSheetItems: [ActionItem] {
-        var items: [ActionItem] = []
-
-        if context.supportsVision,
-           context.stagedAttachments.count < ChatViewModel.maxStagedAttachments
-        {
-            items.append(ActionItem(
-                label: Localized.Attachment.takePhoto,
-                icon: Image(systemName: "camera"),
-                action: {
-                    showActionSheet = false
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        showCamera = true
-                    }
-                }
-            ))
-            items.append(ActionItem(
-                label: Localized.Attachment.attachImage,
-                icon: Image(systemName: "photo"),
-                action: {
-                    showActionSheet = false
-                    showPhotoPicker = true
-                }
-            ))
-        }
-
-        if context.onMoveToSpace != nil, !context.spaces.isEmpty {
-            items.append(ActionItem(
-                label: Localized.Debug.moveToSpaceTitle,
-                icon: Iconography.Brand.security,
-                action: {
-                    showActionSheet = false
-                    showSpacePicker = true
-                }
-            ))
-        }
-
-        return items
-    }
-
-    private var actorName: String {
-        context.agentName.isEmpty || context.agentName.count > 20 ? "Agent" : context.agentName
+        return { sheets.showActionSheet = true }
     }
 
     private var isStreaming: Bool {
@@ -391,14 +179,9 @@ struct ChatFeed: View {
         }
         .frame(
             maxWidth: .infinity,
-            minHeight: isAgentOpened ? viewportHeight : 0,
+            minHeight: isAgentOpened ? scroll.viewportHeight : 0,
             alignment: .topLeading
         )
-    }
-
-    private func dismissBrowsing(result: BrowsingResult) {
-        presentedBrowsingRequest = nil
-        interactions.onBrowsingComplete?(result)
     }
 
     private var feedContent: some View {
@@ -417,7 +200,7 @@ struct ChatFeed: View {
                         }
                     }
 
-                    let pinnedIndex = pinnedUserMessageID.flatMap { id in
+                    let pinnedIndex = scroll.pinnedUserMessageID.flatMap { id in
                         items.firstIndex(where: { $0.id == id })
                     }
 
@@ -441,7 +224,7 @@ struct ChatFeed: View {
                         }
                         .frame(
                             maxWidth: .infinity,
-                            minHeight: viewportHeight,
+                            minHeight: scroll.viewportHeight,
                             alignment: .topLeading
                         )
                     } else {
@@ -455,7 +238,7 @@ struct ChatFeed: View {
 
                     if pagination.hasNewerMessages {
                         Button {
-                            appendAnchorID = items.last?.id
+                            scroll.beginLoadNewer(lastItemID: items.last?.id)
                             pagination.onLoadNewer?()
                         } label: {
                             Label("Load newer messages", systemImage: "chevron.down")
@@ -470,12 +253,12 @@ struct ChatFeed: View {
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
             .opacity(isContentReady ? 1 : 0)
-            .defaultScrollAnchor(appendAnchorID != nil ? nil : .bottom)
+            .defaultScrollAnchor(scroll.keepsBottomAnchor ? .bottom : nil)
             .scrollDismissesKeyboard(.interactively)
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.visibleRect.maxY >= geometry.contentSize.height - 120
             } action: { _, newValue in
-                isAtBottom = newValue
+                scroll.scrollPositionChanged(newValue)
                 pagination.onScrollPositionChanged?(newValue)
             }
             // Track the ScrollView container height. Used as `minHeight` of
@@ -483,17 +266,14 @@ struct ChatFeed: View {
             .onScrollGeometryChange(for: CGFloat.self) { geometry in
                 geometry.containerSize.height
             } action: { _, newValue in
-                viewportHeight = newValue
+                scroll.viewportHeight = newValue
             }
             .overlay(alignment: .bottom) {
-                if !isAtBottom {
+                if !scroll.isAtBottom {
                     Button {
                         Haptics.medium()
                         pagination.onSnapToBottom?()
-                        // Release the pin so the current-turn block collapses
-                        // back into a flat list, then scroll to the bottom.
-                        pinnedUserMessageID = nil
-                        proxy.scrollTo("bottom-anchor", anchor: .bottom)
+                        scroll.snapToBottom(proxy: proxy)
                     } label: {
                         Image(systemName: "arrow.down")
                             .font(.body.weight(.semibold))
@@ -509,7 +289,7 @@ struct ChatFeed: View {
                     .transition(.scale.combined(with: .opacity))
                 }
             }
-            .animation(Animations.smooth, value: isAtBottom)
+            .animation(Animations.smooth, value: scroll.isAtBottom)
             .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
                 VStack(spacing: 0) {
                     if showsIcebreakers {
@@ -553,45 +333,15 @@ struct ChatFeed: View {
                 .animation(Animations.smooth, value: showsIcebreakers)
                 .ignoresSafeArea(.container, edges: .horizontal)
             }
-            // Scroll correction on prepend: old first item pinned to top
+            // Scroll correction on prepend: old first item pinned to top.
             .onChange(of: items.first?.id) { oldFirstID, newFirstID in
-                if let oldFirstID, oldFirstID != newFirstID,
-                   items.contains(where: { $0.id == oldFirstID })
-                {
-                    proxy.scrollTo(oldFirstID, anchor: .top)
-                }
+                scroll.restoreScrollAfterOlderLoad(
+                    oldFirstID: oldFirstID, newFirstID: newFirstID, items: items, proxy: proxy
+                )
             }
             // On append: either pagination anchor OR pin new user message to top.
             .onChange(of: items.last?.id) { _, _ in
-                if let anchorID = appendAnchorID,
-                   items.contains(where: { $0.id == anchorID })
-                {
-                    proxy.scrollTo(anchorID, anchor: .bottom)
-                    appendAnchorID = nil
-                    return
-                }
-                // Pin newly-sent user message to the top of the viewport.
-                // Gated by `isExpectingSendAppend` so pagination appends that
-                // end on a user message don't trigger the viewport-sized spacer.
-                guard isExpectingSendAppend,
-                      let last = items.last,
-                      case .message(let id, let role, _, _) = last,
-                      role == "user",
-                      id != pinnedUserMessageID
-                else {
-                    isExpectingSendAppend = false
-                    return
-                }
-                isExpectingSendAppend = false
-                pinnedUserMessageID = id
-                // Defer one runloop tick so the current-turn block (with its
-                // viewport-sized minHeight) is laid out before we scroll —
-                // otherwise `.top` may not yet be reachable.
-                DispatchQueue.main.async {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                }
+                scroll.applyScrollForNewItems(items, proxy: proxy)
             }
             // Track streaming phase for idle-timer and preStream item capture.
             // No auto-scroll here — after the initial pin on send we never
@@ -599,14 +349,7 @@ struct ChatFeed: View {
             .onChange(of: throttler.phase) {
                 let phase = throttler.phase
                 UIApplication.shared.isIdleTimerDisabled = phase == .waiting || phase == .streaming
-                if phase == .waiting {
-                    if preStreamItemIDs.isEmpty {
-                        preStreamItemIDs = Set(items.map(\.id))
-                    }
-                } else if phase == .idle {
-                    preStreamItemIDs = []
-                    isExpectingSendAppend = false
-                }
+                scroll.phaseChanged(to: phase, items: items)
             }
         }
     }
@@ -643,14 +386,9 @@ struct ChatFeed: View {
         }
     }
 
-    @ViewBuilder
     private func itemRow(for item: ChatItem) -> some View {
-        let isLive =
-            throttler.phase != .idle
-                && !preStreamItemIDs.isEmpty
-                && !preStreamItemIDs.contains(item.id)
         itemView(for: item)
-            .growIn(isNew: isLive)
+            .growIn(isNew: scroll.isLiveRow(item.id, phase: throttler.phase))
             .id(item.id)
     }
 
@@ -664,11 +402,11 @@ struct ChatFeed: View {
                     && !pagination.hasNewerMessages
                     && !isStreaming
                     && onUserMessageFooterAction != nil
-            // Retry re-appends the user message via `send`, so it must set the
-            // send-append flag — otherwise the pin handler would no-op and the
+            // Retry re-appends the user message via `send`, so it declares the
+            // `.sending` intent — otherwise the pin handler would no-op and the
             // retried message wouldn't anchor to the top of the viewport.
             let retryAction: (() -> Void)? = onUserMessageFooterAction.map { action in
-                { isExpectingSendAppend = true; action() }
+                { scroll.declareSending(); action() }
             }
             let isStreamingRow = id == streamingItemID && throttler.phase == .streaming
             ChatMessageView(
@@ -701,7 +439,7 @@ struct ChatFeed: View {
                 AppCard(
                     error.title,
                     explainer: error.suggestion,
-                    action: { selectedError = error }
+                    action: { sheets.selectedError = error }
                 )
                 .padding(.horizontal, breakpoint.inner)
             }
@@ -724,7 +462,7 @@ struct ChatFeed: View {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty || !context.stagedAttachments.isEmpty else { return }
         isInputFocused = false
-        isExpectingSendAppend = true
+        scroll.declareSending()
         onSend(mode)
     }
 }

@@ -107,7 +107,9 @@ struct ToolDisclosureTests {
         let disclosure = tool.disclosure(
             for: call(name: "log_body_measurement", arguments: "{\"weight_kg\":72.5}")
         )
-        #expect(disclosure?.detail == .inline("72.5 kg"))
+        // Format the expectation the same way so the assertion is locale-independent
+        // (the disclosure string is user-facing and uses the current locale's separator).
+        #expect(disclosure?.detail == .inline("\(72.5.formatted()) kg"))
     }
 
     @Test func logFoodIncludesCalories() {

@@ -328,4 +328,37 @@ struct MessageWindowTests {
         #expect(window.messages.count == 10)
         #expect(window.windowStartIndex == 0)
     }
+
+    // MARK: - Rewind
+
+    @Test("rewindTrailingUserMessage removes and returns the trailing user message")
+    func rewindReturnsTrailingUserMessage() {
+        let window = MessageWindow()
+        window.messages = [assistantMsg("a0"), userMsg("u1", content: "retry me")]
+
+        let rewound = window.rewindTrailingUserMessage()
+
+        #expect(rewound?.message.content == "retry me")
+        #expect(rewound?.persisted == nil) // not preloaded, so nothing to delete
+        #expect(window.messages.count == 1)
+        #expect(window.messages.last?.role == "assistant")
+    }
+
+    @Test("rewindTrailingUserMessage is nil when the tail is an assistant message")
+    func rewindNilForAssistantTail() {
+        let window = MessageWindow()
+        window.messages = [userMsg("u0"), assistantMsg("a0")]
+
+        #expect(window.rewindTrailingUserMessage() == nil)
+        #expect(window.messages.count == 2) // untouched
+    }
+
+    @Test("rewindTrailingUserMessage is nil when the trailing user message is empty")
+    func rewindNilForEmptyUserMessage() {
+        let window = MessageWindow()
+        window.messages = [userMsg("u0", content: "   ")]
+
+        #expect(window.rewindTrailingUserMessage() == nil)
+        #expect(window.messages.count == 1)
+    }
 }

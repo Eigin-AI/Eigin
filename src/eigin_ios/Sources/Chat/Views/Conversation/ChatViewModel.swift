@@ -418,24 +418,16 @@ final class ChatViewModel {
 
         if chatLoop.isAwaitingUserInteraction { handleStop() }
 
-        // Rewind: drop the trailing user message from the in-memory window, the
-        // persisted cache, and SwiftData. `send` will re-append and re-persist it
-        // exactly as if the user had typed it fresh. The persisted counterpart is
-        // `allPersisted.last` when the window is anchored at the bottom
-        // (`!hasNewerMessages`); otherwise leave SwiftData alone — a fresh fetch
-        // on the next send cycle will reconcile. Remove from `allPersisted` first
-        // so that `hasNewerMessages` (derived from counts) doesn't transiently
-        // flip true and cause `send`'s `snapToBottom` to rehydrate the message.
-        if window.isPreloaded, !window.hasNewerMessages,
-           let persisted = window.allPersisted.last, persisted.role == "user"
-        {
-            window.allPersisted.removeLast()
+        // Ask the window to rewind the trailing user message; `send` re-appends and
+        // re-persists it exactly as if typed fresh. The window owns the counting
+        // invariant; here we only clean up the persisted row it hands back.
+        guard let rewound = window.rewindTrailingUserMessage() else { return }
+        if let persisted = rewound.persisted {
             if let attachments = persisted.attachments {
                 attachmentStore.deleteAll(attachments)
             }
             modelContext.delete(persisted)
         }
-        window.messages.removeLast()
         chat.updatedAt = .now
 
         if window.hasNewerMessages { window.snapToBottom() }
