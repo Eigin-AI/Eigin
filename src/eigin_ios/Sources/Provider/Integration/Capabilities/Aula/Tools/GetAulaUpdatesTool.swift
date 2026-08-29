@@ -7,7 +7,7 @@ struct GetAulaUpdatesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_updates",
         displayName: Localized.Tools.Aula.updates,
-        defaultPermissionLevel: .ask, category: .external
+        defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 
     /// Fallback for the `days` parameter when the agent omits it.
@@ -26,7 +26,7 @@ struct GetAulaUpdatesTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .external
+        .familyAndSchool
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

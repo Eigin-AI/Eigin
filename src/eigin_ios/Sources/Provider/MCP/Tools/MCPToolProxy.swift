@@ -10,7 +10,7 @@ struct MCPToolProxy: Tool {
     static let defaultCapability = ToolCapability(
         kind: .builtIn, key: "mcp_server",
         displayName: Localized.Ui.useMcpServers,
-        defaultPermissionLevel: .ask, category: .external
+        defaultPermissionLevel: .ask, category: .extensions
     )
 
     let name: String
@@ -21,12 +21,12 @@ struct MCPToolProxy: Tool {
             kind: .discovered, key: name,
             displayName: displayName,
             defaultPermissionLevel: Self.defaultCapability.defaultPermissionLevel,
-            category: .external
+            category: .extensions
         )]
     }
 
     var category: ToolCapability.Category {
-        .external
+        .extensions
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

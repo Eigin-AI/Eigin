@@ -11,7 +11,7 @@ struct BackgroundNotifyTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "background_notify",
         displayName: Localized.Tools.System.backgroundNotify,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .agent, isUserConfigurable: false
     )
 
     let name = "background_notify"

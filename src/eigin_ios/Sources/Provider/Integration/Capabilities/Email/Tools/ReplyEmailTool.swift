@@ -4,7 +4,7 @@ struct ReplyEmailTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_reply",
         displayName: Localized.Tools.Email.reply,
-        defaultPermissionLevel: .ask, category: .external
+        defaultPermissionLevel: .ask, category: .email
     )
 
     let name = "email_reply"
@@ -20,7 +20,7 @@ struct ReplyEmailTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .external
+        .email
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

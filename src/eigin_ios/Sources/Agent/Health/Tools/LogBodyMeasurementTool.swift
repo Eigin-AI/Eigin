@@ -4,7 +4,7 @@ struct LogBodyMeasurementTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "log_body_measurement",
         displayName: Localized.Tools.Log.bodyMeasurement,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .health
     )
 
     let name = "log_body_measurement"
@@ -20,7 +20,7 @@ struct LogBodyMeasurementTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .health
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

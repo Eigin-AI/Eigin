@@ -4,7 +4,7 @@ struct DeleteKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "delete_knowledge",
         displayName: Localized.Tools.Delete.knowledge,
-        defaultPermissionLevel: .ask, category: .agent
+        defaultPermissionLevel: .ask, category: .knowledge
     )
 
     let name = "delete_knowledge"
@@ -21,7 +21,7 @@ struct DeleteKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

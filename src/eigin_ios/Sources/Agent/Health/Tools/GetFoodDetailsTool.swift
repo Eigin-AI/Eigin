@@ -4,7 +4,7 @@ struct GetFoodDetailsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_food_details",
         displayName: Localized.Tools.Get.Food.details,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .health
     )
 
     let name = "get_food_details"
@@ -24,7 +24,7 @@ struct GetFoodDetailsTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .health
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

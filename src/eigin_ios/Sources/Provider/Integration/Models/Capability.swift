@@ -13,4 +13,15 @@ import Foundation
 enum Capability: String, Codable, CaseIterable, Sendable {
     case email
     case aula
+
+    /// The permissions-UI category that tools providing this capability are
+    /// grouped under. `nil` when the capability has no integration-backed
+    /// category — those categories show in the permissions UI regardless of
+    /// what's connected.
+    var toolCategory: ToolCapability.Category? {
+        switch self {
+        case .email: .email
+        case .aula: .familyAndSchool
+        }
+    }
 }

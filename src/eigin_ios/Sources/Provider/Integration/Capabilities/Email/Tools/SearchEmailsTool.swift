@@ -4,7 +4,7 @@ struct SearchEmailsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_search",
         displayName: Localized.Tools.Email.search,
-        defaultPermissionLevel: .ask, category: .external
+        defaultPermissionLevel: .ask, category: .email
     )
 
     /// Supported range for `max_results`.
@@ -25,7 +25,7 @@ struct SearchEmailsTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .external
+        .email
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

@@ -126,4 +126,31 @@ struct PermissionPolicyTests {
         // delete_knowledge is .ask but has chat grant → .always
         #expect(policy.permissionLevel(for: "delete_knowledge") == .always)
     }
+
+    // MARK: - AgentPermissionPolicy — non-configurable machinery
+
+    @Test func nonConfigurableMachineryAlwaysRunsEvenWithNeverGrant() {
+        // A stale or hostile grant must not break onboarding, space bootstrap,
+        // skill flows, or initiative (background prompt) runs.
+        let machineryKeys = [
+            DoneTool.capability.key,
+            BackgroundNotifyTool.capability.key,
+            ActivateSkillTool.capability.key,
+            StartFlowTool.capability.key,
+            AdvanceFlowTool.capability.key,
+        ]
+        var grants = [String: ToolPermissionLevel]()
+        for key in machineryKeys {
+            grants[key] = .never
+        }
+        let policy = AgentPermissionPolicy(
+            builtInGrants: grants,
+            discoveredGrants: [:],
+            chatGrants: [],
+            canPromptUser: true
+        )
+        for key in machineryKeys {
+            #expect(policy.permissionLevel(for: key) == .always)
+        }
+    }
 }

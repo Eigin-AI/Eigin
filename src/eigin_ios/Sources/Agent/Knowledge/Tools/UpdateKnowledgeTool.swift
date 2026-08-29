@@ -8,7 +8,7 @@ struct UpdateKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "update_knowledge",
         displayName: Localized.Tools.Update.knowledge,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .knowledge
     )
 
     let name = "update_knowledge"
@@ -26,7 +26,7 @@ struct UpdateKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

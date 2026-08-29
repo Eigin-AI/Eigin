@@ -3646,19 +3646,59 @@ enum Localized {
             Localized.get("toolCategory.agent")
         }
 
+        /// Tool category label for calendar tools
+        static var calendar: String {
+            Localized.get("toolCategory.calendar")
+        }
+
         /// Tool category label for chat-related tools
         static var chats: String {
             Localized.get("toolCategory.chats")
         }
 
-        /// Tool category label for external/MCP tools
-        static var external: String {
-            Localized.get("toolCategory.external")
+        /// Tool category label for email tools
+        static var email: String {
+            Localized.get("toolCategory.email")
         }
 
-        /// Tool category label for system-level tools
-        static var system: String {
-            Localized.get("toolCategory.system")
+        /// Tool category label for extension (MCP) tools
+        static var extensions: String {
+            Localized.get("toolCategory.extensions")
+        }
+
+        /// Tool category label for family and school tools
+        static var familyAndSchool: String {
+            Localized.get("toolCategory.familyAndSchool")
+        }
+
+        /// Tool category label for health tools
+        static var health: String {
+            Localized.get("toolCategory.health")
+        }
+
+        /// Tool category label for knowledge tools
+        static var knowledge: String {
+            Localized.get("toolCategory.knowledge")
+        }
+
+        /// Tool category label for reminder tools
+        static var reminders: String {
+            Localized.get("toolCategory.reminders")
+        }
+
+        /// Tool category label for skill tools
+        static var skills: String {
+            Localized.get("toolCategory.skills")
+        }
+
+        /// Tool category label for time and place tools
+        static var timeAndPlace: String {
+            Localized.get("toolCategory.timeAndPlace")
+        }
+
+        /// Tool category label for web tools
+        static var web: String {
+            Localized.get("toolCategory.web")
         }
     }
 

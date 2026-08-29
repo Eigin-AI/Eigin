@@ -1,3 +1,4 @@
+import Factory
 import SwiftData
 import SwiftUI
 
@@ -13,6 +14,7 @@ struct ToolPermissions: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
+    @Query(sort: \Integration.createdAt) private var integrations: [Integration]
     @State private var builtInLevels: [String: ToolPermissionLevel] = [:]
     @State private var discoveredLevels: [String: ToolPermissionLevel] = [:]
 
@@ -36,9 +38,17 @@ struct ToolPermissions: View {
 
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
-                    // All built-in capability categories in one card
+                    // All built-in capability categories in one card.
+                    // Integration-backed categories (email, family & school)
+                    // only appear once something provides them.
+                    let integrationCategories = Set(
+                        Container.shared.integrationManager()
+                            .connectedCapabilities(integrations: integrations)
+                            .compactMap(\.toolCategory)
+                    )
                     let categories = ToolCapability.Category.allCases
                         .filter { !ToolRegistry.capabilities(for: $0).isEmpty }
+                        .filter { integrationCategories.contains($0) || !isIntegrationBacked($0) }
 
                     if !categories.isEmpty {
                         AppCardSurface(padding: 0) {
@@ -163,6 +173,14 @@ struct ToolPermissions: View {
         mcpServers.filter(\.isEnabled)
     }
 
+    /// Whether a category's tools only exist through a connected integration.
+    /// Derived from the bundled catalog so it stays in sync as domains grow.
+    private func isIntegrationBacked(_ category: ToolCapability.Category) -> Bool {
+        BundledIntegrationType.all.contains {
+            $0.toolCapabilities.contains { $0.category == category }
+        }
+    }
+
     private func loadGrants() {
         let agentID = agent.id
         let descriptor = FetchDescriptor<AgentToolGrant>(
@@ -214,7 +232,7 @@ struct ToolPermissions: View {
                 let cap = ToolCapability(
                     kind: .discovered, key: toolName,
                     displayName: toolName,
-                    defaultPermissionLevel: .ask, category: .external
+                    defaultPermissionLevel: .ask, category: .extensions
                 )
                 let grant = AgentToolGrant(agentID: agentID, capability: cap, level: level)
                 modelContext.insert(grant)

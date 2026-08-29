@@ -4,7 +4,7 @@ struct SearchKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "search_knowledge",
         displayName: Localized.Tools.Knowledge.search,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .knowledge
     )
 
     let name = "search_knowledge"
@@ -21,7 +21,7 @@ struct SearchKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

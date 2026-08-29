@@ -64,7 +64,7 @@ enum MCPServerSkill {
                 key: MCPNaming.toolName(serverName: server.name, toolName: toolName),
                 displayName: "\(server.name): \(toolName.titleCased)",
                 defaultPermissionLevel: MCPToolProxy.defaultCapability.defaultPermissionLevel,
-                category: .external
+                category: .extensions
             )
         })
 

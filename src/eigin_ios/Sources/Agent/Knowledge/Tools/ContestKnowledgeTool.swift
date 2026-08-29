@@ -7,7 +7,7 @@ struct ContestKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "contest_knowledge",
         displayName: Localized.Tools.Contest.knowledge,
-        defaultPermissionLevel: .always, category: .agent
+        defaultPermissionLevel: .always, category: .knowledge
     )
 
     let name = "contest_knowledge"
@@ -24,7 +24,7 @@ struct ContestKnowledgeTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .agent
+        .knowledge
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

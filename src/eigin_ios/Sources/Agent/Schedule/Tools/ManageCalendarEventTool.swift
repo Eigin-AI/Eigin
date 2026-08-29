@@ -4,7 +4,7 @@ struct ManageCalendarEventTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "manage_calendar_event",
         displayName: Localized.Tools.Schedule.manageEvent,
-        defaultPermissionLevel: .ask, category: .system
+        defaultPermissionLevel: .ask, category: .calendar
     )
 
     let name = "manage_calendar_event"
@@ -20,7 +20,7 @@ struct ManageCalendarEventTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .system
+        .calendar
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {

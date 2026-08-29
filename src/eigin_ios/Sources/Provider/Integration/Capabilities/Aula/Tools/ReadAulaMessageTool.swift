@@ -6,7 +6,7 @@ struct ReadAulaMessageTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_message_read",
         displayName: Localized.Tools.Aula.readMessage,
-        defaultPermissionLevel: .ask, category: .external
+        defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 
     let name = "aula_message_read"
@@ -22,7 +22,7 @@ struct ReadAulaMessageTool: Tool {
     }
 
     var category: ToolCapability.Category {
-        .external
+        .familyAndSchool
     }
 
     var defaultPermissionLevel: ToolPermissionLevel {
