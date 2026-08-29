@@ -23,13 +23,15 @@ struct DefaultAulaProviderTests {
     private func makeProvider(
         store: FakeAulaCredentialStore,
         http: FakeAulaHTTP,
-        refresher: any AulaTokenRefresher = FakeAulaTokenRefresher.returning(accessToken: "unused")
+        refresher: any AulaTokenRefresher = FakeAulaTokenRefresher.returning(accessToken: "unused"),
+        healthMonitor: (any IntegrationHealthReporter)? = nil
     ) -> DefaultAulaProvider {
         DefaultAulaProvider(
             integrationID: integrationID,
             credentialStore: store,
             apiClient: AulaAPIClient(http: http),
-            tokenRefresher: refresher
+            tokenRefresher: refresher,
+            healthMonitor: healthMonitor
         )
     }
 
@@ -388,6 +390,60 @@ struct DefaultAulaProviderTests {
             _ = try await provider.listMessages(limit: 10)
         }
         #expect(http.requests.isEmpty)
+    }
+
+    @Test func missingSessionFlagsTheIntegrationForReconnect() async {
+        let http = FakeAulaHTTP { _ in (200, Data("{}".utf8)) }
+        let health = RecordingHealthReporter()
+        let provider = makeProvider(
+            store: FakeAulaCredentialStore(),
+            http: http,
+            healthMonitor: health
+        )
+
+        await #expect(throws: AulaProviderError.notAuthenticated) {
+            _ = try await provider.listMessages(limit: 10)
+        }
+        #expect(health.marked == [integrationID])
+    }
+
+    @Test func deadRefreshTokenFlagsTheIntegrationForReconnect() async throws {
+        let expired = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(-10))
+        let store = FakeAulaCredentialStore(seed: [integrationID: expired])
+        let refresher =
+            FakeAulaTokenRefresher(result: .failure(FakeAulaTokenRefresher.RefreshUnavailable()))
+        let http = FakeAulaHTTP { _ in (200, Data(#"{"data":{"threads":[]}}"#.utf8)) }
+        let health = RecordingHealthReporter()
+        let provider = makeProvider(
+            store: store,
+            http: http,
+            refresher: refresher,
+            healthMonitor: health
+        )
+
+        await #expect(throws: AulaProviderError.sessionExpired) {
+            _ = try await provider.listMessages(limit: 10)
+        }
+        #expect(health.marked == [integrationID])
+    }
+
+    @Test func unfailableSessionExpiryAfterAWebSessionResetFlagsForReconnect() async throws {
+        // The prime succeeds but the retry still 401s — even a freshly re-primed
+        // web session expired, so the account needs an interactive reconnect.
+        let valid = session(refreshToken: "refresh", expiresAt: Date.now.addingTimeInterval(3600))
+        let store = FakeAulaCredentialStore(seed: [integrationID: valid])
+        let http = FakeAulaHTTP { request in
+            request.aulaMethod == "profiles.getProfileContext"
+                ? (200, Data(#"{"data":{}}"#.utf8))
+                : (401, Data())
+        }
+        let health = RecordingHealthReporter()
+        let provider = makeProvider(store: store, http: http, healthMonitor: health)
+
+        await #expect(throws: AulaProviderError.sessionExpired) {
+            _ = try await provider.listMessages(limit: 10)
+        }
+        #expect(health.marked == [integrationID])
     }
 
     @Test func persistsTheApiVersionAfterA410Bump() async throws {

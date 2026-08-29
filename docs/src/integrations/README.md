@@ -6,6 +6,8 @@ This differs from [MCP](../tools/mcp.md): MCP tools are opaque and injected into
 
 Manage integrations in **Settings → Connections → Integrations**. Connecting one runs its authorization flow and records which capabilities were actually granted, since a user can approve some and deny others — only granted capabilities' tools appear. Only one connected integration can provide a given capability at a time.
 
+When a connection expires (a revoked OAuth refresh token, an expired Aula session, a rotated mail password), the agent's tool errors say the user can fix it themselves, and the Connections list flags the integration with a warning icon. The fix is **Reconnect** on the integration's detail screen: it re-runs the same connect flow under the *existing* integration id, refreshing credentials and granted capabilities in place. Capability-provider selections and tool permissions keep pointing at the same integration, unlike a remove and re-add, which mints a new one.
+
 Integration tools appear in the normal [permissions](../tools/permissions.md) screen once connected, defaulting to **ask** like any external tool.
 
 ## Available integrations

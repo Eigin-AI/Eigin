@@ -23,6 +23,9 @@ struct MicrosoftEmailProvider: EmailProvider {
     /// synthesized sent/reply messages (Graph's send actions don't return one).
     let accountAddress: String
     let urlSession: URLSession
+    /// Told when authentication is definitively dead (no stored token), so the
+    /// Connections UI can flag the reconnect nudge.
+    let healthMonitor: (any IntegrationHealthReporter)?
 
     private static let baseURL = URL(string: "https://graph.microsoft.com/v1.0/me")!
     private static let summarySelect = "id,conversationId,subject,bodyPreview,from,receivedDateTime"
@@ -34,13 +37,15 @@ struct MicrosoftEmailProvider: EmailProvider {
         oauthService: any IntegrationOAuthService,
         oauthConfig: PKCEOAuthConfig,
         accountAddress: String,
-        urlSession: URLSession = .shared
+        urlSession: URLSession = .shared,
+        healthMonitor: (any IntegrationHealthReporter)? = nil
     ) {
         self.integrationID = integrationID
         self.oauthService = oauthService
         self.oauthConfig = oauthConfig
         self.accountAddress = accountAddress
         self.urlSession = urlSession
+        self.healthMonitor = healthMonitor
     }
 
     // MARK: - EmailProvider
@@ -114,6 +119,7 @@ struct MicrosoftEmailProvider: EmailProvider {
             config: oauthConfig,
             integrationID: integrationID
         ) else {
+            healthMonitor?.markNeedsReconnect(integrationID)
             throw EmailProviderError.notAuthenticated
         }
         return token
@@ -229,9 +235,9 @@ struct MicrosoftEmailProvider: EmailProvider {
     private static func errorMessage(status: Int?, context: String) -> String {
         switch status {
         case 401:
-            "Microsoft rejected the request as unauthorized — the connection may need to be re-authorized."
+            "Microsoft rejected the request as unauthorized — ask the user to reconnect it in the Eigin app, then try again."
         case 403:
-            "Microsoft denied this \(context) action — the connected account likely didn't grant the scope required for it. Reconnect the integration and approve all requested permissions to fix this."
+            "Microsoft denied this \(context) action — the connected account likely didn't grant the scope required for it. Reconnect the integration in the Eigin app and approve the requested permissions to fix this."
         case .some(let code):
             "Microsoft returned \(code) for this \(context) action."
         case nil:

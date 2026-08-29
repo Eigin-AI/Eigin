@@ -32,6 +32,8 @@ We don't reimplement MitID itself - that's not something a third party should be
 
 The web cookies (from logged-in browser session) are disposable: they lapse after about a day, independently of the token. When they lapse, we don't need the user to log in again - we re-establish the web session from the token by re-priming it in the background, the same way the app's own client does after an idle period. An interactive reconnect is only needed when the refresh token itself dies, which is something a background step can't recover.
 
+That interactive reconnect is in-place: the integration's detail screen has a **Reconnect** action that re-runs this same WKWebView login under the existing integration id, so nothing referencing the connection (capability selections, permissions) is replaced — the user just logs in again over the old connection.
+
 The technical details are documented inline in the integration code.
 
 ### Configuration

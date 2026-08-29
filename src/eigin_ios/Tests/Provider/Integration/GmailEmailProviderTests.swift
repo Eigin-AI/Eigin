@@ -8,18 +8,24 @@ import Testing
 struct GmailEmailProviderTests {
     private static let base = "https://gmail.googleapis.com/gmail/v1/users/me"
 
-    private func makeProvider(session: URLSession) -> GmailEmailProvider {
+    private func makeProvider(
+        session: URLSession,
+        healthMonitor: (any IntegrationHealthReporter)? = nil
+    ) -> GmailEmailProvider {
         GmailEmailProvider(
-            integrationID: UUID(),
+            integrationID: integrationID,
             oauthService: FakeIntegrationOAuthService(),
             oauthConfig: PKCEOAuthConfig(
                 authorizationEndpoint: URL(string: "https://accounts.google.com/o/oauth2/v2/auth")!,
                 tokenEndpoint: URL(string: "https://oauth2.googleapis.com/token")!,
                 clientID: "client-123"
             ),
-            urlSession: session
+            urlSession: session,
+            healthMonitor: healthMonitor
         )
     }
+
+    private let integrationID = UUID()
 
     @Test func listEmailsFetchesMessagesThenMetadataForEach() async throws {
         let session = FakeURLProtocol.fakeSession()
@@ -194,5 +200,40 @@ struct GmailEmailProviderTests {
         let body = try #require(FakeURLProtocol.lastRequestBody(for: "\(Self.base)/messages/send"))
         let json = try JSONSerialization.jsonObject(with: body) as? [String: Any]
         #expect(json?["threadId"] as? String == "t1")
+    }
+
+    @Test func missingTokenFlagsTheIntegrationForReconnect() async throws {
+        // The fake session (with a default token) never gets consulted — the
+        // service reports no stored token at all.
+        let session = FakeURLProtocol.fakeSession()
+        let oauth = FakeIntegrationOAuthService()
+        oauth.token = nil
+        let health = RecordingHealthReporter()
+        let provider = try GmailEmailProvider(
+            integrationID: integrationID,
+            oauthService: oauth,
+            oauthConfig: PKCEOAuthConfig(
+                authorizationEndpoint: #require(
+                    URL(string: "https://accounts.google.com/o/oauth2/v2/auth")
+                ),
+                tokenEndpoint: #require(URL(string: "https://oauth2.googleapis.com/token")),
+                clientID: "client-123"
+            ),
+            urlSession: session,
+            healthMonitor: health
+        )
+
+        do {
+            _ = try await provider.listEmails(maxResults: 10, pageToken: nil)
+            Issue.record("Expected .notAuthenticated")
+        } catch let error as EmailProviderError {
+            guard case .notAuthenticated = error else {
+                Issue.record("Expected .notAuthenticated, got \(error)")
+                return
+            }
+        } catch {
+            Issue.record("Expected .notAuthenticated, got \(error)")
+        }
+        #expect(health.marked == [integrationID])
     }
 }

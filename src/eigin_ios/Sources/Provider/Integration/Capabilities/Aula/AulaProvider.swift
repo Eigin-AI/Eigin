@@ -161,9 +161,9 @@ enum AulaProviderError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
-            "Not connected to Aula."
+            "Not connected to Aula — ask the user to reconnect Aula in the Eigin app, then try again."
         case .sessionExpired:
-            "The Aula session has expired — reconnect Aula to continue."
+            "The Aula session has expired — ask the user to reconnect Aula in the Eigin app, then try again."
         case .requestFailed(let reason):
             "Aula request failed: \(reason)"
         case .notFound:

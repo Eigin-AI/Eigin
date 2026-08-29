@@ -14,17 +14,23 @@ struct IMAPEmailProvider: EmailProvider {
     let credentialStore: any IMAPCredentialStore
     let makeIMAPSession: @Sendable () -> any IMAPSession
     let makeSMTPSession: @Sendable () -> any SMTPSession
+    /// Told when authentication is definitively dead (no stored credentials,
+    /// or the server rejecting them), so the Connections UI can flag the
+    /// reconnect nudge.
+    let healthMonitor: (any IntegrationHealthReporter)?
 
     init(
         integrationID: UUID,
         credentialStore: any IMAPCredentialStore,
         makeIMAPSession: @escaping @Sendable () -> any IMAPSession = { DefaultIMAPSession() },
-        makeSMTPSession: @escaping @Sendable () -> any SMTPSession = { DefaultSMTPSession() }
+        makeSMTPSession: @escaping @Sendable () -> any SMTPSession = { DefaultSMTPSession() },
+        healthMonitor: (any IntegrationHealthReporter)? = nil
     ) {
         self.integrationID = integrationID
         self.credentialStore = credentialStore
         self.makeIMAPSession = makeIMAPSession
         self.makeSMTPSession = makeSMTPSession
+        self.healthMonitor = healthMonitor
     }
 
     // MARK: - EmailProvider
@@ -112,6 +118,7 @@ struct IMAPEmailProvider: EmailProvider {
 
     private func readSettings() throws -> IMAPAccountSettings {
         guard let settings = credentialStore.read(for: integrationID) else {
+            healthMonitor?.markNeedsReconnect(integrationID)
             throw EmailProviderError.notAuthenticated
         }
         return settings
@@ -195,8 +202,10 @@ struct IMAPEmailProvider: EmailProvider {
         } catch let error as MailSessionError {
             switch error {
             case .authenticationFailed(let reason):
-                throw EmailProviderError
-                    .requestFailed("Authentication with the mail server failed: \(reason)")
+                healthMonitor?.markNeedsReconnect(integrationID)
+                throw EmailProviderError.requestFailed(
+                    "Authentication with the mail server failed — ask the user to reconnect the account in the Eigin app, then try again. \(reason)"
+                )
             case .connectionFailed(let reason):
                 throw EmailProviderError
                     .requestFailed("Couldn't connect to the mail server: \(reason)")

@@ -7,8 +7,11 @@ final class FakeIntegrationOAuthService: IntegrationOAuthService, @unchecked Sen
     var token: String? = "fake-access-token"
     var scopes: Set<String> = []
     private(set) var clearedIDs: [UUID] = []
+    private var authorizedIDList: [UUID] = []
+    private let lock = NSLock()
 
     func authorize(config: PKCEOAuthConfig, integrationID: UUID) async throws -> String {
+        lock.withLock { authorizedIDList.append(integrationID) }
         guard let token else { throw IntegrationOAuthError.authorizationFailed("no token") }
         return token
     }
@@ -24,5 +27,14 @@ final class FakeIntegrationOAuthService: IntegrationOAuthService, @unchecked Sen
     func clearTokens(for integrationID: UUID) {
         clearedIDs.append(integrationID)
         token = nil
+    }
+
+    func hasStoredTokens(for integrationID: UUID) -> Bool {
+        token != nil
+    }
+
+    /// The ids `authorize` was called with, in order.
+    var authorizedIDs: [UUID] {
+        lock.withLock { authorizedIDList }
     }
 }

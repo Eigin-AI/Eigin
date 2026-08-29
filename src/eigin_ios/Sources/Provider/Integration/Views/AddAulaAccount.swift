@@ -6,7 +6,8 @@ import WebKit
 /// Sheet for connecting Aula: runs the real UniLogin/MitID login in an
 /// interactive `WKWebView` (see ``AulaLoginWebView``), then verifies the
 /// resulting session and saves it as an integration. Presented from
-/// ``AddIntegration`` when the user picks the Aula type. See
+/// ``AddIntegration`` when the user picks the Aula type, or from
+/// ``IntegrationDetail`` to reconnect an existing account in place. See
 /// `docs/src/integrations/aula.md` for why Aula needs a custom web view
 /// instead of `ASWebAuthenticationSession`.
 struct AddAulaAccount: View {
@@ -15,6 +16,10 @@ struct AddAulaAccount: View {
     var onConnected: () -> Void = {}
 
     let config: PKCEOAuthConfig
+    /// The existing integration when this sheet runs as an in-place reconnect
+    /// — the new session is saved under its id (so references and keychain
+    /// state survive) and its row is updated instead of inserting a new one.
+    var existing: Integration?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -188,13 +193,22 @@ struct AddAulaAccount: View {
             apiClient: apiClient
         )
 
-        let integration = Integration(
-            typeID: BundledIntegrationType.aula.id,
-            accountLabel: accountLabel(for: verified),
-            grantedCapabilities: [Capability.aula.rawValue]
-        )
-        credentialStore.save(verified, for: integration.id)
-        modelContext.insert(integration)
+        if let existing {
+            // Reconnect: same id, same keychain namespace — only the labels
+            // and the stored session refresh.
+            existing.accountLabel = accountLabel(for: verified)
+            existing.updatedAt = .now
+            credentialStore.save(verified, for: existing.id)
+            IntegrationHealthMonitor.shared.clearNeedsReconnect(existing.id)
+        } else {
+            let integration = Integration(
+                typeID: BundledIntegrationType.aula.id,
+                accountLabel: accountLabel(for: verified),
+                grantedCapabilities: [Capability.aula.rawValue]
+            )
+            credentialStore.save(verified, for: integration.id)
+            modelContext.insert(integration)
+        }
         Haptics.success()
         onConnected()
         dismiss()

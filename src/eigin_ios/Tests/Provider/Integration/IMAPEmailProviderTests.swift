@@ -246,4 +246,57 @@ struct IMAPEmailProviderTests {
             #expect(reason.contains("bad password"))
         }
     }
+
+    @Test func authenticationFailureFlagsTheIntegrationForReconnect() async throws {
+        let integrationID = UUID()
+        let credentialStore = FakeIMAPCredentialStore()
+        credentialStore.save(settings, for: integrationID)
+        let imapSession = FakeIMAPSession()
+        imapSession.openError = .authenticationFailed("bad password")
+        let health = RecordingHealthReporter()
+        let provider = IMAPEmailProvider(
+            integrationID: integrationID,
+            credentialStore: credentialStore,
+            makeIMAPSession: { imapSession },
+            makeSMTPSession: { FakeSMTPSession() },
+            healthMonitor: health
+        )
+
+        do {
+            _ = try await provider.listEmails(maxResults: 10, pageToken: nil)
+            Issue.record("Expected an error")
+        } catch let error as EmailProviderError {
+            guard case .requestFailed(let reason) = error else {
+                Issue.record("Expected .requestFailed, got \(error)")
+                return
+            }
+            #expect(reason.contains("reconnect the account"))
+        }
+        #expect(health.marked == [integrationID])
+    }
+
+    @Test func missingCredentialsFlagsTheIntegrationForReconnect() async {
+        let integrationID = UUID()
+        let health = RecordingHealthReporter()
+        let provider = IMAPEmailProvider(
+            integrationID: integrationID,
+            credentialStore: FakeIMAPCredentialStore(),
+            makeIMAPSession: { FakeIMAPSession() },
+            makeSMTPSession: { FakeSMTPSession() },
+            healthMonitor: health
+        )
+
+        do {
+            _ = try await provider.listEmails(maxResults: 10, pageToken: nil)
+            Issue.record("Expected .notAuthenticated")
+        } catch let error as EmailProviderError {
+            guard case .notAuthenticated = error else {
+                Issue.record("Expected .notAuthenticated, got \(error)")
+                return
+            }
+        } catch {
+            Issue.record("Expected .notAuthenticated, got \(error)")
+        }
+        #expect(health.marked == [integrationID])
+    }
 }

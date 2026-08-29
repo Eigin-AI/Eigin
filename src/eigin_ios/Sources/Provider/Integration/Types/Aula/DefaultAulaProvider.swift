@@ -12,17 +12,23 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
     private let credentialStore: any AulaCredentialStore
     private let apiClient: AulaAPIClient
     private let tokenRefresher: any AulaTokenRefresher
+    /// Told when the session is definitively dead (no stored session, or a
+    /// dead refresh token), so the Connections UI can flag the reconnect
+    /// nudge.
+    private let healthMonitor: (any IntegrationHealthReporter)?
 
     init(
         integrationID: UUID,
         credentialStore: any AulaCredentialStore,
         apiClient: AulaAPIClient,
-        tokenRefresher: any AulaTokenRefresher = DefaultAulaTokenRefresher()
+        tokenRefresher: any AulaTokenRefresher = DefaultAulaTokenRefresher(),
+        healthMonitor: (any IntegrationHealthReporter)? = nil
     ) {
         self.integrationID = integrationID
         self.credentialStore = credentialStore
         self.apiClient = apiClient
         self.tokenRefresher = tokenRefresher
+        self.healthMonitor = healthMonitor
     }
 
     // MARK: - AulaProvider
@@ -256,10 +262,18 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
             AppLogger.debug("aula: sessionExpired, resetting web session", category: .network)
             guard let primed = try await resetWebSession(current) else {
                 AppLogger.debug("aula: web-session reset unavailable or failed", category: .network)
+                healthMonitor?.markNeedsReconnect(integrationID)
                 throw AulaProviderError.sessionExpired
             }
             AppLogger.debug("aula: web session reset, retrying call", category: .network)
-            return try await persisting(call(primed), against: primed)
+            do {
+                return try await persisting(call(primed), against: primed)
+            } catch AulaProviderError.sessionExpired {
+                // Even a freshly primed web session expired — the account
+                // itself needs an interactive reconnect.
+                healthMonitor?.markNeedsReconnect(integrationID)
+                throw AulaProviderError.sessionExpired
+            }
         }
     }
 
@@ -288,6 +302,7 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
                 "aula: refresh grant failed: \(private: error.localizedDescription)",
                 category: .network
             )
+            healthMonitor?.markNeedsReconnect(integrationID)
             throw AulaProviderError.sessionExpired
         }
         var updated = session
@@ -346,6 +361,7 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
 
     private func session() throws -> AulaSession {
         guard let session = credentialStore.read(for: integrationID) else {
+            healthMonitor?.markNeedsReconnect(integrationID)
             throw AulaProviderError.notAuthenticated
         }
         return session

@@ -17,6 +17,10 @@ protocol IntegrationOAuthService: Sendable {
     func grantedScopes(for integrationID: UUID) -> Set<String>
     /// Deletes all stored OAuth tokens for an integration.
     func clearTokens(for integrationID: UUID)
+    /// Whether tokens exist under this id — false after a failed refresh
+    /// cleared them, which is the durable "needs reconnect" signal for OAuth
+    /// types (it survives restarts, unlike a provider's in-memory flag).
+    func hasStoredTokens(for integrationID: UUID) -> Bool
 }
 
 final class DefaultIntegrationOAuthService: IntegrationOAuthService, @unchecked Sendable {
@@ -119,6 +123,10 @@ final class DefaultIntegrationOAuthService: IntegrationOAuthService, @unchecked 
         }
     }
 
+    func hasStoredTokens(for integrationID: UUID) -> Bool {
+        readKeychain(integrationID: integrationID, suffix: Suffix.accessToken) != nil
+    }
+
     // MARK: - Private
 
     private func storeTokens(_ response: TokenResponse, integrationID: UUID) {
@@ -166,12 +174,15 @@ final class DefaultIntegrationOAuthService: IntegrationOAuthService, @unchecked 
 /// unlike ``EmailProviderError`` these are localized.
 enum IntegrationOAuthError: Error, LocalizedError, Equatable {
     case userCancelled
+    case notConfigured(String)
     case authorizationFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .userCancelled:
             Localized.Errors.Authentication.cancelled
+        case .notConfigured(let name):
+            "\(name) isn't configured in this build — its OAuth client id is missing."
         case .authorizationFailed(let reason):
             Localized.Errors.Authorization.failedWithReason(reason)
         }

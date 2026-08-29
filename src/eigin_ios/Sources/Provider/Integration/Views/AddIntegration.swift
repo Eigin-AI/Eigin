@@ -332,47 +332,34 @@ struct AddIntegration: View {
         configFactory: @Sendable () -> PKCEOAuthConfig
     ) {
         let config = configFactory()
-        // Client id comes from a build-time secret (see `.env` / project.yml) —
-        // if it's missing, authorize() would still launch a browser session
-        // that can never complete (Google rejects an empty client_id), which
-        // reads to the user as a silent hang. Fail fast with a clear reason.
-        guard !config.clientID.isEmpty else {
-            phase = .error(
-                "\(type.displayName) isn't configured in this build — its OAuth client id is missing."
-            )
-            return
-        }
         phase = .authorizing
 
         Task {
             let integrationID = UUID()
             do {
-                let accessToken = try await oauthService.authorize(
+                let result = try await IntegrationConnect.authorizeOAuth(
+                    oauthService: oauthService,
+                    type: type,
                     config: config,
-                    integrationID: integrationID
+                    integrationID: integrationID,
+                    labelFallback: type.displayName
                 )
-                let accountLabel = await type.accountLabel(accessToken) ?? type.displayName
-
-                // Google's consent screen lets the user deny individual scopes, so
-                // don't assume every requested capability was granted.
-                let grantedScopes = oauthService.grantedScopes(for: integrationID)
-                let grantedCapabilities = type.grantedCapabilities(fromGrantedScopes: grantedScopes)
 
                 // Reuse the id authorize() already stored tokens under — no need to
                 // migrate keychain keys to a separately-minted model id.
                 let integration = Integration(
                     id: integrationID,
                     typeID: type.id,
-                    accountLabel: accountLabel,
-                    grantedCapabilities: grantedCapabilities.map(\.rawValue)
+                    accountLabel: result.accountLabel,
+                    grantedCapabilities: result.grantedCapabilities.map(\.rawValue)
                 )
                 modelContext.insert(integration)
 
-                let ungranted = type.providedCapabilities.subtracting(grantedCapabilities)
+                let ungranted = type.providedCapabilities.subtracting(result.grantedCapabilities)
                 if !ungranted.isEmpty {
                     let names = ungranted.map(\.rawValue.titleCased).joined(separator: ", ")
                     partialGrantWarning =
-                        "\(accountLabel) is connected, but you didn't grant: \(names). The agent won't be able to use those until you reconnect and approve them."
+                        "\(result.accountLabel) is connected, but you didn't grant: \(names). The agent won't be able to use those until you reconnect and approve them."
                 } else {
                     Haptics.success()
                     dismiss()
