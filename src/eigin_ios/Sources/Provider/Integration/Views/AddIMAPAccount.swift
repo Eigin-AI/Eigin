@@ -4,12 +4,20 @@ import SwiftUI
 
 /// Sheet for connecting an IMAP/SMTP email account: collect server settings,
 /// verify the connection, then save. Presented from ``AddIntegration`` when
-/// the user picks the IMAP type, mirroring how OAuth types launch a browser
+/// the user picks the IMAP type, or from ``IntegrationDetail`` to reconnect
+/// an existing account in place, mirroring how OAuth types launch a browser
 /// from the same picker.
 struct AddIMAPAccount: View {
     /// Called after the integration is saved, so the presenting
     /// ``AddIntegration`` sheet can dismiss itself too.
     var onConnected: () -> Void = {}
+
+    /// The existing integration when this sheet runs as an in-place reconnect
+    /// — the new credentials are saved under its id and its row is updated
+    /// instead of inserting a new one. Pre-fills the stored settings with the
+    /// password blank, so the user consciously re-enters it (a stale one would
+    /// only re-fail the verify step).
+    var existing: Integration?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -79,6 +87,22 @@ struct AddIMAPAccount: View {
             .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
+        .onAppear { prefillFromExisting() }
+    }
+
+    /// In reconnect mode, seeds the form from the stored settings — everything
+    /// except the password, which stays blank so it's consciously re-entered.
+    private func prefillFromExisting() {
+        guard phase == .editing, let existing,
+              let settings = credentialStore.read(for: existing.id)
+        else { return }
+        emailAddress = settings.emailAddress
+        imapHost = settings.imapHost
+        imapPort = String(settings.imapPort)
+        imapUsername = settings.imapUsername
+        smtpHost = settings.smtpHost
+        smtpPort = String(settings.smtpPort)
+        smtpUsername = settings.smtpUsername
     }
 
     @ViewBuilder
@@ -159,13 +183,22 @@ struct AddIMAPAccount: View {
         Task {
             do {
                 try await IMAPConnectionVerifier.verify(settings)
-                let integration = Integration(
-                    typeID: BundledIntegrationType.imap.id,
-                    accountLabel: settings.emailAddress,
-                    grantedCapabilities: [Capability.email.rawValue]
-                )
-                credentialStore.save(settings, for: integration.id)
-                modelContext.insert(integration)
+                if let existing {
+                    // Reconnect: same id, same keychain namespace — only the
+                    // labels and the stored credentials refresh.
+                    existing.accountLabel = settings.emailAddress
+                    existing.updatedAt = .now
+                    credentialStore.save(settings, for: existing.id)
+                    IntegrationHealthMonitor.shared.clearNeedsReconnect(existing.id)
+                } else {
+                    let integration = Integration(
+                        typeID: BundledIntegrationType.imap.id,
+                        accountLabel: settings.emailAddress,
+                        grantedCapabilities: [Capability.email.rawValue]
+                    )
+                    credentialStore.save(settings, for: integration.id)
+                    modelContext.insert(integration)
+                }
                 Haptics.success()
                 onConnected()
                 dismiss()

@@ -85,7 +85,7 @@ enum EmailProviderError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
-            "Not authenticated with the email provider."
+            "Not authenticated with the email provider — ask the user to reconnect it in the Eigin app, then try again."
         case .requestFailed(let reason):
             "Email request failed: \(reason)"
         case .notFound:

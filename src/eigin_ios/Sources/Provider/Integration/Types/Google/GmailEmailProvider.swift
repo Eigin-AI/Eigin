@@ -8,6 +8,9 @@ struct GmailEmailProvider: EmailProvider {
     let oauthService: any IntegrationOAuthService
     let oauthConfig: PKCEOAuthConfig
     let urlSession: URLSession
+    /// Told when authentication is definitively dead (no stored token), so the
+    /// Connections UI can flag the reconnect nudge.
+    let healthMonitor: (any IntegrationHealthReporter)?
 
     private static let baseURL = URL(string: "https://gmail.googleapis.com/gmail/v1/users/me")!
 
@@ -15,12 +18,14 @@ struct GmailEmailProvider: EmailProvider {
         integrationID: UUID,
         oauthService: any IntegrationOAuthService,
         oauthConfig: PKCEOAuthConfig,
-        urlSession: URLSession = .shared
+        urlSession: URLSession = .shared,
+        healthMonitor: (any IntegrationHealthReporter)? = nil
     ) {
         self.integrationID = integrationID
         self.oauthService = oauthService
         self.oauthConfig = oauthConfig
         self.urlSession = urlSession
+        self.healthMonitor = healthMonitor
     }
 
     // MARK: - EmailProvider
@@ -84,6 +89,7 @@ struct GmailEmailProvider: EmailProvider {
             config: oauthConfig,
             integrationID: integrationID
         ) else {
+            healthMonitor?.markNeedsReconnect(integrationID)
             throw EmailProviderError.notAuthenticated
         }
         return token
@@ -203,9 +209,9 @@ struct GmailEmailProvider: EmailProvider {
     private static func errorMessage(status: Int?, context: String) -> String {
         switch status {
         case 401:
-            "Gmail rejected the request as unauthorized — the connection may need to be re-authorized."
+            "Gmail rejected the request as unauthorized — ask the user to reconnect Google in the Eigin app, then try again."
         case 403:
-            "Gmail denied this \(context) action — the connected account likely didn't grant the scope required for it. Reconnect the integration and approve all requested permissions to fix this."
+            "Gmail denied this \(context) action — the connected account likely didn't grant the scope required for it. Reconnect the integration in the Eigin app and approve the requested permissions to fix this."
         case .some(let code):
             "Gmail returned \(code) for this \(context) action."
         case nil:

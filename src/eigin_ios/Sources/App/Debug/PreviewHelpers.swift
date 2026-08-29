@@ -60,6 +60,10 @@ struct PreviewIntegrationOAuthService: IntegrationOAuthService {
     }
 
     func clearTokens(for _: UUID) {}
+
+    func hasStoredTokens(for _: UUID) -> Bool {
+        true
+    }
 }
 
 /// A credit wallet manager for previews that holds one sample wallet and never hits the relay.

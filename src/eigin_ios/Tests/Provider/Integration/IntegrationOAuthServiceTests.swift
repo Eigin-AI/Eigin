@@ -99,6 +99,23 @@ struct IntegrationOAuthServiceTests {
         #expect(keychain.read(key: keychain.integrationKey(for: id, suffix: "access_token")) == nil)
     }
 
+    @Test func hasStoredTokensReflectsTheAccessTokensPresence() {
+        let keychain = FakeKeychainService()
+        let service = DefaultIntegrationOAuthService(keychainService: keychain)
+        let id = UUID()
+
+        #expect(service.hasStoredTokens(for: id) == false)
+
+        keychain.save(
+            key: keychain.integrationKey(for: id, suffix: "access_token"),
+            value: "tok"
+        )
+        #expect(service.hasStoredTokens(for: id) == true)
+
+        service.clearTokens(for: id)
+        #expect(service.hasStoredTokens(for: id) == false)
+    }
+
     @Test func clearTokensRemovesAllSuffixes() {
         let keychain = FakeKeychainService()
         let service = DefaultIntegrationOAuthService(keychainService: keychain)

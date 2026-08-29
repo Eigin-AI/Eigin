@@ -12,12 +12,14 @@ struct MicrosoftEmailProviderTests {
     private static let messageSelect =
         "id,conversationId,subject,from,toRecipients,receivedDateTime,body"
 
+    private let integrationID = UUID()
+
     private func makeProvider(
         session: URLSession,
         accountAddress: String = "me@outlook.com"
     ) -> MicrosoftEmailProvider {
         MicrosoftEmailProvider(
-            integrationID: UUID(),
+            integrationID: integrationID,
             oauthService: FakeIntegrationOAuthService(),
             oauthConfig: PKCEOAuthConfig(
                 authorizationEndpoint: URL(
@@ -204,5 +206,41 @@ struct MicrosoftEmailProviderTests {
         )
         let json = try JSONSerialization.jsonObject(with: requestBody) as? [String: Any]
         #expect(json?["comment"] as? String == "Thanks!")
+    }
+
+    @Test func missingTokenFlagsTheIntegrationForReconnect() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let oauth = FakeIntegrationOAuthService()
+        oauth.token = nil
+        let health = RecordingHealthReporter()
+        let provider = try MicrosoftEmailProvider(
+            integrationID: integrationID,
+            oauthService: oauth,
+            oauthConfig: PKCEOAuthConfig(
+                authorizationEndpoint: #require(URL(
+                    string: "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize"
+                )),
+                tokenEndpoint: #require(URL(
+                    string: "https://login.microsoftonline.com/consumers/oauth2/v2.0/token"
+                )),
+                clientID: "client-123"
+            ),
+            accountAddress: "me@outlook.com",
+            urlSession: session,
+            healthMonitor: health
+        )
+
+        do {
+            _ = try await provider.listEmails(maxResults: 10, pageToken: nil)
+            Issue.record("Expected .notAuthenticated")
+        } catch let error as EmailProviderError {
+            guard case .notAuthenticated = error else {
+                Issue.record("Expected .notAuthenticated, got \(error)")
+                return
+            }
+        } catch {
+            Issue.record("Expected .notAuthenticated, got \(error)")
+        }
+        #expect(health.marked == [integrationID])
     }
 }

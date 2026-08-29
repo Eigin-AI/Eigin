@@ -3414,6 +3414,23 @@
         }
       }
     },
+    "integrations.action.reconnect" : {
+      "comment" : "Button label to reconnect a connected integration in place",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genopret forbindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect"
+          }
+        }
+      }
+    },
     "integrations.addSheet.description" : {
       "comment" : "Description shown atop the Add Integration sheet's browse screen",
       "localizations" : {
@@ -3784,6 +3801,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connected"
+          }
+        }
+      }
+    },
+    "integrations.status.reconnectNeeded" : {
+      "comment" : "Accessibility label for the warning icon on an integration row that needs reconnecting",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skal genoprettes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect needed"
+          }
+        }
+      }
+    },
+    "integrations.attention.body" : {
+      "comment" : "Body of the 'reconnect needed' warning card on the integration detail screen",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbindelsen kan ikke logge ind automatisk længere — sessionen eller loginoplysningerne er udløbet. Genopret forbindelsen for at gendanne adgangen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection can't sign in automatically anymore — its session or credentials expired. Reconnect to restore access."
+          }
+        }
+      }
+    },
+    "integrations.attention.title" : {
+      "comment" : "Title of the 'reconnect needed' warning card on the integration detail screen",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genopret forbindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect needed"
           }
         }
       }

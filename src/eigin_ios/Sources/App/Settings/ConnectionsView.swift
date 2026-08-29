@@ -8,6 +8,7 @@ struct ConnectionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Injected(\.keychainService) private var keychainService
     @Injected(\.integrationManager) private var integrationManager
+    @Injected(\.integrationOAuthService) private var oauthService
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
     @Query(sort: \Integration.createdAt) private var integrations: [Integration]
@@ -254,6 +255,15 @@ struct ConnectionsView: View {
                             .lineLimit(1)
                     }
                     Spacer()
+                    if IntegrationHealthMonitor.shared.needsReconnect(
+                        integration,
+                        oauthService: oauthService
+                    ) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.error)
+                            .accessibilityLabel(Localized.Integrations.Status.reconnectNeeded)
+                    }
                     Image(systemName: "chevron.right")
                         .typography(Typography.miniLabel)
                         .foregroundStyle(colors.text.standard.muted)

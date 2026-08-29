@@ -1119,12 +1119,29 @@ enum Localized {
             static var disconnect: String {
                 Localized.get("integrations.action.disconnect")
             }
+
+            /// Button label to reconnect a connected integration in place
+            static var reconnect: String {
+                Localized.get("integrations.action.reconnect")
+            }
         }
 
         enum AddSheet {
             /// Description shown atop the Add Integration sheet's browse screen
             static var description: String {
                 Localized.get("integrations.addSheet.description")
+            }
+        }
+
+        enum Attention {
+            /// Body of the 'reconnect needed' warning card on the integration detail screen
+            static var body: String {
+                Localized.get("integrations.attention.body")
+            }
+
+            /// Title of the 'reconnect needed' warning card on the integration detail screen
+            static var title: String {
+                Localized.get("integrations.attention.title")
             }
         }
 
@@ -1253,6 +1270,12 @@ enum Localized {
             /// Pill label shown next to an already-connected integration in search/browse results
             static var connected: String {
                 Localized.get("integrations.status.connected")
+            }
+
+            /// Accessibility label for the warning icon on an integration row that needs
+            /// reconnecting
+            static var reconnectNeeded: String {
+                Localized.get("integrations.status.reconnectNeeded")
             }
         }
     }

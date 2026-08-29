@@ -104,7 +104,8 @@ enum BundledIntegrationType {
                 let provider = GmailEmailProvider(
                     integrationID: integration.id,
                     oauthService: Container.shared.integrationOAuthService(),
-                    oauthConfig: GoogleOAuth.config()
+                    oauthConfig: GoogleOAuth.config(),
+                    healthMonitor: IntegrationHealthMonitor.shared
                 )
                 return EmailToolKit.tools(provider: provider)
             default:
@@ -133,7 +134,8 @@ enum BundledIntegrationType {
                     integrationID: integration.id,
                     oauthService: Container.shared.integrationOAuthService(),
                     oauthConfig: MicrosoftOAuth.config(),
-                    accountAddress: integration.accountLabel
+                    accountAddress: integration.accountLabel,
+                    healthMonitor: IntegrationHealthMonitor.shared
                 )
                 return EmailToolKit.tools(provider: provider)
             default:
@@ -160,7 +162,8 @@ enum BundledIntegrationType {
             case .email:
                 let provider = IMAPEmailProvider(
                     integrationID: integration.id,
-                    credentialStore: Container.shared.imapCredentialStore()
+                    credentialStore: Container.shared.imapCredentialStore(),
+                    healthMonitor: IntegrationHealthMonitor.shared
                 )
                 return EmailToolKit.tools(provider: provider)
             default:
@@ -186,7 +189,8 @@ enum BundledIntegrationType {
                 let provider = DefaultAulaProvider(
                     integrationID: integration.id,
                     credentialStore: Container.shared.aulaCredentialStore(),
-                    apiClient: AulaAPIClient(http: URLSessionAulaHTTP())
+                    apiClient: AulaAPIClient(http: URLSessionAulaHTTP()),
+                    healthMonitor: IntegrationHealthMonitor.shared
                 )
                 return AulaToolKit.tools(provider: provider)
             default:
