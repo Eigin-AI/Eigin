@@ -32,6 +32,12 @@ pub fn run(args: CommitMsgArgs) -> Result<()> {
         std::process::exit(1);
     };
 
+    // Merge commits carry git's auto-generated "Merge ..." header, which isn't
+    // Conventional Commits and shouldn't be forced into it — skip validation.
+    if header.starts_with("Merge ") {
+        return Ok(());
+    }
+
     let pattern = Regex::new(
         r"^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([[:alnum:]._-]+\))?(!)?: [[:alnum:]]",
     )

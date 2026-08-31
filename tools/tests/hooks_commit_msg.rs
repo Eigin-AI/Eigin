@@ -35,6 +35,18 @@ fn accepts_breaking_change_marker() {
 }
 
 #[test]
+fn accepts_merge_commit() {
+    let out = run_commit_msg("Merge branch 'main' into feature/foo\n");
+    assert!(out.status.success());
+}
+
+#[test]
+fn accepts_remote_tracking_merge_commit() {
+    let out = run_commit_msg("Merge remote-tracking branch 'origin/main'\n");
+    assert!(out.status.success());
+}
+
+#[test]
 fn rejects_unknown_type() {
     let out = run_commit_msg("update: something\n");
     assert!(!out.status.success());
