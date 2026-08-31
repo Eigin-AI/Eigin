@@ -14,6 +14,8 @@
  *     agent) toward scoping tasks tightly and using parallel mode for
  *     multiple unrelated questions — learned from broad single-task asks
  *     appearing to "hang" on a slow step with no visible progress.
+ *   - `promptGuidelines` nudges the main agent to offload reconnaissance to
+ *     the cheap `explore` sub-agent instead of inline file spelunking.
  * Everything else (parallel/chain modes, streaming, rendering, usage stats,
  * abort handling) is unchanged from upstream.
  *
@@ -489,6 +491,9 @@ export function registerSubagentTool(pi: ExtensionAPI): void {
 			"For multiple unrelated questions, prefer parallel (tasks: [...]) over one broad sequential task — each runs isolated and concurrently.",
 		].join(" "),
 		parameters: SubagentParams,
+		promptGuidelines: [
+			"Use the `explore` sub-agent for reconnaissance — locating code, tracing callers/imports, reading many files to answer a question, researching a library — instead of doing it inline. It runs on a cheaper model in its own context, keeping yours lean.",
+		],
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const agentScope: AgentScope = params.agentScope ?? "user";

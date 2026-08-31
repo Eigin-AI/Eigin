@@ -33,11 +33,12 @@ export async function confirmWithNote(
   title: string,
   detail: string,
   labels: [string, string] = ["Yes", "No"],
+  defaultIndex = 0,
 ): Promise<ConfirmWithNoteResult | null> {
   const options = labels;
 
   return ui.custom<ConfirmWithNoteResult | null>((tui, theme, _kb, done) => {
-    let optionIndex = 0;
+    let optionIndex = Math.min(Math.max(defaultIndex, 0), options.length - 1);
     let editMode = false;
     let cachedLines: string[] | undefined;
 

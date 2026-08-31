@@ -16,44 +16,29 @@
  * - Injects stage-specific guidance as a per-turn hint on the latest user
  *   message (not the system prompt) to avoid invalidating the cached
  *   system-prompt/tool-defs prefix on every stage change (see workflow/stage-hint.ts).
- * - Suggests a model when the stage changes, resolved via the stage's model
- *   role (planner/builder/explorer) rather than a hardcoded model (you may
- *   decline). Configure roles with /eigin:role (see workflow/roles.ts).
+ * - Suggests a model only at plan->build and initial session start, via the
+ *   stage's role (planner/builder/explorer); the prompt defaults to keeping the
+ *   current model. Configure roles with /eigin:role (see workflow/roles.ts).
  * - Lets the agent propose a transition via a confirm dialog (never automatic).
  * - Blocks stateful/destructive git, `terraform apply`/`destroy`, and
  *   `just infra deploy` (which wraps it) everywhere.
- * - Auto-names new sessions from a cheap one-shot LLM call on the first
- *   prompt, via pi.setSessionName() (see observability/generate-session-name.ts)
- *   — skipped for resumed/forked sessions and manual /name. This feeds pi's
- *   own terminal-title logic (`<app> - <name> - <cwd>`) and renames the
- *   session in /resume lists. Re-name anytime with /eigin:rename. Rings the
- *   terminal bell on agent_end so a pipelined, multi-terminal workflow
- *   surfaces which session just finished (Zed's integrated terminal ignores
- *   OSC 9/777 notify sequences but does show a bell as an attention
- *   indicator on unfocused tabs).
- * - Plan review is collaborative: the Plan stage co-edits a markdown file under
- *   .pi/plans/ (tracked as the "active plan", see workflow/active-plan.ts). The
- *   live file + a diff of the user's edits is injected each turn so direct
- *   edits are picked up without being flagged. Code review happens on the
- *   GitLab MR in the Merge stage. The wait_for_user tool (tools/wait-for-user.ts)
- *   hands control back for a signal instead of ending turns with prose.
+ * - Auto-names new sessions via a one-shot LLM call (/eigin:rename to redo) and
+ *   rings the terminal bell on agent_end (see observability/).
+ * - Collaborative plan review: the Plan stage co-edits a markdown file under
+ *   .pi/plans/, re-injected with a diff of the user's edits each turn (see
+ *   workflow/active-plan.ts). wait_for_user hands control back for a signal.
  * - Persists workflow + stage across session resume (old sessions without a
  *   persisted workflow default to Feature).
  * - Maintains an agent-managed task list (add_tasks / resolve_tasks / clear_tasks),
  *   rendered alongside the stage instructions in the same per-turn block
  *   (see workflow/task-list.ts) so long-running, multi-step jobs don't lose
  *   track of what's left. A done/total count also shows in the footer.
- * - Provides an `explore` sub-agent (isolated `pi` subprocess) the main agent
- *   can delegate codebase/docs/web reconnaissance to (see tools/subagent/).
- *   The sub-agent's own eigin process runs in a stripped-down mode (detected
- *   via the EIGIN_SUBAGENT env var): only the web_search default is
- *   registered — no stage, no UI calls, no stage context leaked into the
- *   child. Guardrails (see below) still apply, since that package is loaded
- *   independently. See registerSubagentModeGuards below.
- * - Offers to compact context on Plan→Build — the one deliberate "big
- *   transition" — then auto-sends a kickoff with the approved plan inlined,
- *   so Build starts from a compacted context + the plan rather than the full
- *   planning discussion (see offerBuildHandoff below and workflow/build-handoff.ts).
+ * - Provides an `explore` sub-agent (isolated `pi` subprocess) for recon; its
+ *   own eigin process runs stripped-down via EIGIN_SUBAGENT (see tools/subagent/
+ *   and registerSubagentModeGuards below).
+ * - Offers to compact context at Plan→Build (only past
+ *   COMPACTION_THRESHOLD_PERCENT), then kicks off Build with the plan inlined
+ *   (see offerBuildHandoff below and workflow/build-handoff.ts).
  *
  * Commands / shortcuts (namespaced under `eigin:` to avoid colliding with
  * other extensions' commands):
@@ -99,13 +84,9 @@
  *   observability/bell.ts            terminal BEL write
  *   observability/herdr.ts           emits `herdr:blocked` around human-in-the-loop dialogs
  *
- * Herdr orchestration: when a pane parks on one of our dialogs (propose_stage,
- * wait_for_user, ask_questions, the model-switch/Plan→Build confirms, the
- * fresh-session workflow picker) we emit a `herdr:blocked` event on pi.events
- * (see observability/herdr.ts). Pi's official Herdr integration
- * (`herdr integration install pi`) consumes it and shows the pane as blocked —
- * "needs a decision" — rather than idle. It's a no-op without that integration.
- * Guardrails approval prompts emit the same event from @aliou/pi-guardrails.
+ * Herdr orchestration: human-in-the-loop dialogs emit a `herdr:blocked` event
+ * for pi's Herdr integration to show the pane as blocked (see
+ * observability/herdr.ts); a no-op without it.
  *
  * Hard-invariant enforcement (destructive git, terraform apply/destroy, `just
  * infra deploy`, secret files, outside-repo path access, dangerous shell
@@ -126,6 +107,7 @@ import { withHerdrBlocked } from "./observability/herdr.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
 import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
+import { confirmWithNote } from "./tools/confirm-dialog.ts";
 import {
   diffSinceSeen,
   markSeen,
@@ -184,6 +166,9 @@ const STATE_TYPE = "stage-mode";
 const TASK_STATE_TYPE = "task-list";
 const ACTIVE_PLAN_STATE_TYPE = "active-plan";
 const DEFAULT_WORKFLOW: WorkflowId = "feature";
+
+// Offer plan->build compaction only once context has built up enough to matter.
+const COMPACTION_THRESHOLD_PERCENT = 20;
 
 /** Icon + label for a workflow. */
 function workflowLabel(w: WorkflowDef): string {
@@ -386,13 +371,17 @@ export default function stageExtension(pi: ExtensionAPI): void {
     const model = ctx.modelRegistry.find(pref.provider, pref.id);
     if (!model) return; // Preferred model not configured; skip silently.
 
-    const ok = await withHerdrBlocked(pi, `Switch model for ${stage.label}?`, () =>
-      ctx.ui.confirm(
+    // Default to keeping the current model — switching is opt-in.
+    const result = await withHerdrBlocked(pi, `Switch model for ${stage.label}?`, () =>
+      confirmWithNote(
+        ctx.ui,
         `Switch model for ${stage.label}?`,
         `Use ${pref.id} for the ${stage.label} stage? (current: ${ctx.model?.id ?? "none"})`,
+        ["Switch", "Keep current"],
+        1,
       ),
     );
-    if (!ok) return;
+    if (!result?.confirmed) return;
 
     const success = await pi.setModel(model);
     ctx.ui.notify(
@@ -418,6 +407,15 @@ export default function stageExtension(pi: ExtensionAPI): void {
    */
   async function offerBuildHandoff(ctx: ExtensionContext): Promise<boolean> {
     const buildStage = activeStage("build");
+
+    // Only worth compacting once enough context has built up. Below the
+    // threshold, skip the offer and go straight to the model suggestion.
+    const usage = ctx.getContextUsage();
+    if ((usage?.percent ?? 0) < COMPACTION_THRESHOLD_PERCENT) {
+      await suggestModel(buildStage, ctx);
+      return false;
+    }
+
     const ok = await withHerdrBlocked(pi, "Compact context before Build?", () =>
       ctx.ui.confirm(
         "Compact context before Build?",
@@ -474,11 +472,11 @@ export default function stageExtension(pi: ExtensionAPI): void {
     );
     if (!changed || opts?.suggestModel === false) return { handoffPending: false };
 
+    // Only plan->build changes role (planner -> builder); later stages don't.
     if (from === "plan" && id === "build" && ctx.hasUI) {
       return { handoffPending: await offerBuildHandoff(ctx) };
     }
 
-    await suggestModel(stage, ctx);
     return { handoffPending: false };
   }
 
@@ -494,7 +492,6 @@ export default function stageExtension(pi: ExtensionAPI): void {
     persist();
     if (!changed) return;
     ctx.ui.notify(`Workflow → ${workflowLabel(workflow)}`, "info");
-    await suggestModel(activeStage(entry), ctx);
   }
 
   // --- Command / shortcut ------------------------------------------------
@@ -821,6 +818,8 @@ Always blocked (every stage): the agent should not run stateful or destructive g
     updateTaskStatus(ctx);
     updateTerminalTitle(ctx); // Resumed/forked sessions already have a name — trim the title pi sets on rebind.
     persist(); // Ensure a freshly-picked (or defaulted) workflow/stage is recorded even if nothing else changes it.
-    await suggestModel(activeStage(), ctx);
+    // Suggest the stage's model only when a session first begins — never on
+    // resume/fork. After this, a switch is only ever suggested at plan->build.
+    if (isFreshSession) await suggestModel(activeStage(), ctx);
   });
 }

@@ -1,0 +1,6 @@
+# Gitignored local files to copy into a fresh git worktree (gitignore syntax).
+# Honored by worktrunk (`wt step copy-ignored`) and Claude Code alike; the tool
+# that runs the copy is a per-developer choice, configured outside the repo.
+
+.env
+.pi/model-roles.json

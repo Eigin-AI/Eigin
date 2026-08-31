@@ -13,6 +13,18 @@
       {
         "kind": "directory",
         "path": "/dev"
+      },
+      {
+        "kind": "directory",
+        "path": "/tmp"
+      },
+      {
+        "kind": "directory",
+        "path": "/private/tmp"
+      },
+      {
+        "kind": "directory",
+        "path": "/var/folders"
       }
     ]
   },
