@@ -47,12 +47,12 @@ _test-ios env="staging" verbose="false": generate
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
         xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-            -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation \
+            -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
             -skip-testing:EiginTests/ProviderIntegrationTests test
     else
         {{ tools }} run --log "{{ log_dir }}/ios-test.log" --label "Running iOS tests" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-                -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation \
+                -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
                 -skip-testing:EiginTests/ProviderIntegrationTests test
     fi
 
@@ -97,11 +97,11 @@ _build-ios env="staging" verbose="false": generate
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
         xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-            -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation build
+            -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation build
     else
         {{ tools }} run --log "{{ log_dir }}/ios-build.log" --label "Building Eigin for iOS" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-                -scheme "$scheme" -destination '{{ dest }}' -skipMacroValidation build
+                -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation build
     fi
 
 [private]
@@ -224,8 +224,8 @@ clean env="staging":
     #!/usr/bin/env bash
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     xcodebuild -project {{ ios_dir }}/Eigin-iOS.xcodeproj \
-        -scheme "$scheme" -destination '{{ dest }}' clean
-    rm -rf ~/Library/Developer/Xcode/DerivedData/Eigin-iOS-*
+        -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" clean
+    rm -rf {{ ios_dir }}/DerivedData {{ ios_dir }}/Build
 
 # --- Infra ---
 

@@ -48,6 +48,11 @@ Package.resolved
 
 .build/
 
+# Xcode build output kept inside the worktree (GUI "Relative" + CLI
+# -derivedDataPath), so it's reclaimed when the worktree is removed.
+src/eigin_ios/DerivedData/
+src/eigin_ios/Build/
+
 # CocoaPods
 #
 # We recommend against adding the Pods directory to your .gitignore. However
