@@ -35,7 +35,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             "Notification tapped, initiative request: \(public: requestID)",
             category: .backgroundPrompt
         )
-        PendingInitiative.set(requestID)
+        PendingDestination.set(.initiative(requestID))
     }
 
     /// Show notification banner even when app is in foreground.

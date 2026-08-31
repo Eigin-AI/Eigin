@@ -41,6 +41,7 @@ schemes:
     build:
       targets:
         Eigin: all
+        EiginWidgetsExtension: all
         EiginTests: [test]
     run:
       config: Debug
@@ -53,6 +54,7 @@ schemes:
     build:
       targets:
         EiginDev: all
+        EiginWidgetsDevExtension: all
         EiginTests: [test]
     run:
       config: Debug
@@ -60,6 +62,19 @@ schemes:
       config: Debug
       targets:
         - EiginTests
+  EiginWidgetsExtension:
+    build:
+      targets:
+        EiginWidgetsExtension: all
+    run:
+      config: Debug
+
+  EiginWidgetsDevExtension:
+    build:
+      targets:
+        EiginWidgetsDevExtension: all
+    run:
+      config: Debug
 
 targets:
   Eigin:
@@ -84,6 +99,11 @@ targets:
       - package: SwiftMail
       - framework: Frameworks/FirmFFI.xcframework
         embed: false
+      - target: EiginWidgetsExtension
+        embed: true
+        codeSign: true
+        copiesFiles:
+          - destination: plugins
     postbuildScripts:
       - name: Generate dSYM for CLiteRTLM
         basedOnDependencyAnalysis: false
@@ -105,6 +125,9 @@ targets:
         EiginAulaOAuthClientID: $(EIGIN_AULA_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.eigin.app
+            CFBundleURLSchemes: [eigin]
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
@@ -150,11 +173,87 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.tests
 
+  EiginWidgetsExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widgets
+      - Sources/AppIntents
+      - path: Sources/Localizable.xcstrings
+      # The design tokens, shared verbatim with the app, plus the hand-written
+      # types they resolve against. Extensions compile their own copy; there is
+      # no module boundary to import across.
+      - Sources/Core/Design/Generated
+      - Resources/Assets.xcassets
+      - Resources/Fonts
+      - path: Sources/Core/Design/Theme.swift
+      - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Localized.swift
+      - path: Sources/Core/Foundation/AppLanguage.swift
+      - path: Sources/Core/Foundation/LanguageManager.swift
+      - path: Sources/Core/Foundation/StorageKey.swift
+    info:
+      path: Widgets/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        MARKETING_VERSION: "0.16.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.widgets
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+        INFOPLIST_KEY_CFBundleDisplayName: Eigin Widgets
+        SKIP_INSTALL: true
+
+  EiginWidgetsDevExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widgets
+      - Sources/AppIntents
+      - path: Sources/Localizable.xcstrings
+      # The design tokens, shared verbatim with the app, plus the hand-written
+      # types they resolve against. Extensions compile their own copy; there is
+      # no module boundary to import across.
+      - Sources/Core/Design/Generated
+      - Resources/Assets.xcassets
+      - Resources/Fonts
+      - path: Sources/Core/Design/Theme.swift
+      - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Localized.swift
+      - path: Sources/Core/Foundation/AppLanguage.swift
+      - path: Sources/Core/Foundation/LanguageManager.swift
+      - path: Sources/Core/Foundation/StorageKey.swift
+    info:
+      path: Widgets/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        MARKETING_VERSION: "0.16.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev.widgets
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+        INFOPLIST_KEY_CFBundleDisplayName: Eigin Widgets
+        SKIP_INSTALL: true
+
   EiginDev:
     type: application
     platform: iOS
     sources:
-      - Sources
+      - path: Sources
+        # Two plists live in Sources (app + dev app); each target's own is set
+        # via info.path, so neither may be copied into the bundle as a resource.
+        excludes:
+          - "Info*.plist"
       - Resources
     dependencies:
       - package: swift-markdown
@@ -172,12 +271,17 @@ targets:
       - package: SwiftMail
       - framework: Frameworks/FirmFFI.xcframework
         embed: false
+      - target: EiginWidgetsDevExtension
+        embed: true
+        codeSign: true
+        copiesFiles:
+          - destination: plugins
     postbuildScripts:
       - name: Generate dSYM for CLiteRTLM
         basedOnDependencyAnalysis: false
         path: scripts/generate_clitertlm_dsym.sh
     info:
-      path: Sources/Info.plist
+      path: Sources/Info-Dev.plist
       properties:
         UIBackgroundModes:
           - audio
@@ -193,6 +297,9 @@ targets:
         EiginAulaOAuthClientID: $(EIGIN_AULA_OAUTH_CLIENT_ID)
         NSUserActivityTypes:
           - INSendMessageIntent
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.eigin.app.dev
+            CFBundleURLSchemes: [eigin, eigindev]
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

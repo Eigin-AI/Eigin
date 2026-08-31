@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use std::env;
 use std::process::Command;
 
+use crate::codegen;
 use crate::config;
 use crate::design;
 use crate::knowledge;
@@ -26,6 +27,15 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     design::generate_all(&root)?;
     prompts::generate_all(&root)?;
     knowledge::generate_all(&root)?;
+
+    // The prompt and knowledge registries used to be generated into the design
+    // folder. They are gitignored, so a checkout predating the move keeps the
+    // old copies and the widget extension — which compiles Design/Generated —
+    // fails on the duplicate filenames.
+    codegen::remove_stale_duplicates(
+        &format!("{ios_dir}/Sources/Core/Content/Generated"),
+        &format!("{ios_dir}/Sources/Core/Design/Generated"),
+    )?;
 
     run_cmd(
         Command::new("xcodegen")

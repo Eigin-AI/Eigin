@@ -6,6 +6,8 @@ import UIKit
 /// The active chat screen: message feed, input bar, streaming, and live call access.
 struct ChatView: View {
     let chatID: UUID
+    /// What the chat should arm on open, or `nil` for a plain open.
+    var opening: ChatOpening?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
@@ -24,6 +26,7 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @State private var showLiveCall = false
     @State private var voiceDownloadItem: AssetItem?
+    @State private var didPresentStartLiveCall = false
     @State private var showNonVisionStagedWarning = false
     @State private var supportsVision = false
     /// False until the loaded history has been parsed into ``MarkdownDocumentCache``, so
@@ -32,8 +35,9 @@ struct ChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Injected(\.chatAttachmentStore) private var attachmentStore
 
-    init(chatID: UUID) {
+    init(chatID: UUID, opening: ChatOpening? = nil) {
         self.chatID = chatID
+        self.opening = opening
         _viewModel = State(initialValue: ChatViewModel(chatID: chatID))
     }
 
@@ -119,15 +123,7 @@ struct ChatView: View {
             ChatHeaderView(
                 chat: viewModel.chat,
                 onBack: { dismiss() },
-                onPhone: {
-                    if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
-                       !asset.state.isDownloading
-                    {
-                        voiceDownloadItem = AssetItem(asset)
-                    } else {
-                        showLiveCall = true
-                    }
-                },
+                onPhone: startLiveCall,
                 isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting
             )
 
@@ -146,6 +142,8 @@ struct ChatView: View {
                     isInputDisabled: !canSend ||
                         (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction) ||
                         viewModel.isCompacting,
+                    autoStartDictation: opening == .dictation,
+                    autoShowCamera: opening == .camera,
                     onSend: { context in
                         guard let agent, let provider = activeProvider else { return }
                         viewModel.send(
@@ -279,11 +277,9 @@ struct ChatView: View {
             viewModel.setUp(modelContext: modelContext)
             viewModel.loadChat(agents: agents)
             syncVoice()
+            presentStartLiveCall()
         }
         .onChange(of: agent?.voiceIdentifier) { syncVoice() }
-        .onDisappear {
-            viewModel.cleanupEmptyChatIfNeeded()
-        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background, viewModel.isStreaming {
                 viewModel.beginBackgroundGrace()
@@ -335,6 +331,25 @@ struct ChatView: View {
     private func syncVoice() {
         var service = speechService
         service.voiceIdentifier = agent?.voiceIdentifier
+    }
+
+    /// Presents the live call a widget or shortcut launch asked for, once the
+    /// chat is on screen. Reuses the phone button's voice-download gate.
+    private func presentStartLiveCall() {
+        guard opening == .liveCall, !didPresentStartLiveCall else { return }
+        didPresentStartLiveCall = true
+        startLiveCall()
+    }
+
+    /// Reuses the phone button's voice-download gate before presenting the live call.
+    private func startLiveCall() {
+        if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
+           !asset.state.isDownloading
+        {
+            voiceDownloadItem = AssetItem(asset)
+        } else {
+            showLiveCall = true
+        }
     }
 
     /// Normalises and saves a newly picked image, then stages it for the next

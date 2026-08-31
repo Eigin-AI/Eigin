@@ -20,8 +20,11 @@ struct ChatInputBar: View {
     var onPermissionResponse: ((PermissionResponse) -> Void)?
     var onActionTap: (() -> Void)?
     var hasStagedAttachments = false
+    /// Arms dictation as soon as the bar appears (widget/shortcut launched chat).
+    var autoStartDictation = false
 
     @Environment(\.colors) private var colors
+    @Environment(\.scenePhase) private var scenePhase
     @Injected(\.dictationService) private var dictationService
     @Injected(\.speechService) private var speechService
     @Injected(\.languageManager) private var languageManager
@@ -31,6 +34,7 @@ struct ChatInputBar: View {
     @State private var isDictating = false
     @State private var textBeforeDictation = ""
     @State private var dictationText = ""
+    @State private var didAutoStartDictation = false
 
     private var effectiveText: String {
         guard isDictating else { return text }
@@ -89,6 +93,30 @@ struct ChatInputBar: View {
             guard isDictating else { return }
             dictationText = transcription
         }
+        .onAppear {
+            armAutoDictation()
+        }
+        // A widget launch arms the chat while the app is still transitioning to
+        // the foreground; recording can't start until the scene is active.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            armAutoDictation()
+        }
+        // Navigating away mid-dictation (e.g. a widget tap replaces the
+        // stack) destroys this bar, but the service is shared and singleton —
+        // stop it or the mic keeps recording into nothing.
+        .onDisappear {
+            if isDictating {
+                dictationService.stop()
+            }
+        }
+    }
+
+    /// Arms the auto-started dictation once, and only while the app is active.
+    private func armAutoDictation() {
+        guard autoStartDictation, !didAutoStartDictation, scenePhase == .active else { return }
+        didAutoStartDictation = true
+        startDictation()
     }
 
     private func startDictation() {
