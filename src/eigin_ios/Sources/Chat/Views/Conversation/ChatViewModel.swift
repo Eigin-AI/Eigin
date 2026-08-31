@@ -563,11 +563,6 @@ final class ChatViewModel {
         chatError = ConnectionError(from: error)
     }
 
-    func cleanupEmptyChatIfNeeded() {
-        guard let chat, chat.messages.isEmpty else { return }
-        modelContext.delete(chat)
-    }
-
     // MARK: - Title Generation
 
     func generateTitle(

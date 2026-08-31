@@ -14,6 +14,8 @@ struct EiginApp: App {
             StorageKey.logSinkToFile: true,
         ])
 
+        PendingDestinationMigrator.migrateLegacyKeys()
+
         FontRegistration.register()
         FontRegistration.configureNavigationBar()
 
@@ -59,6 +61,13 @@ struct EiginApp: App {
             // Force a full view tree rebuild when the language changes so all
             // Localized.X.y computed properties are re-read with the new bundle.
             .id(languageManager.currentLanguage)
+            .onOpenURL { url in
+                // Widget-extension handoff: everything the app can do with a route
+                // flows through the pending store, so `open` just launches.
+                if let route = EiginRoute(url: url), route != .openApp {
+                    PendingDestination.set(.newChat(route))
+                }
+            }
             .resolveTheme()
             .environment(\.themeManager, themeManager)
             .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))

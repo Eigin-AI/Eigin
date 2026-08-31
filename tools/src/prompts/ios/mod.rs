@@ -9,16 +9,16 @@ use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::process::Command;
 
 const SOURCE_REL: &str = "design/prompts";
-const OUTPUT_REL: &str = "src/eigin_ios/Sources/Core/Design/Generated/Prompt.swift";
+const OUTPUT_REL: &str = "src/eigin_ios/Sources/Core/Content/Generated/Prompt.swift";
 const FLOW_REGISTRY_OUTPUT_REL: &str =
-    "src/eigin_ios/Sources/Core/Design/Generated/FlowRegistry.swift";
+    "src/eigin_ios/Sources/Core/Content/Generated/FlowRegistry.swift";
 const ICEBREAKER_REGISTRY_OUTPUT_REL: &str =
-    "src/eigin_ios/Sources/Core/Design/Generated/IcebreakerRegistry.swift";
+    "src/eigin_ios/Sources/Core/Content/Generated/IcebreakerRegistry.swift";
 
 /// Compile every `design/prompts/**/*.jinja` template into typed Swift accessors
-/// at `Sources/Core/Design/Generated/Prompt.swift`, mirroring the folder tree into
+/// at `Sources/Core/Content/Generated/Prompt.swift`, mirroring the folder tree into
 /// nested enums. Also compiles every `design/prompts/**/flows.toml` manifest into
-/// `Sources/Core/Design/Generated/FlowRegistry.swift`. Called by `eigin-tools generate`.
+/// `Sources/Core/Content/Generated/FlowRegistry.swift`. Called by `eigin-tools generate`.
 pub fn generate(repo_root: &str) -> Result<()> {
     let source_dir = PathBuf::from(repo_root).join(SOURCE_REL);
     let output_path = PathBuf::from(repo_root).join(OUTPUT_REL);

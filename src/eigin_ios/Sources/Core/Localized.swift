@@ -1319,6 +1319,66 @@ enum Localized {
         static var title: String {
             Localized.get("intents.title")
         }
+
+        enum DictationChat {
+            /// App intent description: start a fresh chat with dictation armed.
+            static var description: String {
+                Localized.get("intents.dictationChat.description")
+            }
+
+            /// App intent title: start a fresh chat with dictation armed.
+            static var title: String {
+                Localized.get("intents.dictationChat.title")
+            }
+        }
+
+        enum LiveCallChat {
+            /// App intent description: start a fresh chat in a live call.
+            static var description: String {
+                Localized.get("intents.liveCallChat.description")
+            }
+
+            /// App intent title: start a fresh chat in a live call.
+            static var title: String {
+                Localized.get("intents.liveCallChat.title")
+            }
+        }
+
+        enum NewChat {
+            /// App intent description: start a fresh chat.
+            static var description: String {
+                Localized.get("intents.newChat.description")
+            }
+
+            /// App intent title: start a fresh chat.
+            static var title: String {
+                Localized.get("intents.newChat.title")
+            }
+        }
+
+        enum OpenApp {
+            /// App intent description: open the app.
+            static var description: String {
+                Localized.get("intents.openApp.description")
+            }
+
+            /// App intent title: open the app.
+            static var title: String {
+                Localized.get("intents.openApp.title")
+            }
+        }
+
+        enum PhotoChat {
+            /// App intent description: start a fresh chat with the camera ready.
+            static var description: String {
+                Localized.get("intents.photoChat.description")
+            }
+
+            /// App intent title: start a fresh chat with the camera ready.
+            static var title: String {
+                Localized.get("intents.photoChat.title")
+            }
+        }
     }
 
     enum Knowledge {
@@ -4933,6 +4993,48 @@ enum Localized {
         /// Status label shown while the TTS engine is speaking
         static var speaking: String {
             Localized.get("voice.speaking")
+        }
+    }
+
+    enum Widgets {
+        /// Placeholder text of the widget's faux input pill.
+        static var chatPillTitle: String {
+            Localized.get("widgets.chatPillTitle")
+        }
+
+        /// Description shown in the widget gallery picker.
+        static var description: String {
+            Localized.get("widgets.description")
+        }
+
+        /// Widget button: start a fresh chat with dictation armed.
+        static var dictation: String {
+            Localized.get("widgets.dictation")
+        }
+
+        /// Widget button: start a fresh chat in a live call.
+        static var liveCall: String {
+            Localized.get("widgets.liveCall")
+        }
+
+        /// Name shown in the widget gallery picker.
+        static var name: String {
+            Localized.get("widgets.name")
+        }
+
+        /// Widget button: start a fresh chat.
+        static var newChat: String {
+            Localized.get("widgets.newChat")
+        }
+
+        /// Widget button: open the app.
+        static var openApp: String {
+            Localized.get("widgets.openApp")
+        }
+
+        /// Widget button: start a fresh chat with the camera ready.
+        static var photo: String {
+            Localized.get("widgets.photo")
         }
     }
 }

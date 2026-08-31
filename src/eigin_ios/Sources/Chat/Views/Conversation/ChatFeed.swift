@@ -47,6 +47,8 @@ struct ChatFeed: View {
     let throttler: any StreamThrottling
     @Binding var messageText: String
     let isInputDisabled: Bool
+    var autoStartDictation = false
+    var autoShowCamera = false
     let onSend: (InteractionMode) -> Void
     let onStop: (() -> Void)?
     let pagination: FeedPagination
@@ -75,6 +77,7 @@ struct ChatFeed: View {
 
     @Environment(\.colors) private var colors
     @Environment(\.gridBreakpoint) private var breakpoint
+    @Environment(\.scenePhase) private var scenePhase
     @Injected(\.speechService) private var speechService
     /// Presentation state for every sheet, picker, and cover the feed hosts.
     /// Owned here because the feed's rows and input trigger them; presented by
@@ -82,6 +85,7 @@ struct ChatFeed: View {
     @State private var sheets = ChatFeedSheetState()
     /// Owns scroll position, the current-turn pin, and grow-in tracking.
     @State private var scroll = FeedScrollCoordinator()
+    @State private var didArmAutoCamera = false
     @FocusState private var isInputFocused: Bool
 
     init(
@@ -90,6 +94,8 @@ struct ChatFeed: View {
         streamingItemID: String? = nil,
         messageText: Binding<String>,
         isInputDisabled: Bool,
+        autoStartDictation: Bool = false,
+        autoShowCamera: Bool = false,
         onSend: @escaping (InteractionMode) -> Void,
         onStop: (() -> Void)? = nil,
         pagination: FeedPagination = FeedPagination(),
@@ -106,6 +112,8 @@ struct ChatFeed: View {
         self.streamingItemID = streamingItemID
         _messageText = messageText
         self.isInputDisabled = isInputDisabled
+        self.autoStartDictation = autoStartDictation
+        self.autoShowCamera = autoShowCamera
         self.onSend = onSend
         self.onStop = onStop
         self.pagination = pagination
@@ -127,6 +135,13 @@ struct ChatFeed: View {
             ))
             .background(colors.surface.standard.base.ignoresSafeArea())
             .toolbar(.hidden, for: .tabBar)
+            .onAppear {
+                armAutoCamera()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                armAutoCamera()
+            }
             .onDisappear {
                 UIApplication.shared.isIdleTimerDisabled = false
                 speechService.stop()
@@ -326,7 +341,8 @@ struct ChatFeed: View {
                         permissionRequest: interactions.permissionRequest,
                         onPermissionResponse: interactions.onPermissionResponse,
                         onActionTap: inputAction,
-                        hasStagedAttachments: !context.stagedAttachments.isEmpty
+                        hasStagedAttachments: !context.stagedAttachments.isEmpty,
+                        autoStartDictation: autoStartDictation
                     )
                 }
                 .animation(Animations.smooth, value: context.stagedAttachments.isEmpty)
@@ -464,5 +480,14 @@ struct ChatFeed: View {
         isInputFocused = false
         scroll.declareSending()
         onSend(mode)
+    }
+
+    /// Opens the auto-started camera once, and only once the scene is active —
+    /// mirrors the dictation arming so a widget launch presents sheets only
+    /// after the foreground transition finishes.
+    private func armAutoCamera() {
+        guard autoShowCamera, !didArmAutoCamera, scenePhase == .active else { return }
+        didArmAutoCamera = true
+        sheets.showCamera = true
     }
 }

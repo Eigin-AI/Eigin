@@ -1,3 +1,4 @@
+import _AppIntents_SwiftUI
 import Factory
 import SwiftData
 import SwiftUI
@@ -9,7 +10,7 @@ struct ContentView: View {
     @Injected(\.relayClient) private var relayClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
+    @AppStorage(PendingDestination.storageKey) private var pendingDestination: String?
     @State private var selectedTab = RootTab.chats
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
@@ -30,7 +31,22 @@ struct ContentView: View {
         .onChange(of: selectedTab) {
             TabBarVisibility.shared.popAll()
         }
-        .onChange(of: pendingInitiativeID) { _, newValue in
+        // The system runs the matching closure in-app shortly before the app
+        // is foregrounded. ContentView hands the route to the shared pending
+        // store; ChatListView navigates when it becomes visible.
+        .onAppIntentExecution(NewChatIntent.self) { _ in
+            PendingDestination.set(.newChat(.newChat))
+        }
+        .onAppIntentExecution(DictationChatIntent.self) { _ in
+            PendingDestination.set(.newChat(.dictationChat))
+        }
+        .onAppIntentExecution(LiveCallChatIntent.self) { _ in
+            PendingDestination.set(.newChat(.liveCallChat))
+        }
+        .onAppIntentExecution(PhotoChatIntent.self) { _ in
+            PendingDestination.set(.newChat(.photoChat))
+        }
+        .onChange(of: pendingDestination) { _, newValue in
             if newValue != nil {
                 selectedTab = .chats
             }

@@ -12,7 +12,9 @@ enum StorageKey {
     static let onboardingPriority = "onboardingPriority"
     /// The user's chosen ``ProactivityLevel`` raw value, applied to the agent on creation.
     static let onboardingProactivity = "onboardingProactivity"
-    /// The chat the onboarding conversation became, opened once when the app first loads.
+    /// The chat the onboarding conversation became, opened once when the app first
+    /// loads — superseded by `PendingDestination.chat`; remapped at launch, not written
+    /// anymore.
     static let pendingOnboardingChat = "pendingOnboardingChat"
     /// Retired key from the CoreML-era prewarm pass, which no longer exists. Kept
     /// only so legacy cleanup can clear it when evicting the old model

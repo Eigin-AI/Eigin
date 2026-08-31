@@ -10,13 +10,13 @@ enum ChatListDestination: Hashable {
 struct ChatListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
+    @Environment(\.scenePhase) private var scenePhase
     @Injected(\.chatAttachmentStore) private var attachmentStore
     @Query(sort: \Chat.updatedAt, order: .reverse) private var chats: [Chat]
     @Query private var agents: [Agent]
     @Query(sort: \Space.name) private var spaces: [Space]
 
-    @AppStorage(PendingInitiative.userDefaultsKey) private var pendingInitiativeID: String?
-    @AppStorage(StorageKey.pendingOnboardingChat) private var pendingOnboardingChat: String?
+    @AppStorage(PendingDestination.storageKey) private var pendingDestination: String?
     private var agent: Agent? {
         agents.primary
     }
@@ -77,6 +77,13 @@ struct ChatListView: View {
                 ChatView(chatID: chatID)
                     .hidesTabBar()
             }
+            .navigationDestination(for: ChatLaunch.self) { launch in
+                ChatView(chatID: launch.chatID, opening: launch.opening)
+                    // A ChatLaunch → ChatLaunch swap reuses the destination's
+                    // @State, so key on the chat to force a fresh view.
+                    .id(launch.chatID)
+                    .hidesTabBar()
+            }
             .navigationDestination(for: ChatListDestination.self) { destination in
                 switch destination {
                 case .manageSpaces:
@@ -97,19 +104,19 @@ struct ChatListView: View {
                 }
             }
             .onAppear {
-                if let requestIDString = pendingInitiativeID,
-                   let requestID = UUID(uuidString: requestIDString)
-                {
-                    handlePendingInitiative(requestID: requestID)
-                }
-                openPendingOnboardingChat()
+                // Must run before handling a pending destination — the incoming
+                // chat only exists after consumption, so nothing to protect.
+                sweepOrphanedEmptyChats()
+                handlePendingDestination()
             }
-            .onChange(of: pendingInitiativeID) { _, newValue in
-                if let requestIDString = newValue,
-                   let requestID = UUID(uuidString: requestIDString)
-                {
-                    handlePendingInitiative(requestID: requestID)
-                }
+            .onChange(of: pendingDestination) { _, _ in
+                handlePendingDestination()
+            }
+            // Navigation during a scene transition gets swallowed, and widget
+            // taps land in that window. Re-run once the scene is active.
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                handlePendingDestination()
             }
             .alert(Localized.Common.Alert.deleteChatTitle, isPresented: $showDeleteConfirmation) {
                 Button(Localized.Common.Actions.cancel, role: .cancel) {}
@@ -241,21 +248,63 @@ struct ChatListView: View {
         guard let agent else { return }
         let chat = Chat(agentID: agent.id, spaceID: selectedSpaceID)
         modelContext.insert(chat)
-        path.append(chat.id)
+        path.append(ChatLaunch(chatID: chat.id))
     }
 
-    /// Opens the chat the onboarding conversation became, once, on first load.
-    private func openPendingOnboardingChat() {
-        guard let idString = pendingOnboardingChat,
-              let id = UUID(uuidString: idString)
-        else { return }
-        pendingOnboardingChat = nil
-        path.append(id)
+    /// Deletes chats with no messages. A conversation only becomes real once it
+    /// holds a message; widget- or shortcut-launched chats the user abandoned
+    /// (left the app before sending anything) leave these behind, and there is
+    /// no view lifecycle to clean them up — the list's appearance is the one
+    /// place that always sees them.
+    private func sweepOrphanedEmptyChats() {
+        let orphans = chats.filter { $0.messages.isEmpty }
+        guard !orphans.isEmpty else { return }
+        for chat in orphans {
+            modelContext.delete(chat)
+        }
+        try? modelContext.save()
     }
 
-    private func handlePendingInitiative(requestID: UUID) {
-        PendingInitiative.clear()
+    /// Opens whatever ``PendingDestination`` holds, once the chat list is
+    /// alive and the scene is active; the widget, notifications, and onboarding
+    /// all funnel through here. External launches replace whatever is on the
+    /// stack — an incoming chat is always the one layer above the list, never
+    /// stacked on a previous chat the user would then have to back through.
+    ///
+    /// Must not run while the scene is inactive: consuming here would clear
+    /// the store and mutate the navigation path mid-transition, where the
+    /// push can be silently dropped — leaving the destination lost.
+    private func handlePendingDestination() {
+        guard scenePhase == .active else { return }
+        guard let destination = PendingDestination.get() else { return }
+        PendingDestination.clear()
+        switch destination {
+        case .initiative(let requestID):
+            openInitiativeChat(requestID: requestID)
+        case .chat(let chatID):
+            replacePath(ChatLaunch(chatID: chatID))
+        case .newChat(let route):
+            startChat(route: route)
+        }
+    }
 
+    /// Writes the whole path in one assignment — clearing first and appending
+    /// after works, but the two-step mutation can lose the push when handled
+    /// during a scene transition.
+    private func replacePath(_ launch: ChatLaunch) {
+        var newPath = NavigationPath()
+        newPath.append(launch)
+        path = newPath
+    }
+
+    private func startChat(route: EiginRoute) {
+        guard let agent else { return }
+        let chat = Chat(agentID: agent.id, spaceID: selectedSpaceID)
+        modelContext.insert(chat)
+        replacePath(ChatLaunch(chatID: chat.id, opening: ChatOpening(route: route)))
+    }
+
+    private func openInitiativeChat(requestID: UUID) {
         let descriptor = FetchDescriptor<AgentInitiativeRequest>(
             predicate: #Predicate { $0.id == requestID }
         )
@@ -288,7 +337,7 @@ struct ChatListView: View {
         request.handledAt = Date()
         try? modelContext.save()
 
-        path.append(chat.id)
+        replacePath(ChatLaunch(chatID: chat.id))
     }
 }
 

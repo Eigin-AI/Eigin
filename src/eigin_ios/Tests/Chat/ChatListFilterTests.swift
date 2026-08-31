@@ -12,6 +12,13 @@ struct ChatListFilterTests {
         return space
     }
 
+    /// Chats the filter should show: made real with one message.
+    private func startedChat(spaceID: UUID?) -> Chat {
+        let chat = Chat(agentID: agentID, spaceID: spaceID)
+        chat.messages = [Message(role: "user", content: "hi")]
+        return chat
+    }
+
     @Test("Default view hides private-space chats")
     func defaultHidesPrivate() {
         let privateSpace = space(isPrivate: true)
@@ -29,8 +36,8 @@ struct ChatListFilterTests {
     @Test("Default view keeps public-space and space-less chats")
     func defaultKeepsVisible() {
         let publicSpace = space(isPrivate: false)
-        let publicChat = Chat(agentID: agentID, spaceID: publicSpace.id)
-        let looseChat = Chat(agentID: agentID, spaceID: nil)
+        let publicChat = startedChat(spaceID: publicSpace.id)
+        let looseChat = startedChat(spaceID: nil)
 
         let result = ChatListFilter.visibleChats(
             [publicChat, looseChat],
@@ -44,8 +51,8 @@ struct ChatListFilterTests {
     @Test("Selecting a private space shows its chats")
     func selectingPrivateShowsChats() {
         let privateSpace = space(isPrivate: true)
-        let privateChat = Chat(agentID: agentID, spaceID: privateSpace.id)
-        let looseChat = Chat(agentID: agentID, spaceID: nil)
+        let privateChat = startedChat(spaceID: privateSpace.id)
+        let looseChat = startedChat(spaceID: nil)
 
         let result = ChatListFilter.visibleChats(
             [privateChat, looseChat],
@@ -59,8 +66,8 @@ struct ChatListFilterTests {
     @Test("Selecting a public space shows its chats")
     func selectingPublicShowsChats() {
         let publicSpace = space(isPrivate: false)
-        let publicChat = Chat(agentID: agentID, spaceID: publicSpace.id)
-        let otherChat = Chat(agentID: agentID, spaceID: UUID())
+        let publicChat = startedChat(spaceID: publicSpace.id)
+        let otherChat = startedChat(spaceID: UUID())
 
         let result = ChatListFilter.visibleChats(
             [publicChat, otherChat],
@@ -69,5 +76,35 @@ struct ChatListFilterTests {
         )
 
         #expect(result.map(\.id) == [publicChat.id])
+    }
+
+    @Test("Empty chats are hidden")
+    func emptyChatsHidden() {
+        let emptyChat = Chat(agentID: agentID)
+        let usedSpace = space(isPrivate: false)
+        let populatedChat = startedChat(spaceID: usedSpace.id)
+
+        let result = ChatListFilter.visibleChats(
+            [emptyChat, populatedChat],
+            spaces: [usedSpace],
+            selectedSpaceID: nil
+        )
+
+        #expect(result.map(\.id) == [populatedChat.id])
+    }
+
+    @Test("Empty chats are hidden in an explicitly selected space")
+    func emptyChatsHiddenInSelectedSpace() {
+        let space1 = space(isPrivate: false)
+        let emptyChat = Chat(agentID: agentID, spaceID: space1.id)
+        let populatedChat = startedChat(spaceID: space1.id)
+
+        let result = ChatListFilter.visibleChats(
+            [emptyChat, populatedChat],
+            spaces: [space1],
+            selectedSpaceID: space1.id
+        )
+
+        #expect(result.map(\.id) == [populatedChat.id])
     }
 }

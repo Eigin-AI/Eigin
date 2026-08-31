@@ -15,7 +15,8 @@ pub fn run(_args: FormatArgs) -> Result<()> {
     run_cmd(
         Command::new("swiftformat")
             .arg(format!("{ios}/Sources"))
-            .arg(format!("{ios}/Tests")),
+            .arg(format!("{ios}/Tests"))
+            .arg(format!("{ios}/Widgets")),
         "swiftformat",
     )?;
 

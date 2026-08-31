@@ -17,6 +17,312 @@
         }
       }
     },
+    "intents.openApp.description" : {
+      "comment" : "App intent description: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbner Eigin på chatlisten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Eigin at the chat list."
+          }
+        }
+      }
+    },
+    "intents.openApp.title" : {
+      "comment" : "App intent title: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Eigin"
+          }
+        }
+      }
+    },
+    "intents.liveCallChat.description" : {
+      "comment" : "App intent description: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat direkte i et liveopkald."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat straight into a live call."
+          }
+        }
+      }
+    },
+    "intents.liveCallChat.title" : {
+      "comment" : "App intent title: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liveopkaldschat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Call Chat"
+          }
+        }
+      }
+    },
+    "intents.dictationChat.description" : {
+      "comment" : "App intent description: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med mikrofonen klar til at lytte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the microphone already listening."
+          }
+        }
+      }
+    },
+    "intents.dictationChat.title" : {
+      "comment" : "App intent title: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktatchat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictation Chat"
+          }
+        }
+      }
+    },
+    "intents.newChat.description" : {
+      "comment" : "App intent description: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med tastaturet klar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the keyboard ready."
+          }
+        }
+      }
+    },
+    "intents.newChat.title" : {
+      "comment" : "App intent title: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "intents.photoChat.description" : {
+      "comment" : "App intent description: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med kameraet klar til at tage et foto."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the camera ready to attach a photo."
+          }
+        }
+      }
+    },
+    "intents.photoChat.title" : {
+      "comment" : "App intent title: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotochat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Chat"
+          }
+        }
+      }
+    },
+    "widgets.chatPillTitle" : {
+      "comment" : "Placeholder text of the widget's faux input pill.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv med Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat with Eigin"
+          }
+        }
+      }
+    },
+    "widgets.openApp" : {
+      "comment" : "Widget button: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Eigin"
+          }
+        }
+      }
+    },
+    "widgets.liveCall" : {
+      "comment" : "Widget button: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liveopkald"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Call"
+          }
+        }
+      }
+    },
+    "widgets.dictation" : {
+      "comment" : "Widget button: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktér"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictate"
+          }
+        }
+      }
+    },
+    "widgets.newChat" : {
+      "comment" : "Widget button: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "widgets.description" : {
+      "comment" : "Description shown in the widget gallery picker.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start en ny chat, diktering eller liveopkald med ét tryk."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a new chat, dictation, or live call with one tap."
+          }
+        }
+      }
+    },
+    "widgets.name" : {
+      "comment" : "Name shown in the widget gallery picker.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin hurtige handlinger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin Quick Actions"
+          }
+        }
+      }
+    },
+    "widgets.photo" : {
+      "comment" : "Widget button: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo"
+          }
+        }
+      }
+    },
     "🚀" : {
 
     },

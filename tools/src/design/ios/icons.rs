@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const IMAGESET_CONTENTS: &str = r#"{
   "images" : [
@@ -157,7 +158,18 @@ fn emit_swift(node: &IconNode, path: &Path) -> Result<()> {
 
     let parent = path.parent().unwrap();
     fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
-    fs::write(path, out).with_context(|| format!("writing {}", path.display()))
+    fs::write(path, out).with_context(|| format!("writing {}", path.display()))?;
+
+    // Nested enums are emitted without separating blank lines, which swiftformat
+    // lints for; let it lay the file out rather than hand-tuning the writer.
+    let status = Command::new("swiftformat")
+        .arg(path)
+        .status()
+        .context("running swiftformat on Iconography.swift")?;
+    if !status.success() {
+        anyhow::bail!("swiftformat failed on {}", path.display());
+    }
+    Ok(())
 }
 
 fn write_swift_body(node: &IconNode, out: &mut String, depth: usize) -> Result<()> {

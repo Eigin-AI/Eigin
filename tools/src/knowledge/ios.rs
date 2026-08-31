@@ -9,7 +9,7 @@ use std::process::Command;
 
 const WORKSPACE_REL: &str = "design/knowledge";
 const OUTPUT_REL: &str =
-    "src/eigin_ios/Sources/Core/Design/Generated/BundledKnowledgeRegistry.swift";
+    "src/eigin_ios/Sources/Core/Content/Generated/BundledKnowledgeRegistry.swift";
 
 /// The name of the ontology source at the workspace root. Every other `.firm`
 /// file lives in a `<type>/` subfolder and maps to exactly one entity.
@@ -29,7 +29,7 @@ struct Knowledge {
 }
 
 /// Compile `design/knowledge/**/*.firm` into
-/// `Sources/Core/Design/Generated/BundledKnowledgeRegistry.swift`, validating the
+/// `Sources/Core/Content/Generated/BundledKnowledgeRegistry.swift`, validating the
 /// workspace through the firm language crate first so a malformed or dangling
 /// source fails generation instead of shipping. Called by `eigin-tools generate`.
 pub fn generate(repo_root: &str) -> Result<()> {

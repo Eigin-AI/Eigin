@@ -38,7 +38,6 @@ struct OnboardingChat: View {
     @State private var fillProgress = OnboardingStep.initiative.avatarProgress
     @State private var lastAssessment = OnboardingAssessment.Result.empty
     @State private var revealDigest: String?
-    @AppStorage(StorageKey.pendingOnboardingChat) private var pendingOnboardingChat: String?
 
     private let pacing = OnboardingPacing()
 
@@ -235,7 +234,7 @@ struct OnboardingChat: View {
             modelContext.insert(persisted)
         }
         // The chat list opens this once when the app first loads.
-        pendingOnboardingChat = chat.id.uuidString
+        PendingDestination.set(.chat(chat.id))
         Task { await seedIntents(chatID: chat.id) }
     }
 
