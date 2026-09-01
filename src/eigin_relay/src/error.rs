@@ -322,10 +322,10 @@ mod tests {
 
     #[tokio::test]
     async fn upstream_returns_opaque_502() {
-        let response = AppError::Upstream("provider berget returned 500".into()).into_response();
+        let response = AppError::Upstream("provider example returned 500".into()).into_response();
         assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
         // Detail is kept for logging in the extension, not the body.
-        assert_eq!(log_detail(&response), "provider berget returned 500");
+        assert_eq!(log_detail(&response), "provider example returned 500");
         let json = extract_json(response).await;
         assert_eq!(json["error"]["message"], "upstream service error");
         assert_eq!(json["error"]["type"], "upstream_error");
@@ -358,9 +358,9 @@ mod tests {
     #[tokio::test]
     async fn service_unavailable_returns_opaque_503() {
         let response =
-            AppError::ServiceUnavailable("provider berget not configured".into()).into_response();
+            AppError::ServiceUnavailable("provider example not configured".into()).into_response();
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-        assert_eq!(log_detail(&response), "provider berget not configured");
+        assert_eq!(log_detail(&response), "provider example not configured");
         let json = extract_json(response).await;
         assert_eq!(json["error"]["message"], "service temporarily unavailable");
         assert_eq!(json["error"]["type"], "service_unavailable");

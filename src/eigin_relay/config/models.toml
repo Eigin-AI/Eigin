@@ -23,6 +23,14 @@ cached_input_millicredits_per_1m_tokens = 15_000
 output_millicredits_per_1m_tokens = 650_000
 
 [[models]]
+id = "z-ai/glm-5.3"
+provider = "tensorx"
+aliases = ["glm-5.3", "glm-5-3", "zai-org/GLM-5.3", "GLM-5.3"]
+input_millicredits_per_1m_tokens = 160_000
+cached_input_millicredits_per_1m_tokens = 40_000
+output_millicredits_per_1m_tokens = 415_000
+
+[[models]]
 id = "z-ai/glm-5.2"
 provider = "tensorx"
 aliases = ["glm-5.2", "glm-5-2", "zai-org/GLM-5.2", "GLM-5.2"]
@@ -31,19 +39,17 @@ cached_input_millicredits_per_1m_tokens = 35_000
 output_millicredits_per_1m_tokens = 400_000
 
 [[models]]
-id = "moonshotai/kimi-k2.6"
-provider = "berget"
-upstream_id = "moonshotai/Kimi-K2.6"
-aliases = ["moonshotai/Kimi-K2.6", "kimi-k2.6", "kimi-k2-6"]
-input_millicredits_per_1m_tokens = 75_000
-cached_input_millicredits_per_1m_tokens = 0
-output_millicredits_per_1m_tokens = 350_000
+id = "z-ai/glm-5.3-flash"
+provider = "tensorx"
+aliases = ["glm-5.3-flash", "glm-5-3-flash", "zai-org/GLM-5.3-Flash", "GLM-5.3-Flash"]
+input_millicredits_per_1m_tokens = 18_000
+cached_input_millicredits_per_1m_tokens = 5_000
+output_millicredits_per_1m_tokens = 46_000
 
 [[models]]
-id = "google/gemma-4-31b-it"
-provider = "berget"
-upstream_id = "google/gemma-4-31B-it"
-aliases = ["gemma-4", "google/gemma-4-31B-it"]
-input_millicredits_per_1m_tokens = 25_000
-cached_input_millicredits_per_1m_tokens = 0
-output_millicredits_per_1m_tokens = 50_000
+id = "moonshotai/kimi-k3"
+provider = "tensorx"
+aliases = ["kimi-k3", "moonshotai/Kimi-K3", "Kimi-K3"]
+input_millicredits_per_1m_tokens = 275_000
+cached_input_millicredits_per_1m_tokens = 70_000
+output_millicredits_per_1m_tokens = 1_380_000

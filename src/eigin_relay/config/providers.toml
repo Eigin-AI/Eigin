@@ -2,7 +2,7 @@
 # API keys are injected at runtime via PROVIDER_<ID>_API_KEY environment variables.
 #
 # Example:
-#   PROVIDER_BERGET_API_KEY=sk-...
+#   PROVIDER_TENSORX_API_KEY=sk-...
 #   PROVIDER_MISTRAL_API_KEY=sk-...
 
 [[providers]]
@@ -12,7 +12,3 @@ base_url = "https://api.mistral.ai/v1"
 [[providers]]
 id = "tensorx"
 base_url = "https://api.tensorx.ai/v1"
-
-[[providers]]
-id = "berget"
-base_url = "https://api.berget.ai/v1"
