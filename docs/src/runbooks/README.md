@@ -11,3 +11,5 @@ on staging first.
   key and reset its one-year expiry.
 - [Terraform remote state](./terraform-remote-state.md) — move Terraform state to a
   private, versioned bucket.
+- [Infra alerts](./infra-alerts.md) — relay alerts on Scaleway Cockpit: what
+  fires, how to tune and verify.

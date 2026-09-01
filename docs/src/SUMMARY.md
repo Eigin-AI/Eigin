@@ -76,3 +76,4 @@
 - [Grant key rotation](./runbooks/grant-key-rotation.md)
 - [Database key rotation](./runbooks/database-key-rotation.md)
 - [Terraform remote state](./runbooks/terraform-remote-state.md)
+- [Infra alerts](./runbooks/infra-alerts.md)

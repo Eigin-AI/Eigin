@@ -16,6 +16,12 @@ variable "scw_region" {
   default     = "fr-par"
 }
 
+variable "alerts_email" {
+  description = "Where Cockpit sends alert emails. Supplied via .env (EIGIN_ALERTS_EMAIL, falling back to EIGIN_SUPPORT_EMAIL) through tf-vars."
+  type        = string
+  default     = "support@eigin.ai"
+}
+
 variable "relay_src_dir" {
   description = "Path to the eigin_relay source directory, relative to the Terraform root"
   type        = string

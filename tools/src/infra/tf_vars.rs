@@ -47,6 +47,8 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
 
     let provider_api_keys_json = serde_json::to_string(&provider_api_keys(&dot_env, &env_upper))?;
 
+    let alerts_email = resolve_alerts_email(&dot_env);
+
     let scw_secret = scw_config_get("secret-key").unwrap_or_default();
     let scw_access_key = scw_config_get("access-key").unwrap_or_default();
     let scw_region = scw_config_get("default-region").unwrap_or_default();
@@ -62,6 +64,7 @@ pub fn run(args: TfVarsArgs) -> Result<()> {
     println!("export TF_VAR_eigin_relay_secondary_key=\"{eigin_relay_secondary_key}\"");
     println!("export TF_VAR_token_encryption_secondary_key=\"{token_encryption_secondary_key}\"");
     println!("export TF_VAR_provider_api_keys='{provider_api_keys_json}'");
+    println!("export TF_VAR_alerts_email=\"{alerts_email}\"");
 
     // S3 remote-state backend credentials.
     print!("{}", aws_exports(&aws_access, &aws_secret, &aws_region));
@@ -120,6 +123,16 @@ fn provider_api_keys(
             Some((name.to_lowercase(), value.clone()))
         })
         .collect()
+}
+
+/// Resolve the alert email: dedicated `EIGIN_ALERTS_EMAIL` wins over the
+/// support inbox `EIGIN_SUPPORT_EMAIL` (which itself may be unset).
+pub fn resolve_alerts_email(dot_env: &HashMap<String, String>) -> String {
+    dot_env
+        .get("EIGIN_ALERTS_EMAIL")
+        .or_else(|| dot_env.get("EIGIN_SUPPORT_EMAIL"))
+        .cloned()
+        .unwrap_or_else(|| "support@eigin.ai".into())
 }
 
 fn repo_root() -> Result<String> {
@@ -264,5 +277,21 @@ mod tests {
              export AWS_SECRET_ACCESS_KEY=\"scw-secret\"\n\
              export AWS_DEFAULT_REGION=\"fr-par\"\n"
         );
+    }
+
+    #[test]
+    fn alerts_email_prefers_dedicated_key_over_support() {
+        let dot_env = env(&[
+            ("EIGIN_ALERTS_EMAIL", "alerts@eigin.ai"),
+            ("EIGIN_SUPPORT_EMAIL", "support@eigin.ai"),
+        ]);
+        assert_eq!(resolve_alerts_email(&dot_env), "alerts@eigin.ai");
+    }
+
+    #[test]
+    fn alerts_email_falls_back_to_support_then_default() {
+        let support_only = env(&[("EIGIN_SUPPORT_EMAIL", "support@eigin.ai")]);
+        assert_eq!(resolve_alerts_email(&support_only), "support@eigin.ai");
+        assert_eq!(resolve_alerts_email(&HashMap::new()), "support@eigin.ai");
     }
 }
