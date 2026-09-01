@@ -181,3 +181,36 @@ pub async fn handle_list(
         data,
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The checked-in models.toml must load, resolve without ID/alias
+    /// collisions, and reference only providers defined in providers.toml.
+    /// Startup only logs a warning on a broken catalog, so this is the guard.
+    #[test]
+    fn checked_in_catalog_resolves_and_references_configured_providers() {
+        let models_path = concat!(env!("CARGO_MANIFEST_DIR"), "/config/models.toml");
+        let providers_path = concat!(env!("CARGO_MANIFEST_DIR"), "/config/providers.toml");
+
+        let models = ModelsConfig::load(models_path)
+            .unwrap_or_else(|e| panic!("failed to load {models_path}: {e}"));
+        let resolved = models
+            .into_resolved()
+            .unwrap_or_else(|e| panic!("checked-in models.toml does not resolve: {e}"));
+        let providers = ProvidersConfig::load(providers_path)
+            .unwrap_or_else(|e| panic!("failed to load {providers_path}: {e}"))
+            .into_map();
+
+        assert!(!resolved.canonical_models.is_empty());
+        for model in resolved.canonical_models.values() {
+            assert!(
+                providers.contains_key(&model.provider),
+                "model '{}' references undefined provider '{}'",
+                model.id,
+                model.provider
+            );
+        }
+    }
+}

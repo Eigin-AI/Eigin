@@ -122,16 +122,19 @@ enum KnownModelCatalog {
         "claude-sonnet-4-6",
         "gpt-5.6",
         "gpt-5.6-terra",
+        "glm-5.3",
+        "glm-5.2",
         "gpt-5.5",
         "mistral-medium-latest",
-        "mistral-medium-2604",
         "gemini-3.5-flash",
         "gpt-5.4",
         "gemini-3.1-pro-preview",
         "gpt-4.1",
+        "mistral-medium-2604",
         "mistral-large-latest",
         "mistral-large-2512",
-        "glm-5.2",
+        "kimi-k3",
+        "glm-5.3-flash",
         "minimax-m3",
         "gpt-5.4-mini",
         "gpt-4.1-mini",
@@ -192,7 +195,17 @@ enum KnownModelCatalog {
     /// Returns the best model from `available` according to the preference ranking,
     /// or the first catalog-known model, or the first available model as fallback.
     static func bestModel(from available: [String]) -> String? {
-        for pattern in preferenceRanking {
+        bestModel(from: available, ranking: preferenceRanking, in: entries)
+    }
+
+    /// Selection core with injectable ranking and catalog, mirroring the `lookup(_:in:)`
+    /// seam, so tests exercise the selection behavior rather than the current ranking.
+    static func bestModel(
+        from available: [String],
+        ranking: [String],
+        in entries: [KnownModelEntry]
+    ) -> String? {
+        for pattern in ranking {
             let normalizedPattern = normalize(pattern)
             if let match = available.first(where: {
                 matchesPattern(normalize(stripPrefix($0)), pattern: normalizedPattern)
@@ -200,7 +213,7 @@ enum KnownModelCatalog {
                 return match
             }
         }
-        return available.first { lookup($0) != nil } ?? available.first
+        return available.first { lookup($0, in: entries) != nil } ?? available.first
     }
 
     // MARK: - Pattern Matching
@@ -851,6 +864,33 @@ enum KnownModelCatalog {
 
         // Zhipu (GLM)
         KnownModelEntry(
+            pattern: "glm-5.3-flash",
+            displayName: "GLM 5.3 Flash",
+            family: .zhipu,
+            contextWindow: 1_048_576,
+            maxOutput: 131_072,
+            // z.ai list prices; a 50% launch promo runs until Sep 2026.
+            inputCostPerMillion: 0.15,
+            outputCostPerMillion: 0.50,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "glm-5.3",
+            displayName: "GLM 5.3",
+            family: .zhipu,
+            contextWindow: 1_048_576,
+            maxOutput: 131_072,
+            inputCostPerMillion: 1.40,
+            outputCostPerMillion: 4.40,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: false,
+            isRecommended: true
+        ),
+        KnownModelEntry(
             pattern: "glm-5.2",
             displayName: "GLM 5.2",
             family: .zhipu,
@@ -943,6 +983,19 @@ enum KnownModelCatalog {
         ),
 
         // Kimi
+        KnownModelEntry(
+            pattern: "kimi-k3",
+            displayName: "Kimi K3",
+            family: .moonshot,
+            contextWindow: 1_048_576,
+            maxOutput: 131_072,
+            inputCostPerMillion: 3.00,
+            outputCostPerMillion: 15.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
         KnownModelEntry(
             pattern: "kimi-k2.7-code",
             displayName: "Kimi K2.7 Code",

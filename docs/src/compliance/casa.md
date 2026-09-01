@@ -26,7 +26,7 @@ The system depends on these external services:
 
 | Dependency | Relationship |
 |---|---|
-| **Hosted inference providers** | Mistral, TensorX, and Berget. Serves hosted AI models |
+| **Hosted inference providers** | Mistral and TensorX. Serves hosted AI models |
 | **Connected account providers** | Third-party accounts the user connects in the App |
 | **Web search provider** | Mojeek search API, proxied through the Relay |
 | **Apple App Store** | Sells credit packs and notifies of refunds |
@@ -196,7 +196,6 @@ Forwarding Gmail content to an inference provider is a transfer of Google user d
 | Provider | Location | No retention | No training | No human review |
 |---|---|---|---|---|
 | [TensorX](https://tensorx.ai/dpa/) | Dublin, Helsinki | DPA §3.2 | DPA §3.2 | Ephemeral enclaves |
-| [Berget](https://berget.ai/en/dpa) | Sweden | ToS §7 | DPA §5.3 | DPA Appendix 1 |
 | [Mistral](https://legal.mistral.ai/terms/data-processing-addendum) | France | Org-level ZDR | Follows from ZDR | See the [Trust Center](https://trust.mistral.ai/) |
 
 Google user data is never used for advertising or model training. See the [privacy policy](https://www.eigin.ai/privacy/).

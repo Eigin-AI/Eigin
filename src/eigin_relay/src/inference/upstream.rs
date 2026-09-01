@@ -183,7 +183,7 @@ mod tests {
 
     #[tokio::test]
     async fn url_without_scheme_is_service_unavailable() {
-        let result = client("api.berget.ai/v1")
+        let result = client("api.invalid.example/v1")
             .chat_completions(Bytes::new(), "key")
             .await;
         assert!(matches!(result, Err(AppError::ServiceUnavailable(_))));
