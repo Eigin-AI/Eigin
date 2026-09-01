@@ -250,7 +250,9 @@ infra command env="staging":
         init)
             eval "$({{ tools }} infra tf-vars {{ env }})"
             cd {{ infra_dir }}
-            terraform workspace select -or-create {{ env }} && terraform init
+            # Init the backend first: a fresh worktree has no .terraform/, and
+            # `workspace select` needs an initialized backend to run.
+            terraform init && terraform workspace select -or-create {{ env }}
             ;;
         migrate)
             # One-time: copy local state to the remote backend. Migrates all

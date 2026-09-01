@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/@aliou/pi-guardrails@0.17.0/schema.json",
+  "$schema": "https://unpkg.com/@aliou/pi-guardrails@0.17.1/schema.json",
   "enabled": true,
   "applyBuiltinDefaults": true,
   "features": {
@@ -25,6 +25,10 @@
       {
         "kind": "directory",
         "path": "/var/folders"
+      },
+      {
+        "kind": "directory",
+        "path": "~/Repositories"
       }
     ]
   },
@@ -32,9 +36,14 @@
     "requireConfirmation": true,
     "autoDenyPatterns": [
       {
-        "pattern": "\\bgit\\s+(?:-\\S+\\s+)*(?:commit|push|merge|rebase|reset)\\b",
+        "pattern": "\\bgit\\s+(?:-\\S+\\s+)*(?:merge|rebase|reset)\\b",
         "regex": true,
-        "description": "Stateful/destructive git — the agent should not commit, push, merge, rebase, or reset. This is the user's to run — discuss it with them, or tell them what to try. Read-only git (status/log/diff/show) is fine."
+        "description": "History-rewriting/integrating git — merge, rebase, and reset stay the user's to run (they can rewrite history or disturb the main worktree). Plain `git commit` and non-force `git push` of a worktree branch are allowed. Read-only git (status/log/diff/show) is fine."
+      },
+      {
+        "pattern": "\\bgit\\s+push\\b.*(?:--force\\b|--force-with-lease\\b|(?:^|\\s)-f\\b)",
+        "regex": true,
+        "description": "Force push — never. Regular commit/push of a worktree branch is fine, but force-pushing can clobber history. `main` is additionally protected server-side (no direct or force push; merge via MR only)."
       },
       {
         "pattern": "\\bgit\\s+branch\\s+(?:\\S+\\s+)*-(?:d|D|m|M|f)\\b",

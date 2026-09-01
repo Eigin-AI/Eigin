@@ -93,8 +93,8 @@ test("accepts options with descriptions", () => {
 	assertEqual(result, undefined, "Should be valid");
 });
 
-// Invalid cases: question count
-test("rejects 1 question", () => {
+// A single question is allowed (not every clarification is a multi-part fork).
+test("accepts 1 question", () => {
 	const questions: QuestionInput[] = [
 		{
 			question: "Only one?",
@@ -102,16 +102,7 @@ test("rejects 1 question", () => {
 		},
 	];
 	const result = validateQuestions(questions);
-	assertEqual(
-		result !== undefined,
-		true,
-		"Should fail with 1 question",
-	);
-	assertEqual(
-		result?.reason.includes("2–3 questions"),
-		true,
-		"Error message should mention range",
-	);
+	assertEqual(result, undefined, "Should be valid");
 });
 
 test("rejects 4 questions", () => {
@@ -128,7 +119,7 @@ test("rejects 4 questions", () => {
 		"Should fail with 4 questions",
 	);
 	assertEqual(
-		result?.reason.includes("2–3 questions"),
+		result?.reason.includes("1–3 questions"),
 		true,
 		"Error message should mention range",
 	);

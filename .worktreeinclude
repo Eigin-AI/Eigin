@@ -4,3 +4,5 @@
 
 .env
 .pi/model-roles.json
+src/eigin_relay/config/grant/
+infra/**/backend.tf

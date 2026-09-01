@@ -11,7 +11,7 @@ export interface ValidationError {
   reason: string;
 }
 
-const MIN_QUESTIONS = 2;
+const MIN_QUESTIONS = 1;
 const MAX_QUESTIONS = 3;
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 3;

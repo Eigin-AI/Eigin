@@ -20,8 +20,10 @@
  *   stage's role (planner/builder/explorer); the prompt defaults to keeping the
  *   current model. Configure roles with /eigin:role (see workflow/roles.ts).
  * - Lets the agent propose a transition via a confirm dialog (never automatic).
- * - Blocks stateful/destructive git, `terraform apply`/`destroy`, and
- *   `just infra deploy` (which wraps it) everywhere.
+ * - Git: allows commit + non-force push of the current worktree branch;
+ *   blocks force-push, merge/rebase/reset, branch/remote mutation,
+ *   `terraform apply`/`destroy`, and `just infra deploy` (which wraps it).
+ *   `main` is protected server-side (no direct/force push; MR-only).
  * - Auto-names new sessions via a one-shot LLM call (/eigin:rename to redo) and
  *   rings the terminal bell on agent_end (see observability/).
  * - Collaborative plan review: the Plan stage co-edits a markdown file under
@@ -53,6 +55,8 @@
  *   /eigin:role <role>       pick a model for that role (planner|builder|explorer)
  *   /eigin:role <role> <id>  set a role's model directly ("provider/id" if ambiguous)
  *   /eigin:rename            regenerate the session name from the most recent user message
+ *   /eigin:plan              show the active plan file's path
+ *   /eigin:plan open         open the active plan file in your editor ($VISUAL/$EDITOR)
  *
  * Module layout:
  *   index.ts            wiring: footer, tool gating, guidance injection, persistence
@@ -68,6 +72,7 @@
  *     confirm-dialog.ts    shared inline confirm-with-note dialog (used by propose + wait_for_user)
  *     wait-for-user.ts     wait_for_user (hand control back, block until the user signals)
  *     role-command.ts      /eigin:role command: configure role→model assignments
+ *     plan-command.ts      /eigin:plan command: open the active plan file in your editor
  *     ask/                 ask_questions (structured multi-question dialog)
  *       ask.ts               tool registration, schema, validation, result formatting
  *       ask-dialog.ts        the tabbed ctx.ui.custom state machine
@@ -127,6 +132,7 @@ import {
 } from "./workflow/stage-hint.ts";
 import { loadRoleOverrides, resolveRoleModel } from "./workflow/role-store.ts";
 import { registerRoleCommand } from "./tools/role-command.ts";
+import { registerPlanCommand } from "./tools/plan-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
 import { ADD_TASKS_TOOL, CLEAR_TASKS_TOOL, RESOLVE_TASKS_TOOL, registerTaskTools } from "./tools/tasks.ts";
 import {
@@ -606,6 +612,10 @@ export default function stageExtension(pi: ExtensionAPI): void {
   });
   registerAskQuestionsTool(pi);
   registerRoleCommand(pi, { activeRole: () => activeStage().role });
+  registerPlanCommand(pi, {
+    activePlanPath: () => activePlanState.path ?? undefined,
+    sessionCwd: () => sessionCwd,
+  });
   registerSubagentTool(pi);
   registerTaskTools(pi, {
     add(texts, ctx) {
@@ -718,7 +728,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     return {
       systemPrompt: `${event.systemPrompt}
 
-Always blocked (every stage): the agent should not run stateful or destructive git (commit, push, pull, fetch, merge, rebase, reset, checkout/switch, branch changes), \`terraform apply\`/\`destroy\`, or \`just infra deploy\` (which wraps it). These are the user's to run — discuss them or say what to try.`,
+Git policy: you may \`git commit\` and \`git push\` the current worktree branch to share and test your work. Never force-push (\`--force\`/\`-f\`/\`--force-with-lease\`), and never run history-rewriting or integrating git (merge, rebase, reset) or branch/remote mutations — those are the user's to run. \`main\` is a protected branch (no direct or force push; merge via MR only), so push worktree branches, not main. Also always blocked: \`terraform apply\`/\`destroy\` and \`just infra deploy\` (which wraps it) — discuss them or say what to try.`,
     };
   });
 

@@ -1,7 +1,7 @@
 /**
  * ask_questions tool — structured multi-question interview.
  *
- * Opens a tabbed dialog (2–3 questions, each with 2–3 options + free-form).
+ * Opens a tabbed dialog (1–3 questions, each with 2–3 options + free-form).
  * The agent asks clarifying questions; the user picks options (optionally
  * annotated with notes) or types free-form answers. The tool returns a
  * structured per-question summary the agent can react to in the same turn.
@@ -34,7 +34,7 @@ export function registerAskQuestionsTool(pi: ExtensionAPI): void {
 		name: ASK_QUESTIONS_TOOL,
 		label: "Ask Questions",
 		description:
-			"Ask the user 2–3 structured questions with a tabbed dialog. Each question offers 2–3 preset options " +
+			"Ask the user 1–3 structured questions with a tabbed dialog. Each question offers 2–3 preset options " +
 			"(the first option is treated as the recommended choice — put your best option first) plus an automatically " +
 			"appended free-form 'Something else…' option (do NOT add your own 'other' option). The user can pick a preset " +
 			"and attach a note to it, or type a free-form answer. Use this for clarifying questions or implementation decisions " +
