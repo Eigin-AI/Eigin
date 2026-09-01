@@ -44,7 +44,10 @@ export function registerReviewCommand(pi: ExtensionAPI, deps: ReviewCommandDeps)
 					diffPath: relative,
 					planPath: deps.activePlanPath() ?? null,
 					guidePath: REVIEW_GUIDE,
+					atMerge: false,
 				}),
+				// Harmless when idle, and needed if invoked mid-turn.
+				{ deliverAs: "followUp" },
 			);
 		},
 	});

@@ -51,18 +51,21 @@ test("resolves each real role name", () => {
 
 const session = { provider: "berget", id: "zai-org/GLM-5.3" };
 
+/** The shape applySessionModel cares about, as agent discovery produces it. */
+type DiscoveredAgent = { name: string; model?: string };
+
 test("an agent with no model of its own runs on the session's model", () => {
-	const [agent] = applySessionModel([{ name: "reviewer" }], session);
-	assertEqual(agent.model, "berget/zai-org/GLM-5.3");
+	const agents: DiscoveredAgent[] = [{ name: "reviewer" }];
+	assertEqual(applySessionModel(agents, session)[0].model, "berget/zai-org/GLM-5.3");
 });
 
 test("an agent that pins a model keeps it", () => {
-	const [agent] = applySessionModel([{ name: "explore", model: "anthropic/claude-haiku-4-5" }], session);
-	assertEqual(agent.model, "anthropic/claude-haiku-4-5");
+	const agents: DiscoveredAgent[] = [{ name: "explore", model: "anthropic/claude-haiku-4-5" }];
+	assertEqual(applySessionModel(agents, session)[0].model, "anthropic/claude-haiku-4-5");
 });
 
 test("agents are left alone when there is no session model", () => {
-	const agents = [{ name: "reviewer" }];
+	const agents: DiscoveredAgent[] = [{ name: "reviewer" }];
 	assertEqual(applySessionModel(agents, undefined), agents);
 });
 

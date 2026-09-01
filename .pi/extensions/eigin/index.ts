@@ -505,6 +505,8 @@ export default function stageExtension(pi: ExtensionAPI): void {
     }
 
     const relative = (abs: string) => abs.replace(`${resolve(sessionCwd)}/`, "");
+    // Queued as a follow-up: propose_stage is still mid-turn here, and an
+    // immediate send is rejected while the agent is streaming.
     pi.sendUserMessage(
       reviewKickoff({
         diffPath: relative(diffPath),
@@ -512,6 +514,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
         guidePath: REVIEW_GUIDE,
         atMerge: true,
       }),
+      { deliverAs: "followUp" },
     );
     return true;
   }
