@@ -10,6 +10,9 @@
  *     interactive/stage machinery there (see ../../index.ts).
  *   - agents.ts additionally resolves a `role:<name>` sentinel in an agent's
  *     `model` frontmatter field against our workflow/roles.ts role store.
+ *   - An agent with no `model` frontmatter inherits the session's current
+ *     model rather than pi's configured default, so a sub-agent follows the
+ *     model you're working with (upstream leaves `--model` off entirely).
  *   - The tool description adds two lines nudging the *caller* (the main
  *     agent) toward scoping tasks tightly and using parallel mode for
  *     multiple unrelated questions — learned from broad single-task asks
@@ -47,6 +50,7 @@ import {
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
+import { applySessionModel } from "./model-role.ts";
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
@@ -498,7 +502,8 @@ export function registerSubagentTool(pi: ExtensionAPI): void {
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const agentScope: AgentScope = params.agentScope ?? "user";
 			const discovery = discoverAgents(ctx.cwd, agentScope);
-			const agents = discovery.agents;
+			// An agent with no `model` frontmatter runs on the session's current model.
+			const agents = applySessionModel(discovery.agents, ctx.model);
 			const confirmProjectAgents = params.confirmProjectAgents ?? true;
 
 			const hasChain = (params.chain?.length ?? 0) > 0;

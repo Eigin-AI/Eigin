@@ -9,9 +9,8 @@
  * writing, implementing, etc). Its metadata — label, whether edit
  * tools are enabled, which model role it suggests — is stable no matter
  * which workflow is using it. Its *guidance* (the behavior-shaping text
- * injected into the system prompt) is not: a workflow tunes it to its own
- * purpose (see workflow/workflows.ts, which composes StageDefs from this
- * catalog plus per-workflow guidance).
+ * injected per turn) is not: each workflow tunes it in
+ * `.pi/guidance/<workflow>/<stage>.md`, loaded by workflow/guidance.ts.
  */
 
 import type { RoleId } from "./roles.ts";
@@ -39,12 +38,6 @@ export interface StageMeta {
   role?: RoleId;
 }
 
-/** A stage as used by a specific workflow: metadata plus tuned guidance. */
-export interface StageDef extends StageMeta {
-  /** Short behavior-shaping guidance injected into the system prompt. */
-  guidance: string;
-}
-
 export const STAGE_META: Record<StageId, StageMeta> = {
   context: { id: "context", label: "Context", allowsEdits: false, role: "planner" },
   plan: { id: "plan", label: "Plan", allowsEdits: true, role: "planner" }, // Restricted to markdown files by guard.
@@ -53,11 +46,6 @@ export const STAGE_META: Record<StageId, StageMeta> = {
   test: { id: "test", label: "Test", allowsEdits: true, role: "builder" },
   merge: { id: "merge", label: "Merge", allowsEdits: true, role: "builder" },
 };
-
-/** Merge a stage's fixed metadata with workflow-specific guidance. */
-export function stage(id: StageId, guidance: string): StageDef {
-  return { ...STAGE_META[id], guidance };
-}
 
 export function isStageId(value: string): value is StageId {
   return value in STAGE_META;

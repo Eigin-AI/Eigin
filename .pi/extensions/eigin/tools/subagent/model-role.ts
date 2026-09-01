@@ -1,7 +1,8 @@
 /**
- * Resolves a `role:<name>` sentinel in an agent's `model` frontmatter field
- * against our workflow/roles.ts role store — the seam that couples the
- * vendored subagent tool to our own role system.
+ * Resolves which model a sub-agent runs on: a `role:<name>` sentinel in its
+ * `model` frontmatter against our workflow/roles.ts role store, and the
+ * session's own model for an agent that pins nothing. The seam that couples
+ * the vendored subagent tool to our own role system.
  *
  * Kept in its own file (rather than inline in agents.ts) so it has no
  * dependency on `@earendil-works/pi-coding-agent`, which only resolves under
@@ -32,4 +33,18 @@ export function resolveAgentModel(model: string | undefined, overrides: RoleOver
 	if (!isRoleId(role)) return undefined;
 
 	return formatModelFlag(resolveRoleModel(role, overrides));
+}
+
+/**
+ * Fill in the session's current model for agents that don't pin one. Without
+ * this an unpinned agent falls back to pi's configured default, which is
+ * rarely the model you're working with once a stage has switched it.
+ */
+export function applySessionModel<T extends { model?: string }>(
+	agents: T[],
+	sessionModel: RoleModel | undefined,
+): T[] {
+	if (!sessionModel) return agents;
+	const flag = formatModelFlag(sessionModel);
+	return agents.map((agent) => (agent.model ? agent : { ...agent, model: flag }));
 }

@@ -41,6 +41,9 @@
  * - Offers to compact context at Plan→Build (only past
  *   COMPACTION_THRESHOLD_PERCENT), then kicks off Build with the plan inlined
  *   (see offerBuildHandoff below and workflow/build-handoff.ts).
+ * - Offers a fresh-eyes review on the way into Merge, so the MR opens on
+ *   feedback that's already addressed (see offerMergeHandoff below and
+ *   workflow/review-handoff.ts). Also available anytime via /eigin:review.
  *
  * Commands / shortcuts (namespaced under `eigin:` to avoid colliding with
  * other extensions' commands):
@@ -57,11 +60,13 @@
  *   /eigin:rename            regenerate the session name from the most recent user message
  *   /eigin:plan              show the active plan file's path
  *   /eigin:plan open         open the active plan file in your editor ($VISUAL/$EDITOR)
+ *   /eigin:review            review this branch's changes against the review guide
  *
  * Module layout:
  *   index.ts            wiring: footer, tool gating, guidance injection, persistence
  *   workflow/stages.ts    shared stage vocabulary + metadata (label/allowsEdits/role)
- *   workflow/workflows.ts  named stage sequences with per-workflow guidance (feature/bug/prototype)
+ *   workflow/workflows.ts  named stage sequences (feature/bug/prototype/release)
+ *   workflow/guidance.ts   loads stage guidance from .pi/guidance/*.md (re-read on edit)
  *   workflow/stage-hint.ts per-turn stage guidance, injected via the context event
  *   workflow/roles.ts     model roles (planner/builder/explorer) + built-in defaults
  *   workflow/role-store.ts persists per-developer role→model overrides (.pi/model-roles.json)
@@ -73,6 +78,7 @@
  *     wait-for-user.ts     wait_for_user (hand control back, block until the user signals)
  *     role-command.ts      /eigin:role command: configure role→model assignments
  *     plan-command.ts      /eigin:plan command: open the active plan file in your editor
+ *     review-command.ts    /eigin:review command: run the reviewer on demand
  *     ask/                 ask_questions (structured multi-question dialog)
  *       ask.ts               tool registration, schema, validation, result formatting
  *       ask-dialog.ts        the tabbed ctx.ui.custom state machine
@@ -83,6 +89,8 @@
  *       model-role.ts        resolves an agent's `role:<name>` model to a real model id
  *   workflow/active-plan.ts  tracks the live plan file + diffs the user's edits for per-turn injection
  *   workflow/build-handoff.ts composes the Plan→Build compaction instructions + kickoff message
+ *   workflow/review-handoff.ts composes the kickoff handing a branch to the reviewer sub-agent
+ *   workflow/branch-diff.ts  writes the branch's diff against main to .pi/review/<branch>.diff
  *   workflow/task-list.ts pure task-list state (add/resolve/format), rendered with the stage hint
  *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
  *   observability/generate-session-name.ts one-shot LLM call producing the session name
@@ -121,6 +129,9 @@ import {
   type ActivePlanState,
 } from "./workflow/active-plan.ts";
 import { buildCompactionInstructions, buildKickoff } from "./workflow/build-handoff.ts";
+import { REVIEW_GUIDE, reviewKickoff } from "./workflow/review-handoff.ts";
+import { writeBranchDiff } from "./workflow/branch-diff.ts";
+import { loadGuidance, loadGuidanceFile } from "./workflow/guidance.ts";
 import { PROPOSE_TOOL, registerProposeTool } from "./tools/propose.ts";
 import { ASK_QUESTIONS_TOOL, registerAskQuestionsTool } from "./tools/ask/ask.ts";
 import { applySubagentDefaults, applyWebSearchDefault, type ToolCallInput } from "./tool-defaults.ts";
@@ -133,6 +144,7 @@ import {
 import { loadRoleOverrides, resolveRoleModel } from "./workflow/role-store.ts";
 import { registerRoleCommand } from "./tools/role-command.ts";
 import { registerPlanCommand } from "./tools/plan-command.ts";
+import { registerReviewCommand } from "./tools/review-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
 import { ADD_TASKS_TOOL, CLEAR_TASKS_TOOL, RESOLVE_TASKS_TOOL, registerTaskTools } from "./tools/tasks.ts";
 import {
@@ -144,7 +156,7 @@ import {
   summarizeTaskList,
   type TaskListState,
 } from "./workflow/task-list.ts";
-import { isStageId, type StageDef, type StageId } from "./workflow/stages.ts";
+import { isStageId, type StageId, type StageMeta } from "./workflow/stages.ts";
 import {
   firstStage,
   getStageInWorkflow,
@@ -175,6 +187,7 @@ const DEFAULT_WORKFLOW: WorkflowId = "feature";
 
 // Offer plan->build compaction only once context has built up enough to matter.
 const COMPACTION_THRESHOLD_PERCENT = 20;
+
 
 /** Icon + label for a workflow. */
 function workflowLabel(w: WorkflowDef): string {
@@ -231,8 +244,8 @@ export default function stageExtension(pi: ExtensionAPI): void {
     return getWorkflow(currentWorkflow);
   }
 
-  /** The active workflow's tuned StageDef for `id` (defaults to the current stage). */
-  function activeStage(id: StageId = currentStage): StageDef {
+  /** The active workflow's stage for `id` (defaults to the current stage). */
+  function activeStage(id: StageId = currentStage): StageMeta {
     return getStageInWorkflow(activeWorkflow(), id);
   }
 
@@ -365,7 +378,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
   // --- Model suggestion --------------------------------------------------
 
   async function suggestModel(
-    stage: StageDef,
+    stage: StageMeta,
     ctx: ExtensionContext,
   ): Promise<void> {
     if (!ctx.hasUI) return; // Dialogs aren't available in -p/JSON mode.
@@ -460,6 +473,49 @@ export default function stageExtension(pi: ExtensionAPI): void {
     return true;
   }
 
+  /**
+   * Offers a fresh-eyes review on the way into Merge — the point where the
+   * work stops changing and starts being read (see workflow/review-handoff.ts).
+   * Writes the diff, then auto-sends a kickoff telling the agent to run the
+   * reviewer sub-agent before opening the MR.
+   *
+   * Returns whether a kickoff was scheduled, so propose_stage knows whether to
+   * end the turn quietly (a kickoff starts a fresh one) or give the normal
+   * stage-guidance continuation.
+   */
+  async function offerMergeHandoff(ctx: ExtensionContext): Promise<boolean> {
+    const ok = await withHerdrBlocked(pi, "Review the changes before Merge?", () =>
+      ctx.ui.confirm(
+        "Review the changes before Merge?",
+        `Run the reviewer over this branch's diff against ${REVIEW_GUIDE} first, so the MR opens on feedback that's already addressed.`,
+      ),
+    );
+    if (!ok) return false;
+
+    let diffPath: string | null;
+    try {
+      diffPath = await writeBranchDiff(sessionCwd);
+    } catch (err) {
+      ctx.ui.notify(`Couldn't build the diff: ${(err as Error).message}`, "warning");
+      return false;
+    }
+    if (!diffPath) {
+      ctx.ui.notify("Nothing to review — no changes against main.", "info");
+      return false;
+    }
+
+    const relative = (abs: string) => abs.replace(`${resolve(sessionCwd)}/`, "");
+    pi.sendUserMessage(
+      reviewKickoff({
+        diffPath: relative(diffPath),
+        planPath: activePlanState.path,
+        guidePath: REVIEW_GUIDE,
+        atMerge: true,
+      }),
+    );
+    return true;
+  }
+
   async function setStage(
     id: StageId,
     ctx: ExtensionContext,
@@ -481,6 +537,11 @@ export default function stageExtension(pi: ExtensionAPI): void {
     // Only plan->build changes role (planner -> builder); later stages don't.
     if (from === "plan" && id === "build" && ctx.hasUI) {
       return { handoffPending: await offerBuildHandoff(ctx) };
+    }
+
+    // Entering Merge: offer a fresh-eyes review before the MR is opened.
+    if (id === "merge" && ctx.hasUI) {
+      return { handoffPending: await offerMergeHandoff(ctx) };
     }
 
     return { handoffPending: false };
@@ -612,6 +673,10 @@ export default function stageExtension(pi: ExtensionAPI): void {
   });
   registerAskQuestionsTool(pi);
   registerRoleCommand(pi, { activeRole: () => activeStage().role });
+  registerReviewCommand(pi, {
+    activePlanPath: () => activePlanState.path ?? undefined,
+    sessionCwd: () => sessionCwd,
+  });
   registerPlanCommand(pi, {
     activePlanPath: () => activePlanState.path ?? undefined,
     sessionCwd: () => sessionCwd,
@@ -725,18 +790,17 @@ export default function stageExtension(pi: ExtensionAPI): void {
   // below) rather than here, to avoid invalidating that cached prefix on
   // every stage change.
   pi.on("before_agent_start", async (event) => {
-    return {
-      systemPrompt: `${event.systemPrompt}
-
-Git policy: you may \`git commit\` and \`git push\` the current worktree branch to share and test your work. Never force-push (\`--force\`/\`-f\`/\`--force-with-lease\`), and never run history-rewriting or integrating git (merge, rebase, reset) or branch/remote mutations — those are the user's to run. \`main\` is a protected branch (no direct or force push; merge via MR only), so push worktree branches, not main. Also always blocked: \`terraform apply\`/\`destroy\` and \`just infra deploy\` (which wraps it) — discuss them or say what to try.`,
-    };
+    const policy = await loadGuidanceFile(sessionCwd, "git-policy");
+    if (!policy) return;
+    return { systemPrompt: `${event.systemPrompt}\n\n${policy}` };
   });
 
   pi.on("context", async (event) => {
     const workflow = activeWorkflow();
     const stage = activeStage();
     const taskBlock = formatTaskList(taskListState);
-    let guidance = taskBlock ? `${stage.guidance}\n\n${taskBlock}` : stage.guidance;
+    const stageGuidance = await loadGuidance(sessionCwd, workflow.id, stage.id);
+    let guidance = taskBlock ? `${stageGuidance}\n\n${taskBlock}` : stageGuidance;
 
     // Collaborative plan: on a fresh user turn while co-editing, inject the
     // live plan file + a diff of the user's edits so they're picked up without

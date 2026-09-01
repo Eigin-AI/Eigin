@@ -3,7 +3,7 @@
  * vendored agent discovery logic.
  */
 
-import { resolveAgentModel } from "./model-role.ts";
+import { applySessionModel, resolveAgentModel } from "./model-role.ts";
 
 function test(name: string, fn: () => void): void {
 	try {
@@ -47,6 +47,23 @@ test("resolves each real role name", () => {
 	assertEqual(resolveAgentModel("role:planner", {}), "anthropic/claude-opus-4-8");
 	assertEqual(resolveAgentModel("role:builder", {}), "anthropic/claude-sonnet-5");
 	assertEqual(resolveAgentModel("role:explorer", {}), "anthropic/claude-haiku-4-5");
+});
+
+const session = { provider: "berget", id: "zai-org/GLM-5.3" };
+
+test("an agent with no model of its own runs on the session's model", () => {
+	const [agent] = applySessionModel([{ name: "reviewer" }], session);
+	assertEqual(agent.model, "berget/zai-org/GLM-5.3");
+});
+
+test("an agent that pins a model keeps it", () => {
+	const [agent] = applySessionModel([{ name: "explore", model: "anthropic/claude-haiku-4-5" }], session);
+	assertEqual(agent.model, "anthropic/claude-haiku-4-5");
+});
+
+test("agents are left alone when there is no session model", () => {
+	const agents = [{ name: "reviewer" }];
+	assertEqual(applySessionModel(agents, undefined), agents);
 });
 
 console.log("\nAll model-role tests completed.");

@@ -16,6 +16,7 @@ import { Type } from "typebox";
 import { confirmWithNote } from "./confirm-dialog.ts";
 import { withHerdrBlocked } from "../observability/herdr.ts";
 import { STAGE_META, type StageId } from "../workflow/stages.ts";
+import { loadGuidance } from "../workflow/guidance.ts";
 import { getStageInWorkflow, getWorkflow, hasStage, relativeStageIn, type WorkflowId } from "../workflow/workflows.ts";
 
 export const PROPOSE_TOOL = "propose_stage";
@@ -167,16 +168,20 @@ export function registerProposeTool(
       // Approved — switch stage now, then continue this turn in the new stage.
       const { handoffPending } = await controller.setStage(target, ctx);
 
-      // Plan→Build with compaction accepted: a kickoff message is already
-      // scheduled (post-compaction, post-model-switch) to start a fresh turn.
-      // End this turn quietly instead of duplicating the guidance/"Proceed."
-      // the kickoff will supply once compaction finishes.
+      // A handoff is running (compaction into Build, or the review into
+      // Merge) and has already scheduled a kickoff message to start a fresh
+      // turn. End this turn quietly instead of duplicating the guidance and
+      // "Proceed." that kickoff will supply.
       if (handoffPending) {
+        const doing =
+          target === "build"
+            ? "Compacting the planning context and starting on the plan"
+            : "Reviewing the branch before the MR";
         return {
           content: [
             {
               type: "text",
-              text: `Approved. Compacting the planning context, switching to ${stage.label}, and starting on the plan\u2026`,
+              text: `Approved. Switching to ${stage.label}. ${doing}\u2026`,
             },
           ],
           details: { stage: target, decision: "approved", note, handoff: true },
@@ -187,11 +192,12 @@ export function registerProposeTool(
       const noteLine = note
         ? `\nThe user also added: "${note}". Factor this in.`
         : "";
+      const guidance = await loadGuidance(ctx.cwd, workflow.id, target);
       return {
         content: [
           {
             type: "text",
-            text: `Approved. Now in the ${stage.label} stage.${noteLine}\n\n${stage.guidance}\n\nProceed.`,
+            text: `Approved. Now in the ${stage.label} stage.${noteLine}\n\n${guidance}\n\nProceed.`,
           },
         ],
         details: { stage: target, decision: "approved", note },

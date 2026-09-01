@@ -48,7 +48,6 @@ test("every workflow's stages exist in STAGE_META", () => {
 	for (const workflow of WORKFLOWS) {
 		for (const s of workflow.stages) {
 			assert(s.id in STAGE_META, `${workflow.id}: unknown stage id "${s.id}"`);
-			assert(s.guidance.length > 0, `${workflow.id}/${s.id}: empty guidance`);
 		}
 	}
 });
@@ -103,9 +102,8 @@ test("hasStage reflects workflow membership", () => {
 	assert(!hasStage(getWorkflow("feature"), "review"), "feature workflow should not include review");
 });
 
-test("getStageInWorkflow returns workflow-tuned guidance, throws for missing stage", () => {
-	const bugContext = getStageInWorkflow(getWorkflow("bug"), "context");
-	assert(bugContext.guidance.includes("reproduce"), "bug context guidance should mention reproduction");
+test("getStageInWorkflow returns the stage, throws for one outside the workflow", () => {
+	assertEqual(getStageInWorkflow(getWorkflow("bug"), "context").label, "Context");
 
 	let threw = false;
 	try {
