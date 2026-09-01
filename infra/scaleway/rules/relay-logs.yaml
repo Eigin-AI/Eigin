@@ -1,0 +1,62 @@
+# Loki (LogQL) alert rules over the relay container's stdout logs.
+# Managed by Terraform via loki_rules — one rule group per concern.
+# Envelope: {"stream":"stdout","message":"<tracing line>"} — match on the
+# message text; NO_COLOR=1 keeps the level token clean.
+groups:
+  - name: eigin-relay-critical
+    interval: 1m
+    rules:
+      # Credit-system failures that the API answers 200 to. Each occurrence
+      # loses money or signals corruption — a single event is worth a page.
+      - alert: RelayWalletCloseOnRefundFailed
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "failed to close wallet on refund" [5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Refund processed but wallet close failed — user keeps credits, needs manual reconciliation"
+      - alert: RelayDebitAfterInferenceFailed
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "debit failed after inference" [5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Inference completed but wallet debit failed — user got free usage, needs manual reconciliation"
+      - alert: RelayWalletVanishedAfterDuplicate
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "wallet vanished after duplicate" [5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Wallet row vanished during duplicate-insert retry — possible data corruption"
+
+  - name: eigin-relay-errors
+    interval: 1m
+    rules:
+      - alert: RelayErrorLogs
+        # Any sustained ERROR is bad; >10/5m ≈ 2/min sustained (baseline is ~1/day)
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "ERROR" [5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sustained ERROR stream from the relay"
+      - alert: RelayHostileActivityDetected
+        # Verification-failure burst: forged-proof probing (422s log at WARN)
+        expr: sum(count_over_time({resource_type="serverless_container"} |~ "verification failed" [10m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Burst of signature-verification failures — possible forged-proof probing"
+
+  - name: eigin-relay-signals
+    interval: 1m
+    rules:
+      - alert: RelayRestarted
+        # Startup signal — doubles as an end-to-end pipeline probe
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "starting eigin-relay" [5m])) > 0
+        labels:
+          severity: info
+        annotations:
+          summary: "Relay container started (cold start or deploy)"

@@ -18,6 +18,19 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+
+    # Manage Cockpit alert rules (Loki for logs, Mimir for metrics) as
+    # Terraform resources. Self-signed community providers; the lock file
+    # pins the checksums. The 1.0/1.1 majors are verified against Cockpit;
+    # loki 2.x currently fails to install from the registry.
+    loki = {
+      source  = "fgouteroux/loki"
+      version = "~> 1.0"
+    }
+    mimir = {
+      source  = "fgouteroux/mimir"
+      version = "~> 1.1"
+    }
   }
 
   # State defaults to local (terraform.tfstate.d/, gitignored). To use remote

@@ -40,6 +40,10 @@ resource "scaleway_container" "relay" {
     MODELS_CONFIG_PATH                = "/config/models.toml"
     PRODUCTS_CONFIG_PATH              = "/config/products.toml"
     PROVIDERS_CONFIG_PATH             = "/config/providers.toml"
+
+    # Plain logs: no ANSI codes, keeps LogQL substring matches and the
+    # Grafana log view clean. tracing-subscriber honors NO_COLOR.
+    NO_COLOR = "1"
   }
 
   # The relay always has a Terraform-generated primary key (both for the client gate and

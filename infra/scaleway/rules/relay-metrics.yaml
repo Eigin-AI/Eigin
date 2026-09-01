@@ -1,0 +1,35 @@
+# Mimir (PromQL) alert rules over Scaleway platform metrics for the relay
+# container and database. Managed by Terraform via mimir_rules.
+# CPU/memory series vanish at scale-to-zero — absence of data is fine; only
+# alert on sustained high utilization while running.
+groups:
+  - name: eigin-relay-load
+    interval: 1m
+    rules:
+      # cpu_usage_ratio reads as percent-of-limit (idle ≈ 25, spike ≈ 30)
+      - alert: RelayContainerCpuHigh
+        expr: avg_over_time(serverless_container_cpu_usage_ratio{resource_name=~".*-relay$"}[10m]) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Relay container CPU sustained above 90% for 10m"
+      - alert: RelayContainerMemoryHigh
+        expr: avg_over_time((serverless_container_memory_usage_bytes{resource_name=~".*-relay$"} / serverless_container_memory_limit_bytes{resource_name=~".*-relay$"})[10m:1m]) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Relay container memory sustained above 90% for 10m"
+
+  - name: eigin-relay-db
+    interval: 1m
+    rules:
+      # ~10 conns/instance at the sqlx pool default, max_scale 3 prod + margin
+      - alert: RelayDbConnectionsHigh
+        expr: serverless_db_postgresql_client_connections{resource_name=~".*-relay-db"} > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Relay database client connections above 50 sustained"
