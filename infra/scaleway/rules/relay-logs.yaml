@@ -53,10 +53,10 @@ groups:
   - name: eigin-relay-signals
     interval: 1m
     rules:
-      - alert: RelayRestarted
+      - alert: RelayRestarting
         # Startup signal — doubles as an end-to-end pipeline probe
-        expr: sum(count_over_time({resource_type="serverless_container"} |= "starting eigin-relay" [5m])) > 0
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "starting eigin-relay" [5m])) > 5
         labels:
           severity: info
         annotations:
-          summary: "Relay container started (cold start or deploy)"
+          summary: "Relay container restarted several times - possible service interruption"
