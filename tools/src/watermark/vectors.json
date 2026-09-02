@@ -1,0 +1,8 @@
+{
+  "signature": { "version": 1, "magic": "0xE191" },
+  "vectors": [
+    { "input": "Hello from Eigin.", "marked": "Hello from Eigin.\u2060\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200c\u200c\u200c\u200c\u200b\u200b\u200b\u200b\u200c\u200c\u200b\u200b\u200c\u200b\u200b\u200b\u200c\u2060" },
+    { "input": "Line one.\n\nLine two.", "marked": "Line one.\n\nLine two.\u2060\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200c\u200c\u200c\u200c\u200b\u200b\u200b\u200b\u200c\u200c\u200b\u200b\u200c\u200b\u200b\u200b\u200c\u2060" },
+    { "input": "Ends with code:\n```\nfn main() {}\n```", "marked": "Ends with code:\n```\nfn main() {}\n```\u2060\u200b\u200b\u200b\u200b\u200b\u200b\u200b\u200c\u200c\u200c\u200c\u200b\u200b\u200b\u200b\u200c\u200c\u200b\u200b\u200c\u200b\u200b\u200b\u200c\u2060" }
+  ]
+}

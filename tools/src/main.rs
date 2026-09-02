@@ -15,6 +15,7 @@ mod localize;
 mod prompts;
 mod run;
 mod security;
+mod watermark;
 
 #[derive(Parser)]
 #[command(name = "eigin-tools")]
@@ -45,6 +46,8 @@ enum Command {
     Run(run::RunArgs),
     /// Scan dependencies and the Relay image for known vulnerabilities.
     Security(security::SecurityArgs),
+    /// Inspect Eigin's best-effort text watermark.
+    Watermark(watermark::WatermarkArgs),
 }
 
 fn main() -> Result<()> {
@@ -60,5 +63,6 @@ fn main() -> Result<()> {
         Command::Localize(args) => localize::run(args),
         Command::Run(args) => run::run(args),
         Command::Security(args) => security::run(args),
+        Command::Watermark(args) => watermark::run(args),
     }
 }

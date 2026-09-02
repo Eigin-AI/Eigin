@@ -45,6 +45,8 @@
 	<string>$(EIGIN_RELAY_URL)</string>
 	<key>EiginSupportEmail</key>
 	<string>$(EIGIN_SUPPORT_EMAIL)</string>
+	<key>EiginWatermarkSignature</key>
+	<string>$(EIGIN_WATERMARK_SIGNATURE)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSUserActivityTypes</key>

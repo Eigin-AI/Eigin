@@ -99,7 +99,10 @@ struct SendEmailTool: Tool {
         }
 
         do {
-            let sent = try await provider.sendEmail(to: to, cc: cc, subject: subject, body: body)
+            // Mark at egress.
+            let sent = try await provider.sendEmail(
+                to: to, cc: cc, subject: subject, body: Watermark.mark(body)
+            )
             return ToolResult(
                 toolCallID: toolCall.id,
                 content: ToolHelpers.output(result: sent.jsonObject.merging(

@@ -50,6 +50,11 @@ pub fn render(r: &Resolved) -> Rendered {
     }
 
     export(&mut out, "EIGIN_SUPPORT_EMAIL", &app.contact.support);
+    export(
+        &mut out,
+        "EIGIN_WATERMARK_SIGNATURE",
+        &app.watermark.signature,
+    );
     export(&mut out, "BUNDLE_ID", &app.identity.bundle_id);
 
     // Per-contributor: each developer signs with their own Apple team. Simulator

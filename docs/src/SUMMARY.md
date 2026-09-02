@@ -18,6 +18,7 @@
 - [Inference providers](./providers.md)
 - [Eigin Relay](./relay.md)
 - [Privacy and security](./privacy.md)
+- [Watermarking](./watermarking.md)
 - [Design system](./design.md)
 
 # The Agent
