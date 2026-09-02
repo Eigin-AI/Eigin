@@ -31,3 +31,20 @@ output "database_url" {
   value       = local.database_url
   sensitive   = true
 }
+
+output "assets_bucket" {
+  description = "Name of the model-asset mirror bucket"
+  value       = scaleway_object_bucket.assets.name
+}
+
+output "assets_write_access_key" {
+  description = "Access key for the asset-upload identity (runbook use only)"
+  value       = scaleway_iam_api_key.assets_write.access_key
+  sensitive   = true
+}
+
+output "assets_write_secret_key" {
+  description = "Secret key for the asset-upload identity (runbook use only)"
+  value       = scaleway_iam_api_key.assets_write.secret_key
+  sensitive   = true
+}

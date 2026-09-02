@@ -69,6 +69,8 @@ pub enum AppError {
     RateLimited,
     /// Monthly search quota exhausted (429).
     PoolExhausted,
+    /// Requested model asset is not configured on this relay (404).
+    AssetNotFound,
     /// Sandbox credit-issuance budget exhausted for the current period (429).
     SandboxBudgetExhausted,
     /// Upstream service unavailable or not configured (503).
@@ -88,6 +90,7 @@ impl std::fmt::Display for AppError {
             Self::InsufficientCredits => write!(f, "insufficient credits"),
             Self::RateLimited => write!(f, "rate limited"),
             Self::PoolExhausted => write!(f, "pool exhausted"),
+            Self::AssetNotFound => write!(f, "asset not found"),
             Self::SandboxBudgetExhausted => write!(f, "sandbox budget exhausted"),
             Self::ServiceUnavailable(msg) => write!(f, "service unavailable: {msg}"),
             Self::Upstream(msg) => write!(f, "upstream error: {msg}"),
@@ -160,6 +163,15 @@ impl IntoResponse for AppError {
                     severity: Severity::Debug,
                     error_type: "rate_limit_error",
                     detail: "pool exhausted".into(),
+                },
+            ),
+            Self::AssetNotFound => (
+                StatusCode::NOT_FOUND,
+                "unknown asset".to_string(),
+                ErrorLog {
+                    severity: Severity::Debug,
+                    error_type: "asset_not_found",
+                    detail: "asset not configured".into(),
                 },
             ),
             Self::SandboxBudgetExhausted => (
@@ -310,6 +322,14 @@ mod tests {
         assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
         let json = extract_json(response).await;
         assert_eq!(json["error"]["message"], "monthly search quota exhausted");
+    }
+
+    #[tokio::test]
+    async fn asset_not_found_returns_404() {
+        let response = AppError::AssetNotFound.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let json = extract_json(response).await;
+        assert_eq!(json["error"]["type"], "asset_not_found");
     }
 
     #[tokio::test]

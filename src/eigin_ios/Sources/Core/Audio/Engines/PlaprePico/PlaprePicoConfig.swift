@@ -56,11 +56,6 @@ enum PlaprePicoConfig {
     /// transitions without feeling laggy.
     static let interUtteranceSilence: TimeInterval = 0.1
 
-    // MARK: - HuggingFace source
-
-    static let hfRepo = "42futures/plapre-pico-coreml"
-    static let hfRevision = "main"
-
     // MARK: - Voices
 
     /// The five Danish speakers shipped in `speakers.json`.

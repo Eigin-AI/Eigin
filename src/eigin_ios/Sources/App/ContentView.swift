@@ -116,8 +116,10 @@ struct ContentView: View {
             guard let models = try? await relayClient.models(), !models.isEmpty else { return }
             provider.availableModels = models
             if provider.enabledModels.isEmpty {
-                provider.enabledModels = [KnownModelCatalog.bestModel(from: models) ?? ""]
-                    .filter { !$0.isEmpty }
+                provider.enabledModels = [
+                    KnownModelCatalog.bestModel(from: models) ?? "",
+                ]
+                .filter { !$0.isEmpty }
             }
         }
     }

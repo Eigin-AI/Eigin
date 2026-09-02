@@ -17,312 +17,6 @@
         }
       }
     },
-    "intents.openApp.description" : {
-      "comment" : "App intent description: open the app.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åbner Eigin på chatlisten."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opens Eigin at the chat list."
-          }
-        }
-      }
-    },
-    "intents.openApp.title" : {
-      "comment" : "App intent title: open the app.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åbn Eigin"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Eigin"
-          }
-        }
-      }
-    },
-    "intents.liveCallChat.description" : {
-      "comment" : "App intent description: start a fresh chat in a live call.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starter en ny chat direkte i et liveopkald."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starts a fresh chat straight into a live call."
-          }
-        }
-      }
-    },
-    "intents.liveCallChat.title" : {
-      "comment" : "App intent title: start a fresh chat in a live call.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liveopkaldschat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live Call Chat"
-          }
-        }
-      }
-    },
-    "intents.dictationChat.description" : {
-      "comment" : "App intent description: start a fresh chat with dictation armed.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starter en ny chat med mikrofonen klar til at lytte."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starts a fresh chat with the microphone already listening."
-          }
-        }
-      }
-    },
-    "intents.dictationChat.title" : {
-      "comment" : "App intent title: start a fresh chat with dictation armed.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diktatchat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dictation Chat"
-          }
-        }
-      }
-    },
-    "intents.newChat.description" : {
-      "comment" : "App intent description: start a fresh chat.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starter en ny chat med tastaturet klar."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starts a fresh chat with the keyboard ready."
-          }
-        }
-      }
-    },
-    "intents.newChat.title" : {
-      "comment" : "App intent title: start a fresh chat.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ny chat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New Chat"
-          }
-        }
-      }
-    },
-    "intents.photoChat.description" : {
-      "comment" : "App intent description: start a fresh chat with the camera ready.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starter en ny chat med kameraet klar til at tage et foto."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starts a fresh chat with the camera ready to attach a photo."
-          }
-        }
-      }
-    },
-    "intents.photoChat.title" : {
-      "comment" : "App intent title: start a fresh chat with the camera ready.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fotochat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Photo Chat"
-          }
-        }
-      }
-    },
-    "widgets.chatPillTitle" : {
-      "comment" : "Placeholder text of the widget's faux input pill.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skriv med Eigin"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chat with Eigin"
-          }
-        }
-      }
-    },
-    "widgets.openApp" : {
-      "comment" : "Widget button: open the app.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Åbn Eigin"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Eigin"
-          }
-        }
-      }
-    },
-    "widgets.liveCall" : {
-      "comment" : "Widget button: start a fresh chat in a live call.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liveopkald"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live Call"
-          }
-        }
-      }
-    },
-    "widgets.dictation" : {
-      "comment" : "Widget button: start a fresh chat with dictation armed.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diktér"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dictate"
-          }
-        }
-      }
-    },
-    "widgets.newChat" : {
-      "comment" : "Widget button: start a fresh chat.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ny chat"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New Chat"
-          }
-        }
-      }
-    },
-    "widgets.description" : {
-      "comment" : "Description shown in the widget gallery picker.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start en ny chat, diktering eller liveopkald med ét tryk."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start a new chat, dictation, or live call with one tap."
-          }
-        }
-      }
-    },
-    "widgets.name" : {
-      "comment" : "Name shown in the widget gallery picker.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eigin hurtige handlinger"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eigin Quick Actions"
-          }
-        }
-      }
-    },
-    "widgets.photo" : {
-      "comment" : "Widget button: start a fresh chat with the camera ready.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foto"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Photo"
-          }
-        }
-      }
-    },
     "🚀" : {
 
     },
@@ -3754,6 +3448,40 @@
         }
       }
     },
+    "integrations.attention.body" : {
+      "comment" : "Body of the 'reconnect needed' warning card on the integration detail screen",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbindelsen kan ikke logge ind automatisk længere — sessionen eller loginoplysningerne er udløbet. Genopret forbindelsen for at gendanne adgangen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection can't sign in automatically anymore — its session or credentials expired. Reconnect to restore access."
+          }
+        }
+      }
+    },
+    "integrations.attention.title" : {
+      "comment" : "Title of the 'reconnect needed' warning card on the integration detail screen",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genopret forbindelse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect needed"
+          }
+        }
+      }
+    },
     "integrations.aula.description" : {
       "comment" : "Subtitle for the Aula integration type in the connect picker",
       "localizations" : {
@@ -4128,40 +3856,6 @@
         }
       }
     },
-    "integrations.attention.body" : {
-      "comment" : "Body of the 'reconnect needed' warning card on the integration detail screen",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forbindelsen kan ikke logge ind automatisk længere — sessionen eller loginoplysningerne er udløbet. Genopret forbindelsen for at gendanne adgangen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The connection can't sign in automatically anymore — its session or credentials expired. Reconnect to restore access."
-          }
-        }
-      }
-    },
-    "integrations.attention.title" : {
-      "comment" : "Title of the 'reconnect needed' warning card on the integration detail screen",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Genopret forbindelse"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reconnect needed"
-          }
-        }
-      }
-    },
     "intent.dismissWarning" : {
       "comment" : "A message displayed when dismissing an intent.",
       "localizations" : {
@@ -4247,6 +3941,40 @@
         }
       }
     },
+    "intents.dictationChat.description" : {
+      "comment" : "App intent description: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med mikrofonen klar til at lytte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the microphone already listening."
+          }
+        }
+      }
+    },
+    "intents.dictationChat.title" : {
+      "comment" : "App intent title: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktatchat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictation Chat"
+          }
+        }
+      }
+    },
     "intents.dismissWarning" : {
       "comment" : "Confirmation message when dismissing an intent",
       "localizations" : {
@@ -4260,6 +3988,142 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This intent will no longer guide your agent."
+          }
+        }
+      }
+    },
+    "intents.liveCallChat.description" : {
+      "comment" : "App intent description: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat direkte i et liveopkald."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat straight into a live call."
+          }
+        }
+      }
+    },
+    "intents.liveCallChat.title" : {
+      "comment" : "App intent title: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liveopkaldschat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Call Chat"
+          }
+        }
+      }
+    },
+    "intents.newChat.description" : {
+      "comment" : "App intent description: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med tastaturet klar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the keyboard ready."
+          }
+        }
+      }
+    },
+    "intents.newChat.title" : {
+      "comment" : "App intent title: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "intents.openApp.description" : {
+      "comment" : "App intent description: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbner Eigin på chatlisten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Eigin at the chat list."
+          }
+        }
+      }
+    },
+    "intents.openApp.title" : {
+      "comment" : "App intent title: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Eigin"
+          }
+        }
+      }
+    },
+    "intents.photoChat.description" : {
+      "comment" : "App intent description: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter en ny chat med kameraet klar til at tage et foto."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starts a fresh chat with the camera ready to attach a photo."
+          }
+        }
+      }
+    },
+    "intents.photoChat.title" : {
+      "comment" : "App intent title: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotochat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Chat"
           }
         }
       }
@@ -5490,7 +5354,7 @@
       "comment" : "A message displayed when there are no wallets to display.",
       "isCommentAutoGenerated" : true
     },
-    "Not granted — disconnect and reconnect this integration to approve the permissions you skipped." : {
+    "Not granted — reconnect this integration to approve the permissions you skipped." : {
 
     },
     "notification.chatCreationHint" : {
@@ -11811,23 +11675,6 @@
         }
       }
     },
-    "tools.custom.provider" : {
-      "comment" : "Display name for the custom-provider tool",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brugerdefineret udbyder"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom Provider"
-          }
-        }
-      }
-    },
     "tools.contest.knowledge" : {
       "comment" : "Display name for the contest-knowledge tool",
       "localizations" : {
@@ -11845,6 +11692,23 @@
         }
       }
     },
+    "tools.custom.provider" : {
+      "comment" : "Display name for the custom-provider tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brugerdefineret udbyder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom Provider"
+          }
+        }
+      }
+    },
     "tools.delete.knowledge" : {
       "comment" : "Display name for the delete-knowledge tool",
       "localizations" : {
@@ -11858,57 +11722,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete Knowledge"
-          }
-        }
-      }
-    },
-    "tools.forget.knowledge" : {
-      "comment" : "Display name for the forget-knowledge tool",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glem viden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forget Knowledge"
-          }
-        }
-      }
-    },
-    "tools.merge.knowledge" : {
-      "comment" : "Display name for the merge-knowledge tool",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Flet viden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Merge Knowledge"
-          }
-        }
-      }
-    },
-    "tools.supersede.knowledge" : {
-      "comment" : "Display name for the supersede-knowledge tool",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erstat viden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supersede Knowledge"
           }
         }
       }
@@ -12147,6 +11960,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Finish Setup"
+          }
+        }
+      }
+    },
+    "tools.forget.knowledge" : {
+      "comment" : "Display name for the forget-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glem viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forget Knowledge"
           }
         }
       }
@@ -12402,6 +12232,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Manage Vocabulary"
+          }
+        }
+      }
+    },
+    "tools.merge.knowledge" : {
+      "comment" : "Display name for the merge-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flet viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merge Knowledge"
           }
         }
       }
@@ -12980,6 +12827,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Move Chat to Space"
+          }
+        }
+      }
+    },
+    "tools.supersede.knowledge" : {
+      "comment" : "Display name for the supersede-knowledge tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstat viden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supersede Knowledge"
           }
         }
       }
@@ -15143,23 +15007,6 @@
         }
       }
     },
-    "voice.recoveryFailed" : {
-      "comment" : "Error shown when the live call cannot recover audio after a route change (e.g. Bluetooth handover) and has to end.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lyden kunne ikke gendannes efter et skift af lydenhed."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't restore audio after the device changed."
-          }
-        }
-      }
-    },
     "voice.installHint" : {
       "comment" : "A footer text that encourages users to install more voices if they haven't already.",
       "localizations" : {
@@ -15194,6 +15041,23 @@
         }
       }
     },
+    "voice.recoveryFailed" : {
+      "comment" : "Error shown when the live call cannot recover audio after a route change (e.g. Bluetooth handover) and has to end.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyden kunne ikke gendannes efter et skift af lydenhed."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't restore audio after the device changed."
+          }
+        }
+      }
+    },
     "voice.speaking" : {
       "comment" : "Status label shown while the TTS engine is speaking",
       "localizations" : {
@@ -15214,6 +15078,142 @@
     "What do you suggest?" : {
       "comment" : "A prompt asking the user what they would like to do next.",
       "isCommentAutoGenerated" : true
+    },
+    "widgets.chatPillTitle" : {
+      "comment" : "Placeholder text of the widget's faux input pill.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv med Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat with Eigin"
+          }
+        }
+      }
+    },
+    "widgets.description" : {
+      "comment" : "Description shown in the widget gallery picker.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start en ny chat, diktering eller liveopkald med ét tryk."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start a new chat, dictation, or live call with one tap."
+          }
+        }
+      }
+    },
+    "widgets.dictation" : {
+      "comment" : "Widget button: start a fresh chat with dictation armed.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktér"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dictate"
+          }
+        }
+      }
+    },
+    "widgets.liveCall" : {
+      "comment" : "Widget button: start a fresh chat in a live call.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liveopkald"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Call"
+          }
+        }
+      }
+    },
+    "widgets.name" : {
+      "comment" : "Name shown in the widget gallery picker.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin hurtige handlinger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin Quick Actions"
+          }
+        }
+      }
+    },
+    "widgets.newChat" : {
+      "comment" : "Widget button: start a fresh chat.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny chat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Chat"
+          }
+        }
+      }
+    },
+    "widgets.openApp" : {
+      "comment" : "Widget button: open the app.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Åbn Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Eigin"
+          }
+        }
+      }
+    },
+    "widgets.photo" : {
+      "comment" : "Widget button: start a fresh chat with the camera ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo"
+          }
+        }
+      }
     },
     "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes." : {
 

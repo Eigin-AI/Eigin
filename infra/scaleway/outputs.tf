@@ -36,3 +36,20 @@ output "database_url" {
   value       = module.relay.database_url
   sensitive   = true
 }
+
+output "assets_bucket" {
+  description = "Name of the model-asset mirror bucket"
+  value       = module.relay.assets_bucket
+}
+
+output "assets_write_access_key" {
+  description = "Access key for the asset-upload identity (runbook use only)"
+  value       = module.relay.assets_write_access_key
+  sensitive   = true
+}
+
+output "assets_write_secret_key" {
+  description = "Secret key for the asset-upload identity (runbook use only)"
+  value       = module.relay.assets_write_secret_key
+  sensitive   = true
+}

@@ -40,6 +40,10 @@ resource "scaleway_container" "relay" {
     MODELS_CONFIG_PATH                = "/config/models.toml"
     PRODUCTS_CONFIG_PATH              = "/config/products.toml"
     PROVIDERS_CONFIG_PATH             = "/config/providers.toml"
+    ASSETS_CONFIG_PATH                = "/config/assets.toml"
+    S3_ENDPOINT                       = "https://s3.${var.scw_region}.scw.cloud"
+    S3_REGION                         = var.scw_region
+    PRESIGN_EXPIRY_SECONDS            = tostring(var.presign_expiry_seconds)
 
     # Plain logs: no ANSI codes, keeps LogQL substring matches and the
     # Grafana log view clean. tracing-subscriber honors NO_COLOR.
@@ -56,6 +60,9 @@ resource "scaleway_container" "relay" {
       EIGIN_RELAY_PRIMARY_KEY      = random_password.eigin_relay_key.result
       TOKEN_ENCRYPTION_KEY_PRIMARY = random_bytes.token_encryption_key.base64
       DATABASE_URL                 = local.database_url
+      ASSETS_BUCKET                = scaleway_object_bucket.assets.name
+      S3_ACCESS_KEY                = scaleway_iam_api_key.assets_read.access_key
+      S3_SECRET_KEY                = scaleway_iam_api_key.assets_read.secret_key
     },
     var.eigin_relay_secondary_key != "" ? { EIGIN_RELAY_SECONDARY_KEY = var.eigin_relay_secondary_key } : {},
     var.token_encryption_secondary_key != "" ? { TOKEN_ENCRYPTION_KEY_SECONDARY = var.token_encryption_secondary_key } : {},
@@ -69,5 +76,6 @@ resource "scaleway_container" "relay" {
     docker_registry_image.relay,
     scaleway_sdb_sql_database.db,
     scaleway_iam_policy.db,
+    scaleway_iam_policy.assets_read,
   ]
 }

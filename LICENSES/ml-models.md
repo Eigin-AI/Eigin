@@ -1,8 +1,15 @@
 # ML Model Licenses
 
-Models are downloaded at runtime from their original sources (currently HuggingFace).
+Model weights are not bundled in the app. They are mirrored at build/runbook time
+from their original sources (HuggingFace) into Eigin's private asset mirror
+(Scaleway Object Storage) and downloaded by the app from there. Mirroring and
+redistribution happen under each model's license: record any new model's
+license here before mirroring it, and keep the mirror's version provenance
+(`--origin-repo` / `--origin-rev` in the manifest) pointing at the exact
+upstream revision mirrored.
 
-The app does not bundle or redistribute model weights directly.
+Distribution of the mirror is access-controlled: presigned URLs are only issued
+to clients that hold the relay key.
 
 ---
 

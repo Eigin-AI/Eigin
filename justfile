@@ -176,6 +176,15 @@ grant command="keygen" *args:
         *) echo "Unknown grant command: {{ command }}"; exit 1 ;;
     esac
 
+# Manage self-hosted model assets. Thin pass-through to `eigin-tools assets`.
+# See the model-mirror runbook for the upload/promote procedure.
+#   just assets upload --id <id> --source-dir <dir> --version <v> \
+#     --origin-repo <repo> --origin-rev <sha> --endpoint <url> --region <r> \
+#     --bucket <b> --access-key <k> --secret-key <s>
+[doc('Manage self-hosted model assets (upload)')]
+assets *args:
+    {{ tools }} assets {{ args }}
+
 # --- Run / Clean / Open ---
 
 [doc('Run a target locally (target: relay)')]

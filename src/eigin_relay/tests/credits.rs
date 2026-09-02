@@ -90,6 +90,10 @@ async fn make_state(
         alias_map,
         admit_floor_millicredits,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 
@@ -343,6 +347,10 @@ async fn make_state_with_ledger(
         alias_map,
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 
@@ -388,6 +396,10 @@ async fn make_grant_state(
         alias_map,
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 
@@ -812,6 +824,10 @@ async fn webhook_rate_limited_after_limit() {
         alias_map,
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     });
     let app = build_router(state);
 
@@ -1049,6 +1065,10 @@ async fn make_sandbox_state(
         alias_map: HashMap::new(),
         admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 

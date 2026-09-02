@@ -61,7 +61,7 @@ struct GemmaModelDownloaderTests {
             id: "test-model",
             name: "Test",
             size: "1 GB",
-            downloadURL: "http://example.com",
+            assetID: "test-model",
             folderName: "test-model"
         )
 
@@ -74,7 +74,9 @@ struct GemmaModelDownloaderTests {
             GemmaModelDownloader.DownloadFile(
                 remotePath: "a",
                 localPath: "a",
-                estimatedSize: 1
+                estimatedSize: 1,
+                sha256: "",
+                url: ""
             ),
         ]
         downloader.nextFileIndex = 1 // all files dispatched
@@ -107,7 +109,7 @@ struct GemmaModelDownloaderTests {
             id: "partial-test-model",
             name: "Partial Test",
             size: "1 GB",
-            downloadURL: "http://example.com",
+            assetID: "test-model",
             folderName: "partial-test-model"
         )
 
@@ -130,7 +132,7 @@ struct GemmaModelDownloaderTests {
             id: "complete-test-model",
             name: "Complete Test",
             size: "1 GB",
-            downloadURL: "http://example.com",
+            assetID: "test-model",
             folderName: "complete-test-model"
         )
 

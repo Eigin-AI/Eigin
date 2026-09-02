@@ -23,6 +23,10 @@ final class FakeRelayClient: RelayClient, @unchecked Sendable {
         throw RelayClientError.notConfigured
     }
 
+    var assetHandler: @Sendable (String) async throws -> AssetManifest = { _ in
+        throw RelayClientError.notConfigured
+    }
+
     func search(query: String, region: String?, focus: String?) async throws -> String {
         try await searchHandler(query, region, focus)
     }
@@ -41,5 +45,9 @@ final class FakeRelayClient: RelayClient, @unchecked Sendable {
 
     func models() async throws -> [String] {
         try await modelsHandler()
+    }
+
+    func asset(id: String) async throws -> AssetManifest {
+        try await assetHandler(id)
     }
 }

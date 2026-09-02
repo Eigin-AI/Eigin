@@ -5,7 +5,8 @@ import UIKit
 
 /// Downloads and caches the on-device model with a background URLSession and
 /// pause/resume support. Uses up to 4 concurrent connections for faster
-/// HuggingFace downloads.
+/// downloads from the self-hosted asset mirror. Every file is verified against
+/// the manifest's SHA-256 after it lands.
 @Observable
 public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     public static let shared = GemmaModelDownloader()
@@ -34,11 +35,17 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
     var pendingFiles: [DownloadFile] = []
     private var totalBytesForAllFiles: Int64 = 0
     private var downloadContinuation: CheckedContinuation<URL, Error>?
+    /// Version of the manifest `pendingFiles` was built from.
+    var resolvedAssetVersion = ""
 
     private static let sessionIdentifier = AppKeys.downloadSessionIdentifier
 
     /// The single `.litertlm` artifact that makes up the model.
     static let modelFileName = "gemma-4-E2B-it.litertlm"
+
+    /// Mirror asset id. Runtime-specific (LiteRT-LM), so different runtimes of
+    /// the same model don't collide in the asset namespace.
+    static let assetID = "gemma4-e2b-litertlm"
 
     // Parallel download state
     private let maxConcurrentDownloads = 4
@@ -59,20 +66,20 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         public let id: String
         public let name: String
         public let size: String
-        public let downloadURL: String
+        public let assetID: String
         public let folderName: String
 
         public init(
             id: String,
             name: String,
             size: String,
-            downloadURL: String,
+            assetID: String,
             folderName: String
         ) {
             self.id = id
             self.name = name
             self.size = size
-            self.downloadURL = downloadURL
+            self.assetID = assetID
             self.folderName = folderName
         }
 
@@ -81,7 +88,7 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         /// demand by the runtime, so they cost nothing while only text is used.
         public static let gemma4e2b = ModelInfo(
             id: "gemma4-e2b", name: "Gemma 4 E2B", size: "2.6 GB",
-            downloadURL: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main",
+            assetID: GemmaModelDownloader.assetID,
             folderName: "gemma4-e2b-litertlm"
         )
 
@@ -97,11 +104,35 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         let remotePath: String
         let localPath: String
         let estimatedSize: Int64
+        let sha256: String
+        /// Absolute presigned URL. Empty in state persisted by a pre-mirror
+        /// build (or before the manifest fetch); resume refetches the manifest
+        /// and rebuilds these, so a download in flight across an app update
+        /// survives instead of being silently dropped.
+        let url: String
 
-        init(remotePath: String, localPath: String, estimatedSize: Int64) {
+        init(
+            remotePath: String,
+            localPath: String,
+            estimatedSize: Int64,
+            sha256: String,
+            url: String
+        ) {
             self.remotePath = remotePath
             self.localPath = localPath
             self.estimatedSize = estimatedSize
+            self.sha256 = sha256
+            self.url = url
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            remotePath = try c.decode(String.self, forKey: .remotePath)
+            localPath = try c.decode(String.self, forKey: .localPath)
+            estimatedSize = try c.decode(Int64.self, forKey: .estimatedSize)
+            // Tolerate state written before these fields existed.
+            sha256 = try c.decodeIfPresent(String.self, forKey: .sha256) ?? ""
+            url = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         }
     }
 
@@ -109,6 +140,8 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         let modelId: String
         let totalBytes: Int64
         let files: [DownloadFile]
+        /// Manifest version the URLs belong to.
+        let assetVersion: String?
     }
 
     // MARK: - Init
@@ -236,10 +269,14 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
                 try? fileManager.removeItem(at: dest)
                 try? fileManager.createDirectory(at: dest, withIntermediateDirectories: true)
 
-                // Models are hosted as individual files on HuggingFace. The
-                // LiteRT-LM model is a single `.litertlm` file fetched directly.
-                buildHuggingFaceFileList(model)
-                fillDownloadSlots()
+                // Manifest-driven plan: sizes and per-file presigned URLs come
+                // from the relay's asset mirror.
+                Task { [weak self] in
+                    await self?.buildFileListFromManifest(model)
+                    await MainActor.run { [weak self] in
+                        self?.fillDownloadSlots()
+                    }
+                }
             }
         }
     }
@@ -267,7 +304,19 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         // Re-scan from beginning — fillDownloadSlots skips completed files on disk.
         nextFileIndex = 0
         completedBytes = 0
-        fillDownloadSlots()
+
+        // Presigned URLs may have expired while paused — refetch the manifest so
+        // resumed tasks carry fresh URLs, then refill.
+        if let model = currentModel {
+            Task { [weak self] in
+                await self?.buildFileListFromManifest(model)
+                await MainActor.run { [weak self] in
+                    self?.fillDownloadSlots()
+                }
+            }
+        } else {
+            fillDownloadSlots()
+        }
     }
 
     public func cancelDownload() {
@@ -411,8 +460,8 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
             let urlString: String
             if file.remotePath.hasPrefix("http") {
                 urlString = file.remotePath
-            } else if let model = currentModel {
-                urlString = "\(model.downloadURL)/\(file.remotePath)"
+            } else if !file.url.isEmpty {
+                urlString = file.url
             } else {
                 continue
             }
@@ -464,6 +513,11 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         let resolved = localModelURL(for: model)
 
         if let url = resolved {
+            ModelAssetService.writeMarker(
+                id: model.assetID,
+                version: resolvedAssetVersion,
+                in: modelsDirectory.appendingPathComponent(model.folderName)
+            )
             downloadContinuation?.resume(returning: url)
         } else {
             downloadContinuation?.resume(throwing: DownloadError.extractionFailed)
@@ -483,7 +537,8 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         let state = PersistedState(
             modelId: model.id,
             totalBytes: totalBytesForAllFiles,
-            files: pendingFiles
+            files: pendingFiles,
+            assetVersion: resolvedAssetVersion.isEmpty ? nil : resolvedAssetVersion
         )
         try? JSONEncoder().encode(state).write(to: stateURL)
     }
@@ -506,11 +561,15 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         destDir = modelsDirectory.appendingPathComponent(model.folderName)
         pendingFiles = state.files
         totalBytesForAllFiles = state.totalBytes
+        resolvedAssetVersion = state.assetVersion ?? ""
         nextFileIndex = 0
         completedBytes = 0
         downloadingModelId = model.id
         isDownloading = true
         isPaused = true
+        // Left paused: resuming refetches the manifest, so any stale or empty
+        // presigned URLs (including state written by a pre-mirror build) are
+        // rebuilt with fresh ones before download slots refill.
         // Scan completed bytes from disk for accurate progress
         if let dest = destDir {
             for file in pendingFiles {
@@ -526,14 +585,20 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         status = "Paused"
     }
 
-    // MARK: - HuggingFace File List
+    // MARK: - Asset Mirror File List
 
+    /// The known on-disk file layout, used off the network path: the
+    /// completeness check (`isModelComplete`) and the pre-download size
+    /// estimate. The real download list — with sizes, checksums, and URLs —
+    /// comes from the manifest in `buildFileListFromManifest`.
     static func expectedFiles(for _: ModelInfo) -> [DownloadFile] {
         [
             .init(
                 remotePath: modelFileName,
                 localPath: modelFileName,
-                estimatedSize: 2_583_691_264
+                estimatedSize: 2_583_691_264,
+                sha256: "",
+                url: ""
             ),
         ]
     }
@@ -542,23 +607,54 @@ public final class GemmaModelDownloader: NSObject, @unchecked Sendable {
         expectedFiles(for: model).reduce(into: 0) { $0 += $1.estimatedSize }
     }
 
-    private func buildHuggingFaceFileList(_ model: ModelInfo) {
-        let allFiles = Self.expectedFiles(for: model)
-        let threshold: Int64 = 10_000_000
-        var largeFiles: [DownloadFile] = []
-        var smallFiles: [DownloadFile] = []
-        for file in allFiles {
-            if file.estimatedSize >= threshold {
-                largeFiles.append(file)
-            } else {
-                smallFiles.append(file)
+    /// Build `pendingFiles` from the relay's asset manifest: real sizes,
+    /// per-file presigned URLs, sha256 checksums. Large files first so
+    /// parallel slots fill with the long poles.
+    func buildFileListFromManifest(_ model: ModelInfo) async {
+        do {
+            let manifest = try await ModelAssetService().manifest(for: model.assetID)
+            var files: [DownloadFile] = manifest.files.map { file in
+                DownloadFile(
+                    remotePath: file.path,
+                    localPath: file.path,
+                    estimatedSize: file.size,
+                    sha256: file.sha256,
+                    url: file.url
+                )
+            }
+            let threshold: Int64 = 10_000_000
+            files.sort { $0.estimatedSize > $1.estimatedSize }
+            let large = files.filter { $0.estimatedSize >= threshold }
+            let small = files.filter { $0.estimatedSize < threshold }
+
+            await MainActor.run { [weak self] in
+                guard let self, currentModel?.id == model.id else { return }
+                pendingFiles = large + small
+                totalBytesForAllFiles = pendingFiles.reduce(0) { $0 + $1.estimatedSize }
+                completedBytes = 0
+                nextFileIndex = 0
+                resolvedAssetVersion = manifest.version
+            }
+        } catch {
+            // Manifest unreachable: fail the in-flight download cleanly —
+            // nothing on disk breaks, installed models keep working.
+            let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
+            await MainActor.run { [weak self] in
+                guard let self, currentModel?.id == model.id, isDownloading,
+                      !isPaused else { return }
+                isDownloading = false
+                downloadingModelId = nil
+                status = "Error: \(message)"
+                downloadContinuation?.resume(
+                    throwing: NSError(
+                        domain: "Local.ModelDownloader",
+                        code: 0,
+                        userInfo: [NSLocalizedDescriptionKey: message]
+                    )
+                )
+                downloadContinuation = nil
             }
         }
-        largeFiles.sort { $0.estimatedSize > $1.estimatedSize }
-        pendingFiles = largeFiles + smallFiles
-        totalBytesForAllFiles = pendingFiles.reduce(0) { $0 + $1.estimatedSize }
-        completedBytes = 0
-        nextFileIndex = 0
     }
 
     /// Exclude the Models directory from iCloud and iTunes backups.
@@ -599,10 +695,10 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
               let dest = destDir else { return }
 
         // HTTP status check: URLSessionDownloadTask writes the response body
-        // to `location` regardless of status code. A 404 from HuggingFace is
-        // a short HTML page ("Entry not found") that would otherwise be
-        // saved verbatim and later fail a checksum / signature check with
-        // a misleading error. Catch it here with a clear error.
+        // to `location` regardless of status code. An error response (e.g. an
+        // expired presigned URL → 403, or a wrong key → 404) is a short XML/HTML
+        // body that would otherwise be saved verbatim and later fail the
+        // checksum with a misleading error. Catch it here with a clear one.
         if let http = downloadTask.response as? HTTPURLResponse, http.statusCode >= 400 {
             // Read a small excerpt of the body for the error message.
             let snippet: String = (try? String(contentsOf: location, encoding: .utf8))?
@@ -617,8 +713,7 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
                 activeTaskFileIndex.removeValue(forKey: taskId)
                 activeTaskBytes.removeValue(forKey: taskId)
                 status = "Error: HTTP \(http.statusCode) for \(localPath)"
-                // Surface the actual server message so the user sees *why* it failed
-                // (e.g., "Entry not found. Please check the file URL.").
+                // Surface the actual server message so the failure is legible.
                 let err = NSError(
                     domain: "Local.ModelDownloader",
                     code: http.statusCode,
@@ -650,8 +745,41 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
             .attributesOfItem(atPath: destFile.path))?[.size] as? Int64 ?? 0
         let taskId = downloadTask.taskIdentifier
 
+        // Hash off the main queue (heavy, touches only this file). The expected
+        // sha is read from `pendingFiles` on the main queue below, where that
+        // state is owned — never from this delegate queue.
+        let actualSha = try? ModelAssetService.sha256Hex(of: destFile)
+
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            let expectedSha = pendingFiles
+                .first(where: { $0.localPath == localPath })?.sha256 ?? ""
+            let mismatched =
+                !expectedSha.isEmpty
+                    && actualSha?.caseInsensitiveCompare(expectedSha) != .orderedSame
+            if mismatched {
+                // A corrupted file fails the whole download: cancel the rest and
+                // surface the error (same path as any other task failure).
+                try? fileManager.removeItem(at: destFile)
+                for t in activeDownloadTasks.values {
+                    t.cancel()
+                }
+                activeDownloadTasks.removeAll()
+                activeTaskFileIndex.removeAll()
+                activeTaskBytes.removeAll()
+                nextFileIndex = pendingFiles.count
+                completedTaskIDs.insert(taskId)
+                status = "Error: checksum mismatch for \(localPath)"
+                isDownloading = false
+                isPaused = false
+                downloadingModelId = nil
+                cleanupPersistedState()
+                downloadContinuation?.resume(
+                    throwing: DownloadError.checksumMismatch(localPath)
+                )
+                downloadContinuation = nil
+                return
+            }
             completedTaskIDs.insert(taskId)
             activeDownloadTasks.removeValue(forKey: taskId)
             activeTaskFileIndex.removeValue(forKey: taskId)
@@ -744,10 +872,12 @@ extension GemmaModelDownloader: URLSessionDownloadDelegate {
 
 public enum DownloadError: LocalizedError {
     case invalidURL, extractionFailed
+    case checksumMismatch(String)
     public var errorDescription: String? {
         switch self {
         case .invalidURL: "Invalid download URL"
         case .extractionFailed: "Failed to extract model"
+        case .checksumMismatch(let path): "Checksum mismatch for \(path) — download corrupted"
         }
     }
 }

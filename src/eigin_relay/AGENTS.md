@@ -41,6 +41,12 @@ src/
     usage.rs      — SSE/JSON usage-block extraction (never touches content)
     upstream.rs   — UpstreamClient trait + reqwest impl
     handler.rs    — POST /v1/chat/completions (admit, stream, settle)
+  assets/         — self-hosted model-asset mirror (manifests + presigned URLs)
+    mod.rs        — public exports
+    catalog.rs    — assets.toml loading (pinned versions + manifest shas)
+    store.rs      — AssetStore trait, Scaleway S3 impl, InMemory fake, Inert placeholder
+    cache.rs      — sha-verified lazy manifest cache
+    handler.rs    — GET /v1/assets, GET /v1/assets/{id}
 migrations/
   0001_create_wallets.sql
   0002_create_processed_notifications.sql
@@ -48,6 +54,7 @@ migrations/
 config/
   models.toml     — curated model catalog + credit rates (TODO: pin to provider)
   products.toml   — IAP product credit tiers (TODO: pin to App Store products before launch)
+  assets.toml     — asset-mirror pointers: id → pinned version + manifest sha
   apple/          — Apple Root CA .cer files (DER-encoded, public certs, safe to commit)
 tests/
   integration.rs  — search integration tests (httpmock)
@@ -103,6 +110,22 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 Runtime-tunable values (`UPSTREAM_API_KEY`, `UPSTREAM_API_URL`, `APPLE_BUNDLE_ID`) are stored in Scaleway Secret Manager in production — update them there and restart the container. Model catalog and product tiers (`models.toml`, `products.toml`) are deploy-time config — update them in the repo and redeploy.
 
 `TOKEN_ENCRYPTION_KEY_PRIMARY` and the relay/grant keys are Terraform-generated (owned in state), not hand-edited secrets. Rotating them is a deliberate procedure — see the [runbooks](../../docs/src/runbooks/README.md), in particular [token key rotation](../../docs/src/runbooks/token-key-rotation.md).
+
+### Model assets
+
+| Variable | Default | Description |
+|---|---|---|
+| `ASSETS_CONFIG_PATH` | `config/assets.toml` | Path to the asset pointer TOML. |
+| `ASSETS_BUCKET` | — | Object-storage bucket for the asset mirror. All five S3 vars must be set together; with none set the module is inert (empty catalog 404s) and configured entries 503 at serve time. |
+| `S3_ENDPOINT` | — | S3 endpoint, e.g. `https://s3.fr-par.scw.cloud`. |
+| `S3_REGION` | — | Bucket region, e.g. `fr-par`. |
+| `S3_ACCESS_KEY` | — | Read-only credential for the bucket (Terraform-generated in production). |
+| `S3_SECRET_KEY` | — | Secret half of the read credential. |
+| `PRESIGN_EXPIRY_SECONDS` | `86400` | How long presigned download URLs in `GET /v1/assets/{id}` stay valid. |
+
+Asset swaps are deploy-time config: `eigin-tools assets upload` mints a version, then an
+MR bumps `assets.toml` (the image hash covers it, so the deploy is automatic). See the
+[model-mirror runbook](../../docs/src/runbooks/model-mirror.md).
 
 ## Design principles
 

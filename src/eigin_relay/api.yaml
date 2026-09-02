@@ -48,6 +48,8 @@ tags:
     description: Credit wallet management. Wallets are keyed by purchase, not user identity.
   - name: Inference
     description: OpenAI-compatible proxy. Debits wallet after response based on token usage. Content is never logged.
+  - name: Assets
+    description: Versioned manifests and presigned download URLs for on-device model assets (self-hosted mirror).
   - name: Webhooks
     description: Apple App Store Server Notifications V2.
 
@@ -172,6 +174,38 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ModelObject"
+    AssetsListResponse:
+      type: object
+      required: [assets]
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetEntry"
+    AssetEntry:
+      type: object
+      required: [id, version]
+      properties:
+        id: { type: string, example: "gemma4-e2b-litertlm", description: Stable asset identifier, never changes across versions. }
+        version: { type: string, example: "2026-01-15-1448", description: Currently served version (UTC timestamp id, minted at upload). }
+    AssetManifestResponse:
+      type: object
+      required: [id, version, files]
+      properties:
+        id: { type: string, example: "gemma4-e2b-litertlm" }
+        version: { type: string, example: "2026-01-15-1448" }
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetFile"
+    AssetFile:
+      type: object
+      required: [path, size, sha256, url]
+      properties:
+        path: { type: string, example: "gemma-4-E2B-it.litertlm", description: Path relative to the asset version root. }
+        size: { type: integer, format: int64, example: 2583691264 }
+        sha256: { type: string, description: SHA-256 of the file, hex-encoded. Verify downloads against this. }
+        url: { type: string, description: Presigned GET URL for the object; short-lived, refetch the manifest when it expires. }
 
     ModelObject:
       type: object
@@ -455,6 +489,82 @@ paths:
                     }
         "401":
           description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/assets:
+    get:
+      operationId: listAssets
+      summary: List mirrored model assets
+      description: |
+        Every asset the relay currently serves, with its pinned version. Version
+        ids are UTC timestamps minted at upload; a change here means a reviewed
+        assets.toml bump was deployed. Needs only the relay key.
+      tags: [Assets]
+      security:
+        - EiginKey: []
+      responses:
+        "200":
+          description: Configured assets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssetsListResponse" }
+              example:
+                assets:
+                  - { id: "gemma4-e2b-litertlm", version: "2026-01-15-1448" }
+        "401":
+          description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/assets/{assetId}:
+    get:
+      operationId: getAsset
+      summary: Asset manifest with presigned download URLs
+      description: |
+        The manifest for the asset's currently pinned version: file list with
+        sizes and SHA-256 checksums, plus a short-lived presigned GET URL per
+        file. Download directly from object storage; verify each file's SHA-256.
+        If a URL expires mid-download, refetch this endpoint for a fresh one.
+      tags: [Assets]
+      security:
+        - EiginKey: []
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+          example: gemma4-e2b-litertlm
+      responses:
+        "200":
+          description: Asset manifest with presigned URLs.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssetManifestResponse" }
+              example:
+                id: "gemma4-e2b-litertlm"
+                version: "2026-01-15-1448"
+                files:
+                  - {
+                      path: "gemma-4-E2B-it.litertlm",
+                      size: 2583691264,
+                      sha256: "…",
+                      url: "https://<bucket>.s3.fr-par.scw.cloud/assets/gemma4-e2b-litertlm/2026-01-15-1448/gemma-4-E2B-it.litertlm?X-Amz-…"
+                    }
+        "401":
+          description: "Invalid `x-eigin-key`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Unknown asset id.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Manifest fetch failed (bucket unreachable, or pointer/bucket drift).
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
