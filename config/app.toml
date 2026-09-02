@@ -1,0 +1,31 @@
+# Shared, non-secret app configuration. Rendered into consumer-specific forms
+# by `just config export <target>`. Secrets live in the gitignored .env.
+
+[identity]
+bundle_id = "ai.eigin.finch"
+
+[contact]
+support = "support@eigin.ai"
+# Where infra alerts are sent.
+alerts = "support@eigin.ai"
+
+[relay]
+url.staging = "https://staging.relay.eigin.ai"
+url.production = "https://relay.eigin.ai"
+
+# PKCE mobile clients have no client secret, so the client id is public: it ships
+# inside every released binary. Access is bounded by the redirect-URI allowlist.
+
+[oauth.google]
+client_id.staging = "747290183194-st5kjo8m63rnequgsq065ds4njb0d8o0.apps.googleusercontent.com"
+client_id.production = "898145019129-ur7c7tcubtf4sitsf4b1bts6m805hf3t.apps.googleusercontent.com"
+
+[oauth.microsoft]
+client_id.staging = "61a23355-46db-46d7-802a-b59fd90207ed"
+client_id.production = "7270c27b-22bf-46e3-8f51-80af3d078929"
+
+# Aula's own client, sourced from https://github.com/Casperjuel/aula-mcp.
+# One client serves both environments.
+[oauth.aula]
+client_id.staging = "_99949a54b8b65423862aac1bf629599ed64231607a"
+client_id.production = "_99949a54b8b65423862aac1bf629599ed64231607a"

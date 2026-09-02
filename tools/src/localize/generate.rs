@@ -4,7 +4,7 @@ use crate::config;
 
 /// Generate localization source files from the catalog.
 ///
-/// Reads platform configuration from tools.toml at the repo root.
+/// Reads platform configuration from config/tools.toml.
 /// Each configured platform with a localize section will have its
 /// source files generated and formatted.
 #[derive(clap::Args)]
@@ -19,7 +19,7 @@ pub fn run(args: GenerateArgs) -> Result<()> {
 }
 
 pub fn run_with_root(args: GenerateArgs, root: &str) -> Result<()> {
-    let cfg = config::load(root)?;
+    let cfg = config::load(root)?.tools;
 
     let platforms: Vec<_> = cfg
         .platforms
@@ -33,7 +33,7 @@ pub fn run_with_root(args: GenerateArgs, root: &str) -> Result<()> {
 
     if platforms.is_empty() {
         if let Some(p) = &args.platform {
-            bail!("platform '{p}' not found in tools.toml");
+            bail!("platform '{p}' not found in config/tools.toml");
         }
         return Ok(());
     }

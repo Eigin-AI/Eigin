@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use std::env;
 use std::process::Command;
 
 use crate::codegen;
@@ -11,9 +10,13 @@ use crate::prompts;
 
 /// Run all code generation tasks for the project.
 ///
-/// - iOS: generates the Xcode project from project.yml via xcodegen,
-///   then updates the build server config for IDE/LSP support.
-/// - All platforms: generates localization source files from catalog.
+/// - Always: localization, design tokens, prompts and knowledge.
+/// - With xcodegen installed: the Xcode project from project.yml. xcodegen
+///   itself doesn't need Xcode, only the Swift runtime.
+/// - With Xcode available: the build server config for IDE/LSP support.
+///
+/// Each Xcode step is skipped with a note when its tool is absent, so relay and
+/// tooling work needs only Rust.
 #[derive(clap::Args)]
 pub struct GenerateArgs {}
 
@@ -37,13 +40,24 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
         &format!("{ios_dir}/Sources/Core/Design/Generated"),
     )?;
 
+    if !is_installed("xcodegen") {
+        println!("Skipping the Xcode project: xcodegen not installed (needed for iOS work).");
+        return Ok(());
+    }
+
     run_cmd(
         Command::new("xcodegen")
             .arg("generate")
-            .env("BUNDLE_ID", bundle_id())
+            .env("BUNDLE_ID", bundle_id(&root)?)
             .current_dir(&ios_dir),
         "xcodegen generate",
     )?;
+
+    // IDE/LSP convenience only, and the one step that genuinely needs Xcode.
+    if !is_installed("xcodebuild") || !is_installed("xcode-build-server") {
+        println!("Skipping the build server config: needs Xcode and xcode-build-server.");
+        return Ok(());
+    }
 
     run_cmd(
         Command::new("xcode-build-server")
@@ -61,14 +75,19 @@ pub fn run(_args: GenerateArgs) -> Result<()> {
     Ok(())
 }
 
-/// Bundle identifier for the generated project. Without one the app builds but
-/// can't be installed, so environments with no `.env` (worktrees, OSS clones)
-/// fall back to the default identifier.
-fn bundle_id() -> String {
-    match env::var("BUNDLE_ID") {
-        Ok(id) if !id.trim().is_empty() => id,
-        _ => "ai.eigin.finch".to_string(),
-    }
+/// Bundle identifier for the generated project, from `config/app.toml`.
+fn bundle_id(root: &str) -> Result<String> {
+    Ok(config::load(root)?.app.identity.bundle_id)
+}
+
+/// Whether a command can be run, used to skip steps whose tool is absent.
+fn is_installed(name: &str) -> bool {
+    Command::new(name)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
 }
 
 fn run_cmd(cmd: &mut Command, label: &str) -> Result<()> {

@@ -4,7 +4,7 @@ use crate::config;
 
 /// Validate that all String(localized:) keys in source files exist in the generated output.
 ///
-/// Reads platform configuration from tools.toml at the repo root.
+/// Reads platform configuration from config/tools.toml.
 #[derive(clap::Args)]
 pub struct ValidateArgs {
     /// Platform to validate (e.g. ios). Omit to validate all configured platforms.
@@ -21,7 +21,7 @@ pub fn run(args: ValidateArgs) -> Result<()> {
 }
 
 pub fn run_with_root(args: ValidateArgs, root: &str) -> Result<bool> {
-    let cfg = config::load(root)?;
+    let cfg = config::load(root)?.tools;
 
     let platforms: Vec<_> = cfg
         .platforms
@@ -35,7 +35,7 @@ pub fn run_with_root(args: ValidateArgs, root: &str) -> Result<bool> {
 
     if platforms.is_empty() {
         if let Some(p) = &args.platform {
-            bail!("platform '{p}' not found in tools.toml");
+            bail!("platform '{p}' not found in config/tools.toml");
         }
         return Ok(true);
     }

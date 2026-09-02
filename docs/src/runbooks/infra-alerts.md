@@ -1,7 +1,7 @@
 # Infra alerts
 
-Scaleway Cockpit emails the alerts inbox (`.env` `EIGIN_ALERTS_EMAIL`, else
-`EIGIN_SUPPORT_EMAIL`) when a relay alert fires. Rules are Terraform:
+Scaleway Cockpit emails the alerts inbox (`contact.alerts` in `config/app.toml`)
+when a relay alert fires. Rules are Terraform:
 `infra/scaleway/monitoring.tf` and `infra/scaleway/rules/*.yaml`.
 
 ## Alerts

@@ -8,7 +8,7 @@ Provides the `email` capability via the Microsoft Graph API: list, search, read,
 |---|---|
 | Azure app registration, **personal Microsoft accounts only** | Authorizes against the `/consumers` authority. Requests `Mail.Read`, `Mail.Send`, `offline_access`, `User.Read` delegated permissions. |
 | Platform: **Mobile and desktop applications** | Public client, no secret. Redirect URI is `msauth.<bundle-id>://auth` — register one per Bundle ID (dev and production need separate entries, and separate app registrations if their Bundle IDs differ). |
-| `EIGIN_MICROSOFT_OAUTH_CLIENT_ID_STAGING` / `_PRODUCTION` | Set in `.env` (see `.env.example`), wired into the app via `EiginMicrosoftOAuthClientID` in `Info.plist`. Connecting Microsoft fails fast with a clear error if this is missing. |
+| `EIGIN_MICROSOFT_OAUTH_CLIENT_ID_STAGING` / `_PRODUCTION` | Committed in `config/app.toml`; a PKCE client id is public by design. Wired into the app via `EiginMicrosoftOAuthClientID` in `Info.plist`. Connecting Microsoft fails fast with a clear error if this is missing. |
 | Setup process | Manual only, through the [Azure Portal app registrations](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) — there's no API for creating this kind of registration, so it can't be codified. |
 
 ## Partial consent

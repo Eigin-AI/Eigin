@@ -163,7 +163,7 @@ just infra deploy            # Deploy to staging
 just infra deploy production
 ```
 
-`ENV` defaults to `staging`. The correct per-env relay key and Mojeek key are resolved automatically from `.env` via `scripts/tf-env.sh` — no manual TF_VAR edits required. See `infra/scaleway/` for the Terraform configuration.
+`ENV` defaults to `staging`. `eigin-tools config export tf-vars <env>` resolves the per-env relay key and Mojeek key from `.env`. See `infra/scaleway/` for the Terraform configuration.
 
 ### Custom domain (one-time setup)
 
