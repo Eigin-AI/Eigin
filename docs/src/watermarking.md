@@ -24,7 +24,7 @@ The watermark is appended at egress only — the stored conversation stays clean
 so the mark is never fed back to the model and never affects editing.
 
 - Full-message **copy** to the clipboard.
-- Agent **email send / reply** (in addition to the visible provenance line).
+- Agent **email send / reply**.
 
 Partial/selection copy is out of scope. Code is untouched because the mark is
 appended after all content.

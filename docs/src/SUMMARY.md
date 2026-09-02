@@ -67,7 +67,10 @@
 
 # Compliance
 
+- [Overview](./compliance/README.md)
 - [CASA](./compliance/casa.md)
+- [AI Act](./compliance/ai-act.md)
+- [GDPR](./compliance/gdpr.md)
 
 # Runbooks
 
@@ -79,3 +82,4 @@
 - [Terraform remote state](./runbooks/terraform-remote-state.md)
 - [Model mirror](./runbooks/model-mirror.md)
 - [Infra alerts](./runbooks/infra-alerts.md)
+- [Data breach](./runbooks/data-breach.md)
