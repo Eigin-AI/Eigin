@@ -5,6 +5,7 @@
 | 0.1 | 2026-08-19 | Daniel Rothmann | Draft |
 | 0.2 | 2026-08-22 | Daniel Rothmann | Draft |
 | 1.0 | 2026-08-24 | Daniel Rothmann | Final |
+| 1.1 | 2026-09-02 | Daniel Rothmann | Final. System context moved to the shared overview |
 
 ## Introduction
 
@@ -14,22 +15,7 @@ This document is our self-assessment against the [CASA Specification](https://gi
 
 ## System context
 
-Eigin consists of three main components: the App, the Relay, and the database.
-
-| Component | What it is |
-|---|---|
-| **Eigin App** | Native iOS client. Runs the agent and its tools against a local or hosted model, and holds credentials for connected accounts |
-| **Eigin Relay** | Rust API, deployed as a container on Scaleway. Proxies inference and search, manages inference credits, and integrates with the App Store |
-| **Relay database** | Postgres ([`database.tf`](https://code.eigin.ai/dev/eigin/-/blob/main/infra/scaleway/modules/relay/database.tf)). Stores inference wallets, usage quotas, and processed notification IDs |
-
-The system depends on these external services:
-
-| Dependency | Relationship |
-|---|---|
-| **Hosted inference providers** | Mistral and TensorX. Serves hosted AI models |
-| **Connected account providers** | Third-party accounts the user connects in the App |
-| **Web search provider** | Mojeek search API, proxied through the Relay |
-| **Apple App Store** | Sells credit packs and notifies of refunds |
+See the shared [system context](./README.md#system-context) for components and dependencies.
 
 ## Scope
 
