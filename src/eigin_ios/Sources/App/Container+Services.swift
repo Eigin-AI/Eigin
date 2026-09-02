@@ -91,7 +91,7 @@ extension Container {
         self {
             DefaultModelRouter(
                 reachability: self.networkReachability(),
-                localModelReadiness: { GemmaModelDownloader.shared.isDownloaded(.default) }
+                localModelReadiness: { GemmaModelStore.isDownloaded }
             )
         }.singleton
     }

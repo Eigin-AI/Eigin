@@ -54,20 +54,27 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Checks disk for model files and sets state accordingly. Synchronous — no I/O.
     func checkAvailability() {
-        if isDownloaded { state = .ready }
+        if isDownloaded {
+            state = .ready
+        } else if AssetDownloader.shared.isDownloading(assetID: PocketTTSModelDownloader.assetID) {
+            // Background session kept going across a relaunch — re-attach.
+            Task { await download() }
+        }
     }
 
     /// Downloads the model with progress reporting, then initializes from cache.
     func download() async {
-        guard state != .ready else { return }
+        guard state != .ready, !state.isDownloading else { return }
         state = .downloading(fractionCompleted: 0)
         do {
             // Phase 1: seed the FluidAudio cache from the self-hosted mirror.
-            try await PocketTTSModelDownloader.download { [weak self] fraction in
-                Task { @MainActor [weak self] in
-                    self?.state = .downloading(fractionCompleted: fraction)
-                }
+            let progressTask = AssetDownloader.shared.observeProgress(
+                assetID: PocketTTSModelDownloader.assetID
+            ) { [weak self] fraction in
+                self?.state = .downloading(fractionCompleted: fraction)
             }
+            defer { progressTask.cancel() }
+            try await PocketTTSModelDownloader.download()
             // Phase 2: initialize from cache (fast — files already on disk)
             let mgr = PocketTtsManager()
             try await mgr.initialize()
@@ -82,7 +89,12 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
     /// Removes the model from memory, deletes cached files from disk, and resets state.
     func delete() {
         unload()
-        try? FileManager.default.removeItem(at: PocketTTSModelDownloader.cacheDirectory)
+        // An in-flight download removes its own directory once its tasks drain.
+        if AssetDownloader.shared.isDownloading(assetID: PocketTTSModelDownloader.assetID) {
+            AssetDownloader.shared.cancel(assetID: PocketTTSModelDownloader.assetID)
+        } else {
+            try? FileManager.default.removeItem(at: PocketTTSModelDownloader.cacheDirectory)
+        }
         state = .notDownloaded
     }
 

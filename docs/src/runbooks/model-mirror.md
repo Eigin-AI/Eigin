@@ -12,7 +12,7 @@ Always land a version on **staging**, test the app against it, then promote the
 
 The uploader mirrors a local directory 1:1, so you download **only the files the
 app needs** — these repos hold many unrelated variants. The include patterns come
-from what the app checks for on disk (`GemmaModelDownloader`, `PlaprePicoAssets`,
+from what the app checks for on disk (`GemmaModelStore`, `PlaprePicoAssets`,
 `PocketTTSModelDownloader`).
 
 | id | HuggingFace repo | files to include |

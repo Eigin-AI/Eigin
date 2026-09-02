@@ -76,53 +76,26 @@ enum PlaprePicoAssets {
 
     /// Downloads every required asset from the self-hosted mirror, compiles each
     /// `.mlpackage` to `.mlmodelc`, and places everything in `rootDirectory`.
-    /// Reports aggregate progress in [0, 1]. Idempotent at the file level.
-    static func downloadAll(
-        progress: @escaping @Sendable (Double) -> Void
-    ) async throws {
+    /// Resumes partial downloads; joins an in-flight one.
+    static func downloadAll() async throws {
         let fm = FileManager.default
-        try fm.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+        let uncompiledRoot = rootDirectory.appendingPathComponent(
+            uncompiledDirectoryName, isDirectory: true
+        )
 
-        // 1. The manifest *is* the tree: files, sizes, checksums, URLs.
-        let manifest = try await ModelAssetService().manifest(for: assetID)
+        // 1. Download. Raw `.mlpackage` trees land in a temporary folder that
+        //    only exists until they're compiled; supporting files land in the root.
+        try await AssetDownloader.shared.download(
+            .init(assetID: assetID, directory: rootDirectory, localPath: localPath)
+        )
 
-        let stagingRoot = rootDirectory.appendingPathComponent("_staging", isDirectory: true)
-        let totalBytes = manifest.files.reduce(Int64(0)) { $0 + $1.size }
-        var downloadedBytes: Int64 = 0
-        progress(0)
-
-        // 2. Download each file (skip if already on disk — partial resume).
-        for file in manifest.files {
-            // .mlpackage trees stage under _staging until compiled; supporting
-            // files land directly in the root.
-            let destination: URL = if let pkg = modelPackageNames
-                .first(where: { file.path.hasPrefix("\($0).mlpackage/") })
-            {
-                stagingRoot
-                    .appendingPathComponent(pkg)
-                    .appendingPathComponent(String(file.path.dropFirst("\(pkg).mlpackage/".count)))
-            } else {
-                supportingFileURL(file.path)
-            }
-
-            if fm.fileExists(atPath: destination.path) {
-                downloadedBytes += file.size
-                progress(totalBytes > 0 ? Double(downloadedBytes) / Double(totalBytes) : 0)
-                continue
-            }
-            downloadedBytes += try await ModelAssetService.download(
-                file: file, to: destination
-            )
-            progress(totalBytes > 0 ? Double(downloadedBytes) / Double(totalBytes) : 0)
-        }
-
-        // 3. Compile each .mlpackage from staging to .mlmodelc in the root.
+        // 2. Compile each .mlpackage to .mlmodelc in the root.
         for pkg in modelPackageNames {
             let compiledDest = compiledModelURL(pkg)
             if fm.fileExists(atPath: compiledDest.path) { continue }
-            let stagingPkg = stagingRoot.appendingPathComponent(pkg, isDirectory: true)
+            let package = uncompiledRoot.appendingPathComponent(pkg, isDirectory: true)
             do {
-                let compiled = try await MLModel.compileModel(at: stagingPkg)
+                let compiled = try await MLModel.compileModel(at: package)
                 // compileModel returns a temp URL — move it into place.
                 if fm.fileExists(atPath: compiledDest.path) {
                     try fm.removeItem(at: compiledDest)
@@ -133,13 +106,23 @@ enum PlaprePicoAssets {
             }
         }
 
-        // 4. Clean up staging + record the installed version.
-        try? fm.removeItem(at: stagingRoot)
-        ModelAssetService.writeMarker(
-            id: assetID, version: manifest.version, in: rootDirectory
-        )
+        // 3. Drop the raw packages. The version marker was written by the downloader.
+        try? fm.removeItem(at: uncompiledRoot)
+    }
 
-        progress(1)
+    /// Temporary home for downloaded `.mlpackage` trees until they're compiled.
+    static let uncompiledDirectoryName = "_uncompiled"
+
+    /// Manifest path → on-disk path: `<Pkg>.mlpackage/x` → `_uncompiled/<Pkg>/x`.
+    @Sendable
+    static func localPath(_ manifestPath: String) -> String {
+        for pkg in modelPackageNames {
+            let prefix = "\(pkg).mlpackage/"
+            if manifestPath.hasPrefix(prefix) {
+                return "\(uncompiledDirectoryName)/\(pkg)/" + manifestPath.dropFirst(prefix.count)
+            }
+        }
+        return manifestPath
     }
 
     /// Removes every cached file. Resets the asset to its undownloaded state.

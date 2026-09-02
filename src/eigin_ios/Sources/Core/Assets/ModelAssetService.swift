@@ -1,11 +1,8 @@
 import Crypto
 import Foundation
 
-/// Downloads and verifies model assets from the relay's self-hosted mirror.
-///
-/// All on-demand model downloads (Gemma, Plapre Pico, PocketTTS) flow through
-/// this: fetch the manifest, stream each file from its presigned URL, verify
-/// the SHA-256, and record the installed version on disk.
+/// Manifest access, checksum, and version-marker helpers for the relay's
+/// self-hosted model mirror. The transfer itself is `AssetDownloader`.
 struct ModelAssetService: Sendable {
     let relay: any RelayClient
 
@@ -19,46 +16,6 @@ struct ModelAssetService: Sendable {
     /// Fetch the manifest for an asset id via the relay client.
     func manifest(for id: String) async throws -> AssetManifest {
         try await relay.asset(id: id)
-    }
-
-    /// Download one manifest file to a destination URL, verifying its SHA-256.
-    /// Returns the bytes written. Throws `checksumMismatch` when the digest
-    /// doesn't match the manifest.
-    static func download(
-        file: AssetManifest.File,
-        to destination: URL,
-        session: URLSession = .shared
-    ) async throws -> Int64 {
-        guard let url = URL(string: file.url) else {
-            throw ModelAssetError.invalidURL(file.path)
-        }
-        let (tempURL, response) = try await session.download(from: url)
-        guard let http = response as? HTTPURLResponse,
-              (200 ..< 300).contains(http.statusCode)
-        else {
-            try? FileManager.default.removeItem(at: tempURL)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw ModelAssetError.downloadFailed(path: file.path, status: status)
-        }
-
-        let actual = (try? Self.sha256Hex(of: tempURL)) ?? ""
-        guard actual.caseInsensitiveCompare(file.sha256) == .orderedSame else {
-            try? FileManager.default.removeItem(at: tempURL)
-            throw ModelAssetError.checksumMismatch(path: file.path)
-        }
-
-        let size = (try? FileManager.default
-            .attributesOfItem(atPath: tempURL.path)[.size] as? Int64)
-        let fm = FileManager.default
-        try? fm.createDirectory(
-            at: destination.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        if fm.fileExists(atPath: destination.path) {
-            try fm.removeItem(at: destination)
-        }
-        try fm.moveItem(at: tempURL, to: destination)
-        return size ?? 0
     }
 
     /// Streaming SHA-256 of a file, as lowercase hex.
@@ -100,15 +57,18 @@ struct ModelAssetService: Sendable {
 
 enum ModelAssetError: Error, LocalizedError {
     case invalidURL(String)
-    case downloadFailed(path: String, status: Int)
+    case downloadFailed(path: String, status: Int, detail: String = "")
+    case rangeNotHonoured(path: String)
     case checksumMismatch(path: String)
 
     var errorDescription: String? {
         switch self {
         case .invalidURL(let path):
             "Invalid download URL for \(path)"
-        case .downloadFailed(let path, let status):
-            "Failed to download \(path) (HTTP \(status))"
+        case .downloadFailed(let path, let status, let detail):
+            "Failed to download \(path) (HTTP \(status))" + (detail.isEmpty ? "" : ": \(detail)")
+        case .rangeNotHonoured(let path):
+            "Byte range for \(path) came back wrong — download corrupted"
         case .checksumMismatch(let path):
             "Checksum mismatch for \(path) — download corrupted"
         }
