@@ -2,8 +2,9 @@ import Foundation
 
 /// Manages the Gemma 4 E2B model lifecycle: download, load, unload.
 ///
-/// Wraps ``GemmaModelDownloader`` for fetching the `.litertlm` model file and
-/// ``GemmaRuntime`` (LiteRT-LM) for inference. Conforms to ``OnDemandAsset``
+/// Fetches the `.litertlm` model file through ``AssetDownloader`` (layout in
+/// ``GemmaModelStore``) and wraps ``GemmaRuntime`` (LiteRT-LM) for inference. Conforms to
+/// ``OnDemandAsset``
 /// for the settings download flow.
 @MainActor
 @Observable
@@ -47,9 +48,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private var loadTask: Task<Void, Error>?
     private let declinedKey = StorageKey.gemmaDeclined
 
-    /// The model info describing the `.litertlm` artifact to fetch.
-    private let localModelInfo = GemmaModelDownloader.ModelInfo.default
-
     /// Minimum device RAM to run the local model. A real session — long-context
     /// conversation plus a concurrently-loaded voice model — sits around 3 GB of
     /// resident memory, so a 4 GB device (e.g. iPhone 13) would be fully consumed
@@ -62,7 +60,9 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     init(deviceInfo: any DeviceInfoService = DefaultDeviceInfoService()) {
         self.deviceInfo = deviceInfo
+        ModelStorage.excludeFromBackup()
         startMemoryPressureMonitor()
+        resumeIfInProgress()
     }
 
     var hasBeenDeclined: Bool {
@@ -70,9 +70,9 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         set { UserDefaults.standard.set(newValue, forKey: declinedKey) }
     }
 
-    /// Estimated download size in bytes, derived from the manifest.
+    /// Estimated download size in bytes.
     static var estimatedSize: Int64 {
-        GemmaModelDownloader.expectedFileSizeBytes(for: GemmaModelDownloader.ModelInfo.default)
+        GemmaModelStore.estimatedSize
     }
 
     /// Multiplier applied to the estimated model size to reserve enough free
@@ -82,7 +82,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Whether the model is fully downloaded and ready to use.
     var isReady: Bool {
-        GemmaModelDownloader.shared.isDownloaded(localModelInfo)
+        GemmaModelStore.isDownloaded
     }
 
     // MARK: - Device requirements
@@ -95,15 +95,12 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         hasRequiredRAM()
     }
 
-    static func minimumRequiredFreeSpaceBytes(
-        for model: GemmaModelDownloader.ModelInfo
-    ) -> Int64 {
-        let base = GemmaModelDownloader.expectedFileSizeBytes(for: model)
-        return Int64(Double(base) * storageHeadroomFactor)
+    static var minimumRequiredFreeSpaceBytes: Int64 {
+        Int64(Double(estimatedSize) * storageHeadroomFactor)
     }
 
     func hasRequiredDiskSpace() -> Bool {
-        let required = Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)
+        let required = Self.minimumRequiredFreeSpaceBytes
         guard let free = deviceInfo.freeDiskSpaceBytes() else { return false }
         return free >= required
     }
@@ -146,30 +143,39 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
 
         guard hasRequiredDiskSpace() else {
-            let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes(for: localModelInfo)) /
-                1_000_000_000
+            let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes) / 1_000_000_000
             transient = .failed(
                 Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB))
             )
             return
         }
 
+        startDownload()
+    }
+
+    /// A download the background session kept running across a relaunch has
+    /// nobody awaiting it; re-attach so the UI reflects it and completion is
+    /// handled. Skips the resource checks — the bytes are already committed.
+    private func resumeIfInProgress() {
+        guard AssetDownloader.shared.isDownloading(assetID: GemmaModelStore.assetID) else { return }
+        startDownload()
+    }
+
+    private func startDownload() {
         transient = .downloading(0)
 
         downloadTask = Task {
             do {
-                let progressTask = Task { @MainActor in
-                    let downloader = GemmaModelDownloader.shared
-                    while !Task.isCancelled {
-                        try? await Task.sleep(for: .milliseconds(250))
-                        if downloader.isDownloading {
-                            transient = .downloading(downloader.progress)
-                        }
-                    }
+                let progressTask = AssetDownloader.shared.observeProgress(
+                    assetID: GemmaModelStore.assetID
+                ) { [weak self] fraction in
+                    self?.transient = .downloading(fraction)
                 }
+                defer { progressTask.cancel() }
 
-                _ = try await GemmaModelDownloader.shared.download(localModelInfo)
-                progressTask.cancel()
+                try await AssetDownloader.shared.download(
+                    .init(assetID: GemmaModelStore.assetID, directory: GemmaModelStore.directory)
+                )
 
                 try Task.checkCancellation()
 
@@ -222,14 +228,18 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     func cancel() {
         downloadTask?.cancel()
         downloadTask = nil
-        GemmaModelDownloader.shared.cancelDownload()
+        AssetDownloader.shared.cancel(assetID: GemmaModelStore.assetID)
         transient = .idle
     }
 
     func delete() {
+        // An in-flight download removes its own directory once its tasks drain.
+        let wasDownloading = AssetDownloader.shared.isDownloading(assetID: GemmaModelStore.assetID)
         cancel()
         unload()
-        try? GemmaModelDownloader.shared.delete(localModelInfo)
+        if !wasDownloading {
+            try? GemmaModelStore.delete()
+        }
         // LiteRT never prunes its compiled-graph cache (multiple GB). Clear it
         // here so deleting the model actually reclaims the space rather than
         // orphaning the cache in Library/Caches. The engine is unloaded above,
@@ -363,7 +373,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// catalog's context window (the single source of truth feeding
     /// `EngineConfig.maxNumTokens`).
     private func loadRuntime() async throws -> GemmaRuntime {
-        guard let modelURL = GemmaModelDownloader.shared.localModelURL(for: localModelInfo) else {
+        guard let modelURL = GemmaModelStore.modelURL else {
             throw LocalClientError.modelNotLoaded
         }
         let contextWindow = KnownModelCatalog.lookup("gemma-4-e2b")?.contextWindow ?? 8192

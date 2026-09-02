@@ -38,20 +38,27 @@ final class PlaprePicoModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Synchronous on-disk check used at app launch to set initial state.
     func checkAvailability() {
-        if isDownloaded { state = .ready }
+        if isDownloaded {
+            state = .ready
+        } else if AssetDownloader.shared.isDownloading(assetID: PlaprePicoAssets.assetID) {
+            // Background session kept going across a relaunch — re-attach.
+            Task { await download() }
+        }
     }
 
     // MARK: - Download
 
     func download() async {
-        guard state != .ready else { return }
+        guard state != .ready, !state.isDownloading else { return }
         state = .downloading(fractionCompleted: 0)
         do {
-            try await PlaprePicoAssets.downloadAll { [weak self] fraction in
-                Task { @MainActor [weak self] in
-                    self?.state = .downloading(fractionCompleted: fraction)
-                }
+            let progressTask = AssetDownloader.shared.observeProgress(
+                assetID: PlaprePicoAssets.assetID
+            ) { [weak self] fraction in
+                self?.state = .downloading(fractionCompleted: fraction)
             }
+            defer { progressTask.cancel() }
+            try await PlaprePicoAssets.downloadAll()
             state = .ready
         } catch {
             state = .failed(error.localizedDescription)
@@ -60,7 +67,12 @@ final class PlaprePicoModelManager: OnDemandAsset, @unchecked Sendable {
 
     func delete() {
         unload()
-        PlaprePicoAssets.deleteAll()
+        // An in-flight download removes its own directory once its tasks drain.
+        if AssetDownloader.shared.isDownloading(assetID: PlaprePicoAssets.assetID) {
+            AssetDownloader.shared.cancel(assetID: PlaprePicoAssets.assetID)
+        } else {
+            PlaprePicoAssets.deleteAll()
+        }
         state = .notDownloaded
     }
 

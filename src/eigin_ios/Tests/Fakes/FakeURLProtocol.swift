@@ -7,6 +7,20 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     private nonisolated(unsafe) static var _responseQueues: [String: [(Data, HTTPURLResponse)]] =
         [:]
     private nonisolated(unsafe) static var _capturedBodies: [String: Data] = [:]
+    private nonisolated(unsafe) static var _capturedRanges: [String: [String]] = [:]
+    private nonisolated(unsafe) static var _delays: [String: TimeInterval] = [:]
+    private nonisolated(unsafe) var isStopped = false
+
+    /// Hold `url`'s stubbed response for `seconds`, so a test can act while the
+    /// request is in flight (e.g. cancel it).
+    static func stubDelay(for url: String, seconds: TimeInterval) {
+        lock.withLock { _delays[url] = seconds }
+    }
+
+    /// Every `Range` header value received for `url`, in arrival order.
+    static func requestedRanges(for url: String) -> [String] {
+        lock.withLock { _capturedRanges[url] ?? [] }
+    }
 
     /// The most recent request body sent to `url`, for asserting what the client serialized.
     static func lastRequestBody(for url: String) -> Data? {
@@ -62,6 +76,16 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
             Self.lock.withLock { Self._capturedBodies[urlString] = body }
         }
 
+        if let delay = Self.lock.withLock({ Self._delays[urlString] }) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay) { [self] in
+                if !isStopped { deliver(urlString) }
+            }
+            return
+        }
+        deliver(urlString)
+    }
+
+    private func deliver(_ urlString: String) {
         let error: Error?
         let queued: (Data, HTTPURLResponse)?
         let entry: (Data, HTTPURLResponse)?
@@ -89,6 +113,20 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
         }
 
         if let (data, response) = entry {
+            // Honour byte ranges on 200 stubs the way an object store would.
+            if let range = request.value(forHTTPHeaderField: "Range") {
+                Self.lock.withLock { Self._capturedRanges[urlString, default: []].append(range) }
+                if response.statusCode == 200, let (slice, partial) = Self.slice(
+                    data,
+                    range: range,
+                    url: request.url!
+                ) {
+                    client?.urlProtocol(self, didReceive: partial, cacheStoragePolicy: .notAllowed)
+                    client?.urlProtocol(self, didLoad: slice)
+                    client?.urlProtocolDidFinishLoading(self)
+                    return
+                }
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)
@@ -106,7 +144,21 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
         client?.urlProtocolDidFinishLoading(self)
     }
 
-    override func stopLoading() {}
+    override func stopLoading() {
+        isStopped = true
+    }
+
+    /// `bytes=a-b` → (data[a...b], 206 response with Content-Range).
+    private static func slice(_ data: Data, range: String, url: URL) -> (Data, HTTPURLResponse)? {
+        let bounds = range.dropFirst("bytes=".count).split(separator: "-").compactMap { Int($0) }
+        guard bounds.count == 2, bounds[0] <= bounds[1], bounds[1] < data.count else { return nil }
+        let slice = data.subdata(in: bounds[0] ..< bounds[1] + 1)
+        let response = HTTPURLResponse(
+            url: url, statusCode: 206, httpVersion: nil,
+            headerFields: ["Content-Range": "bytes \(bounds[0])-\(bounds[1])/\(data.count)"]
+        )!
+        return (slice, response)
+    }
 
     /// URLSession often moves `httpBody` into `httpBodyStream` before a URLProtocol sees it,
     /// so fall back to draining the stream when the body isn't set directly.

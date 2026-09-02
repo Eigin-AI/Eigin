@@ -111,9 +111,11 @@ struct ModelStorageView: View {
         for entry in entries where entry.id.hasPrefix("other:") {
             try? FileManager.default.removeItem(atPath: entry.path)
         }
-        // Also try the library's built-in escape hatch for any stale
-        // Gemma variants under Documents/Models that isn't gemma4-e2b.
-        try? GemmaModelDownloader.shared.resetAllModels()
+        // Sweep stale model folders under Documents/Models, unless a download
+        // is still draining its cancel (it removes its own directory).
+        if !AssetDownloader.shared.isDownloading(assetID: GemmaModelStore.assetID) {
+            try? ModelStorage.resetAll()
+        }
         refresh()
     }
 

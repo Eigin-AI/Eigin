@@ -26,10 +26,12 @@ enum PocketTTSModelDownloader {
             .appendingPathComponent("fluidaudio/Models/pocket-tts", isDirectory: true)
     }
 
-    /// True when FluidAudio's required model directories are all in cache.
+    /// True when FluidAudio's required model directories are all in cache and
+    /// no download is mid-flight.
     static func isDownloaded() -> Bool {
         let fm = FileManager.default
         let repoDir = cacheDirectory
+        guard AssetDownloadPlan.load(from: repoDir) == nil else { return false }
         return [
             "cond_step.mlmodelc",
             "flowlm_step.mlmodelc",
@@ -39,35 +41,12 @@ enum PocketTTSModelDownloader {
         ].allSatisfy { fm.fileExists(atPath: repoDir.appendingPathComponent($0).path) }
     }
 
-    /// Download every manifest file into the FluidAudio cache layout,
-    /// verifying checksums. Idempotent at the file level.
-    static func download(
-        progress: @escaping @Sendable (Double) -> Void
-    ) async throws {
-        let manifest = try await ModelAssetService().manifest(for: assetID)
-        try FileManager.default.createDirectory(
-            at: cacheDirectory, withIntermediateDirectories: true
+    /// Download every manifest file into the FluidAudio cache layout, verifying
+    /// checksums. Resumes partial state; joins an in-flight download.
+    static func download() async throws {
+        try await AssetDownloader.shared.download(
+            .init(assetID: assetID, directory: cacheDirectory)
         )
-
-        let totalBytes = manifest.files.reduce(Int64(0)) { $0 + $1.size }
-        var completedBytes: Int64 = 0
-        progress(0)
-
-        for file in manifest.files {
-            let destination = cacheDirectory.appendingPathComponent(file.path)
-            if FileManager.default.fileExists(atPath: destination.path) {
-                completedBytes += file.size
-                progress(totalBytes > 0 ? Double(completedBytes) / Double(totalBytes) : 0)
-                continue
-            }
-            completedBytes += try await ModelAssetService.download(file: file, to: destination)
-            progress(totalBytes > 0 ? Double(completedBytes) / Double(totalBytes) : 0)
-        }
-
-        ModelAssetService.writeMarker(
-            id: assetID, version: manifest.version, in: cacheDirectory
-        )
-        progress(1)
     }
 }
 #endif

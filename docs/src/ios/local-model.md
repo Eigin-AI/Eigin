@@ -15,7 +15,7 @@ text is used. The app is text-only today.
 
 | | |
 |---|---|
-| Download | `GemmaModelDownloader`: background `URLSession`, resumable, parallel, checksum-verified |
+| Download | `AssetDownloader` (shared with the TTS models); layout in `GemmaModelStore` |
 | Location | `~/Documents/Models/gemma4-e2b-litertlm/` |
 | Backup | Excluded from iCloud/iTunes backups (re-downloadable) |
 | Device gate | Requires ≥ 5 GB RAM (iPhone 15 or later); checked before download and load |

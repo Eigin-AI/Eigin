@@ -126,9 +126,7 @@ struct GemmaModelManagerTests {
     }
 
     @Test func downloadStartsWhenStorageIsAdequate() {
-        let required = GemmaModelManager.minimumRequiredFreeSpaceBytes(
-            for: GemmaModelDownloader.ModelInfo.default
-        )
+        let required = GemmaModelManager.minimumRequiredFreeSpaceBytes
 
         let manager = GemmaModelManager(
             deviceInfo: FakeDeviceInfoService(diskBytes: required + 1)

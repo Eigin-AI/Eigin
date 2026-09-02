@@ -22,13 +22,6 @@ relay fronts, not from their original HuggingFace repos. The relay serves a
 versioned manifest per asset — file list, SHA-256 checksums, and short-lived
 presigned download URLs — and the app verifies every file before use.
 
-This pins each model to an audited version that's always available: upstream
-can't mutate or pull files, and there are no third-party rate limits. Which
-version is current is a reviewed change in the relay's config, so a swap is a
-merge, not a live edit. The mirror is access-controlled by the same shared key
-as everything else; if you [self-host](#self-hosting), you run your own bucket
-and audit your own uploads.
-
 ## Abuse prevention
 
 - A shared key (`x-eigin-key`) gates every request.
