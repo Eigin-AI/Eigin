@@ -10,7 +10,7 @@ use std::process::Command;
 /// success confirmation or a failure summary with the last 30 lines of the
 /// log. The full log is always written regardless of outcome.
 #[derive(clap::Args)]
-pub struct RunArgs {
+pub struct ExecArgs {
     /// Path to the log file.
     #[arg(long)]
     pub log: PathBuf,
@@ -24,37 +24,40 @@ pub struct RunArgs {
     pub cmd: Vec<String>,
 }
 
-pub fn run(args: RunArgs) -> Result<()> {
-    if let Some(parent) = args.log.parent() {
+pub fn run(args: ExecArgs) -> Result<()> {
+    let mut command = Command::new(&args.cmd[0]);
+    command.args(&args.cmd[1..]);
+    logged(&args.label, &args.log, &mut command)
+}
+
+/// Run a prepared command with its output captured, for callers that build one
+/// themselves rather than passing it on a command line.
+pub fn logged(label: &str, log: &PathBuf, command: &mut Command) -> Result<()> {
+    if let Some(parent) = log.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("creating log directory {}", parent.display()))?;
     }
 
-    println!("→ {}…", args.label);
+    println!("→ {label}…");
 
-    let log_file = File::create(&args.log)
-        .with_context(|| format!("creating log file {}", args.log.display()))?;
+    let log_file =
+        File::create(log).with_context(|| format!("creating log file {}", log.display()))?;
 
-    let status = Command::new(&args.cmd[0])
-        .args(&args.cmd[1..])
+    let status = command
         .stdout(log_file.try_clone()?)
         .stderr(log_file)
         .status()
-        .with_context(|| format!("spawning {:?}", args.cmd[0]))?;
+        .with_context(|| format!("spawning {:?}", command.get_program()))?;
 
     if status.success() {
-        println!(
-            "✓ {} succeeded. Full log: {}",
-            args.label,
-            args.log.display()
-        );
+        println!("✓ {label} succeeded. Full log: {}", log.display());
         return Ok(());
     }
 
-    println!("✗ {} failed. Full log: {}", args.label, args.log.display());
+    println!("✗ {label} failed. Full log: {}", log.display());
     println!();
 
-    let tail = read_tail(&args.log, 30)?;
+    let tail = read_tail(log, 30)?;
     println!("--- Last 30 lines ---");
     print!("{}", tail);
     println!("--- End of tail ---");

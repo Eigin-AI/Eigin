@@ -26,5 +26,14 @@ just build ios      # Build the iOS app
 just test ios       # Run the iOS test suite
 ```
 
+To run the app and read its logs from the command line — on the simulator or on
+a paired iPhone — see [Run](../contributing/build-from-source.md#run):
+
+```
+just run ios simulator
+just run ios device
+just logs ios device 30m
+```
+
 Releasing to TestFlight / the App Store is automated via Fastlane — see
 [Releasing](releasing.md).

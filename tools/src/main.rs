@@ -5,6 +5,8 @@ mod assets;
 mod codegen;
 mod config;
 mod design;
+mod dev;
+mod exec;
 mod format;
 mod generate;
 mod grant;
@@ -13,7 +15,6 @@ mod knowledge;
 mod lint;
 mod localize;
 mod prompts;
-mod run;
 mod security;
 mod watermark;
 
@@ -42,8 +43,14 @@ enum Command {
     Lint(lint::LintArgs),
     /// Localization codegen and validation.
     Localize(localize::Args),
+    /// Start a target: the relay, or the iOS app on a simulator or a device.
+    Run(dev::RunArgs),
+    /// Stop a detached target.
+    Stop(dev::StopArgs),
+    /// Show a target's logs.
+    Logs(dev::LogsArgs),
     /// Run a command, capturing output to a log file.
-    Run(run::RunArgs),
+    Exec(exec::ExecArgs),
     /// Scan dependencies and the Relay image for known vulnerabilities.
     Security(security::SecurityArgs),
     /// Inspect Eigin's best-effort text watermark.
@@ -61,7 +68,10 @@ fn main() -> Result<()> {
         Command::Hooks(args) => hooks::run(args),
         Command::Lint(args) => lint::run(args),
         Command::Localize(args) => localize::run(args),
-        Command::Run(args) => run::run(args),
+        Command::Run(args) => dev::run(args),
+        Command::Stop(args) => dev::stop(args),
+        Command::Logs(args) => dev::logs(args),
+        Command::Exec(args) => exec::run(args),
         Command::Security(args) => security::run(args),
         Command::Watermark(args) => watermark::run(args),
     }

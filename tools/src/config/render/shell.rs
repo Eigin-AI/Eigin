@@ -15,6 +15,27 @@ pub fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', r"'\''"))
 }
 
+/// Read rendered exports back as key/value pairs.
+///
+/// For callers that set the environment themselves rather than handing the
+/// block to a shell: the dev-loop commands spawn xcodebuild and the relay
+/// directly, with no `eval` in between.
+pub fn parse_exports(rendered: &str) -> Vec<(String, String)> {
+    rendered
+        .lines()
+        .filter_map(|line| line.strip_prefix("export "))
+        .filter_map(|line| line.split_once('='))
+        .map(|(key, value)| (key.to_string(), unquote(value)))
+        .collect()
+}
+
+fn unquote(value: &str) -> String {
+    match value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')) {
+        Some(inner) => inner.replace(r"'\''", "'"),
+        None => value.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,5 +83,37 @@ mod tests {
     #[test]
     fn empty_value_round_trips() {
         assert_eq!(eval_back(""), "");
+    }
+
+    /// The pair form has to agree with the shell form, or the dev-loop commands
+    /// and the recipes that `eval` would disagree about the same secret.
+    fn parse_back(value: &str) -> String {
+        let mut rendered = String::new();
+        export(&mut rendered, "V", value);
+        parse_exports(&rendered).remove(0).1
+    }
+
+    #[test]
+    fn parsing_matches_what_a_shell_would_see() {
+        for value in [
+            "abc123",
+            "abc$HOME-def",
+            "tick`echo PWNED`",
+            "it's \"quoted\"",
+            "",
+            "a=b=c",
+        ] {
+            assert_eq!(parse_back(value), eval_back(value), "value: {value}");
+        }
+    }
+
+    #[test]
+    fn parsing_keeps_the_key() {
+        let mut rendered = String::new();
+        export(&mut rendered, "BUNDLE_ID", "ai.eigin.finch");
+        assert_eq!(
+            parse_exports(&rendered),
+            vec![("BUNDLE_ID".to_string(), "ai.eigin.finch".to_string())]
+        );
     }
 }
