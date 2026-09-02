@@ -101,9 +101,9 @@ struct AgentProfile: View {
             base.appSheet(
                 isPresented: $showDownloadPrompt,
                 title: asset.displayName,
+                description: asset.downloadDescription,
                 detents: [.medium],
-                fitsContent: true,
-                showsDismissButton: false
+                fitsContent: true
             ) {
                 AssetDownloadSheetContent(
                     asset: asset,
@@ -217,40 +217,10 @@ struct AgentProfile: View {
 
     // MARK: - Voice Upgrade Card
 
-    @ViewBuilder
+    /// The upgrade offer lives entirely in the shared row: the name plus the
+    /// install affordance says enough.
     private func voiceUpgradeCard(asset: any OnDemandAsset) -> some View {
-        if case .downloading(let progress) = asset.state {
-            AppCardSurface {
-                HStack(spacing: Spacing.n12) {
-                    CircularProgressView(progress: progress)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(asset.displayName)
-                            .typography(Typography.titleXS)
-                            .foregroundStyle(colors.text.standard.base)
-                        Text(Localized.Status.downloading)
-                            .typography(Typography.tag)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                    Spacer()
-                }
-            }
-        } else {
-            AppCardSurface(action: { showDownloadPrompt = true }) {
-                HStack(spacing: Spacing.n12) {
-                    Image(systemName: "arrow.down.circle")
-                        .foregroundStyle(colors.accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(asset.displayName)
-                            .typography(Typography.titleXS)
-                            .foregroundStyle(colors.text.standard.base)
-                        Text(asset.downloadDescription)
-                            .typography(Typography.tag)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                    Spacer()
-                }
-            }
-        }
+        AssetRow(asset: asset)
     }
 
     // MARK: - Provider Card (provider picker + model row)

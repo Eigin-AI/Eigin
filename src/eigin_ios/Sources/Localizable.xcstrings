@@ -4264,40 +4264,6 @@
         }
       }
     },
-    "localModel.downloadBackgroundHint" : {
-      "comment" : "Hint shown during model download in Settings, telling the user they can leave and come back",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download kører i baggrunden. Du kan komme tilbage hertil når som helst."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download runs in the background. You can come back here anytime."
-          }
-        }
-      }
-    },
-    "localModel.downloadFailed" : {
-      "comment" : "Status when download fails",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download mislykkedes"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download failed"
-          }
-        }
-      }
-    },
     "localModel.downloadFromHuggingFace" : {
       "comment" : "Button to download model from HuggingFace",
       "localizations" : {
@@ -4345,23 +4311,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preparing model…"
-          }
-        }
-      }
-    },
-    "localModel.retry" : {
-      "comment" : "Button to retry download",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prøv igen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry"
           }
         }
       }
@@ -5279,23 +5228,6 @@
         }
       }
     },
-    "model.status.installed" : {
-      "comment" : "A label indicating that a voice engine is installed on the device.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installeret"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installed"
-          }
-        }
-      }
-    },
     "model.storageNotEnough" : {
       "comment" : "Storage error message with size argument",
       "localizations" : {
@@ -6105,23 +6037,6 @@
         }
       }
     },
-    "onboarding.inference.startDownloadButton" : {
-      "comment" : "Button to start downloading the offline model.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start download"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start download"
-          }
-        }
-      }
-    },
     "onboarding.inference.useEiginButton" : {
       "comment" : "Primary button label to use the Eigin cloud provider.",
       "localizations" : {
@@ -6179,30 +6094,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download en model (4 GB) og start helt offline. Ingen konto nødvendig."
+            "value" : "En kompakt open model fra Google, der virker uden internetforbindelse."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download a model (4 GB) and start completely offline. No account needed."
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.downloadAction" : {
-      "comment" : "Button label to start downloading the on-device model",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download model"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download model"
+            "value" : "A compact open model from Google that works without an internet connection."
           }
         }
       }
@@ -6237,23 +6135,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download runs in the background. Check back here anytime to see how we are doing."
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.errorTitle" : {
-      "comment" : "An error title shown when the local model download fails.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download mislykkedes"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download failed"
           }
         }
       }
@@ -6305,23 +6186,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld%%"
-          }
-        }
-      }
-    },
-    "onboarding.modelSetup.readyStatus" : {
-      "comment" : "A status label shown when the local model has finished downloading and is ready.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Klar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready"
           }
         }
       }
@@ -10380,23 +10244,6 @@
         }
       }
     },
-    "settings.speechEngine" : {
-      "comment" : "Section header for speech engine assets",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Talesyntese"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speech Engine"
-          }
-        }
-      }
-    },
     "settings.turnDelay" : {
       "comment" : "A label displayed under the button that allows the user to change the response speed of a live call.",
       "localizations" : {
@@ -10890,23 +10737,6 @@
         }
       }
     },
-    "status.downloading" : {
-      "comment" : "Short status label shown while an asset is downloading",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloader…"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloading…"
-          }
-        }
-      }
-    },
     "status.downloadingProgress" : {
       "comment" : "A text label below the progress bar indicating the percentage of the download that has occurred.",
       "localizations" : {
@@ -10988,57 +10818,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ failed"
-          }
-        }
-      }
-    },
-    "status.preparing" : {
-      "comment" : "Short status label shown while an asset or model is being prepared/compiled",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forbereder…"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preparing…"
-          }
-        }
-      }
-    },
-    "status.preparingDevice" : {
-      "comment" : "Longer status label shown while the device is being prepared for the model",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold appen åben, mens vi forbereder din enhed. Det tager et par minutter. "
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please keep the app open while we prepare your device. This can take a few minutes."
-          }
-        }
-      }
-    },
-    "status.ready" : {
-      "comment" : "Short status label shown when an asset is ready to use",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Klar til brug"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ready to use"
           }
         }
       }
@@ -14911,13 +14690,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Højkvalitets dansk stemmemodel (~570 MB)"
+            "value" : "Højkvalitets dansk stemmemodel, der kører på din egen enhed."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "High-quality Danish voice model (~570 MB)"
+            "value" : "High-quality Danish voice model that runs on your own device."
           }
         }
       }
@@ -14939,36 +14718,19 @@
         }
       }
     },
-    "voice.downloadPitch" : {
-      "comment" : "Pitch text shown in the asset download sheet for voice models",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Højkvalitets oplæsning der kører helt lokalt på din enhed."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "High-quality spoken voice that runs entirely on your device."
-          }
-        }
-      }
-    },
     "voice.enhancedDescription" : {
       "comment" : "Download description for the enhanced voice model size",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Højkvalitets stemmemodel (~100 MB)"
+            "value" : "Højkvalitets stemmemodel, der kører på din egen enhed."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "High-quality voice model (~100 MB)"
+            "value" : "High-quality voice model that runs on your own device."
           }
         }
       }
@@ -14979,13 +14741,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbedret stemme"
+            "value" : "Engelsk stemme"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enhanced Voice"
+            "value" : "English voice"
           }
         }
       }
@@ -15217,6 +14979,311 @@
     },
     "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes." : {
 
+    },
+    "asset.queued" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I kø"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queued"
+          }
+        }
+      }
+    },
+    "asset.preparing" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klargør…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing…"
+          }
+        }
+      }
+    },
+    "asset.notInstalled" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke installeret"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not installed"
+          }
+        }
+      }
+    },
+    "asset.installed" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installeret"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installed"
+          }
+        }
+      }
+    },
+    "asset.readyToUse" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klar til brug"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready to use"
+          }
+        }
+      }
+    },
+    "asset.timeLeft" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tilbage"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ left"
+          }
+        }
+      }
+    },
+    "asset.durationSeconds" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        }
+      }
+    },
+    "asset.durationMinutes" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min"
+          }
+        }
+      }
+    },
+    "asset.useWhenReady" : {
+      "comment" : "Button in the download sheet while a download runs: dismisses the sheet, the asset switches on by itself once ready.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brug når klar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use when ready"
+          }
+        }
+      }
+    },
+    "asset.durationHours" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ t %@ min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ h %@ min"
+          }
+        }
+      }
+    },
+    "settings.localAssets.title" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokale filer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local assets"
+          }
+        }
+      }
+    },
+    "settings.localAssets.subtitle" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrér de modeller og stemmer, der er gemt på denne enhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage the models and voices stored on this device"
+          }
+        }
+      }
+    },
+    "settings.localAssets.totalInstalled" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ installeret"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ installed"
+          }
+        }
+      }
+    },
+    "settings.section.storage" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lager"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage"
+          }
+        }
+      }
+    },
+    "model.facts.limitations" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begrænsninger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limitations"
+          }
+        }
+      }
+    },
+    "model.facts.limitationsValue" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basal ræsonnering, få værktøjer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basic reasoning, few tools"
+          }
+        }
+      }
+    },
+    "model.facts.sizeOnDevice" : {
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fylder på enheden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Size on device"
+          }
+        }
+      }
+    },
+    "model.facts.goodFor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good for"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "God til"
+          }
+        }
+      }
+    },
+    "model.facts.goodForValue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick chats, web search"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hurtige chats, websøgning"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

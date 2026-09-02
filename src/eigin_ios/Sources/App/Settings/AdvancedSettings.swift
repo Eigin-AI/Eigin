@@ -4,8 +4,6 @@ import SwiftUI
 struct AdvancedSettings: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
-    @Injected(\.voiceService) private var voiceService
-    @Injected(\.languageManager) private var languageManager
     @AppStorage(StorageKey.logSinkToFile) private var logSinkToFile = true
     @AppStorage(StorageKey.logFileLevel) private var logFileLevel = AppLogger.LogLevel.info.rawValue
     @State private var logFileURL: URL?
@@ -26,10 +24,7 @@ struct AdvancedSettings: View {
 
             ScrollView {
                 VStack(spacing: Sizing.PageLayout.gap) {
-                    let assets = voiceService.engineAssets(for: languageManager.currentLanguage)
-                    if !assets.isEmpty {
-                        speechEngineSection(assets: assets)
-                    }
+                    localAssetsSection
 
                     loggingSection
                 }
@@ -44,21 +39,39 @@ struct AdvancedSettings: View {
         .onAppear { logFileURL = AppLogger.exportLog() }
     }
 
-    // MARK: - Speech Engine
+    // MARK: - Local Assets
 
-    private func speechEngineSection(assets: [any OnDemandAsset]) -> some View {
+    /// Entry point to ``LocalAssetsView``: the single surface for managing
+    /// every downloaded model and voice.
+    private var localAssetsSection: some View {
         VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            sectionLabel(Localized.Settings.speechEngine)
+            sectionLabel(Localized.Settings.Section.storage)
 
             AppCardSurface(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(assets.enumerated()), id: \.element.id) { index, asset in
-                        if index > 0 {
-                            Divider().padding(.horizontal, Spacing.n24)
+                NavigationLink {
+                    LocalAssetsView()
+                        .hidesTabBar()
+                } label: {
+                    HStack(spacing: Spacing.n16) {
+                        VStack(alignment: .leading, spacing: Spacing.n4) {
+                            Text(Localized.Settings.LocalAssets.title)
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.text.standard.base)
+                            Text(Localized.Settings.LocalAssets.subtitle)
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.text.standard.muted)
+                                .multilineTextAlignment(.leading)
                         }
-                        EngineAssetRow(asset: asset)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .typography(Typography.miniLabel)
+                            .foregroundStyle(colors.text.standard.muted)
                     }
+                    .padding(.horizontal, Spacing.n24)
+                    .padding(.vertical, Spacing.n16)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -155,79 +168,6 @@ struct AdvancedSettings: View {
             .foregroundStyle(colors.text.standard.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.n8)
-    }
-}
-
-// MARK: - Engine Asset Row
-
-/// A disclosure row for a single downloadable engine asset.
-/// Folding it out reveals the relevant action: download or delete.
-struct EngineAssetRow: View {
-    let asset: any OnDemandAsset
-    @Environment(\.colors) private var colors
-    @State private var showDownloadPrompt = false
-    @State private var showDeleteConfirmation = false
-
-    var body: some View {
-        AppDisclosure(asset.displayName, description: statusLabel, variant: .open) {
-            actionContent
-        }
-        .alert("Delete \(asset.displayName)?", isPresented: $showDeleteConfirmation) {
-            Button(Localized.Common.Actions.delete, role: .destructive) { asset.delete() }
-            Button(Localized.Common.Actions.cancel, role: .cancel) {}
-        } message: {
-            Text(Localized.Model.removeWarning)
-        }
-        .appSheet(
-            isPresented: $showDownloadPrompt,
-            title: asset.displayName,
-            detents: [.medium],
-            fitsContent: true,
-            showsDismissButton: false
-        ) {
-            AssetDownloadSheetContent(
-                asset: asset,
-                onAccept: { showDownloadPrompt = false },
-                onDecline: { showDownloadPrompt = false }
-            )
-        }
-    }
-
-    @ViewBuilder
-    private var actionContent: some View {
-        switch asset.state {
-        case .ready:
-            AppButton(Localized.Common.Actions.delete, variant: .destructive) {
-                showDeleteConfirmation = true
-            }
-        case .notDownloaded, .failed:
-            AppButton(Localized.Common.Actions.download) {
-                showDownloadPrompt = true
-            }
-        case .downloading(let progress):
-            HStack(spacing: Spacing.n12) {
-                CircularProgressView(progress: progress)
-                Text(Localized.Status.downloading)
-                    .typography(Typography.tag)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-        case .downloaded, .compiling:
-            HStack(spacing: Spacing.n12) {
-                ProgressView()
-                Text(Localized.Status.preparing)
-                    .typography(Typography.tag)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-        }
-    }
-
-    private var statusLabel: String? {
-        switch asset.state {
-        case .ready: Localized.Model.Status.installed
-        case .downloading: Localized.Status.downloading
-        case .downloaded, .compiling: Localized.Status.preparing
-        case .notDownloaded, .failed: nil
-        }
     }
 }
 

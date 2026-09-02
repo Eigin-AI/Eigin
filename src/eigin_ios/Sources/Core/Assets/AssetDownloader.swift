@@ -41,6 +41,15 @@ struct AssetDownloadProgress: Equatable, Sendable {
 @Observable
 @MainActor
 final class AssetDownloader: NSObject {
+    /// Where a job is in its lifecycle. Queued covers waiting behind the head
+    /// job and initial manifest/plan setup; preparing covers the end-of-transfer
+    /// window between "all bytes on disk" and "installed" (the SHA-256 pass).
+    enum Phase: Equatable {
+        case queued
+        case transferring
+        case preparing
+    }
+
     static let shared = AssetDownloader(
         configuration: {
             let config = URLSessionConfiguration
@@ -57,8 +66,11 @@ final class AssetDownloader: NSObject {
     /// Concurrent requests. iOS caps connections per host at 6, so more just queue.
     static let maxInFlight = 6
 
-    /// Progress per asset id, present while that asset is queued or transferring.
+    /// Byte progress per asset id, present while that asset is queued or transferring.
     private(set) var progress: [String: AssetDownloadProgress] = [:]
+
+    /// Lifecycle phase per asset id, present alongside `progress`.
+    private(set) var phases: [String: Phase] = [:]
 
     /// Stashed by the AppDelegate when iOS relaunches the app for background
     /// session events; called once those events are delivered.
@@ -141,6 +153,7 @@ final class AssetDownloader: NSObject {
             completedBytes: job.plan?.completedBytes ?? 0,
             totalBytes: job.plan?.totalBytes ?? 0
         )
+        phases[job.request.assetID] = .queued
         return job
     }
 
@@ -237,6 +250,7 @@ final class AssetDownloader: NSObject {
             job.tasks[task.taskIdentifier] = task
             job.taskParts[task.taskIdentifier] = part
             task.resume()
+            phases[job.request.assetID] = .transferring
         }
 
         if job.tasks.isEmpty, job.nextPartIndex >= plan.parts.count, !job.isVerifying {
@@ -248,6 +262,7 @@ final class AssetDownloader: NSObject {
     private func verify(_ job: AssetDownloadJob) {
         guard let plan = job.plan else { return }
         job.isVerifying = true
+        phases[job.request.assetID] = .preparing
         let directory = job.request.directory
         Task {
             let mismatch = await Task.detached(priority: .userInitiated) { () -> Int? in
@@ -307,6 +322,7 @@ final class AssetDownloader: NSObject {
         registry.remove(job.request.directory)
         targets.unregister(assetID: job.request.assetID)
         progress.removeValue(forKey: job.request.assetID)
+        phases.removeValue(forKey: job.request.assetID)
         queue.removeAll { $0 === job }
         pump()
     }
@@ -466,16 +482,18 @@ extension AssetDownloader: URLSessionDownloadDelegate {
 // MARK: - Progress observation
 
 extension AssetDownloader {
-    /// Poll an asset's progress every 250 ms and forward its fraction until
-    /// the returned task is cancelled.
+    /// Poll an asset's progress every 250 ms and forward bytes and phase until
+    /// the returned task is cancelled (or the job leaves the queue).
     func observeProgress(
         assetID: String,
-        _ update: @escaping @MainActor (Double) -> Void
+        _ update: @escaping @MainActor (AssetDownloadProgress, Phase) -> Void
     ) -> Task<Void, Never> {
         Task { @MainActor in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(250))
-                if let p = progress[assetID] { update(p.fraction) }
+                if let p = progress[assetID], let phase = phases[assetID] {
+                    update(p, phase)
+                }
             }
         }
     }

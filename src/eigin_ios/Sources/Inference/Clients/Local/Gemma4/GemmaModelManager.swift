@@ -16,26 +16,32 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     let downloadDescription = Localized.Onboarding.LocalModel.description
 
     /// Runtime-only states that the disk can't tell us about. Terminal states
-    /// (notDownloaded / downloaded / ready) are derived from `llm` and disk
-    /// in ``state`` so they stay correct without anyone having to remember to
-    /// refresh them after a cold start or a lazy load from chat.
+    /// (notDownloaded / unavailable / downloaded / ready) are derived from `llm`,
+    /// device capability, and disk in ``state`` so they stay correct without
+    /// anyone having to remember to refresh them after a cold start or a lazy
+    /// load from chat.
     private enum Transient: Equatable {
         case idle
-        case downloading(Double)
+        case queued
+        case downloading(AssetTransferInfo)
         case preparing
         case failed(String)
+        case unavailable(String)
     }
 
     private var transient: Transient = .idle
 
     var state: AssetState {
         switch transient {
-        case .downloading(let p): .downloading(fractionCompleted: p)
-        case .preparing: .compiling(fractionCompleted: 0)
+        case .queued: .queued
+        case .downloading(let info): .downloading(info)
+        case .preparing: .preparing(fractionCompleted: nil)
         case .failed(let m): .failed(m)
+        case .unavailable(let m): .unavailable(m)
         case .idle:
             if llm != nil { .ready }
             else if isReady { .downloaded }
+            else if !hasRequiredRAM() { .unavailable(Localized.Model.insufficientRAM) }
             else { .notDownloaded }
         }
     }
@@ -46,6 +52,7 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     private var downloadTask: Task<Void, Never>?
     private var loadTask: Task<Void, Error>?
+    private var compileTask: Task<Void, Never>?
     private let declinedKey = StorageKey.gemmaDeclined
 
     /// Minimum device RAM to run the local model. A real session — long-context
@@ -63,6 +70,20 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         ModelStorage.excludeFromBackup()
         startMemoryPressureMonitor()
         resumeIfInProgress()
+        prewarmMirrorSize()
+    }
+
+    /// Fetch the mirror-reported size so the offer row states the real cost
+    /// before the user commits. Falls back to the static estimate until/unless
+    /// this lands. Skipped under unit tests — they don't have a relay.
+    private func prewarmMirrorSize() {
+        guard mirrorSizeBytes == nil,
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+        else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            mirrorSizeBytes = await ModelAssetService.totalBytes(for: GemmaModelStore.assetID)
+        }
     }
 
     var hasBeenDeclined: Bool {
@@ -74,6 +95,27 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     static var estimatedSize: Int64 {
         GemmaModelStore.estimatedSize
     }
+
+    /// Size reported by the mirror manifest once fetched; falls back to the
+    /// static estimate.
+    private(set) var mirrorSizeBytes: Int64?
+
+    var sizeDescription: String? {
+        ByteCountFormatter.string(
+            fromByteCount: mirrorSizeBytes ?? GemmaModelStore.estimatedSize,
+            countStyle: .file
+        )
+    }
+
+    /// Compile the downloaded artifact so the model never lingers in a busy
+    /// state waiting for a chat or a settings screen to trigger it.
+    func prepareIfNeeded() {
+        guard state == .downloaded else { return }
+        Task { await compile() }
+    }
+
+    /// Smooths raw byte progress into a time-left estimate.
+    private var transferEstimator = TransferRateEstimator()
 
     /// Multiplier applied to the estimated model size to reserve enough free
     /// space for the download plus LiteRT's compiled-graph cache. Increase if
@@ -135,16 +177,21 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     // MARK: - Download
 
     func download() async {
-        guard !state.isDownloading else { return }
+        // Queued and preparing count too: the asset is already in flight, and
+        // a second tap must not spawn a second task over the live one.
+        guard state != .ready, !state.isBusy else { return }
 
+        // Resource shortfalls are informational: the device can't take this
+        // download right now. The row shows the reason — a warning, not a
+        // dead-end failure.
         guard hasRequiredRAM() else {
-            transient = .failed(Localized.Model.insufficientRAM)
+            transient = .unavailable(Localized.Model.insufficientRAM)
             return
         }
 
         guard hasRequiredDiskSpace() else {
             let requiredGB = Double(Self.minimumRequiredFreeSpaceBytes) / 1_000_000_000
-            transient = .failed(
+            transient = .unavailable(
                 Localized.Model.storageNotEnough(String(format: "%.1f", requiredGB))
             )
             return
@@ -162,14 +209,15 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     }
 
     private func startDownload() {
-        transient = .downloading(0)
+        transferEstimator.reset()
+        transient = .queued
 
         downloadTask = Task {
             do {
                 let progressTask = AssetDownloader.shared.observeProgress(
                     assetID: GemmaModelStore.assetID
-                ) { [weak self] fraction in
-                    self?.transient = .downloading(fraction)
+                ) { [weak self] progress, phase in
+                    self?.recordTransfer(progress: progress, phase: phase)
                 }
                 defer { progressTask.cancel() }
 
@@ -190,6 +238,9 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
                 transient = .idle
             } catch is CancellationError {
                 transient = .idle
+            } catch let error as URLError where error.code == .cancelled {
+                // A cancel rides in as a cancelled URL error — not a failure.
+                transient = .idle
             } catch {
                 transient = .failed(error.localizedDescription)
                 AppLogger.error(
@@ -200,29 +251,74 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
+    /// Fold a downloader tick into the transient state: phase mapping plus a
+    /// smoothed time-left estimate.
+    private func recordTransfer(progress: AssetDownloadProgress, phase: AssetDownloader.Phase) {
+        let secondsLeft = transferEstimator.estimate(
+            completedBytes: progress.completedBytes,
+            totalBytes: progress.totalBytes,
+            now: .now
+        )
+        switch phase {
+        case .queued:
+            transient = .queued
+        case .transferring:
+            transient = .downloading(AssetTransferInfo(
+                fractionCompleted: progress.fraction,
+                bytesCompleted: progress.completedBytes,
+                totalBytes: progress.totalBytes,
+                estimatedSecondsLeft: secondsLeft
+            ))
+        case .preparing:
+            transient = .preparing
+        }
+    }
+
     // MARK: - Prepare
 
     /// Initialize the LiteRT engine for the downloaded model. Triggered when the
     /// model lands on disk; completes in seconds (LiteRT caches its compiled
     /// graph under the engine's `cacheDir`).
     func compile() async {
+        // prepareIfNeeded() fires from several surfaces (app start, Local
+        // assets, this screen); a second trigger must join, not race loadRuntime.
+        if let existing = compileTask {
+            await existing.value
+            return
+        }
         guard state == .downloaded else { return }
 
         transient = .preparing
-        do {
-            let runtime = try await loadRuntime()
-            runtime.reset()
-            llm = runtime
-            transient = .idle
-        } catch is CancellationError {
-            transient = .idle
-        } catch {
-            transient = .failed(error.localizedDescription)
-            AppLogger.error(
-                "Gemma model preparation failed: \(private: error.localizedDescription)",
-                category: .chat
-            )
+        let task = Task { [weak self] () in
+            guard let self else { return }
+            defer {
+                Task { @MainActor [weak self] in
+                    self?.compileTask = nil
+                }
+            }
+            do {
+                let runtime = try await loadRuntime()
+                runtime.reset()
+                await MainActor.run { [weak self] in
+                    self?.llm = runtime
+                    self?.transient = .idle
+                }
+            } catch is CancellationError {
+                await MainActor.run { [weak self] in
+                    self?.transient = .idle
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    self?.transient = .failed(error.localizedDescription)
+                }
+                AppLogger.error(
+                    "Gemma model preparation failed: \(private: error.localizedDescription)",
+                    category: .chat
+                )
+            }
         }
+        compileTask = task
+        await task.value
     }
 
     func cancel() {

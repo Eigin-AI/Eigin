@@ -123,3 +123,6 @@ infra/**/backend.tf
 
 ## MacOS
 **/.DS_Store
+
+## Xcode device-build artifacts
+src/eigin_ios/DeviceDerivedData

@@ -163,6 +163,50 @@ enum Localized {
         }
     }
 
+    enum Asset {
+        static func durationHours(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("asset.durationHours"), p1, p2)
+        }
+
+        static func durationMinutes(_ p1: String) -> String {
+            String(format: Localized.get("asset.durationMinutes"), p1)
+        }
+
+        static func durationSeconds(_ p1: String) -> String {
+            String(format: Localized.get("asset.durationSeconds"), p1)
+        }
+
+        static var installed: String {
+            Localized.get("asset.installed")
+        }
+
+        static var notInstalled: String {
+            Localized.get("asset.notInstalled")
+        }
+
+        static var preparing: String {
+            Localized.get("asset.preparing")
+        }
+
+        static var queued: String {
+            Localized.get("asset.queued")
+        }
+
+        static var readyToUse: String {
+            Localized.get("asset.readyToUse")
+        }
+
+        static func timeLeft(_ p1: String) -> String {
+            String(format: Localized.get("asset.timeLeft"), p1)
+        }
+
+        /// Button in the download sheet while a download runs: dismisses the sheet, the asset
+        /// switches on by itself once ready.
+        static var useWhenReady: String {
+            Localized.get("asset.useWhenReady")
+        }
+    }
+
     enum Attachment {
         /// Action sheet button label to attach an image from the photo library.
         static var attachImage: String {
@@ -1421,17 +1465,6 @@ enum Localized {
             Localized.get("localModel.delete")
         }
 
-        /// Hint shown during model download in Settings, telling the user they can leave and come
-        /// back
-        static var downloadBackgroundHint: String {
-            Localized.get("localModel.downloadBackgroundHint")
-        }
-
-        /// Status when download fails
-        static var downloadFailed: String {
-            Localized.get("localModel.downloadFailed")
-        }
-
         /// Button to download model from HuggingFace
         static var downloadFromHuggingFace: String {
             Localized.get("localModel.downloadFromHuggingFace")
@@ -1445,11 +1478,6 @@ enum Localized {
         /// Status while preparing model
         static var preparing: String {
             Localized.get("localModel.preparing")
-        }
-
-        /// Button to retry download
-        static var retry: String {
-            Localized.get("localModel.retry")
         }
     }
 
@@ -1670,6 +1698,28 @@ enum Localized {
             String(format: Localized.get("model.storageRequirement"), p1)
         }
 
+        enum Facts {
+            static var goodFor: String {
+                Localized.get("model.facts.goodFor")
+            }
+
+            static var goodForValue: String {
+                Localized.get("model.facts.goodForValue")
+            }
+
+            static var limitations: String {
+                Localized.get("model.facts.limitations")
+            }
+
+            static var limitationsValue: String {
+                Localized.get("model.facts.limitationsValue")
+            }
+
+            static var sizeOnDevice: String {
+                Localized.get("model.facts.sizeOnDevice")
+            }
+        }
+
         enum Gemma4e2b {
             /// The name of the machine learning model used in the app.
             static var name: String {
@@ -1764,13 +1814,6 @@ enum Localized {
                 static var title: String {
                     Localized.get("model.picker.auto.title")
                 }
-            }
-        }
-
-        enum Status {
-            /// A label indicating that a voice engine is installed on the device.
-            static var installed: String {
-                Localized.get("model.status.installed")
             }
         }
     }
@@ -2041,11 +2084,6 @@ enum Localized {
                 Localized.get("onboarding.inference.offlineSheetTitle")
             }
 
-            /// Button to start downloading the offline model.
-            static var startDownloadButton: String {
-                Localized.get("onboarding.inference.startDownloadButton")
-            }
-
             /// Primary button label to use the Eigin cloud provider.
             static var useEiginButton: String {
                 Localized.get("onboarding.inference.useEiginButton")
@@ -2072,11 +2110,6 @@ enum Localized {
         }
 
         enum ModelSetup {
-            /// Button label to start downloading the on-device model
-            static var downloadAction: String {
-                Localized.get("onboarding.modelSetup.downloadAction")
-            }
-
             /// Subtitle explaining that the model download continues in the background
             static var downloadStatus: String {
                 Localized.get("onboarding.modelSetup.downloadStatus")
@@ -2085,11 +2118,6 @@ enum Localized {
             /// Status text during model download
             static func downloadingProgress(_ p1: String) -> String {
                 String(format: Localized.get("onboarding.modelSetup.downloadingProgress"), p1)
-            }
-
-            /// An error title shown when the local model download fails.
-            static var errorTitle: String {
-                Localized.get("onboarding.modelSetup.errorTitle")
             }
 
             /// Link/button to skip local model download and use a cloud provider instead
@@ -2106,11 +2134,6 @@ enum Localized {
             /// Progress percentage label
             static func progressPercent(_ p1: String) -> String {
                 String(format: Localized.get("onboarding.modelSetup.progressPercent"), p1)
-            }
-
-            /// A status label shown when the local model has finished downloading and is ready.
-            static var readyStatus: String {
-                Localized.get("onboarding.modelSetup.readyStatus")
             }
 
             enum Words {
@@ -3152,11 +3175,6 @@ enum Localized {
             Localized.get("settings.sendTestNotification")
         }
 
-        /// Section header for speech engine assets
-        static var speechEngine: String {
-            Localized.get("settings.speechEngine")
-        }
-
         /// A label displayed under the button that allows the user to change the response speed of
         /// a live call.
         static var turnDelay: String {
@@ -3333,6 +3351,20 @@ enum Localized {
             }
         }
 
+        enum LocalAssets {
+            static var subtitle: String {
+                Localized.get("settings.localAssets.subtitle")
+            }
+
+            static var title: String {
+                Localized.get("settings.localAssets.title")
+            }
+
+            static func totalInstalled(_ p1: String) -> String {
+                String(format: Localized.get("settings.localAssets.totalInstalled"), p1)
+            }
+        }
+
         enum Log {
             /// A message displayed when there are no log entries to display.
             static var empty: String {
@@ -3458,6 +3490,10 @@ enum Localized {
             /// Section header in settings grouping app-wide preferences
             static var general: String {
                 Localized.get("settings.section.general")
+            }
+
+            static var storage: String {
+                Localized.get("settings.section.storage")
             }
 
             /// Section header grouping system-level/configuration entries
@@ -3630,11 +3666,6 @@ enum Localized {
             Localized.get("status.completed")
         }
 
-        /// Short status label shown while an asset is downloading
-        static var downloading: String {
-            Localized.get("status.downloading")
-        }
-
         /// A text label below the progress bar indicating the percentage of the download that has
         /// occurred.
         static func downloadingProgress(_ p1: String) -> String {
@@ -3659,21 +3690,6 @@ enum Localized {
         /// A tool call that failed, displayed in red text.
         static func failedFormat(_ p1: String) -> String {
             String(format: Localized.get("status.failedFormat"), p1)
-        }
-
-        /// Short status label shown while an asset or model is being prepared/compiled
-        static var preparing: String {
-            Localized.get("status.preparing")
-        }
-
-        /// Longer status label shown while the device is being prepared for the model
-        static var preparingDevice: String {
-            Localized.get("status.preparingDevice")
-        }
-
-        /// Short status label shown when an asset is ready to use
-        static var ready: String {
-            Localized.get("status.ready")
         }
     }
 
@@ -4951,11 +4967,6 @@ enum Localized {
         /// Display name for the Danish (Plapre Pico) voice model
         static var danishName: String {
             Localized.get("voice.danishName")
-        }
-
-        /// Pitch text shown in the asset download sheet for voice models
-        static var downloadPitch: String {
-            Localized.get("voice.downloadPitch")
         }
 
         /// Download description for the enhanced voice model size

@@ -226,3 +226,67 @@ struct AssetDownloaderTests {
         #expect(rangesAfter - rangesBefore < 3)
     }
 }
+
+// MARK: - Phase reporting
+
+extension AssetDownloaderTests {
+    /// The FIFO rule, observable: while the head job is blocked, the next
+    /// asset sits in `.queued` and never starts touching the network.
+    @Test func secondAssetWaitsAsQueued() async throws {
+        let a = bytes(500, seed: 21)
+        let aManifest = stub([("a.bin", a, nil)])
+        let b = bytes(500, seed: 22)
+        let bHost = "https://assets.test/\(UUID().uuidString)"
+        let bURL = "\(bHost)/b.bin"
+        FakeURLProtocol.stubResponse(for: bURL, data: b, statusCode: 200)
+        let bManifest = AssetManifest(id: "asset2", version: "v1", files: [
+            .init(path: "b.bin", size: Int64(b.count), sha256: sha256(b), url: bURL),
+        ])
+
+        let dirA = tempDir(), dirB = tempDir()
+        defer { try? FileManager.default.removeItem(at: dirA) }
+        defer { try? FileManager.default.removeItem(at: dirB) }
+
+        let gate = AsyncStream<Void>.makeStream()
+        let downloader = makeDownloader { assetID in
+            if assetID == "asset" {
+                for await _ in gate.stream {
+                    break
+                }
+            }
+            return assetID == "asset" ? aManifest : bManifest
+        }
+
+        async let first: Void = downloader.download(.init(assetID: "asset", directory: dirA))
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(downloader.phases["asset"] == .queued)
+
+        async let second: Void = downloader.download(.init(assetID: "asset2", directory: dirB))
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(downloader.phases["asset2"] == .queued)
+
+        gate.continuation.yield()
+        _ = try await (first, second)
+        #expect(downloader.phases["asset"] == nil)
+        #expect(downloader.phases["asset2"] == nil)
+        #expect(ModelAssetService.installedVersion(in: dirA) == "v1")
+        #expect(ModelAssetService.installedVersion(in: dirB) == "v1")
+    }
+
+    /// The head job moves to `.transferring` once its requests are running,
+    /// and leaves the phase map entirely once installed.
+    @Test func reportsTransferringWhileInFlightAndNilWhenDone() async throws {
+        let manifest = stub([("slow.bin", bytes(1000, seed: 23), nil)])
+        FakeURLProtocol.stubDelay(for: manifest.files[0].url, seconds: 0.4)
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let downloader = makeDownloader { _ in manifest }
+
+        async let work: Void = downloader.download(.init(assetID: "asset", directory: dir))
+        try await Task.sleep(for: .milliseconds(120))
+        #expect(downloader.phases["asset"] == .transferring)
+
+        _ = try await work
+        #expect(downloader.phases["asset"] == nil)
+    }
+}

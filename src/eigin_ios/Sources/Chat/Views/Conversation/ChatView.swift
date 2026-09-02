@@ -257,9 +257,9 @@ struct ChatView: View {
         .appSheet(
             isPresented: showVoiceDownload,
             title: voiceDownloadItem?.asset.displayName ?? "",
+            description: voiceDownloadItem?.asset.downloadDescription,
             detents: [.medium],
-            fitsContent: true,
-            showsDismissButton: false
+            fitsContent: true
         ) {
             AssetDownloadSheetContent(
                 asset: voiceDownloadItem!.asset,
@@ -344,7 +344,7 @@ struct ChatView: View {
     /// Reuses the phone button's voice-download gate before presenting the live call.
     private func startLiveCall() {
         if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
-           !asset.state.isDownloading
+           !asset.state.isBusy
         {
             voiceDownloadItem = AssetItem(asset)
         } else {

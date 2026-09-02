@@ -3,8 +3,10 @@ import SwiftUI
 
 /// Manages the on-device Gemma model: download, preparation, and deletion.
 ///
-/// Mirrors the state-based UI used in onboarding, plus a manage state when the
-/// model is ready that lets the user delete the downloaded weights.
+/// Built around the shared ``AssetRow`` with a minimal metadata block — what
+/// the model is, how big it is, that it runs on device — and state-appropriate
+/// primary actions. The row carries the live status; this screen carries the
+/// decisions.
 struct LocalProviderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
@@ -20,7 +22,12 @@ struct LocalProviderView: View {
     }
 
     private var isPreparing: Bool {
-        gemmaManager.state == .downloaded || gemmaManager.state.isCompiling
+        switch gemmaManager.state {
+        case .downloaded, .preparing:
+            true
+        default:
+            false
+        }
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -40,11 +47,26 @@ struct LocalProviderView: View {
             )
 
             VStack(spacing: Spacing.n32) {
+                VStack(alignment: .leading, spacing: Spacing.n16) {
+                    // Status first, then the facts, then the prose. The
+                    // action lives in the button below, so the row omits its
+                    // own control.
+                    AssetRow(asset: gemmaManager, showsAction: false)
+
+                    metadataFacts
+
+                    Text(gemmaManager.downloadDescription)
+                        .typography(Typography.description)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Spacer()
-                stateContent
-                Spacer()
+
+                actions
             }
             .padding(.horizontal, Spacing.n24)
+            .padding(.top, Spacing.n8)
             .padding(.bottom, Spacing.n32)
         }
         .frame(maxWidth: .infinity)
@@ -66,121 +88,81 @@ struct LocalProviderView: View {
         }
     }
 
+    // MARK: - Metadata
+
+    /// What you can't read off the title, the row, or the description: what
+    /// to expect from it, what not to, and what it costs in storage.
+    private var metadataFacts: some View {
+        AppCardSurface(padding: 0) {
+            VStack(spacing: 0) {
+                factRow(
+                    Localized.Model.Facts.goodFor,
+                    value: Localized.Model.Facts.goodForValue,
+                    divider: true
+                )
+                factRow(
+                    Localized.Model.Facts.limitations,
+                    value: Localized.Model.Facts.limitationsValue,
+                    divider: true
+                )
+                factRow(
+                    Localized.Model.Facts.sizeOnDevice,
+                    value: gemmaManager.sizeDescription ?? ""
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func factRow(_ label: String, value: String, divider: Bool = false) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.n16) {
+                Text(label)
+                    .typography(Typography.description)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(colors.text.standard.base)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
+                Text(value)
+                    .typography(Typography.description)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, Spacing.n20)
+            .padding(.vertical, Spacing.n16)
+            .contentShape(Rectangle())
+
+            if divider {
+                Divider().padding(.leading, Spacing.n20)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    /// One full-width button that carries the screen's whole decision:
+    /// download it, stop it, or remove it.
     @ViewBuilder
-    private var stateContent: some View {
+    private var actions: some View {
         switch gemmaManager.state {
         case .notDownloaded:
-            notDownloadedView
-        case .downloading(let progress):
-            downloadingView(progress: progress)
-        case .downloaded:
-            compilingView
-        case .compiling:
-            compilingView
-        case .ready:
-            manageView
-        case .failed(let message):
-            failedView(message: message)
-        }
-    }
-
-    // MARK: - Not Downloaded
-
-    private var notDownloadedView: some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-
-            VStack(spacing: Spacing.n32) {
-                Image(systemName: "arrow.down.circle")
-                    .font(.system(size: 56))
-                    .foregroundStyle(colors.accent)
-
-                Text(Localized.Onboarding.LocalModel.description)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.muted)
-                    .multilineTextAlignment(.center)
-            }
-
-            Spacer()
-
-            AppButton(Localized.Onboarding.ModelSetup.downloadAction) {
+            AppButton(Localized.Common.Actions.download) {
+                Haptics.light()
                 Task { await gemmaManager.download() }
             }
-        }
-    }
 
-    // MARK: - Downloading
-
-    private func downloadingView(progress: Double) -> some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-
-            ZStack {
-                CircularProgressView(
-                    progress: progress,
-                    size: 150,
-                    lineWidth: 8,
-                    accentColor: colors.accent
-                )
-
-                Text(verbatim: "\(Int(progress * 100))%")
-                    .typography(Typography.titleM)
-                    .foregroundStyle(colors.text.standard.base)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
+        case .failed:
+            AppButton(Localized.Common.Actions.retry) {
+                Task { await gemmaManager.download() }
             }
 
-            Text(Localized.LocalModel.downloadBackgroundHint)
-                .typography(Typography.body)
-                .foregroundStyle(colors.text.standard.muted)
-                .multilineTextAlignment(.center)
-
-            Spacer()
-
-            AppButton(Localized.Common.Actions.cancel) {
+        case .queued, .downloading:
+            AppButton(Localized.LocalModel.cancel, variant: .secondary) {
                 gemmaManager.cancel()
             }
-        }
-    }
 
-    // MARK: - Compiling / Preparing
-
-    private var compilingView: some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-
-            Image(systemName: "rectangle.3.group")
-                .font(.system(size: 56))
-                .foregroundStyle(colors.accent)
-                .symbolEffect(.breathe, options: .repeating)
-
-            Text(Localized.Status.preparingDevice)
-                .typography(Typography.body)
-                .foregroundStyle(colors.text.standard.muted)
-                .multilineTextAlignment(.center)
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Manage (Ready)
-
-    private var manageView: some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-
-            VStack(spacing: Spacing.n32) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(colors.accent)
-
-                Text(Localized.Onboarding.ModelSetup.readyStatus)
-                    .typography(Typography.titleM)
-                    .foregroundStyle(colors.text.standard.base)
-            }
-
-            Spacer()
-
+        case .ready:
             AppButton(Localized.LocalModel.delete, variant: .secondary) {
                 showDeleteConfirm = true
             }
@@ -193,41 +175,16 @@ struct LocalProviderView: View {
                     deleteModel()
                 }
                 Button(Localized.Common.Actions.cancel, role: .cancel) {}
+            } message: {
+                Text(Localized.Model.removeWarning)
             }
+
+        case .downloaded, .preparing, .unavailable:
+            EmptyView()
         }
     }
 
-    // MARK: - Failed
-
-    private func failedView(message: String) -> some View {
-        VStack(spacing: Spacing.n32) {
-            Spacer()
-
-            VStack(spacing: Spacing.n32) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(colors.text.standard.error)
-
-                VStack(spacing: Spacing.n8) {
-                    Text(Localized.Onboarding.ModelSetup.errorTitle)
-                        .typography(Typography.titleM)
-                        .foregroundStyle(colors.text.standard.base)
-                    Text(message)
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .multilineTextAlignment(.center)
-                }
-            }
-
-            Spacer()
-
-            AppButton(Localized.Common.Actions.retry) {
-                Task { await gemmaManager.download() }
-            }
-        }
-    }
-
-    // MARK: - Actions
+    // MARK: - Provider plumbing
 
     private func ensureLocalProvider() {
         guard localProvider == nil else { return }
