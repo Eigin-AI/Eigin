@@ -72,5 +72,26 @@ From the repo root; arguments are positional. In a Linux container, scope to `re
 - `just build [ios|relay]`: default all.
 - `just test [ios|relay]`: default all.
 - `just format`: auto-format.
-- `just run relay`: start the relay locally.
 - `just --list`: see everything.
+
+## Run
+
+`just run` starts a target and returns, `just logs` reads its output, `just stop` ends it.
+
+```
+just run relay [env]                            # detached, logs to logs/relay.log
+just run ios simulator [env]                    # the iPhone 17 Pro simulator
+just run ios device [device] [env]              # a paired iPhone, over the network
+just stop relay
+just logs relay [since] [--follow]
+just logs ios simulator [env] [since] [--follow]
+just logs ios device [device] [env] [since]
+```
+
+`since` is a duration (`30s`, `10m`, `2h`, `7d`) or a date, and defaults to the
+last 10 minutes. Arguments are recognised by shape, so their order is free.
+
+Device runs need `DEVELOPMENT_TEAM` and a phone that's unlocked, awake and on
+the same network. Name it once and it's remembered (`logs/device-default`);
+`EIGIN_DEVICE` overrides for a session, and several paired phones with no
+default means you're asked.

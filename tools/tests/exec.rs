@@ -13,7 +13,7 @@ fn run_success_exits_zero() {
 
     let status = eigin_tools()
         .args([
-            "run",
+            "exec",
             "--log",
             log.to_str().unwrap(),
             "--label",
@@ -35,7 +35,7 @@ fn run_failure_propagates_exit_code() {
 
     let status = eigin_tools()
         .args([
-            "run",
+            "exec",
             "--log",
             log.to_str().unwrap(),
             "--label",
@@ -58,7 +58,7 @@ fn run_captures_output_to_log() {
 
     eigin_tools()
         .args([
-            "run",
+            "exec",
             "--log",
             log.to_str().unwrap(),
             "--label",
@@ -82,7 +82,7 @@ fn run_creates_log_directory() {
 
     let status = eigin_tools()
         .args([
-            "run",
+            "exec",
             "--log",
             log.to_str().unwrap(),
             "--label",

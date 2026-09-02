@@ -60,7 +60,7 @@ _test-ios env="staging" verbose="false": generate
             -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
             -skip-testing:EiginTests/ProviderIntegrationTests test
     else
-        {{ tools }} run --log "{{ log_dir }}/ios-test.log" --label "Running iOS tests" -- \
+        {{ tools }} exec --log "{{ log_dir }}/ios-test.log" --label "Running iOS tests" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
                 -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
                 -skip-testing:EiginTests/ProviderIntegrationTests test
@@ -71,7 +71,7 @@ _test-relay verbose="false":
     if [ "{{ verbose }}" = "true" ]; then \
         cd {{ relay_dir }} && cargo test; \
     else \
-        {{ tools }} run --log "{{ log_dir }}/relay-test.log" --label "Running relay tests" -- \
+        {{ tools }} exec --log "{{ log_dir }}/relay-test.log" --label "Running relay tests" -- \
             sh -c 'cd {{ relay_dir }} && cargo test'; \
     fi
 
@@ -109,7 +109,7 @@ _build-ios env="staging" verbose="false": generate
         xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
             -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation build
     else
-        {{ tools }} run --log "{{ log_dir }}/ios-build.log" --label "Building Eigin for iOS" -- \
+        {{ tools }} exec --log "{{ log_dir }}/ios-build.log" --label "Building Eigin for iOS" -- \
             xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
                 -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation build
     fi
@@ -119,7 +119,7 @@ _build-relay verbose="false":
     if [ "{{ verbose }}" = "true" ]; then \
         cd {{ relay_dir }} && cargo build --release; \
     else \
-        {{ tools }} run --log "{{ log_dir }}/relay-build.log" --label "Building Eigin relay" -- \
+        {{ tools }} exec --log "{{ log_dir }}/relay-build.log" --label "Building Eigin relay" -- \
             sh -c 'cd {{ relay_dir }} && cargo build --release'; \
     fi
 
@@ -150,7 +150,7 @@ release target="ios" env="staging" track="beta": generate
     if [ -z "${DEVELOPMENT_TEAM:-}" ]; then
         echo "DEVELOPMENT_TEAM is not set in .env — required to sign a release."; exit 1
     fi
-    {{ tools }} run --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ({{ env }}/{{ track }})" -- \
+    {{ tools }} exec --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ({{ env }}/{{ track }})" -- \
         sh -c 'cd {{ ios_dir }} && bundle exec fastlane ios '"$lane"' env:{{ env }}'
 
 # --- Grants ---
@@ -203,27 +203,27 @@ grant command="keygen" *args:
 assets *args:
     {{ tools }} assets {{ args }}
 
-# --- Run / Clean / Open ---
+# --- Run / Stop / Logs ---
 
-[doc('Run a target locally (target: relay)')]
-run target env="staging":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    case "{{ target }}" in
-        relay)
-            # Suffixed secrets and the environment's non-secret tfvars values,
-            # resolved and stripped to the names the relay reads.
-            vars="$({{ tools }} config export relay {{ env }})"
-            eval "$vars"
+# `run` is fire-and-forget for every target: it returns once the target is up,
+# `logs` is where output shows up, `stop` ends it. The logic lives in the tools
+# CLI; these recipes name the arguments and hand them over. Slots are quoted
+# because a device can be called "Daniel's iPhone (2)".
 
-            grant_key_file="{{ relay_dir }}/config/grant/grant_public.pem"
-            if [ -f "$grant_key_file" ]; then
-                export GRANT_PUBLIC_KEY="$(cat "$grant_key_file")"
-            fi
-            cd {{ relay_dir }} && cargo run
-            ;;
-        *) echo "Unknown run target: {{ target }}"; exit 1 ;;
-    esac
+[doc('Run a target detached (target: relay | ios). ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
+run target="relay" mode="" value="" env="":
+    @{{ tools }} run {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }}
+
+[doc('Stop a detached target (target: relay)')]
+stop target="relay":
+    @{{ tools }} stop {{ quote(target) }}
+
+[doc('Show target logs (target: relay | ios). ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
+[arg("follow", short="f", long="follow", value="true")]
+[arg("since", long="since")]
+logs target="relay" mode="" value="" env="" since="" follow="false":
+    @{{ tools }} logs {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }} \
+        --since {{ quote(since) }} {{ if follow == "true" { "--follow" } else { "" } }}
 
 [doc('Clean the iOS build and derived data')]
 clean env="staging":
