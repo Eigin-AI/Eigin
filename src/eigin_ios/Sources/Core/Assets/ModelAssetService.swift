@@ -18,6 +18,13 @@ struct ModelAssetService: Sendable {
         try await relay.asset(id: id)
     }
 
+    /// Total mirrored bytes for an asset, so offers can state the real cost
+    /// before download starts. Nil when the manifest is unreachable.
+    static func totalBytes(for id: String) async -> Int64? {
+        guard let manifest = try? await ModelAssetService().manifest(for: id) else { return nil }
+        return manifest.files.reduce(0) { $0 + $1.size }
+    }
+
     /// Streaming SHA-256 of a file, as lowercase hex.
     static func sha256Hex(of fileURL: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: fileURL)

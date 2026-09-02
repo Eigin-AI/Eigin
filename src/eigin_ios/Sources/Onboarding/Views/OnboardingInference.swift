@@ -27,6 +27,17 @@ struct OnboardingInference: View {
         gemmaManager.isSupported && gemmaManager.state == .notDownloaded
     }
 
+    private var isFailed: Bool {
+        if case .failed = gemmaManager.state { return true }
+        return false
+    }
+
+    /// The sheet offers an action while nothing is under way: a first
+    /// download, or another go after a failure.
+    private var offerable: Bool {
+        offlineAvailable || isFailed
+    }
+
     private var connectSheetTitle: String {
         switch selectedMode {
         case .preset(let preset): preset.name
@@ -133,23 +144,35 @@ struct OnboardingInference: View {
         }
     }
 
-    /// The offline download sheet: starts the background download, then lets the
-    /// user return to the provider choice.
+    /// The offline download sheet: the Gemma asset row, the pitch, and one
+    /// button. Layout never moves — the copy and the button swap in place
+    /// once the download starts.
     private var offlineSheet: some View {
         VStack(spacing: Spacing.n24) {
-            Text(offlineAvailable
-                ? Localized.Onboarding.Inference.offlineSheetText
-                : Localized.Onboarding.Inference.offlineDownloadingText)
-                .typography(Typography.body)
-                .foregroundStyle(colors.text.standard.muted)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            AssetRow(asset: gemmaManager, showsAction: false)
 
-            if offlineAvailable {
-                AppButton(Localized.Onboarding.Inference.startDownloadButton) {
+            Text(
+                offerable
+                    ? Localized.Onboarding.Inference.offlineSheetText
+                    : Localized.Onboarding.Inference.offlineDownloadingText
+            )
+            .typography(Typography.description)
+            .foregroundStyle(colors.text.standard.muted)
+            .fixedSize(horizontal: false, vertical: true)
+
+            if offerable {
+                AppButton(
+                    isFailed
+                        ? Localized.Common.Actions.retry
+                        : Localized.Common.Actions.download
+                ) {
+                    Haptics.light()
                     Task { await gemmaManager.download() }
                 }
             } else {
-                AppButton(Localized.Onboarding.Inference.continueButton) { showDownload = false }
+                AppButton(Localized.Onboarding.Inference.continueButton) {
+                    showDownload = false
+                }
             }
         }
         .padding(.horizontal, Spacing.n24)

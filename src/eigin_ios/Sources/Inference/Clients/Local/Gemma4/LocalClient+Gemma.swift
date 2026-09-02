@@ -11,13 +11,19 @@ extension LocalClient {
                 displayName: Localized.Model.gemma4e2b,
                 state: .notDownloaded
             )
-        case .downloading(let progress):
+        case .downloading(let info):
             return LocalModelStatus(
                 id: "gemma-4-e2b",
                 displayName: Localized.Model.gemma4e2b,
-                state: .downloading(progress: progress)
+                state: .downloading(progress: info.fractionCompleted)
             )
-        case .downloaded, .compiling:
+        case .queued:
+            return LocalModelStatus(
+                id: "gemma-4-e2b",
+                displayName: Localized.Model.gemma4e2b,
+                state: .downloading(progress: 0)
+            )
+        case .downloaded, .preparing:
             return LocalModelStatus(
                 id: "gemma-4-e2b",
                 displayName: Localized.Model.gemma4e2b,
@@ -34,6 +40,12 @@ extension LocalClient {
                 id: "gemma-4-e2b",
                 displayName: Localized.Model.gemma4e2b,
                 state: .unavailable(reason: message)
+            )
+        case .unavailable(let reason):
+            return LocalModelStatus(
+                id: "gemma-4-e2b",
+                displayName: Localized.Model.gemma4e2b,
+                state: .unavailable(reason: reason)
             )
         }
     }

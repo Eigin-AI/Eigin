@@ -143,9 +143,9 @@ struct ChatMessageView: View, Equatable {
         .appSheet(
             isPresented: showDownloadSheet,
             title: downloadItem?.asset.displayName ?? "",
+            description: downloadItem?.asset.downloadDescription,
             detents: [.medium],
-            fitsContent: true,
-            showsDismissButton: false
+            fitsContent: true
         ) {
             AssetDownloadSheetContent(
                 asset: downloadItem!.asset,
@@ -192,7 +192,7 @@ struct ChatMessageView: View, Equatable {
                     } else if let asset = voiceService.upgradeAsset(
                         for: languageManager.currentLanguage
                     ),
-                        !asset.state.isDownloading
+                        !asset.state.isBusy
                     {
                         downloadItem = AssetItem(asset)
                     } else {

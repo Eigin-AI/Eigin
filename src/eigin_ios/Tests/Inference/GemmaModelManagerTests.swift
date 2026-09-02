@@ -53,7 +53,7 @@ struct GemmaModelManagerTests {
 
     // MARK: – RAM gating
 
-    @Test func downloadTransitionsToFailedWhenRAMIsLow() async {
+    @Test func downloadTurnsUnavailableWhenRAMIsLow() async {
         let manager = GemmaModelManager(
             deviceInfo: FakeDeviceInfoService(
                 diskBytes: .max,
@@ -62,10 +62,22 @@ struct GemmaModelManagerTests {
         )
         await manager.download()
 
-        if case .failed(let message) = manager.state {
+        if case .unavailable(let message) = manager.state {
             #expect(message.contains("iPhone 15"))
         } else {
-            Issue.record("Expected .failed state, got \(manager.state)")
+            Issue.record("Expected .unavailable state, got \(manager.state)")
+        }
+    }
+
+    /// An unsupported device shows the warning before any download attempt,
+    /// not just after one.
+    @Test func unsupportedDeviceIsUnavailableFromTheStart() {
+        let manager = GemmaModelManager(
+            deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
+        )
+
+        if case .unavailable = manager.state {} else {
+            Issue.record("Expected .unavailable state, got \(manager.state)")
         }
     }
 
@@ -112,16 +124,16 @@ struct GemmaModelManagerTests {
 
     // MARK: – Storage gating
 
-    @Test func downloadTransitionsToFailedWhenStorageIsLow() async {
+    @Test func downloadTurnsUnavailableWhenStorageIsLow() async {
         let manager = GemmaModelManager(
             deviceInfo: FakeDeviceInfoService(diskBytes: 1)
         )
         await manager.download()
 
-        if case .failed(let message) = manager.state {
+        if case .unavailable(let message) = manager.state {
             #expect(message.contains("GB"))
         } else {
-            Issue.record("Expected .failed state, got \(manager.state)")
+            Issue.record("Expected .unavailable state, got \(manager.state)")
         }
     }
 

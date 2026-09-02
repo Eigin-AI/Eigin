@@ -57,15 +57,10 @@ final class SpeechEngineResolver {
         return nil
     }
 
-    /// Downloadable engine assets visible in settings.
-    /// Shows installed assets regardless of language, plus not-yet-downloaded
-    /// assets only if they support the given language.
-    func engineAssets(for language: AppLanguage) -> [any OnDemandAsset] {
-        providers.compactMap { provider -> (any OnDemandAsset)? in
-            guard let asset = provider.asset else { return nil }
-            if asset.state == .ready { return asset }
-            return provider.supportedLanguages.contains(language) ? asset : nil
-        }
+    /// Every downloadable engine asset regardless of language or readiness —
+    /// the backing data for the Local assets screen.
+    func allAssets() -> [any OnDemandAsset] {
+        providers.compactMap(\.asset)
     }
 
     /// All voices from the best ready engine for a language.

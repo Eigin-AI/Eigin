@@ -55,6 +55,7 @@ struct ContentView: View {
             ensureBackgroundSchedule()
             ensureEiginProvider()
             ensureLocalProvider()
+            GemmaModelManager.shared.prepareIfNeeded()
         }
         .onChange(of: gemmaManager.state) { _, newState in
             if newState == .ready || newState == .downloaded {

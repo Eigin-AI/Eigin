@@ -27,6 +27,15 @@ extension Container {
 
     // MARK: - Speech Engine
 
+    /// Every downloadable on-device asset: the local model plus all voice
+    /// engine models. The single source for the Local assets screen.
+    @MainActor
+    var localAssets: Factory<[any OnDemandAsset]> {
+        self { @MainActor in
+            [GemmaModelManager.shared] + Container.shared.speechEngineResolver().allAssets()
+        }.singleton
+    }
+
     @MainActor
     var speechEngineResolver: Factory<SpeechEngineResolver> {
         self { @MainActor in

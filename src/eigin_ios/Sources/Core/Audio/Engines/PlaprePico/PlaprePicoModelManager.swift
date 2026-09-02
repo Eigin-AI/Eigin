@@ -13,7 +13,18 @@ final class PlaprePicoModelManager: OnDemandAsset, @unchecked Sendable {
     let id = "plapre-pico"
     let displayName = Localized.Voice.danishName
     let downloadDescription = Localized.Voice.danishDescription
+    /// Size reported by the mirror manifest once fetched; static fallback otherwise.
+    private(set) var mirrorSizeBytes: Int64?
     static let unloadTimeoutSeconds = 240
+
+    /// Approximate mirror footprint, for rows and offers.
+    var sizeDescription: String? {
+        let bytes = mirrorSizeBytes ?? 570_000_000
+        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    /// Smooths raw byte progress into a time-left estimate.
+    private var transferEstimator = TransferRateEstimator()
 
     private(set) var state: AssetState = .notDownloaded
     var hasBeenDeclined: Bool {
@@ -38,6 +49,7 @@ final class PlaprePicoModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Synchronous on-disk check used at app launch to set initial state.
     func checkAvailability() {
+        prewarmMirrorSize()
         if isDownloaded {
             state = .ready
         } else if AssetDownloader.shared.isDownloading(assetID: PlaprePicoAssets.assetID) {
@@ -46,22 +58,62 @@ final class PlaprePicoModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
+    /// Fetch the mirror-reported size so the offer row states the real cost
+    /// before the user commits.
+    private func prewarmMirrorSize() {
+        guard mirrorSizeBytes == nil else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            mirrorSizeBytes = await ModelAssetService
+                .totalBytes(for: PlaprePicoAssets.assetID)
+        }
+    }
+
     // MARK: - Download
 
     func download() async {
-        guard state != .ready, !state.isDownloading else { return }
-        state = .downloading(fractionCompleted: 0)
+        guard state != .ready, !state.isBusy else { return }
+        transferEstimator.reset()
+        state = .queued
         do {
             let progressTask = AssetDownloader.shared.observeProgress(
                 assetID: PlaprePicoAssets.assetID
-            ) { [weak self] fraction in
-                self?.state = .downloading(fractionCompleted: fraction)
+            ) { [weak self] progress, phase in
+                self?.recordTransfer(progress: progress, phase: phase)
             }
             defer { progressTask.cancel() }
             try await PlaprePicoAssets.downloadAll()
             state = .ready
+        } catch is CancellationError {
+            // A user cancel isn't a failure — the row just falls back to Offer.
+            state = isDownloaded ? .ready : .notDownloaded
+        } catch let error as URLError where error.code == .cancelled {
+            state = isDownloaded ? .ready : .notDownloaded
         } catch {
             state = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Fold a downloader tick into state: phase mapping plus a smoothed
+    /// time-left estimate.
+    private func recordTransfer(progress: AssetDownloadProgress, phase: AssetDownloader.Phase) {
+        let secondsLeft = transferEstimator.estimate(
+            completedBytes: progress.completedBytes,
+            totalBytes: progress.totalBytes,
+            now: .now
+        )
+        switch phase {
+        case .queued:
+            state = .queued
+        case .transferring:
+            state = .downloading(AssetTransferInfo(
+                fractionCompleted: progress.fraction,
+                bytesCompleted: progress.completedBytes,
+                totalBytes: progress.totalBytes,
+                estimatedSecondsLeft: secondsLeft
+            ))
+        case .preparing:
+            state = .preparing(fractionCompleted: nil)
         }
     }
 

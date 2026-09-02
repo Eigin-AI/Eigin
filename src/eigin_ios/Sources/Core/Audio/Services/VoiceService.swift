@@ -25,9 +25,6 @@ protocol VoiceService {
     func upgradeAsset(for language: AppLanguage) -> (any OnDemandAsset)?
     /// Whether the best engine is a local model (not system).
     func isUsingEnhancedEngine(for language: AppLanguage) -> Bool
-    /// Downloadable engine assets for settings UI.
-    /// Shows installed assets always, not-downloaded only if they support the language.
-    func engineAssets(for language: AppLanguage) -> [any OnDemandAsset]
     func refresh()
 }
 
@@ -134,10 +131,6 @@ final class DefaultVoiceService: VoiceService {
         resolver?.upgradeAvailable(for: language)
     }
 
-    func engineAssets(for language: AppLanguage) -> [any OnDemandAsset] {
-        resolver?.engineAssets(for: language) ?? []
-    }
-
     func isUsingEnhancedEngine(for language: AppLanguage) -> Bool {
         guard let resolver else { return false }
         return resolver.bestReadyProvider(for: language).engineKind != .system
@@ -222,10 +215,6 @@ struct PreviewVoiceService: VoiceService {
 
     func isUsingEnhancedEngine(for language: AppLanguage) -> Bool {
         false
-    }
-
-    func engineAssets(for language: AppLanguage) -> [any OnDemandAsset] {
-        []
     }
 
     func refresh() {}

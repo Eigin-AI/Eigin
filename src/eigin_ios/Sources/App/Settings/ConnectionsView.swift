@@ -380,10 +380,16 @@ struct ConnectionsView: View {
                     switch gemmaManager.state {
                     case .notDownloaded, .failed:
                         Text(Localized.Settings.Info.modelNotDownloaded)
+                    case .queued:
+                        Text(Localized.Asset.queued)
                     case .downloading:
                         Text(Localized.Settings.Info.modelDownloading)
-                    case .downloaded, .compiling:
+                    case .downloaded, .preparing:
                         Text(Localized.Settings.Info.modelDownloaded)
+                    case .unavailable(let reason):
+                        // The reason carries the actual blocker (RAM or disk),
+                        // so a low-disk user isn't told the device can't run it.
+                        Text(reason)
                     case .ready:
                         let count = localProvider?.availableModels.count ?? 0
                         Text(Localized.Settings.Info.modelsAvailable("\(count)"))

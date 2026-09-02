@@ -20,7 +20,18 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
     let id = "pocket-tts"
     let displayName = Localized.Voice.enhancedName
     let downloadDescription = Localized.Voice.enhancedDescription
+    /// Size reported by the mirror manifest once fetched; static fallback otherwise.
+    private(set) var mirrorSizeBytes: Int64?
     static let unloadTimeoutSeconds = 120
+
+    /// Approximate mirror footprint, for rows and offers.
+    var sizeDescription: String? {
+        let bytes = mirrorSizeBytes ?? 100_000_000
+        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    /// Smooths raw byte progress into a time-left estimate.
+    private var transferEstimator = TransferRateEstimator()
 
     private(set) var state: AssetState = .notDownloaded
     var hasBeenDeclined: Bool {
@@ -54,6 +65,7 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Checks disk for model files and sets state accordingly. Synchronous — no I/O.
     func checkAvailability() {
+        prewarmMirrorSize()
         if isDownloaded {
             state = .ready
         } else if AssetDownloader.shared.isDownloading(assetID: PocketTTSModelDownloader.assetID) {
@@ -62,27 +74,68 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
         }
     }
 
+    /// Fetch the mirror-reported size so the offer row states the real cost
+    /// before the user commits.
+    private func prewarmMirrorSize() {
+        guard mirrorSizeBytes == nil else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            mirrorSizeBytes = await ModelAssetService
+                .totalBytes(for: PocketTTSModelDownloader.assetID)
+        }
+    }
+
     /// Downloads the model with progress reporting, then initializes from cache.
     func download() async {
-        guard state != .ready, !state.isDownloading else { return }
-        state = .downloading(fractionCompleted: 0)
+        guard state != .ready, !state.isBusy else { return }
+        transferEstimator.reset()
+        state = .queued
         do {
             // Phase 1: seed the FluidAudio cache from the self-hosted mirror.
             let progressTask = AssetDownloader.shared.observeProgress(
                 assetID: PocketTTSModelDownloader.assetID
-            ) { [weak self] fraction in
-                self?.state = .downloading(fractionCompleted: fraction)
+            ) { [weak self] progress, phase in
+                self?.recordTransfer(progress: progress, phase: phase)
             }
             defer { progressTask.cancel() }
             try await PocketTTSModelDownloader.download()
-            // Phase 2: initialize from cache (fast — files already on disk)
+            // Phase 2: initialize from cache (seconds — files already on disk)
+            state = .preparing(fractionCompleted: nil)
             let mgr = PocketTtsManager()
             try await mgr.initialize()
             manager = mgr
             copyBundledVoices()
             state = .ready
+        } catch is CancellationError {
+            // A user cancel isn't a failure — the row just falls back to Offer.
+            state = isDownloaded ? .ready : .notDownloaded
+        } catch let error as URLError where error.code == .cancelled {
+            state = isDownloaded ? .ready : .notDownloaded
         } catch {
             state = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Fold a downloader tick into state: phase mapping plus a smoothed
+    /// time-left estimate.
+    private func recordTransfer(progress: AssetDownloadProgress, phase: AssetDownloader.Phase) {
+        let secondsLeft = transferEstimator.estimate(
+            completedBytes: progress.completedBytes,
+            totalBytes: progress.totalBytes,
+            now: .now
+        )
+        switch phase {
+        case .queued:
+            state = .queued
+        case .transferring:
+            state = .downloading(AssetTransferInfo(
+                fractionCompleted: progress.fraction,
+                bytesCompleted: progress.completedBytes,
+                totalBytes: progress.totalBytes,
+                estimatedSecondsLeft: secondsLeft
+            ))
+        case .preparing:
+            state = .preparing(fractionCompleted: nil)
         }
     }
 
