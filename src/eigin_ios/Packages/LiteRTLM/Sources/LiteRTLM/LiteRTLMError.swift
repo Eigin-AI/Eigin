@@ -41,6 +41,10 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
     case failedToCreateSessionConfig
     case failedToCreateConversationConfig
     case failedToCreateConversation
+    case failedToSetLoraPath
+    case failedToSetAudioLoraPath
+    case failedToSetSupportedLoraRanks
+    case failedToSetSupportedAudioLoraRanks
 
     public var errorDescription: String? {
       switch self {
@@ -58,6 +62,14 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
         return "Failed to create conversation config."
       case .failedToCreateConversation:
         return "Failed to create conversation."
+      case .failedToSetLoraPath:
+        return "Failed to set LoRA path."
+      case .failedToSetAudioLoraPath:
+        return "Failed to set Audio LoRA path."
+      case .failedToSetSupportedLoraRanks:
+        return "Failed to set supported LoRA ranks."
+      case .failedToSetSupportedAudioLoraRanks:
+        return "Failed to set supported Audio LoRA ranks."
       }
     }
   }
@@ -73,6 +85,7 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
     case toolExecutionError(name: String, error: String)
     case benchmarkNotEnabled
     case benchmarkInfoUnavailable
+    case responseFormatNotEnabled
 
     public var errorDescription: String? {
       switch self {
@@ -97,6 +110,9 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
           """
       case .benchmarkInfoUnavailable:
         return "Failed to get benchmark info."
+      case .responseFormatNotEnabled:
+        return
+          "responseFormat cannot be used unless enableResponseFormat=true was passed to ConversationConfig."
       }
     }
   }
@@ -108,6 +124,7 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
     case invalidTopP
     case invalidTemperature
     case multipleSystemMessages
+    case invalidJsonSchema(String)
 
     public var errorDescription: String? {
       switch self {
@@ -123,6 +140,8 @@ public enum LiteRTLMError: Error, LocalizedError, Equatable {
         return "temperature should be non-negative"
       case .multipleSystemMessages:
         return "Cannot set both systemMessage and have system messages in initialMessages."
+      case .invalidJsonSchema(let schema):
+        return "Invalid JSON schema: \(schema)"
       }
     }
   }

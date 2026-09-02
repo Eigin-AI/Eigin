@@ -11,5 +11,7 @@
 --ifdef outdent
 --stripunusedargs closure-only
 --patternlet inline
---exclude .build,Frameworks
+# Packages/LiteRTLM is vendored third-party code kept verbatim for clean
+# upstream diffing on version bumps; do not reformat it to our style.
+--exclude .build,Frameworks,Packages/LiteRTLM
 --disable preferKeyPath,redundantSendable

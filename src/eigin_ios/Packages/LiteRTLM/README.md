@@ -2,8 +2,7 @@
 
 This is a local Swift package vendoring the Swift wrapper sources from
 [google-ai-edge/LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), Apache 2.0
-licensed. Vendored at revision `ffed38adbc33509480b5340e5173638bc20a68ff` (release
-`v0.12.0`).
+licensed. Vendored from the `v0.16.0` release tag.
 
 ## Why vendored instead of a remote SPM dependency
 
@@ -19,7 +18,7 @@ workarounds (see [issue #131](https://code.eigin.ai/dev/eigin/-/work_items/131))
 2. `Conversation` has no explicit teardown method upstream (only `deinit`), so we had to
    patch the resolved checkout's source in place at codegen time to add one.
 3. The `CLiteRTLM.framework` ships as a prebuilt dynamic framework with no companion
-   dSYM (still true as of v0.14.0), requiring a post-build `dsymutil` step regardless of
+   dSYM (still true as of v0.16.0), requiring a post-build `dsymutil` step regardless of
    how the package is consumed — see `Generate dSYM for CLiteRTLM` in
    `src/eigin_ios/project.yml`.
 
@@ -51,3 +50,7 @@ package is consumed and remains handled by the post-build script.
 5. Update the revision/version noted at the top of this file and in
    `LICENSES/swift-packages.md`.
 6. Run `just generate && just build ios && just test ios`.
+
+Keep these sources verbatim in upstream's style so the diff against a new tag
+stays clean. `just format` does not touch them and `src/eigin_ios/.swiftformat`
+excludes `Packages/LiteRTLM` from the lint (see the comment there).
