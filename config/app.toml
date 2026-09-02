@@ -9,6 +9,11 @@ support = "support@eigin.ai"
 # Where infra alerts are sent.
 alerts = "support@eigin.ai"
 
+[watermark]
+# Best-effort zero-width mark stamped into assistant output at egress. Holds the
+# magic as hex; must match the detector's canonical value. Empty disables it.
+signature = "E191"
+
 [relay]
 url.staging = "https://staging.relay.eigin.ai"
 url.production = "https://relay.eigin.ai"

@@ -72,7 +72,10 @@ struct ReplyEmailTool: Tool {
         }
 
         do {
-            let sent = try await provider.replyEmail(messageID: messageID, body: body)
+            // Mark at egress.
+            let sent = try await provider.replyEmail(
+                messageID: messageID, body: Watermark.mark(body)
+            )
             return ToolResult(
                 toolCallID: toolCall.id,
                 content: ToolHelpers.output(result: sent.jsonObject.merging(

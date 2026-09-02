@@ -52,6 +52,8 @@ pub struct AppConfig {
     pub contact: Contact,
     pub relay: RelayConfig,
     pub oauth: OAuthConfig,
+    #[serde(default)]
+    pub watermark: WatermarkConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -63,6 +65,14 @@ pub struct Identity {
 pub struct Contact {
     pub support: String,
     pub alerts: String,
+}
+
+/// Watermark enablement for the build. Empty or absent `signature` disables
+/// watermarking.
+#[derive(Debug, Default, Deserialize)]
+pub struct WatermarkConfig {
+    #[serde(default)]
+    pub signature: String,
 }
 
 #[derive(Debug, Deserialize)]

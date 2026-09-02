@@ -166,7 +166,7 @@ struct ChatMessageView: View, Equatable {
             if showFooter {
                 Button {
                     Haptics.light()
-                    UIPasteboard.general.string = content
+                    UIPasteboard.general.string = Watermark.mark(content)
                     withAnimation(.easeInOut(duration: 0.05)) {
                         showCopied = true
                     }
