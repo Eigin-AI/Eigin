@@ -1,6 +1,8 @@
-set dotenv-load := true
+# `tools config` reads .env and renders it per consumer. Recipes capture an
+# export block before eval, so a tool failure fails the recipe.
 
 ios_dir   := "src/eigin_ios"
+
 simulator := "iPhone 17 Pro"
 dest      := "platform=iOS Simulator,name=" + simulator
 relay_dir := "src/eigin_relay"
@@ -12,7 +14,15 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 [doc('Regenerate the Xcode project and other generated files')]
 generate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    vars="$({{ tools }} config export ios)"
+    eval "$vars"
     {{ tools }} generate
+
+[doc('Config (init | check | secret <NAME> <env> | export ios|relay|tf-vars [env])')]
+config *args="check":
+    {{ tools }} config {{ args }}
 
 [doc('Auto-format all code')]
 format:
@@ -133,6 +143,13 @@ release target="ios" env="staging" track="beta": generate
         iap)      lane=sync_iap ;;
         *) echo "Unknown release track: {{ track }}"; exit 1 ;;
     esac
+    # fastlane reads BUNDLE_ID / DEVELOPMENT_TEAM / ASC_* from the environment.
+    vars="$({{ tools }} config export ios)"
+    eval "$vars"
+    # Exported empty for simulator builds, so a release must assert a real one.
+    if [ -z "${DEVELOPMENT_TEAM:-}" ]; then
+        echo "DEVELOPMENT_TEAM is not set in .env — required to sign a release."; exit 1
+    fi
     {{ tools }} run --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ({{ env }}/{{ track }})" -- \
         sh -c 'cd {{ ios_dir }} && bundle exec fastlane ios '"$lane"' env:{{ env }}'
 
@@ -168,7 +185,8 @@ grant command="keygen" *args:
         sign-remote)
             env="${args[0]:-staging}"
             product="${args[1]:-$default_product}"
-            eval "$({{ tools }} infra tf-vars "$env")"
+            vars="$({{ tools }} config export tf-vars "$env")"
+            eval "$vars"
             terraform -chdir={{ infra_dir }} workspace select -or-create "$env" >/dev/null
             GRANT_PRIVATE_KEY="$(terraform -chdir={{ infra_dir }} output -raw grant_private_key_pem)" \
                 {{ tools }} grant sign --product "$product"
@@ -190,39 +208,18 @@ assets *args:
 [doc('Run a target locally (target: relay)')]
 run target env="staging":
     #!/usr/bin/env bash
+    set -euo pipefail
     case "{{ target }}" in
         relay)
-            [ -f .env ] && source .env
-            suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
-
-            # Secrets come from .env, per environment (suffixed).
-            mojeek_key="MOJEEK_API_KEY_${suffix}"
-            relay_primary_key="EIGIN_RELAY_PRIMARY_KEY_${suffix}"
-            relay_secondary_key="EIGIN_RELAY_SECONDARY_KEY_${suffix}"
-            export MOJEEK_API_KEY="${!mojeek_key}"
-            export EIGIN_RELAY_PRIMARY_KEY="${!relay_primary_key}"
-            export EIGIN_RELAY_SECONDARY_KEY="${!relay_secondary_key:-}"
-
-            # Export all PROVIDER_*_API_KEY_<ENV> as PROVIDER_*_API_KEY (without suffix).
-            for raw in $(env | grep -E "^PROVIDER_.*_API_KEY_${suffix}=" | cut -d= -f1); do
-                export "${raw%_${suffix}}"="${!raw}"
-            done
-
-            # Non-secret config comes from the environment's tfvars (single source of truth).
-            tfvars="{{ infra_dir }}/environments/{{ env }}.tfvars"
-            get_tfvar() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=[[:space:]]*"?([^"]*)"?.*/\1/'; }
-            # List-valued tfvars (e.g. ["Production", "Sandbox"]) flatten to the
-            # comma-separated string the relay parses: strip brackets/quotes/spaces.
-            get_tfvar_csv() { grep -E "^[[:space:]]*$1[[:space:]]*=" "$tfvars" | sed -E 's/^[^=]*=//' | tr -d '[]" '; }
-            export APPLE_BUNDLE_ID="$(get_tfvar apple_bundle_id)"
-            export APPLE_APP_APPLE_ID="$(get_tfvar apple_app_apple_id)"
-            apple_envs="$(get_tfvar_csv apple_environments)"
-            export APPLE_ENVIRONMENTS="${apple_envs:-Sandbox}"
-            sandbox_budget="$(get_tfvar sandbox_monthly_credit_budget)"
-            export SANDBOX_MONTHLY_CREDIT_BUDGET="${sandbox_budget:-25000}"
+            # Suffixed secrets and the environment's non-secret tfvars values,
+            # resolved and stripped to the names the relay reads.
+            vars="$({{ tools }} config export relay {{ env }})"
+            eval "$vars"
 
             grant_key_file="{{ relay_dir }}/config/grant/grant_public.pem"
-            [ -f "$grant_key_file" ] && export GRANT_PUBLIC_KEY="$(cat "$grant_key_file")"
+            if [ -f "$grant_key_file" ]; then
+                export GRANT_PUBLIC_KEY="$(cat "$grant_key_file")"
+            fi
             cd {{ relay_dir }} && cargo run
             ;;
         *) echo "Unknown run target: {{ target }}"; exit 1 ;;
@@ -241,6 +238,7 @@ clean env="staging":
 [doc('Manage infra (bootstrap | init | plan | deploy | migrate | token-key-status | token-key-replace | token-key-sweep | token-key-retire)')]
 infra command env="staging":
     #!/usr/bin/env bash
+    set -euo pipefail
     case "{{ command }}" in
         bootstrap)
             # One-time: create the dedicated project + private, versioned state
@@ -257,7 +255,8 @@ infra command env="staging":
             echo "Backend bucket: $(terraform output -raw tfstate_bucket_name)"
             ;;
         init)
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             cd {{ infra_dir }}
             # Init the backend first: a fresh worktree has no .terraform/, and
             # `workspace select` needs an initialized backend to run.
@@ -266,12 +265,14 @@ infra command env="staging":
         migrate)
             # One-time: copy local state to the remote backend. Migrates all
             # workspaces at once. Requires backend.tf. See the remote-state runbook.
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             cd {{ infra_dir }}
             terraform init -migrate-state
             ;;
         plan)
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             cd {{ infra_dir }}
             terraform workspace select -or-create {{ env }}
             terraform plan -var-file=environments/{{ env }}.tfvars
@@ -281,14 +282,16 @@ infra command env="staging":
             if [ "{{ env }}" = "production" ]; then
                 read -p "Deploy to production? [y/N] " confirm && [ "$confirm" = "y" ] || exit 1
             fi
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             cd {{ infra_dir }}
             terraform workspace select -or-create {{ env }}
             terraform apply -var-file=environments/{{ env }}.tfvars
             ;;
         token-key-status)
             # Read-only: how many wallets are still on which token encryption key.
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
             export DATABASE_URL="$(terraform -chdir={{ infra_dir }} output -raw database_url)"
             key="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
@@ -297,13 +300,14 @@ infra command env="staging":
         token-key-replace)
             # Deploy a new primary token key, keeping the current one as the decrypt
             # fallback. Refuses until the current key is saved as the secondary in .env.
-            [ -f .env ] && source .env
             suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
             old="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
             var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
-            if [ "${!var:-}" != "$old" ]; then
+            secondary="$({{ tools }} config secret TOKEN_ENCRYPTION_SECONDARY_KEY {{ env }})"
+            if [ "$secondary" != "$old" ]; then
                 echo "Add the current key to your repo-root .env as the secondary, then re-run:"
                 echo "  ${var}=${old}"
                 exit 1
@@ -312,14 +316,14 @@ infra command env="staging":
             ;;
         token-key-sweep)
             # Re-encrypt every wallet onto the new key (dry-run, confirm, then verify).
-            [ -f .env ] && source .env
             suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
             export DATABASE_URL="$(terraform -chdir={{ infra_dir }} output -raw database_url)"
             new="$(terraform -chdir={{ infra_dir }} output -raw token_encryption_key)"
             var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
-            old="${!var:-}"
+            old="$({{ tools }} config secret TOKEN_ENCRYPTION_SECONDARY_KEY {{ env }})"
             if [ -z "$old" ]; then
                 echo "No ${var} in .env — run 'just infra token-key-replace {{ env }}' first."
                 exit 1
@@ -333,15 +337,18 @@ infra command env="staging":
         token-key-retire)
             # Drop the old key once the sweep has drained. Refuses until the secondary
             # is removed from .env, then redeploys.
-            [ -f .env ] && source .env
             suffix=$(echo "{{ env }}" | tr '[:lower:]' '[:upper:]')
             var="TOKEN_ENCRYPTION_SECONDARY_KEY_${suffix}"
-            if [ -n "${!var:-}" ]; then
+            # Capture separately: inside [ -n "$(…)" ] a tool failure is invisible to
+            # set -e, and an empty result would wave this retire through.
+            secondary="$({{ tools }} config secret TOKEN_ENCRYPTION_SECONDARY_KEY {{ env }})"
+            if [ -n "$secondary" ]; then
                 echo "Remove ${var} from your repo-root .env first, then re-run."
                 exit 1
             fi
             docker info > /dev/null 2>&1 || (echo "Docker daemon is not running. Start Docker Desktop and try again."; exit 1)
-            eval "$({{ tools }} infra tf-vars {{ env }})"
+            vars="$({{ tools }} config export tf-vars {{ env }})"
+            eval "$vars"
             terraform -chdir={{ infra_dir }} workspace select {{ env }} >/dev/null
             terraform -chdir={{ infra_dir }} apply -var-file=environments/{{ env }}.tfvars
             ;;

@@ -40,7 +40,7 @@ The technical details are documented inline in the integration code.
 
 | Requirement | Notes |
 |---|---|
-| `EIGIN_AULA_OAUTH_CLIENT_ID` | Aula's own mobile-app OAuth client id. Set in `.env` (see `.env.example`), wired into the app via `EiginAulaOAuthClientID` in `Info.plist`. Connecting Aula fails fast with a clear error if it's missing. |
+| `EIGIN_AULA_OAUTH_CLIENT_ID` | Aula's own mobile-app OAuth client id, sourced from [aula-mcp](https://github.com/Casperjuel/aula-mcp). Committed in `config/app.toml`. Wired into the app via `EiginAulaOAuthClientID` in `Info.plist`. Connecting Aula fails fast with a clear error if it's missing. |
 
 ## Status and known limitations
 

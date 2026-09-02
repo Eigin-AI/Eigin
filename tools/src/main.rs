@@ -9,7 +9,6 @@ mod format;
 mod generate;
 mod grant;
 mod hooks;
-mod infra;
 mod knowledge;
 mod lint;
 mod localize;
@@ -34,10 +33,10 @@ enum Command {
     Format(format::FormatArgs),
     /// Generate and sign credit grant tokens.
     Grant(grant::GrantArgs),
+    /// Read, resolve and render project configuration.
+    Config(config::Args),
     /// Manage and run git hooks.
     Hooks(hooks::Args),
-    /// Infrastructure tooling (Terraform, deployment).
-    Infra(infra::Args),
     /// Lint all code in the repo without modifying files.
     Lint(lint::LintArgs),
     /// Localization codegen and validation.
@@ -55,8 +54,8 @@ fn main() -> Result<()> {
         Command::Assets(args) => assets::run(args),
         Command::Format(args) => format::run(args),
         Command::Grant(args) => grant::run(args),
+        Command::Config(args) => config::run(args),
         Command::Hooks(args) => hooks::run(args),
-        Command::Infra(args) => infra::run(args),
         Command::Lint(args) => lint::run(args),
         Command::Localize(args) => localize::run(args),
         Command::Run(args) => run::run(args),

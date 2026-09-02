@@ -15,7 +15,7 @@ pub fn validate(repo_root: &str, config: &LocalizeConfig) -> Result<bool> {
     let sources = config
         .validate_sources
         .as_deref()
-        .context("no validate-sources configured for ios in tools.toml")?;
+        .context("no validate-sources configured for ios in config/tools.toml")?;
     let sources_dir = format!("{repo_root}/{sources}");
     let output = format!("{repo_root}/{}", config.output);
     validator::validate(&sources_dir, &output)

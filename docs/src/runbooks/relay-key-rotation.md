@@ -8,7 +8,7 @@ so already-shipped app builds keep working. Old builds age out.
 
 ```sh
 export ENV=staging
-eval "$(cargo run -q --manifest-path tools/Cargo.toml -- infra tf-vars $ENV)"
+eval "$(cargo run -q --manifest-path tools/Cargo.toml -- config export tf-vars $ENV)"
 cd infra/scaleway && terraform workspace select $ENV
 ```
 
@@ -23,7 +23,7 @@ terraform output -raw eigin_relay_primary_key
 ## 2. Generate a new primary
 
 ```sh
-eval "$(cargo run -q --manifest-path tools/Cargo.toml -- infra tf-vars $ENV)"
+eval "$(cargo run -q --manifest-path tools/Cargo.toml -- config export tf-vars $ENV)"
 terraform apply -replace=module.relay.random_password.eigin_relay_key -var-file=environments/$ENV.tfvars
 terraform output -raw eigin_relay_primary_key   # ship this in new app builds
 ```

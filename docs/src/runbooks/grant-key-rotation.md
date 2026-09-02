@@ -7,7 +7,7 @@ grants signed with the old key, so re-issue any that must keep working.
 
 ```sh
 export ENV=staging
-eval "$(cargo run -q --manifest-path tools/Cargo.toml -- infra tf-vars $ENV)"
+eval "$(cargo run -q --manifest-path tools/Cargo.toml -- config export tf-vars $ENV)"
 cd infra/scaleway && terraform workspace select $ENV
 ```
 
