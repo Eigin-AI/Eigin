@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use tracing_subscriber::EnvFilter;
 
+use eigin_relay::assets::store::{AssetStore, InertAssetStore};
+use eigin_relay::assets::{AssetsConfig, ScalewayAssetStore};
 use eigin_relay::credits::apple::{AppStoreVerifier, MultiEnvironmentVerifier, load_root_certs};
 use eigin_relay::credits::grant::{Ed25519GrantVerifier, GrantVerifier, RejectingGrantVerifier};
 use eigin_relay::credits::postgres::{backfill_key_fp, connect_and_migrate};
@@ -48,6 +50,12 @@ struct InferenceConfig {
     token_rate_limiter: RateLimiter<uuid::Uuid>,
 }
 
+struct AssetsModuleConfig {
+    assets_config: HashMap<String, eigin_relay::assets::catalog::AssetConfig>,
+    asset_store: Arc<dyn AssetStore>,
+    presign_expiry: Duration,
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 #[tokio::main]
@@ -71,6 +79,7 @@ async fn main() {
     let credits = configure_credits(db_pool.clone()).await;
     let quota = configure_quota(db_pool.clone());
     let inference = configure_inference();
+    let assets = configure_assets();
     let webhook_rate_limiter = configure_webhook_rate_limiter();
 
     // Trusted proxy hops in front of the app, for reading the client IP from
@@ -104,6 +113,10 @@ async fn main() {
         alias_map: inference.resolved_catalog.alias_map,
         admit_floor_millicredits: inference.admit_floor_millicredits,
         token_rate_limiter: inference.token_rate_limiter,
+        assets_config: assets.assets_config,
+        assets_cache: Default::default(),
+        asset_store: assets.asset_store,
+        presign_expiry: assets.presign_expiry,
     });
 
     let app = build_router(state);
@@ -467,5 +480,44 @@ fn configure_inference() -> InferenceConfig {
         resolved_catalog,
         admit_floor_millicredits,
         token_rate_limiter,
+    }
+}
+
+/// Load assets.toml + the object store. With no env config the module is inert:
+/// an empty catalog lists nothing and unknown ids 404. Entries present but no
+/// store configured 503 at serve time (dev can point assets.toml at a local
+/// fake or leave it empty).
+fn configure_assets() -> AssetsModuleConfig {
+    let assets_config_path =
+        env::var("ASSETS_CONFIG_PATH").unwrap_or_else(|_| "config/assets.toml".into());
+    let assets_config = AssetsConfig::load(&assets_config_path)
+        .and_then(|c| c.into_map())
+        .unwrap_or_else(|e| {
+            tracing::warn!("{e} — asset module disabled");
+            HashMap::new()
+        });
+
+    let asset_store: Arc<dyn AssetStore> = match ScalewayAssetStore::from_env() {
+        Some(store) => {
+            tracing::info!("asset mirror store configured");
+            Arc::new(store)
+        }
+        None => {
+            tracing::info!("no asset store configured — /v1/assets entries will 503");
+            Arc::new(InertAssetStore)
+        }
+    };
+
+    let presign_expiry = Duration::from_secs(
+        env::var("PRESIGN_EXPIRY_SECONDS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(86_400),
+    );
+
+    AssetsModuleConfig {
+        assets_config,
+        asset_store,
+        presign_expiry,
     }
 }

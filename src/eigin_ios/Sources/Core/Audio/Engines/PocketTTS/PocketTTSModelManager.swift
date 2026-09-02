@@ -47,21 +47,7 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
     /// True when all required model files are present on disk.
     /// Checks every file FluidAudio needs so a partial download isn't mistaken for ready.
     var isDownloaded: Bool {
-        let fm = FileManager.default
-        let repoDir =
-            fm
-                .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("fluidaudio/Models/pocket-tts")
-        let required = [
-            "cond_step.mlmodelc",
-            "flowlm_step.mlmodelc",
-            "flow_decoder.mlmodelc",
-            "mimi_decoder_v2.mlmodelc",
-            "constants_bin",
-        ]
-        return required.allSatisfy {
-            fm.fileExists(atPath: repoDir.appendingPathComponent($0).path)
-        }
+        PocketTTSModelDownloader.isDownloaded()
     }
 
     // MARK: - Lifecycle
@@ -76,13 +62,12 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
         guard state != .ready else { return }
         state = .downloading(fractionCompleted: 0)
         do {
-            // Phase 1: download files with progress
-            _ = try await PocketTtsResourceDownloader
-                .ensureModels { [weak self] progress in
-                    Task { @MainActor [weak self] in
-                        self?.state = .downloading(fractionCompleted: progress.fractionCompleted)
-                    }
+            // Phase 1: seed the FluidAudio cache from the self-hosted mirror.
+            try await PocketTTSModelDownloader.download { [weak self] fraction in
+                Task { @MainActor [weak self] in
+                    self?.state = .downloading(fractionCompleted: fraction)
                 }
+            }
             // Phase 2: initialize from cache (fast — files already on disk)
             let mgr = PocketTtsManager()
             try await mgr.initialize()
@@ -97,12 +82,7 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
     /// Removes the model from memory, deletes cached files from disk, and resets state.
     func delete() {
         unload()
-        let fm = FileManager.default
-        let cacheDir =
-            fm
-                .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("fluidaudio/Models/pocket-tts")
-        try? fm.removeItem(at: cacheDir)
+        try? FileManager.default.removeItem(at: PocketTTSModelDownloader.cacheDirectory)
         state = .notDownloaded
     }
 
@@ -166,9 +146,8 @@ final class PocketTTSModelManager: OnDemandAsset, @unchecked Sendable {
     private func copyBundledVoices() {
         let fm = FileManager.default
         let constantsBinDir =
-            fm
-                .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("fluidaudio/Models/pocket-tts/constants_bin")
+            PocketTTSModelDownloader.cacheDirectory
+                .appendingPathComponent("constants_bin")
 
         guard fm.fileExists(atPath: constantsBinDir.path),
               let bundleResourceURL = Bundle.main.resourceURL

@@ -14,6 +14,10 @@ module "relay" {
   monthly_pool_size = var.monthly_pool_size
   max_scale         = var.max_scale
 
+  # Model-asset mirror — bucket + identities live in the relay module (only the
+  # relay reads it, like the database). Presign lifetime is the one knob to expose.
+  presign_expiry_seconds = var.presign_expiry_seconds
+
   # Inference proxy — provider API keys map provider IDs to their keys
   provider_api_keys = var.provider_api_keys
 

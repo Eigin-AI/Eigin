@@ -15,6 +15,20 @@ Inference is gated by credits, tied to a purchase or grant rather than an identi
 - Users buy non-expiring credit packs via IAP, or receive a direct grant. Either creates a wallet identified by a hash of the transaction, not the person.
 - A request is admitted when the wallet has balance. Credits are debited after completion, based on actual upstream token usage. Roughly 1 credit buys €0.01 of inference at upstream cost.
 
+## Model assets
+
+On-device models (the local LLM and the TTS voices) download from a mirror the
+relay fronts, not from their original HuggingFace repos. The relay serves a
+versioned manifest per asset — file list, SHA-256 checksums, and short-lived
+presigned download URLs — and the app verifies every file before use.
+
+This pins each model to an audited version that's always available: upstream
+can't mutate or pull files, and there are no third-party rate limits. Which
+version is current is a reviewed change in the relay's config, so a swap is a
+merge, not a live edit. The mirror is access-controlled by the same shared key
+as everything else; if you [self-host](#self-hosting), you run your own bucket
+and audit your own uploads.
+
 ## Abuse prevention
 
 - A shared key (`x-eigin-key`) gates every request.

@@ -8,11 +8,14 @@ LiteRT-LM's Swift wrapper is vendored as a local package at `src/eigin_ios/Packa
 
 ## The model file
 
-A single `.litertlm` file (~2.6 GB) downloads from the [litert-community](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm) HuggingFace repo. It's the standard build, which bundles vision and audio encoders; the runtime loads those on demand, so they cost nothing while only text is used. The app is text-only today.
+A single `.litertlm` file (~2.6 GB) downloads from Eigin's [model mirror](../runbooks/model-mirror.md)
+— not HuggingFace. It's the standard build, which bundles vision and audio
+encoders; the runtime loads those on demand, so they cost nothing while only
+text is used. The app is text-only today.
 
 | | |
 |---|---|
-| Download | `GemmaModelDownloader`: background `URLSession`, resumable, parallel |
+| Download | `GemmaModelDownloader`: background `URLSession`, resumable, parallel, checksum-verified |
 | Location | `~/Documents/Models/gemma4-e2b-litertlm/` |
 | Backup | Excluded from iCloud/iTunes backups (re-downloadable) |
 | Device gate | Requires ≥ 5 GB RAM (iPhone 15 or later); checked before download and load |

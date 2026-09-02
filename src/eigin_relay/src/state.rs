@@ -4,6 +4,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::assets::cache::ManifestCache;
+use crate::assets::catalog::AssetConfig;
+use crate::assets::store::SharedAssetStore;
 use crate::credits::CreditLedger;
 use crate::credits::apple::AppleVerifier;
 use crate::credits::grant::GrantVerifier;
@@ -78,4 +81,15 @@ pub struct AppState {
     pub admit_floor_millicredits: i64,
     /// Per-token rate limiter (keyed by wallet UUID).
     pub token_rate_limiter: crate::RateLimiter<uuid::Uuid>,
+
+    // --- Model assets ---
+    /// Configured assets (id → pinned version + manifest sha), from assets.toml.
+    pub assets_config: HashMap<String, AssetConfig>,
+    /// Lazy per-version manifest cache (fetch → sha-verify → parse → hold).
+    pub assets_cache: ManifestCache,
+    /// Object-storage boundary for the asset mirror; `InertAssetStore` when
+    /// no bucket is configured (then entries -> 503 at serve time).
+    pub asset_store: SharedAssetStore,
+    /// How long presigned download URLs stay valid.
+    pub presign_expiry: Duration,
 }

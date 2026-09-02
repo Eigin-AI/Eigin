@@ -55,6 +55,25 @@ struct ModelsListResponse: Decodable {
     }
 }
 
+/// Manifest for a mirrored model asset, from `GET /v1/assets/{id}`: the
+/// pinned version's file list with checksums and short-lived presigned URLs.
+struct AssetManifest: Decodable, Sendable, Equatable {
+    let id: String
+    let version: String
+    let files: [File]
+
+    struct File: Decodable, Sendable, Equatable {
+        /// Path relative to the asset version root (mirrors the source tree 1:1).
+        let path: String
+        let size: Int64
+        /// Hex SHA-256 of the file — verify downloads against this.
+        let sha256: String
+        /// Presigned GET URL, valid for a limited window; refetch the manifest
+        /// if it expires.
+        let url: String
+    }
+}
+
 /// Standard error response from relay endpoints.
 struct RelayErrorResponse: Decodable {
     let error: Body

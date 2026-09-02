@@ -153,3 +153,11 @@ variable "webhook_rate_limit_window_seconds" {
   default     = 60
 }
 
+# --- Model-asset mirror ---
+
+variable "presign_expiry_seconds" {
+  description = "How long presigned asset download URLs stay valid (default 24h)"
+  type        = number
+  default     = 86400
+}
+

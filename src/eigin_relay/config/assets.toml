@@ -1,0 +1,27 @@
+# Model-asset mirror pointer: which asset versions the relay serves as current.
+#
+# One [[assets]] entry per mirrored asset. Bumping `version` (+ the new
+# `manifest_sha256`) is the review-gated swap: apps keep referencing the same
+# asset id. Entries are minted by `eigin-tools assets upload`, which prints the
+# ready-to-paste block.
+#
+# This one file is baked into both staging and production images, so a version
+# must exist in both buckets under the same id. The runbook promotes by
+# re-uploading the same bytes to production with `--version <same id>`.
+#
+# Dev with no bucket configured: this file stays empty and the module is inert
+# (GET /v1/assets lists nothing, GET /v1/assets/{id} 404s).
+[[assets]]
+id = "gemma4-e2b-litertlm"
+version = "2026-09-01-2111"
+manifest_sha256 = "2580c981e3a75d1b45142b1a46a99a54d4a9bf4980e5fceee99b19409606a916"
+
+[[assets]]
+id = "plapre-pico-coreml"
+version = "2026-09-01-2140"
+manifest_sha256 = "695a1188ac96e79c1159c4bc468c67558c09cf36b9c9098792fb3e478386ea84"
+
+[[assets]]
+id = "pocket-tts-coreml"
+version = "2026-09-01-2141"
+manifest_sha256 = "80c33c11f468b304d6f05bbc257b24e14eac9bbe6031754be150d79353da4a3e"

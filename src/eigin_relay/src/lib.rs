@@ -4,6 +4,7 @@
 //! - Anonymous search proxy with a shared rolling-window community pool.
 //! - Anonymous inference proxy with a per-wallet credit ledger.
 
+pub mod assets;
 pub mod auth;
 pub mod client_ip;
 pub mod credits;

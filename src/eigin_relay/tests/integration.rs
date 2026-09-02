@@ -117,6 +117,10 @@ async fn test_state_with_keys(
         alias_map: HashMap::new(),
         admit_floor_millicredits: 50_000,
         token_rate_limiter: eigin_relay::RateLimiter::new(20, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 
@@ -369,6 +373,10 @@ async fn test_state_with_ip_limit(
         alias_map: HashMap::new(),
         admit_floor_millicredits: 50_000,
         token_rate_limiter: eigin_relay::RateLimiter::new(100, Duration::from_secs(60)),
+        assets_config: HashMap::new(),
+        assets_cache: Default::default(),
+        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
+        presign_expiry: Duration::from_secs(86_400),
     })
 }
 
@@ -513,4 +521,146 @@ async fn search_pool_exhausts_after_quota_reached() {
     let body = to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["error"]["message"], "monthly search quota exhausted");
+}
+
+// --- Asset mirror ---
+
+/// State with an assets module backed by the in-memory store: one configured
+/// asset whose manifest sha matches its bytes.
+async fn asset_state(
+    assets: Vec<eigin_relay::assets::catalog::AssetConfig>,
+    store: eigin_relay::assets::store::InMemoryAssetStore,
+) -> Arc<eigin_relay::AppState> {
+    let mut state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let inner = Arc::get_mut(&mut state).expect("unique ref");
+    inner.assets_config = assets.into_iter().map(|a| (a.id.clone(), a)).collect();
+    inner.asset_store = Arc::new(store);
+    state
+}
+
+#[tokio::test]
+async fn assets_endpoints_require_key() {
+    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let app = router(state);
+
+    assert_eq!(
+        call(&app, "/v1/assets", None).await.status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        call(&app, "/v1/assets/gemma4-e2b", None).await.status(),
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn assets_list_is_empty_when_not_configured() {
+    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let app = router(state);
+
+    let response = call(&app, "/v1/assets", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["assets"], serde_json::json!([]));
+}
+
+#[tokio::test]
+async fn assets_get_unknown_id_404s() {
+    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let app = router(state);
+
+    let response = call(&app, "/v1/assets/unknown", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["error"]["type"], "asset_not_found");
+}
+
+#[tokio::test]
+async fn assets_list_and_get_serve_manifest() {
+    let id = "gemma4-e2b";
+    let version = "2026-01-15-1448";
+    let manifest = serde_json::json!({
+        "asset_id": id,
+        "version": version,
+        "origin": { "repo": "litert-community/gemma-4-E2B-it-litert-lm", "revision": "c0ffee" },
+        "files": [
+            { "path": "gemma-4-E2B-it.litertlm", "size": 1234, "sha256": "cafebabe" }
+        ]
+    });
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    let sha = eigin_relay::assets::cache::sha256_hex(&bytes);
+
+    let store = eigin_relay::assets::store::InMemoryAssetStore::with_manifest(id, version, bytes);
+    let config = vec![eigin_relay::assets::catalog::AssetConfig {
+        id: id.into(),
+        version: version.into(),
+        manifest_sha256: sha,
+    }];
+    let state = asset_state(config, store).await;
+    let app = router(state);
+
+    // List shows the configured asset.
+    let response = call(&app, "/v1/assets", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["assets"][0]["id"], id);
+    assert_eq!(json["assets"][0]["version"], version);
+
+    // Get serves the manifest with a presigned URL per file.
+    let response = call(&app, &format!("/v1/assets/{id}"), Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["id"], id);
+    assert_eq!(json["version"], version);
+    assert_eq!(json["files"][0]["path"], "gemma-4-E2B-it.litertlm");
+    assert_eq!(json["files"][0]["sha256"], "cafebabe");
+    assert!(
+        json["files"][0]["url"]
+            .as_str()
+            .unwrap()
+            .contains("assets/gemma4-e2b/2026-01-15-1448/gemma-4-E2B-it.litertlm")
+    );
+}
+
+#[tokio::test]
+async fn assets_get_sha_mismatch_is_503() {
+    let id = "plapre-pico";
+    let version = "2026-01-15-1448";
+    let manifest = serde_json::json!({
+        "asset_id": id, "version": version,
+        "files": [ { "path": "model.bin", "size": 1, "sha256": "aa" } ]
+    });
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    let store = eigin_relay::assets::store::InMemoryAssetStore::with_manifest(id, version, bytes);
+    let config = vec![eigin_relay::assets::catalog::AssetConfig {
+        id: id.into(),
+        version: version.into(),
+        manifest_sha256: "definitely-not-the-sha".into(),
+    }];
+    let state = asset_state(config, store).await;
+    let app = router(state);
+
+    let response = call(&app, &format!("/v1/assets/{id}"), Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn assets_get_without_store_is_503() {
+    // Entry configured but no bucket behind it: 503, not 404.
+    let config = vec![eigin_relay::assets::catalog::AssetConfig {
+        id: "pocket-tts".into(),
+        version: "2026-01-15-1448".into(),
+        manifest_sha256: "x".into(),
+    }];
+    let store =
+        eigin_relay::assets::store::InMemoryAssetStore::new(std::collections::HashMap::new());
+    let state = asset_state(config, store).await;
+    let app = router(state);
+
+    let response = call(&app, "/v1/assets/pocket-tts", Some("test-relay-key")).await;
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
 }

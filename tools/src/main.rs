@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+mod assets;
 mod codegen;
 mod config;
 mod design;
@@ -27,6 +28,8 @@ struct Cli {
 enum Command {
     /// Run all code generation tasks for the project.
     Generate(generate::GenerateArgs),
+    /// Manage and upload self-hosted model assets.
+    Assets(assets::AssetsArgs),
     /// Format all code in the repo.
     Format(format::FormatArgs),
     /// Generate and sign credit grant tokens.
@@ -49,6 +52,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Generate(args) => generate::run(args),
+        Command::Assets(args) => assets::run(args),
         Command::Format(args) => format::run(args),
         Command::Grant(args) => grant::run(args),
         Command::Hooks(args) => hooks::run(args),

@@ -115,4 +115,34 @@ struct RelayClientTests {
             _ = try await client.balance(token: "t")
         }
     }
+
+    @Test func assetDecodesManifest() async throws {
+        FakeURLProtocol.stubResponse(
+            for: "https://relay.test/v1/assets/gemma4-e2b",
+            data: Data(
+                #"{"id":"gemma4-e2b","version":"2026-01-15-1448","files":[{"path":"gemma-4-E2B-it.litertlm","size":2583691264,"sha256":"abc","url":"https://bucket.s3.fr-par.scw.cloud/assets/gemma4-e2b/2026-01-15-1448/gemma-4-E2B-it.litertlm?X-Amz-Sig=s"}]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        let manifest = try await makeClient().asset(id: "gemma4-e2b")
+        #expect(manifest.id == "gemma4-e2b")
+        #expect(manifest.version == "2026-01-15-1448")
+        #expect(manifest.files.count == 1)
+        #expect(manifest.files[0].path == "gemma-4-E2B-it.litertlm")
+        #expect(manifest.files[0].size == 2_583_691_264)
+        #expect(manifest.files[0].sha256 == "abc")
+        #expect(manifest.files[0].url.contains("X-Amz-Sig"))
+    }
+
+    @Test func assetMapsStatusCodeToError() async throws {
+        FakeURLProtocol.stubResponse(
+            for: "https://relay.test/v1/assets/unknown",
+            data: Data(#"{"error":{"message":"unknown asset","type":"asset_not_found"}}"#.utf8),
+            statusCode: 404
+        )
+        await #expect(throws: RelayClientError.self) {
+            _ = try await makeClient().asset(id: "unknown")
+        }
+    }
 }
