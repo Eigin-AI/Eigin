@@ -351,6 +351,38 @@ enum Localized {
                 Localized.get("chat.input.messagePlaceholder")
             }
         }
+
+        enum Thinking {
+            /// Shown by the thinking indicator when a response is close
+            static var almostThere: String {
+                Localized.get("chat.thinking.almostThere")
+            }
+
+            /// Shown by the thinking indicator for very long waits
+            static var sorryForTheWait: String {
+                Localized.get("chat.thinking.sorryForTheWait")
+            }
+
+            /// Shown by the thinking indicator after a longer wait
+            static var stillThinking: String {
+                Localized.get("chat.thinking.stillThinking")
+            }
+
+            /// Shown by the thinking indicator when the wait is unusually long
+            static var takingAWhile: String {
+                Localized.get("chat.thinking.takingAWhile")
+            }
+
+            /// Shown by the thinking indicator after a short wait
+            static var thinking: String {
+                Localized.get("chat.thinking.thinking")
+            }
+
+            /// Status label shown by the thinking figure while the turn waits for the user to act
+            static var waitingForYou: String {
+                Localized.get("chat.thinking.waitingForYou")
+            }
+        }
     }
 
     enum Common {
