@@ -8619,6 +8619,23 @@
         }
       }
     },
+    "provider.eigin.nothingToRestore": {
+      "comment": "Shown when restoring finds no previous credit purchases on the Apple ID",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen køb at gendanne."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No purchases to restore."
+          }
+        }
+      }
+    },
     "provider.eigin.noProducts": {
       "comment": "Shown when no purchase options can be loaded",
       "localizations": {
@@ -8700,6 +8717,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Always private"
+          }
+        }
+      }
+    },
+    "provider.eigin.restoreCredits": {
+      "comment": "Button that re-redeems past purchases so credits survive a reinstall",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gendan credits"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore credits"
           }
         }
       }

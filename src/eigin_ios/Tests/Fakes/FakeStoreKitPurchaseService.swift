@@ -14,6 +14,8 @@ final class FakeStoreKitPurchaseService: StoreKitPurchaseService, @unchecked Sen
     var purchaseErrors: [String: Error] = [:]
     /// Proofs handed out by the unfinished-transaction scan.
     var unfinished: [String] = []
+    /// Proofs handed out by the historical (reinstall recovery) scan.
+    var historical: [String] = []
     /// Proofs `finish(proof:)` was called with, in order.
     private(set) var finished: [String] = []
 
@@ -89,6 +91,10 @@ final class FakeStoreKitPurchaseService: StoreKitPurchaseService, @unchecked Sen
 
     func deliveredProofs() -> AsyncStream<String> {
         delivered
+    }
+
+    func historicalProofs() async -> [String] {
+        historical
     }
 
     func finish(proof: String) async {

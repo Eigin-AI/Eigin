@@ -2909,6 +2909,11 @@ enum Localized {
                 Localized.get("provider.eigin.noProducts")
             }
 
+            /// Shown when restoring finds no previous credit purchases on the Apple ID
+            static var nothingToRestore: String {
+                Localized.get("provider.eigin.nothingToRestore")
+            }
+
             /// Chat error suggestion shown when the Eigin relay has no credits left
             static var outOfCreditsBody: String {
                 Localized.get("provider.eigin.outOfCreditsBody")
@@ -2927,6 +2932,11 @@ enum Localized {
             /// Info section: privacy (title)
             static var privacyTitle: String {
                 Localized.get("provider.eigin.privacyTitle")
+            }
+
+            /// Button that re-redeems past purchases so credits survive a reinstall
+            static var restoreCredits: String {
+                Localized.get("provider.eigin.restoreCredits")
             }
 
             /// Subtitle on the Eigin provider row in the connections list

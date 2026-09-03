@@ -256,4 +256,89 @@ struct CreditsServiceTests {
         #expect(wallets.count == 1)
         #expect(wallets.first?.token == "eict_proof-a")
     }
+
+    // MARK: - Restore purchases (#216)
+
+    @Test func restoreRedeemsHistoricalProofsAndPersistsWalletsWithoutFinishing() async throws {
+        let relay = FakeRelayClient()
+        let redeemed = ProofLog()
+        mintingRedeemer(relay: relay, redeemed: redeemed)
+        let store = FakeStoreKitPurchaseService()
+        store.historical = ["proof-a", "proof-b"]
+        let (service, manager) = makeService(relay: relay, store: store)
+
+        let wallets = try await service.restorePurchases()
+
+        #expect(redeemed.all == ["proof-a", "proof-b"])
+        #expect(
+            manager.wallets().map(\.token) == ["eict_proof-a", "eict_proof-b"],
+            "one wallet persisted per historical transaction"
+        )
+        // Historical transactions are already finished — finish would be a no-op and must not
+        // consume unrelated proofs tracked for the unfinished-transaction path.
+        #expect(store.finished.isEmpty)
+        #expect(wallets.map(\.token) == ["eict_proof-a", "eict_proof-b"])
+    }
+
+    @Test func restoreContinuesPastAFailedProof() async throws {
+        let relay = FakeRelayClient()
+        let redeemed = ProofLog()
+        mintingRedeemer(relay: relay, redeemed: redeemed, failed: ["proof-a"])
+        let store = FakeStoreKitPurchaseService()
+        store.historical = ["proof-a", "proof-b"]
+        let (service, manager) = makeService(relay: relay, store: store)
+
+        // One bad proof (e.g. a product the relay no longer knows) must not block the rest.
+        let wallets = try await service.restorePurchases()
+
+        #expect(redeemed.all == ["proof-b"])
+        #expect(manager.wallets().map(\.token) == ["eict_proof-b"])
+        #expect(wallets.map(\.token) == ["eict_proof-b"])
+    }
+
+    @Test func restoreThrowsWhenEveryProofFails() async throws {
+        let relay = FakeRelayClient()
+        let store = FakeStoreKitPurchaseService()
+        store.historical = ["proof-a", "proof-b"]
+        relay.redeemHandler = { _, _ in throw RelayClientError.network("") }
+        let (service, manager) = makeService(relay: relay, store: store)
+
+        await #expect(throws: RelayClientError.self) {
+            try await service.restorePurchases()
+        }
+        #expect(manager.wallets().isEmpty)
+    }
+
+    @Test func restoreWithEmptyHistoryReturnsNoWallets() async throws {
+        let (service, manager) = makeService(
+            relay: FakeRelayClient(),
+            store: FakeStoreKitPurchaseService()
+        )
+
+        let wallets = try await service.restorePurchases()
+
+        #expect(wallets.isEmpty)
+        #expect(manager.wallets().isEmpty)
+    }
+
+    @Test func restoreReRedeemUpsertsExistingWalletWithoutDuplicates() async throws {
+        let relay = FakeRelayClient()
+        let redeemed = ProofLog()
+        mintingRedeemer(relay: relay, redeemed: redeemed)
+        let store = FakeStoreKitPurchaseService()
+        store.purchaseProofs = ["proof-a"]
+        store.historical = ["proof-a"]
+        let (service, manager) = makeService(relay: relay, store: store)
+
+        // The wallet from the original purchase is gone from the Keychain after a reinstall;
+        // on device the same proof redeems to the same token (relay idempotency). Here both
+        // the purchase and the restore run against one store to show the upsert dedupes.
+        _ = try await service.purchaseCredits(productID: "eigin.credits.v1.apple.500")
+        let restored = try await service.restorePurchases()
+
+        let wallets = manager.wallets()
+        #expect(wallets.count == 1)
+        #expect(wallets.first?.token == "eict_proof-a")
+        #expect(restored.map(\.token) == ["eict_proof-a"])
+    }
 }

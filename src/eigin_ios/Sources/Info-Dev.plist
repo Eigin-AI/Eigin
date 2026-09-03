@@ -54,6 +54,8 @@
 	<array>
 		<string>INSendMessageIntent</string>
 	</array>
+	<key>SKIncludeConsumableInAppPurchaseHistory</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

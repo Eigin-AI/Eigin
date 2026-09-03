@@ -133,6 +133,11 @@ struct PreviewCreditsService: CreditsService {
     func startOutstandingRedemption() async {
         // Previews have no StoreKit queue to recover.
     }
+
+    func restorePurchases() async throws -> [CreditWallet] {
+        // Previews have no purchase history to restore.
+        []
+    }
 }
 
 /// A model refresher for previews. Behavior is driven entirely by the provider's own cache so it
