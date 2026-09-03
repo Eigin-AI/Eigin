@@ -25,16 +25,49 @@ struct GetCreditsSheetContent: View {
                 }
             }
 
+            restoreButton
+
             if let error = model.error {
                 Text(error)
                     .typography(Typography.note)
                     .foregroundStyle(colors.text.standard.error)
                     .multilineTextAlignment(.center)
-                    .padding(.top, Spacing.n8)
+                    .padding(.top, Spacing.n4)
             }
         }
         .padding(.horizontal, px)
         .task { await model.loadProductsIfNeeded() }
+    }
+
+    /// Re-redeem the account's purchase history so credits survive a reinstall. Plain text so it
+    /// reads as a secondary action next to the credit packs; notes and errors sit under it.
+    /// Hidden until the product list has loaded so the empty-state spinner stays clean.
+    @ViewBuilder
+    private var restoreButton: some View {
+        if model.hasLoadedProducts {
+            Button {
+                Task {
+                    if await model.restorePurchases() { onPurchased() }
+                }
+            } label: {
+                HStack(spacing: Spacing.n4) {
+                    if model.isRestoring {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    Text(Localized.Provider.Eigin.restoreCredits)
+                }
+                .typography(Typography.note)
+                .foregroundStyle(
+                    model.isRestoring ? colors.text.standard.disabled : colors.text.standard.muted
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isPurchasing || model.isRestoring)
+            .padding(.top, Spacing.n4)
+        }
     }
 
     @ViewBuilder
@@ -70,7 +103,7 @@ struct GetCreditsSheetContent: View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
         }
         .buttonStyle(.plain)
-        .disabled(model.isPurchasing)
+        .disabled(model.isPurchasing || model.isRestoring)
     }
 
     private func priceTag(_ product: PurchasableCredit) -> some View {

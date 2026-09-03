@@ -20,6 +20,12 @@ protocol CreditsService: Sendable {
     /// Redeem every outstanding StoreKit transaction: scan the queue of unfinished transactions
     /// once, then keep redeeming whatever StoreKit delivers, for the process lifetime.
     func startOutstandingRedemption() async
+    /// Re-redeem every consumable purchase in the App Store account's history — after a reinstall
+    /// or on a new device — and persist the wallets that come back. Redeem is idempotent per
+    /// transaction, so this restores the current balance rather than double-granting. Per-proof
+    /// failures are skipped; throws only if every proof failed, so the UI can surface e.g. an
+    /// offline error. Returns the restored wallets (possibly a subset on partial failure).
+    func restorePurchases() async throws -> [CreditWallet]
 }
 
 struct DefaultCreditsService: CreditsService {
@@ -92,15 +98,7 @@ struct DefaultCreditsService: CreditsService {
         productID: String? = nil
     ) async throws -> CreditWallet {
         do {
-            let response = try await relayClient.redeem(type: "apple_iap", proof: proof)
-            let wallet = CreditWallet(
-                token: response.token,
-                credits: response.credits,
-                status: response.status,
-                productID: productID,
-                updatedAt: Date()
-            )
-            walletManager.add(wallet)
+            let wallet = try await redeem(proof: proof, productID: productID)
             await purchaseService.finish(proof: proof)
             return wallet
         } catch {
@@ -112,6 +110,47 @@ struct DefaultCreditsService: CreditsService {
             )
             throw error
         }
+    }
+
+    func restorePurchases() async throws -> [CreditWallet] {
+        let proofs = await purchaseService.historicalProofs()
+        var wallets: [CreditWallet] = []
+        var lastError: Error?
+
+        for proof in proofs {
+            do {
+                // Historical transactions are already finished — redeem and store only.
+                try await wallets.append(redeem(proof: proof))
+            } catch {
+                AppLogger.warning(
+                    "Restore skipped a historical purchase: \(public: String(describing: error))",
+                    category: .general
+                )
+                lastError = error
+            }
+        }
+
+        // Surface a total failure (e.g. offline) to the caller; partial success is fine — the
+        // remaining wallets are good and the user can restore again for the rest.
+        if wallets.isEmpty, let lastError {
+            throw lastError
+        }
+        return wallets
+    }
+
+    /// Redeem a proof and persist the wallet it returns. The relay deduplicates on the
+    /// transaction: repeat redeems return the same wallet with its current balance.
+    private func redeem(proof: String, productID: String? = nil) async throws -> CreditWallet {
+        let response = try await relayClient.redeem(type: "apple_iap", proof: proof)
+        let wallet = CreditWallet(
+            token: response.token,
+            credits: response.credits,
+            status: response.status,
+            productID: productID,
+            updatedAt: Date()
+        )
+        walletManager.add(wallet)
+        return wallet
     }
 
     private func consumeDeliveredProofs() async {
@@ -151,7 +190,7 @@ private final class RedemptionState: @unchecked Sendable {
 
     /// Lets the proof be claimed again — for redeliveries after a failed redeem.
     func release(_ proof: String) {
-        lock.withLock {
+        _ = lock.withLock {
             inFlight.remove(proof)
         }
     }

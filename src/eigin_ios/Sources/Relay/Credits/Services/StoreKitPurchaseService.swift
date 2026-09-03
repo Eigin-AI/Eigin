@@ -29,6 +29,11 @@ protocol StoreKitPurchaseService: Sendable {
     /// transactions set up before an earlier redemption completed). Unverified transactions are
     /// finished immediately.
     func deliveredProofs() -> AsyncStream<String>
+    /// Verified proofs for every consumable, non-revoked transaction in the App Store account's
+    /// history for this app — including already finished ones. Used to re-redeem past purchases
+    /// after a reinstall. These transactions are already finished; there is nothing to finish
+    /// afterwards.
+    func historicalProofs() async -> [String]
     /// Finish the transaction backing this proof. No-op for an unknown proof.
     func finish(proof: String) async
 }
@@ -128,6 +133,19 @@ struct DefaultStoreKitPurchaseService: StoreKitPurchaseService {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    func historicalProofs() async -> [String] {
+        var proofs: [String] = []
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result else { continue }
+            // Only consumable credit packs; skips anything revoked (e.g. refunded).
+            guard transaction.productType == .consumable, transaction.revocationDate == nil else {
+                continue
+            }
+            proofs.append(result.jwsRepresentation)
+        }
+        return proofs
     }
 
     func finish(proof: String) async {

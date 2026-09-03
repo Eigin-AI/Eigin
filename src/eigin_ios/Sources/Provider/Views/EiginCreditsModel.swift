@@ -23,6 +23,7 @@ final class EiginCreditsModel {
     private(set) var hasLoadedProducts = false
     private(set) var isRefreshing = false
     private(set) var purchasingID: String?
+    private(set) var isRestoring = false
     var error: String?
 
     var isPurchasing: Bool {
@@ -71,10 +72,32 @@ final class EiginCreditsModel {
         }
     }
 
+    /// Restore past purchases and refresh the balance. Returns `true` when at least one wallet came
+    /// back, so the caller can dismiss — mirrors `purchase(_:)`. An empty result (no purchases in
+    /// the account's history) is surfaced as an error-style note, not a silent no-op.
+    func restorePurchases() async -> Bool {
+        guard !isRestoring, !isPurchasing else { return false }
+        isRestoring = true
+        error = nil
+        defer { isRestoring = false }
+        do {
+            let wallets = try await creditsService.restorePurchases()
+            await refresh()
+            guard !wallets.isEmpty else {
+                error = Localized.Provider.Eigin.nothingToRestore
+                return false
+            }
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
     /// Buy a product and refresh the balance. Returns `true` on success so the caller can dismiss.
-    /// Guarded so only one purchase runs at a time.
+    /// Guarded so only one operation runs at a time — a purchase and a restore must not interleave.
     func purchase(_ productID: String) async -> Bool {
-        guard purchasingID == nil else { return false }
+        guard purchasingID == nil, !isRestoring else { return false }
         purchasingID = productID
         error = nil
         defer { purchasingID = nil }

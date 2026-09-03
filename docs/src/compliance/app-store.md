@@ -162,7 +162,7 @@ The App is free. Hosted AI through Eigin is paid with prepaid credits bought as 
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 3.1.1 In-app purchase | Met | Credits are sold only through in-app purchase. No other unlock mechanism exists. Purchased credits do not expire. No loot boxes, gifting, or trials |
+| 3.1.1 In-app purchase | Met | Credits are sold only through in-app purchase. No other unlock mechanism exists. Purchased credits do not expire. A "Restore credits" action re-redeems the Apple ID's purchase history so credits survive a reinstall. No loot boxes, gifting, or trials |
 | 3.1.1(a) | N/A | No external purchase links |
 | 3.1.2 Subscriptions | N/A | No subscriptions |
 | 3.1.3 Other purchase methods | Met | The user may connect an AI provider they already have a relationship with by entering their own API key. The App does not sell or promote those providers' plans and contains no calls to action to purchase outside the App |

@@ -130,6 +130,10 @@ targets:
           - CFBundleURLName: ai.eigin.app
             CFBundleURLSchemes: [eigin]
         ITSAppUsesNonExemptEncryption: false
+        # Credit packs are consumables, finished right after redeem. Without this key,
+        # Transaction.all excludes finished consumables and reinstall recovery (#216) has
+        # nothing to re-redeem.
+        SKIncludeConsumableInAppPurchaseHistory: true
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -311,6 +315,10 @@ targets:
           - CFBundleURLName: ai.eigin.app.dev
             CFBundleURLSchemes: [eigin, eigindev]
         ITSAppUsesNonExemptEncryption: false
+        # Credit packs are consumables, finished right after redeem. Without this key,
+        # Transaction.all excludes finished consumables and reinstall recovery (#216) has
+        # nothing to re-redeem.
+        SKIncludeConsumableInAppPurchaseHistory: true
     settings:
       base:
         SWIFT_VERSION: "6.0"
