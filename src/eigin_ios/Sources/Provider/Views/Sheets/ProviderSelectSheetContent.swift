@@ -100,6 +100,10 @@ struct ProviderSelectSheetContent: View {
                     }
                 }
             }
+
+            // Third-party disclosure before the user connects a provider of
+            // their own (App Store guideline 5.1.2).
+            ThirdPartyDisclosureText(variant: .ownProvider)
         }
         .padding(.horizontal, Spacing.n24)
     }

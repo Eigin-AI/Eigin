@@ -8228,6 +8228,57 @@
         }
       }
     },
+    "provider.disclosure.eiginCloud": {
+      "comment": "Third-party AI disclosure on the credits sheet, where the user commits to Eigin cloud inference",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samtaler, du sender, behandles af tredjeparts-AI-udbydere i EU på vegne af Eigin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations you send are processed by third-party AI providers in the EU on Eigin's behalf."
+          }
+        }
+      }
+    },
+    "provider.disclosure.ownProvider": {
+      "comment": "Third-party AI disclosure on the provider-select sheet, where the user commits to a provider they connect themselves",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samtaler, du sender, går direkte til den tredjeparts-AI-udbyder, du forbinder, på dennes vilkår."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations you send go directly to the third-party AI provider you connect, under their terms."
+          }
+        }
+      }
+    },
+    "provider.disclosure.privacyLink": {
+      "comment": "Tappable tail of the third-party AI disclosure, linking to the privacy policy",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se privatlivspolitikken."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See the privacy policy."
+          }
+        }
+      }
+    },
     "provider.edit.removeWarning": {
       "comment": "Confirmation message before removing a provider",
       "localizations": {
