@@ -100,6 +100,16 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Divider().padding(.leading, Spacing.n24)
+
+                    NavigationLink {
+                        AboutView()
+                            .hidesTabBar()
+                    } label: {
+                        chevronRow(Localized.Settings.Section.about)
+                    }
+                    .buttonStyle(.plain)
+
 #if DEBUG
                     Divider().padding(.leading, Spacing.n24)
 

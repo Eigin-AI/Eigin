@@ -6,7 +6,7 @@
 | swift-markdown | https://github.com/swiftlang/swift-markdown | 0.7.3 | Apache 2.0 |
 | iosMath | https://github.com/junyan72/iosMath | pinned by commit, see project.yml | MIT |
 | HighlightSwift | https://github.com/appstefan/highlightswift | pinned by commit, see project.yml | MIT |
-| MCP Swift SDK | https://github.com/modelcontextprotocol/swift-sdk | 0.11.0 | MIT |
+| MCP Swift SDK | https://github.com/modelcontextprotocol/swift-sdk | 0.11.0 | Apache 2.0 (relicensing from MIT in progress upstream) |
 | Factory | https://github.com/hmlongco/Factory | 2.4.0 | MIT |
 | FluidAudio | https://github.com/42futures/FluidAudio | feature/pocket-tts-sessions | Apache 2.0 |
 | swift-transformers | https://github.com/huggingface/swift-transformers | 1.3.0 | Apache 2.0 |

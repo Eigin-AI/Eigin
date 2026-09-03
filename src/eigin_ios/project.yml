@@ -129,6 +129,8 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: ai.eigin.app
             CFBundleURLSchemes: [eigin]
+        EiginPrivacyURL: $(EIGIN_PRIVACY_URL)
+        EiginTermsURL: $(EIGIN_TERMS_URL)
         ITSAppUsesNonExemptEncryption: false
         # Credit packs are consumables, finished right after redeem. Without this key,
         # Transaction.all excludes finished consumables and reinstall recovery (#216) has
@@ -160,6 +162,8 @@ targets:
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_PRODUCTION}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_PRODUCTION}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
+        EIGIN_PRIVACY_URL: ${EIGIN_PRIVACY_URL}
+        EIGIN_TERMS_URL: ${EIGIN_TERMS_URL}
         EIGIN_WATERMARK_SIGNATURE: ${EIGIN_WATERMARK_SIGNATURE}
         EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_PRODUCTION}
         EIGIN_MICROSOFT_OAUTH_CLIENT_ID: ${EIGIN_MICROSOFT_OAUTH_CLIENT_ID_PRODUCTION}
@@ -314,6 +318,8 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: ai.eigin.app.dev
             CFBundleURLSchemes: [eigin, eigindev]
+        EiginPrivacyURL: $(EIGIN_PRIVACY_URL)
+        EiginTermsURL: $(EIGIN_TERMS_URL)
         ITSAppUsesNonExemptEncryption: false
         # Credit packs are consumables, finished right after redeem. Without this key,
         # Transaction.all excludes finished consumables and reinstall recovery (#216) has
@@ -348,6 +354,8 @@ targets:
         EIGIN_RELAY_URL: ${EIGIN_RELAY_URL_STAGING}
         EIGIN_RELAY_PRIMARY_KEY: ${EIGIN_RELAY_PRIMARY_KEY_STAGING}
         EIGIN_SUPPORT_EMAIL: ${EIGIN_SUPPORT_EMAIL}
+        EIGIN_PRIVACY_URL: ${EIGIN_PRIVACY_URL}
+        EIGIN_TERMS_URL: ${EIGIN_TERMS_URL}
         EIGIN_WATERMARK_SIGNATURE: ${EIGIN_WATERMARK_SIGNATURE}
         EIGIN_GOOGLE_OAUTH_CLIENT_ID: ${EIGIN_GOOGLE_OAUTH_CLIENT_ID_STAGING}
         EIGIN_MICROSOFT_OAUTH_CLIENT_ID: ${EIGIN_MICROSOFT_OAUTH_CLIENT_ID_STAGING}

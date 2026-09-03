@@ -50,6 +50,7 @@ impl<T> PerEnv<T> {
 pub struct AppConfig {
     pub identity: Identity,
     pub contact: Contact,
+    pub legal: LegalConfig,
     pub relay: RelayConfig,
     pub oauth: OAuthConfig,
     #[serde(default)]
@@ -65,6 +66,13 @@ pub struct Identity {
 pub struct Contact {
     pub support: String,
     pub alerts: String,
+}
+
+/// Legal pages linked from the app's About screen.
+#[derive(Debug, Deserialize)]
+pub struct LegalConfig {
+    pub privacy: String,
+    pub terms: String,
 }
 
 /// Watermark enablement for the build. Empty or absent `signature` disables

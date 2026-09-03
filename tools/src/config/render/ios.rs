@@ -50,6 +50,8 @@ pub fn render(r: &Resolved) -> Rendered {
     }
 
     export(&mut out, "EIGIN_SUPPORT_EMAIL", &app.contact.support);
+    export(&mut out, "EIGIN_PRIVACY_URL", &app.legal.privacy);
+    export(&mut out, "EIGIN_TERMS_URL", &app.legal.terms);
     export(
         &mut out,
         "EIGIN_WATERMARK_SIGNATURE",

@@ -9724,6 +9724,193 @@
         }
       }
     },
+    "settings.about.appVersionBuildFormat": {
+      "comment": "App version line on the About screen when the build number is known. First argument is the marketing version, second is the build number, e.g. 'Version 0.16.0 (42).'",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@ (%2$@)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "settings.about.appVersionFormat": {
+      "comment": "App version line on the About screen. Argument is the marketing version, e.g. 'Version 0.16.0'.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@"
+          }
+        }
+      }
+    },
+    "settings.about.legal": {
+      "comment": "Section header grouping the privacy policy and terms links",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Juridisk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal"
+          }
+        }
+      }
+    },
+    "settings.about.libraries": {
+      "comment": "Section header for third-party libraries on the licenses screen",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libraries"
+          }
+        }
+      }
+    },
+    "settings.about.licenseCountFormat": {
+      "comment": "Subtitle on the About screen indicating how many third-party packages are licensed. Argument is the package count as text.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ pakker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ packages"
+          }
+        }
+      }
+    },
+    "settings.about.licenseListTitle": {
+      "comment": "Title for the third-party licenses screen",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenser"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenses"
+          }
+        }
+      }
+    },
+    "settings.about.licenseVersion": {
+      "comment": "Label prefix on a license detail page before the package version, e.g. 'Version 0.7.3'",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "settings.about.models": {
+      "comment": "Section header for downloaded models on the licenses screen",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
+          }
+        }
+      }
+    },
+    "settings.about.privacyPolicy": {
+      "comment": "Row linking to the privacy policy",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privatlivspolitik"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
+    "settings.about.repository": {
+      "comment": "Row on a license detail page opening the package's upstream repository in the browser.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kildekode"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repository"
+          }
+        }
+      }
+    },
+    "settings.about.termsOfService": {
+      "comment": "Row linking to the terms of service",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servicevilkår"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms of Service"
+          }
+        }
+      }
+    },
     "settings.development": {
       "comment": "The text that appears next to the icon in the \"Development\" section of the settings menu.",
       "localizations": {
@@ -10567,6 +10754,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Advanced"
+          }
+        }
+      }
+    },
+    "settings.section.about": {
+      "comment": "Section header and navigation title for the About screen (version, legal links, licenses)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
           }
         }
       }
