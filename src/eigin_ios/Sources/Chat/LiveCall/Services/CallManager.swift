@@ -44,10 +44,14 @@ final class CallManager: NSObject, CXProviderDelegate, @unchecked Sendable {
         let action = CXStartCallAction(call: uuid, handle: cxHandle)
         action.isVideo = false
         callController.request(CXTransaction(action: action)) { error in
-            if let error { AppLogger.error(
-                "Start call failed: \(private: error.localizedDescription)",
-                category: .livecall
-            ) }
+            if let error {
+                let code = (error as? CXErrorCodeRequestTransactionError)?.code
+                    .rawValue ?? -1
+                AppLogger.error(
+                    "Start call failed (code \(public: code)): \(private: error.localizedDescription)",
+                    category: .livecall
+                )
+            }
         }
     }
 
