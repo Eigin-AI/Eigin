@@ -35,6 +35,13 @@ resource "scaleway_cockpit_alert_manager" "relay" {
   }
 }
 
+# Rules YAML lives in rules/ and is fed via content = file() rather than
+# content_file: the loki provider recomputes its state hash from the file
+# itself during refresh, which masks in-place edits from every subsequent
+# plan/diff. mimir reads live rules instead, but both are fed inline so the
+# behavior never depends on provider-version internals: inline content is a
+# config attribute, so edits always diff.
+#
 # Ruler tokens: one per data source, scoped to rule management only. The
 # provider needs read access to compare desired vs live rule groups, which
 # the full_access rule scope grants. Try to grant nothing broader.
@@ -83,13 +90,13 @@ provider "mimir" {
 resource "loki_rules" "relay" {
   depends_on = [scaleway_cockpit_alert_manager.relay]
 
-  namespace    = "eigin-relay"
-  content_file = "${path.module}/rules/relay-logs.yaml"
+  namespace = "eigin-relay"
+  content   = file("${path.module}/rules/relay-logs.yaml")
 }
 
 resource "mimir_rules" "relay" {
   depends_on = [scaleway_cockpit_alert_manager.relay]
 
-  namespace    = "eigin-relay"
-  content_file = "${path.module}/rules/relay-metrics.yaml"
+  namespace = "eigin-relay"
+  content   = file("${path.module}/rules/relay-metrics.yaml")
 }
