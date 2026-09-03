@@ -71,6 +71,7 @@
 - [CASA](./compliance/casa.md)
 - [AI Act](./compliance/ai-act.md)
 - [GDPR](./compliance/gdpr.md)
+- [App Store Review](./compliance/app-store.md)
 
 # Runbooks
 
