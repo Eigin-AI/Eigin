@@ -86,6 +86,8 @@ struct ChatFeed: View {
     /// Owns scroll position, the current-turn pin, and grow-in tracking.
     @State private var scroll = FeedScrollCoordinator()
     @State private var didArmAutoCamera = false
+    /// Show gate, appearance clock and stall clock for the thinking indicator.
+    @State private var thinkingIndicatorState = ThinkingIndicatorState()
     @FocusState private var isInputFocused: Bool
 
     init(
@@ -137,6 +139,11 @@ struct ChatFeed: View {
             .toolbar(.hidden, for: .tabBar)
             .onAppear {
                 armAutoCamera()
+                // A feed mounted mid-wait (thinking, or parked on the user)
+                // arms its own fresh indicator.
+                if shouldShowThinkingIndicator {
+                    thinkingIndicatorState.setShown(true)
+                }
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
@@ -197,6 +204,7 @@ struct ChatFeed: View {
             minHeight: isAgentOpened ? scroll.viewportHeight : 0,
             alignment: .topLeading
         )
+        .animation(.easeIn(duration: 0.2), value: isThinking)
     }
 
     private var feedContent: some View {
@@ -242,6 +250,9 @@ struct ChatFeed: View {
                             minHeight: scroll.viewportHeight,
                             alignment: .topLeading
                         )
+                        // Animates the indicator shrinking out (and the reply
+                        // taking its place) instead of popping.
+                        .animation(.easeIn(duration: 0.2), value: isThinking)
                     } else {
                         // When the conversation opens with an agent-initiated message
                         // (no user turn yet), apply the same minHeight + topLeading
@@ -367,6 +378,15 @@ struct ChatFeed: View {
                 UIApplication.shared.isIdleTimerDisabled = phase == .waiting || phase == .streaming
                 scroll.phaseChanged(to: phase, items: items)
             }
+            // The indicator mounts/remounts only on this edge, so a stall
+            // (options, permissions) never tears it down or restarts it.
+            .onChange(of: shouldShowThinkingIndicator) { _, shouldShow in
+                thinkingIndicatorState.setShown(shouldShow)
+            }
+            // Stalls park the thinking clock; resuming restarts it.
+            .onChange(of: isAwaitingUserInput) { _, stalled in
+                thinkingIndicatorState.setStalled(stalled)
+            }
         }
     }
 
@@ -385,21 +405,53 @@ struct ChatFeed: View {
         return rows
     }
 
-    /// Shown while the turn has started but no text has arrived yet.
+    /// Shown while the turn has started but no text has arrived yet, and
+    /// stays through stalls (options, permissions) with its waiting copy —
+    /// one fresh cycle per appearance.
     @ViewBuilder private var typingIndicator: some View {
-        if throttler.phase == .waiting
-            || (throttler.phase == .streaming && throttler.displayedText.isEmpty)
+        // `shouldShowThinkingIndicator` is re-evaluated at render time so
+        // the delayed task can never show the indicator after the turn ended.
+        if shouldShowThinkingIndicator, thinkingIndicatorState.isShown,
+           let shownAt = thinkingIndicatorState.shownAt
         {
             AppChatBrandMessage {
-                TypingIndicator()
-                    .transition(
-                        .asymmetric(
-                            insertion: .opacity.animation(.easeIn(duration: Animations.fast)),
-                            removal: .identity
-                        )
-                    )
+                ThinkingIndicator(
+                    shownAt: shownAt,
+                    clockStart: thinkingIndicatorState.clockStart,
+                    priorElapsed: thinkingIndicatorState.priorElapsed,
+                    isStalled: isAwaitingUserInput
+                )
+                // Entry is part of the indicator's own timeline; removal scales
+                // it away so the reply takes its place.
+                .transition(.asymmetric(
+                    insertion: .identity,
+                    removal: .scale(scale: 0, anchor: .leading)
+                        .combined(with: .opacity)
+                        .animation(.easeIn(duration: 0.2))
+                ))
             }
         }
+    }
+
+    /// Turn waiting on the model, with nothing parked on the user.
+    private var isThinking: Bool {
+        let waiting = throttler.phase == .waiting
+            || (throttler.phase == .streaming && throttler.displayedText.isEmpty)
+        return waiting && !isAwaitingUserInput
+    }
+
+    /// Turn mid-flight but parked waiting on the user — options/flashcards,
+    /// permission or browsing prompts.
+    private var isAwaitingUserInput: Bool {
+        if case .options = items.last { return true }
+        return interactions.permissionRequest != nil
+            || interactions.browsingRequest != nil
+    }
+
+    /// Whether a thinking indicator belongs on screen: the turn is
+    /// mid-flight, either thinking or parked on the user.
+    private var shouldShowThinkingIndicator: Bool {
+        isThinking || isAwaitingUserInput
     }
 
     private func itemRow(for item: ChatItem) -> some View {
@@ -436,9 +488,6 @@ struct ChatFeed: View {
                 onUserMessageFooterAction: retryAction
             )
             .equatable()
-        case .typing:
-            TypingIndicator()
-                .padding(.horizontal, breakpoint.inner)
         case .status(_, let text):
             HStack(spacing: Spacing.n8) {
                 ProgressView()

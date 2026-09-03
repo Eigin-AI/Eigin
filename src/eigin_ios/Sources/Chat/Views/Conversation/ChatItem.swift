@@ -3,7 +3,6 @@ import Foundation
 /// A single item in a chat feed. Each case renders differently in `ChatFeed`.
 enum ChatItem: Identifiable {
     case message(id: String, role: String, content: String, attachments: [MessageAttachment] = [])
-    case typing(id: String)
     case status(id: String, text: String)
     case error(id: String, error: ConnectionError)
     case toolGroup(id: String, tools: [ToolCallInfo])
@@ -17,7 +16,6 @@ enum ChatItem: Identifiable {
     var id: String {
         switch self {
         case .message(let id, _, _, _): id
-        case .typing(let id): id
         case .status(let id, _): id
         case .error(let id, _): id
         case .toolGroup(let id, _): id
