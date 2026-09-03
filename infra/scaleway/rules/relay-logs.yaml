@@ -53,10 +53,14 @@ groups:
   - name: eigin-relay-signals
     interval: 1m
     rules:
-      - alert: RelayRestarting
-        # Startup signal — doubles as an end-to-end pipeline probe
-        expr: sum(count_over_time({resource_type="serverless_container"} |= "starting eigin-relay" [5m])) > 5
+      - alert: RelayCrashLooping
+        # Crash loop — ~2 restarts/min sustained. The 10m window fills in ~10m,
+        # plus the 15m hold, so this fires ~25m into a crash loop. Scale-up
+        # bursts hit a short spike of cold boots and then go quiet, so they
+        # never accumulate here.
+        expr: sum(count_over_time({resource_type="serverless_container"} |= "starting eigin-relay" [10m])) > 20
+        for: 15m
         labels:
-          severity: info
+          severity: warning
         annotations:
-          summary: "Relay container restarted several times - possible service interruption"
+          summary: "Relay container crash-looping — restarts sustained for ~25m"
