@@ -129,6 +129,10 @@ struct PreviewCreditsService: CreditsService {
             updatedAt: Date()
         )
     }
+
+    func startOutstandingRedemption() async {
+        // Previews have no StoreKit queue to recover.
+    }
 }
 
 /// A model refresher for previews. Behavior is driven entirely by the provider's own cache so it

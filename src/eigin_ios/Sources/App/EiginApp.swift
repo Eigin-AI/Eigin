@@ -23,6 +23,12 @@ struct EiginApp: App {
         // registered with the telephony system before the first call.
         _ = CallManager.shared
 
+        // Recover purchases interrupted before their credits were redeemed: StoreKit re-delivers
+        // unfinished transactions, and this sweep redeems and finishes them for the app lifetime.
+        Task {
+            await Container.shared.creditsService().startOutstandingRedemption()
+        }
+
         // Register background prompt task and notification delegate.
         let container = Container.shared.modelContainer()
         BackgroundPromptScheduler.register(container: container)
