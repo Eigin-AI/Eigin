@@ -6,17 +6,22 @@ struct WatermarkTests {
     // Parity anchor shared with the CLI's Rust fixture (tools/src/watermark/vectors.json):
     // version=1 (00000001) + magic=0xE191 (1110000110010001).
     private let expectedBits = "000000011110000110010001"
-    private let sentinel = "\u{2060}"
-    private let zero = "\u{200B}"
-    private let one = "\u{200C}"
+    private let sentinel: Unicode.Scalar = "\u{2060}"
+    private let zero: Unicode.Scalar = "\u{200B}"
+    private let one: Unicode.Scalar = "\u{200C}"
 
     @Test func tokenMatchesSharedContract() {
         let token = Watermark.token(magic: 0xE191)
-        #expect(token.hasPrefix(sentinel))
-        #expect(token.hasSuffix(sentinel))
+        #expect(token.hasPrefix(String(sentinel)))
+        #expect(token.hasSuffix(String(sentinel)))
 
-        let inner = token.filter { String($0) == zero || String($0) == one }
-        let asBinary = inner.map { String($0) == one ? "1" : "0" }.joined()
+        // Compare at the scalar level: Swift may cluster runs of identical
+        // zero-width scalars into a single `Character`. (Array pins the plain
+        // Sequence `filter`, not the `Predicate`-typed overload.)
+        let asBinary = Array(token.unicodeScalars)
+            .filter { $0 == zero || $0 == one }
+            .map { $0 == one ? "1" : "0" }
+            .joined()
         #expect(asBinary == expectedBits)
     }
 
@@ -25,18 +30,18 @@ struct WatermarkTests {
         let text = "Hello from Eigin."
         let marked = text + Watermark.token(magic: 0xE191)
 
-        let visible = marked.filter {
-            let s = String($0)
-            return s != zero && s != one && s != sentinel
-        }
+        let visible = String(String.UnicodeScalarView(
+            Array(marked.unicodeScalars).filter { $0 != zero && $0 != one && $0 != sentinel }
+        ))
         #expect(visible == text)
         #expect(marked.hasPrefix(text))
     }
 
-    @Test func disabledInTestsSoMarkIsNoop() {
-        // No `EiginWatermarkSignature` in the test Info.plist ⇒ disabled.
-        #expect(Watermark.isEnabled == false)
-        #expect(Watermark.mark("unchanged") == "unchanged")
+    @Test func markIsNoopWhenDisabled() {
+        // The disabled path must be a pure no-op so call sites can wrap
+        // egress unconditionally. Injected `nil` keeps this deterministic
+        // regardless of the test host's build config.
+        #expect(Watermark.mark("unchanged", magic: nil) == "unchanged")
     }
 
     @Test func shippedConfigParsesToCanonicalMagic() throws {

@@ -135,7 +135,9 @@ struct EmailToolsTests {
 
         #expect(!result.isError)
         #expect(provider.lastSendTo == ["a@b.com", "c@d.com"])
-        #expect(provider.lastSendBody == "Body text")
+        // The egress body is the composed text, plus at most the invisible
+        // egress watermark (present when the build config enables it).
+        #expect(provider.lastSendBody == Watermark.mark("Body text"))
     }
 
     // MARK: - reply_email
@@ -161,6 +163,7 @@ struct EmailToolsTests {
 
         #expect(!result.isError)
         #expect(provider.lastReplyMessageID == "msg-1")
-        #expect(provider.lastReplyBody == "Thanks!")
+        // Same contract as send: composed body plus the egress watermark.
+        #expect(provider.lastReplyBody == Watermark.mark("Thanks!"))
     }
 }
