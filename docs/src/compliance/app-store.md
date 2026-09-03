@@ -130,7 +130,7 @@ Eigin ships no content of its own. Text in the App is written by the user or gen
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 2.4.1 | Met | Designed for iPhone. Runs on iPad in compatibility mode |
+| 2.4.1 | Met | `TARGETED_DEVICE_FAMILY: 1` — the App Store build is iPhone-only. Runs on iPad in compatibility mode |
 | 2.4.2 | Met | On-device AI runs only while the user is in a conversation and only on devices with enough memory ([local model](../ios/local-model.md)). Background work is a scheduled system task, not a continuous process. No mining or unrelated background activity |
 | 2.4.3, 2.4.5 | N/A | No Apple TV or Mac App Store build |
 | 2.4.4 | Met | The App never asks the user to restart or change unrelated system settings |
@@ -142,7 +142,7 @@ Eigin ships no content of its own. Text in the App is written by the user or gen
 | 2.5.1 | Met | Public APIs only. HealthKit is used for health and fitness: reading and logging nutrition, sleep, and body measurements to the Health app |
 | 2.5.2 | Met | The App can optionally download an AI model to run on-device. Model files are data read by the App's built-in runtime, not code, and add no features beyond the on-device AI described in the listing ([local model](../ios/local-model.md)). Downloads are checksum-verified and stay in the App's container |
 | 2.5.3 | Met | No malicious payloads |
-| 2.5.4 | Met | Background modes: audio and VoIP for the live voice call, which is a CallKit call with the native call screen ([live call](../voice/live-call.md)); processing for the scheduled proactive check-in ([initiative](../agents/initiative.md)). Each is used for its intended purpose |
+| 2.5.4 | Met | Background modes: audio and VoIP for the live voice call ([live call](../voice/live-call.md)). The call streams the AI's speech to the user through CallKit, which is voice over IP, so it declares the VoIP mode for outgoing CallKit calls and runs on the native call screen; audio keeps the session running when backgrounded. Processing covers the scheduled proactive check-in ([initiative](../agents/initiative.md)). Each mode is declared for the feature that uses it, in its intended purpose |
 | 2.5.5 | Met | All networking uses hostnames over URLSession, so IPv6-only networks work |
 | 2.5.6 | Met | Web content is shown with WebKit (`WKWebView` and `SFSafariViewController`) |
 | 2.5.7, 2.5.10 | N/A | Retired numbers; Apple's text reads "intentionally omitted" |
