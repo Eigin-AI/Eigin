@@ -188,6 +188,9 @@ targets:
       - Sources/Core/Design/Generated
       - Resources/Assets.xcassets
       - Resources/Fonts
+      # App extensions also bundle the manifest: they compile files that touch UserDefaults.
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
       - path: Sources/Core/Localized.swift
@@ -225,6 +228,8 @@ targets:
       - Sources/Core/Design/Generated
       - Resources/Assets.xcassets
       - Resources/Fonts
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
       - path: Sources/Core/Localized.swift

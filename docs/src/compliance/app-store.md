@@ -253,6 +253,20 @@ This guideline covers software a host app offers that is not part of its binary.
 | (ix) | Met | Submitted by Eigin ApS, a legal entity. Not in a regulated field |
 | (x) | Met | Onboarding asks for a first name for the AI to use. It is optional and stored on the device, and the screen says so |
 
+#### Privacy manifest
+
+The App and its WidgetKit extension each bundle a privacy manifest ([`PrivacyInfo.xcprivacy`](https://code.eigin.ai/dev/eigin/-/blob/main/src/eigin_ios/Resources/PrivacyInfo.xcprivacy)). It declares:
+
+| Declaration | Value |
+|---|---|
+| Tracking | No tracking, no tracking domains |
+| Collected data types | None. Hosted inference sends conversation content only to answer the request, under zero-retention terms, which Apple's definition treats as ephemeral processing, not collection |
+| UserDefaults [CA92.1] | Reads and writes the App's own settings |
+| Disk space [85F4.1, E174.1] | Free space is checked before an on-device model download and surfaced when a model cannot be installed |
+| File timestamps [0A2A.1] | A downloaded voice model's files, inside the app container, are fingerprinted to detect changes |
+
+SwiftPM dependencies that call required-reason APIs either ship their own manifest (swift-crypto, swift-nio, swift-nio-ssl, Factory) or are covered by the App's declaration above. Xcode's generated privacy report (Product → Generate Privacy Report) reflects this content.
+
 ### 5.1.2 Data use and sharing
 
 | Req | Verdict | Evidence |
