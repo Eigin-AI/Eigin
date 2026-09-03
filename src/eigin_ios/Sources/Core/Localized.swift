@@ -2786,6 +2786,25 @@ enum Localized {
             }
         }
 
+        enum Disclosure {
+            /// Third-party AI disclosure on the credits sheet, where the user commits to Eigin
+            /// cloud inference
+            static var eiginCloud: String {
+                Localized.get("provider.disclosure.eiginCloud")
+            }
+
+            /// Third-party AI disclosure on the provider-select sheet, where the user commits to a
+            /// provider they connect themselves
+            static var ownProvider: String {
+                Localized.get("provider.disclosure.ownProvider")
+            }
+
+            /// Tappable tail of the third-party AI disclosure, linking to the privacy policy
+            static var privacyLink: String {
+                Localized.get("provider.disclosure.privacyLink")
+            }
+        }
+
         enum Edit {
             /// Confirmation message before removing a provider
             static var removeWarning: String {

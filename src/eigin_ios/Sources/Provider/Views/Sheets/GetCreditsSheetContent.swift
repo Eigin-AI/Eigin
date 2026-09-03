@@ -34,6 +34,10 @@ struct GetCreditsSheetContent: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.n4)
             }
+
+            // Third-party disclosure before the user commits to Eigin cloud
+            // (App Store guideline 5.1.2).
+            ThirdPartyDisclosureText(variant: .eiginCloud)
         }
         .padding(.horizontal, px)
         .task { await model.loadProductsIfNeeded() }
@@ -63,10 +67,12 @@ struct GetCreditsSheetContent: View {
                 .foregroundStyle(
                     model.isRestoring ? colors.text.standard.disabled : colors.text.standard.muted
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
             .disabled(model.isPurchasing || model.isRestoring)
-            .padding(.top, Spacing.n4)
+            // Lifted off the credit packs so it reads as its own secondary action.
+            .padding(.top, Spacing.n16)
         }
     }
 
