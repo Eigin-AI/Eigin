@@ -6,3 +6,10 @@
 .pi/model-roles.json
 src/eigin_relay/config/grant/
 infra/**/backend.tf
+
+# Licensed brand fonts (gitignored locally, see .gitignore files in each dir).
+# "Copy if present": skipped gracefully when a developer lacks the fonts.
+src/eigin_ios/Resources/Fonts/*.otf
+src/eigin_ios/Resources/Fonts/*.ttf
+design/assets/fonts/**/*.otf
+design/assets/fonts/**/*.ttf
