@@ -43,8 +43,12 @@
 	<string>$(EIGIN_RELAY_PRIMARY_KEY)</string>
 	<key>EiginRelayURL</key>
 	<string>$(EIGIN_RELAY_URL)</string>
+	<key>EiginPrivacyURL</key>
+	<string>$(EIGIN_PRIVACY_URL)</string>
 	<key>EiginSupportEmail</key>
 	<string>$(EIGIN_SUPPORT_EMAIL)</string>
+	<key>EiginTermsURL</key>
+	<string>$(EIGIN_TERMS_URL)</string>
 	<key>EiginWatermarkSignature</key>
 	<string>$(EIGIN_WATERMARK_SIGNATURE)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

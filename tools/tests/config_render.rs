@@ -31,6 +31,10 @@ client_id.production = ""
 [oauth.aula]
 client_id.staging = ""
 client_id.production = ""
+
+[legal]
+privacy = "https://www.example/privacy/"
+terms = "https://www.example/terms/"
 "#;
 
 const STAGING_TFVARS: &str = r#"
@@ -100,6 +104,14 @@ fn ios_renders_committed_config_and_secrets() {
             .contains("export EIGIN_RELAY_PRIMARY_KEY_PRODUCTION='prod-relay'")
     );
     assert!(out.exports.contains("export BUNDLE_ID='ai.example.app'"));
+    assert!(
+        out.exports
+            .contains("export EIGIN_PRIVACY_URL='https://www.example/privacy/'")
+    );
+    assert!(
+        out.exports
+            .contains("export EIGIN_TERMS_URL='https://www.example/terms/'")
+    );
     assert!(out.exports.contains("export DEVELOPMENT_TEAM='TEAM123'"));
     assert!(out.warnings.is_empty(), "{:?}", out.warnings);
 }

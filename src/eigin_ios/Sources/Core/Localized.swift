@@ -3234,6 +3234,68 @@ enum Localized {
             Localized.get("settings.voice")
         }
 
+        enum About {
+            /// App version line on the About screen when the build number is known. First argument
+            /// is the marketing version, second is the build number, e.g. 'Version 0.16.0 (42).'
+            static func appVersionBuildFormat(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("settings.about.appVersionBuildFormat"), p1, p2)
+            }
+
+            /// App version line on the About screen. Argument is the marketing version, e.g.
+            /// 'Version 0.16.0'.
+            static func appVersionFormat(_ p1: String) -> String {
+                String(format: Localized.get("settings.about.appVersionFormat"), p1)
+            }
+
+            /// Section header grouping the privacy policy and terms links
+            static var legal: String {
+                Localized.get("settings.about.legal")
+            }
+
+            /// Section header for third-party libraries on the licenses screen
+            static var libraries: String {
+                Localized.get("settings.about.libraries")
+            }
+
+            /// Subtitle on the About screen indicating how many third-party packages are licensed.
+            /// Argument is the package count as text.
+            static func licenseCountFormat(_ p1: String) -> String {
+                String(format: Localized.get("settings.about.licenseCountFormat"), p1)
+            }
+
+            /// Title for the third-party licenses screen
+            static var licenseListTitle: String {
+                Localized.get("settings.about.licenseListTitle")
+            }
+
+            /// Label prefix on a license detail page before the package version, e.g. 'Version
+            /// 0.7.3'
+            static var licenseVersion: String {
+                Localized.get("settings.about.licenseVersion")
+            }
+
+            /// Section header for downloaded models on the licenses screen
+            static var models: String {
+                Localized.get("settings.about.models")
+            }
+
+            /// Row linking to the privacy policy
+            static var privacyPolicy: String {
+                Localized.get("settings.about.privacyPolicy")
+            }
+
+            /// Row on a license detail page opening the package's upstream repository in the
+            /// browser.
+            static var repository: String {
+                Localized.get("settings.about.repository")
+            }
+
+            /// Row linking to the terms of service
+            static var termsOfService: String {
+                Localized.get("settings.about.termsOfService")
+            }
+        }
+
         enum Action {
             /// Button label to add a new integration
             static var addIntegration: String {
@@ -3514,6 +3576,12 @@ enum Localized {
         }
 
         enum Section {
+            /// Section header and navigation title for the About screen (version, legal links,
+            /// licenses)
+            static var about: String {
+                Localized.get("settings.section.about")
+            }
+
             /// Section header for advanced settings
             static var advanced: String {
                 Localized.get("settings.section.advanced")

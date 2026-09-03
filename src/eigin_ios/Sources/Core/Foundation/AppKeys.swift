@@ -14,6 +14,18 @@ enum AppKeys {
     static let supportEmail: String =
         Bundle.main.infoDictionary?["EiginSupportEmail"] as? String ?? "support@eigin.ai"
 
+    /// Privacy policy page, linked from Settings > About.
+    static let privacyPolicyURL: URL? = URL(
+        string: Bundle.main.infoDictionary?["EiginPrivacyURL"] as? String
+            ?? "https://www.eigin.ai/privacy/"
+    )
+
+    /// Terms of service page, linked from Settings > About.
+    static let termsOfServiceURL: URL? = URL(
+        string: Bundle.main.infoDictionary?["EiginTermsURL"] as? String
+            ?? "https://www.eigin.ai/terms/"
+    )
+
     /// Google's OAuth client ID for the Eigin iOS app
     static let googleOAuthClientID: String =
         Bundle.main.infoDictionary?["EiginGoogleOAuthClientID"] as? String ?? ""

@@ -28,6 +28,10 @@ client_id.production = ""
 [oauth.aula]
 client_id.staging = ""
 client_id.production = ""
+
+[legal]
+privacy = "https://www.example/privacy/"
+terms = "https://www.example/terms/"
 "#;
 
 /// A `Resolved` backed by the fixture config and the given secrets.
