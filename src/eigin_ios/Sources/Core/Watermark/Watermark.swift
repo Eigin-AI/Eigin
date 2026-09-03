@@ -30,7 +30,14 @@ enum Watermark {
     /// A no-op when watermarking is disabled by build config, so call sites can
     /// wrap egress unconditionally.
     static func mark(_ text: String) -> String {
-        guard let magic = configuredMagic else { return text }
+        mark(text, magic: configuredMagic)
+    }
+
+    /// Appends the watermark for an explicit magic; `nil` disables it.
+    /// Injectable so tests can exercise the disabled path regardless of the
+    /// build config the test host was built with.
+    static func mark(_ text: String, magic: UInt16?) -> String {
+        guard let magic else { return text }
         return text + token(magic: magic)
     }
 
