@@ -27,6 +27,10 @@ struct LiveCallView: View {
 
     @State private var service = LiveCallService()
 
+    /// How much of the avatar blob's wobble is showing — re-anchored on every
+    /// phase change so the wobble eases in and out over `Animations.slow`.
+    @State private var blobIntensity = MorphIntensity.none
+
     /// Mirrors the loop's pending permission so the sheet stays alive through
     /// its dismissal animation, matching the chat permission flow.
     @State private var presentedPermission: PermissionRequest?
@@ -37,13 +41,8 @@ struct LiveCallView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                OnboardingAvatar(
-                    progress: 0,
-                    emoji: agent.emoji,
-                    showsProgress: false,
-                    size: 140
-                )
-                .padding(.top, Spacing.n48)
+                LiveCallAvatar(emoji: agent.emoji, intensity: blobIntensity)
+                    .padding(.top, Spacing.n48)
 
                 LiveCallStatus(service: service)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -82,6 +81,10 @@ struct LiveCallView: View {
                 messages = service.messages
                 isPresented = false
             }
+        }
+        .onChange(of: service.phase) { _, phase in
+            // The blob wobbles only while the agent is working.
+            blobIntensity = blobIntensity.transitioned(to: phase == .processing, at: .now)
         }
         .onChange(of: scenePhase) { _, newPhase in
             service.isForegrounded = newPhase == .active

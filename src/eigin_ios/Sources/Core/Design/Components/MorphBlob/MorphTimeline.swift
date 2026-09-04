@@ -1,13 +1,13 @@
 import Foundation
 
-/// Deterministic timeline for the thinking figure.
+/// Deterministic timeline for the morphing blob.
 ///
-/// Everything the figure does is a pure function of elapsed time plus a seed:
+/// Everything the blob does is a pure function of elapsed time plus a seed:
 /// the library position (pose), the scale-in on first appearance, and the
-/// slow breath. No animation state is stored, so the figure can be torn down
+/// slow breath. No animation state is stored, so the blob can be torn down
 /// and rebuilt — pushed down the feed by tool cards, say — and lands on
 /// exactly the same frame it left.
-struct ThinkingTimeline: Equatable {
+struct MorphTimeline: Equatable {
     /// Which two forms a moment sits between, and how far between them.
     /// `from == to` means holding a single form.
     struct Pose: Equatable {
@@ -17,7 +17,7 @@ struct ThinkingTimeline: Equatable {
     }
 
     // Tuned against the design prototype ("Pose, settle, speak up"), then
-    // re-tuned by eye: faster travel, and a mixed rhythm so the figure never
+    // re-tuned by eye: faster travel, and a mixed rhythm so the blob never
     // settles into a metronome.
     static let initialHold: TimeInterval = 0.6
     static let entryDuration: TimeInterval = 0.4
@@ -55,7 +55,7 @@ struct ThinkingTimeline: Equatable {
     /// Prototype entry easing: cubic-bezier(.32, 1.4, .5, 1) — overshoots, settles.
     static let entryEasing = CubicBezierEasing(x1: 0.32, y1: 1.4, x2: 0.5, y2: 1)
 
-    /// Library positions the figure travels through — one seeded cycle that
+    /// Library positions the blob travels through — one seeded cycle that
     /// starts on the circle, visits every form once in shuffled order, and
     /// returns to the circle, so looping it is seamless.
     private(set) var sequence: [Int]
@@ -77,7 +77,7 @@ struct ThinkingTimeline: Equatable {
             return Double(state >> 11) / Double(1 << 53)
         }
 
-        let count = ThinkingForm.all.count
+        let count = MorphForm.all.count
         var generator = SeededGenerator(state: state)
         sequence = [0] + (1 ..< count).shuffled(using: &generator) + [0]
 
@@ -103,13 +103,13 @@ struct ThinkingTimeline: Equatable {
 
     private let seed: UInt64
 
-    /// The figure's library position at `t` seconds after it appeared.
+    /// The blob's library position at `t` seconds after it appeared.
     func pose(at t: TimeInterval) -> Pose {
         guard t >= Self.initialHold, !segments.isEmpty else {
             return Pose(from: 0, to: 0, progress: 0)
         }
         // Long waits loop the pre-generated choreography rather than freezing;
-        // the wrap lands on the circle the figure entered with.
+        // the wrap lands on the circle the blob entered with.
         var remaining = t - Self.initialHold
         let totalDuration = segments.reduce(0) { $0 + $1.travel }
         if totalDuration > 0 {
@@ -131,7 +131,7 @@ struct ThinkingTimeline: Equatable {
         return Pose(from: 0, to: 0, progress: 0)
     }
 
-    /// Scale-in progress for the figure's first seconds. Overshoots slightly
+    /// Scale-in progress for the blob's first seconds. Overshoots slightly
     /// on the way to 1, mirroring the prototype's pop.
     func entryScale(at t: TimeInterval) -> Double {
         guard t > 0 else { return 0 }
