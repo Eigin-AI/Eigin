@@ -87,6 +87,11 @@ final class SoundManager {
         player.stop()
     }
 
+    /// Whether the sound is currently playing (for cue re-entry logic).
+    func isPlaying(_ sound: Sound) -> Bool {
+        players[sound]?.isPlaying == true
+    }
+
     func stopAll() {
         for player in players.values {
             player.stop()

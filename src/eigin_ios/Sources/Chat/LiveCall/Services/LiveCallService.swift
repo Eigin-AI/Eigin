@@ -150,6 +150,11 @@ final class LiveCallService: @unchecked Sendable {
     /// before hanging up anyway (e.g. if the TTS engine itself is broken).
     private static let errorFarewellWatchdogDuration: TimeInterval = 10.0
 
+    /// How long tool execution waits for the spoken intent to finish after
+    /// playback last made progress — long healthy speech keeps resetting the
+    /// bound, only a stall releases the tool early.
+    private static let preToolSpeechWait: TimeInterval = 25.0
+
     // MARK: - Sound
 
     private let soundManager = SoundManager()
@@ -253,6 +258,9 @@ final class LiveCallService: @unchecked Sendable {
         soundManager.stopAll()
         streamTask?.cancel()
         chatLoop.onContentDelta = nil
+        chatLoop.onSegmentEnd = nil
+        chatLoop.beforeToolCall = nil
+        chatLoop.afterToolCall = nil
         chatLoop.abort()
         chatLoop.settle()
 
@@ -271,6 +279,9 @@ final class LiveCallService: @unchecked Sendable {
         Haptics.medium()
 
         chatLoop.onContentDelta = nil
+        chatLoop.onSegmentEnd = nil
+        chatLoop.beforeToolCall = nil
+        chatLoop.afterToolCall = nil
         speech.cancel()
         soundManager.stopAll()
         streamTask?.cancel()
@@ -302,6 +313,9 @@ final class LiveCallService: @unchecked Sendable {
         soundManager.stopAll()
         streamTask?.cancel()
         chatLoop.onContentDelta = nil
+        chatLoop.onSegmentEnd = nil
+        chatLoop.beforeToolCall = nil
+        chatLoop.afterToolCall = nil
         chatLoop.abort()
         chatLoop.settle()
 
@@ -425,6 +439,17 @@ final class LiveCallService: @unchecked Sendable {
         Haptics.medium()
         phase = .speaking
         soundManager.stop(.waiting)
+    }
+
+    /// Thinking state while tools run and the next model round warms up, so
+    /// the silence reads as "working" instead of dead air. The waiting sound
+    /// only starts if it isn't already looping — re-entry from different tool
+    /// boundaries must not restart the cue.
+    private func startThinkingPhase() {
+        phase = .processing
+        if !soundManager.isPlaying(.waiting) {
+            soundManager.play(.waiting, loops: 25)
+        }
     }
 
     // MARK: - Silence Detection
@@ -576,6 +601,40 @@ final class LiveCallService: @unchecked Sendable {
             speech.voiceIdentifier = self.agent?.voiceIdentifier
             speech.feedDelta(delta)
         }
+        chatLoop.onSegmentEnd = { [weak self] in
+            guard let self, phase == .processing || phase == .speaking else { return }
+            // Speak the pre-tool prose now instead of waiting for the whole
+            // turn; open the stream again when the next round streams in.
+            speech.flushSegment()
+        }
+        chatLoop.beforeToolCall = { [weak self] toolName in
+            guard let self else { return }
+            // Let the agent finish saying what it's about to do before acting
+            // on it, so tool UI doesn't appear over unspoken speech. Bounded so
+            // a playback stall can't freeze the turn.
+            await speech.waitUntilPlaybackDrains(timeout: Self.preToolSpeechWait)
+            // The drain also resumes on cancel/reset during teardown — don't
+            // touch phase or sound after a hangup or interrupt.
+            guard !Task.isCancelled, phase == .processing || phase == .speaking
+            else { return }
+            speech.markAudioEnded()
+            // Thinking starts now for every tool. Prompted tools stay silent —
+            // the permission beep is the cue; the waiting sound joins once the
+            // request is granted (afterToolCall).
+            let willPrompt = permissionPolicy?.permissionLevel(for: toolName) == .ask
+            guard willPrompt == false else {
+                phase = .processing
+                return
+            }
+            startThinkingPhase()
+        }
+        chatLoop.afterToolCall = { [weak self] in
+            guard let self else { return }
+            // Back to thinking for the next round's model latency. The next
+            // block's onAudioStarted flips us back to speaking.
+            guard phase == .processing || phase == .speaking else { return }
+            startThinkingPhase()
+        }
 
         streamTask = Task { [weak self] in
             guard let self else { return }
@@ -682,6 +741,9 @@ final class LiveCallService: @unchecked Sendable {
         soundManager.stopAll()
         chatLoop.abort()
         chatLoop.onContentDelta = nil
+        chatLoop.onSegmentEnd = nil
+        chatLoop.beforeToolCall = nil
+        chatLoop.afterToolCall = nil
 
         onError?(error)
         isEndingCall = true
