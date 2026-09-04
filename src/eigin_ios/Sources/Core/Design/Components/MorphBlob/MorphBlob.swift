@@ -23,9 +23,13 @@ struct MorphBlob: View {
     var color: Color
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Seeded choreography for this appearance, computed once — it depends
-    /// only on `shownAt`.
-    @State private var timeline: MorphTimeline?
+
+    /// Seeded choreography for this appearance. Derived from `shownAt` on
+    /// every evaluation rather than stored, so the blob never depends on an
+    /// appearance callback that SwiftUI may skip when a view is rebuilt.
+    private var timeline: MorphTimeline {
+        MorphTimeline(seed: UInt64(bitPattern: Int64(shownAt.timeIntervalSince1970 * 1000)))
+    }
 
     /// The largest native form size; drawing scales figures off it.
     private static let maxFormSize = MorphForm.all
@@ -64,8 +68,6 @@ struct MorphBlob: View {
                 }
             }
         }
-        .onAppear { timeline = makeTimeline() }
-        .onChange(of: shownAt) { timeline = makeTimeline() }
     }
 
     /// Whether anything is moving right now: the entry is playing, or the
@@ -77,12 +79,8 @@ struct MorphBlob: View {
         return reduceMotion ? false : intensity.value(at: date) > 0
     }
 
-    private func makeTimeline() -> MorphTimeline {
-        MorphTimeline(seed: UInt64(bitPattern: Int64(shownAt.timeIntervalSince1970 * 1000)))
-    }
-
     private func path(in frame: CGSize, at date: Date) -> Path {
-        guard let timeline else { return Path() }
+        let timeline = timeline
         let size = frame
         let t = date.timeIntervalSince(shownAt)
 
