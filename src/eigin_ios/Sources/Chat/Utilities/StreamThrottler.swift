@@ -57,8 +57,26 @@ final class StreamThrottler: StreamThrottling {
     /// cadence. Higher = faster catch-up and larger word chunks per tick.
     private let catchUpRate: Double
 
-    init(catchUpRate: Double = 2.0) {
+    /// How long the stream may sit quiet with all buffered input already scanned
+    /// before the tail — even a trailing partial word — is revealed. Slow models
+    /// often deliver their final deltas seconds before the finish event; without
+    /// this grace the last word hides for that entire window.
+    private let stallGrace: TimeInterval
+
+    /// Injected clock, in the same timebase as ``CADisplayLink`` timestamps.
+    private let now: () -> TimeInterval
+
+    /// Timestamp of the most recent `feed()`, used for the stall check.
+    private var lastFeedTime: TimeInterval = 0
+
+    init(
+        catchUpRate: Double = 2.0,
+        stallGrace: TimeInterval = 0.45,
+        now: @escaping () -> TimeInterval = CACurrentMediaTime
+    ) {
         self.catchUpRate = catchUpRate
+        self.stallGrace = stallGrace
+        self.now = now
     }
 
     func start() {
@@ -73,6 +91,7 @@ final class StreamThrottler: StreamThrottling {
         }
         fullText += chunk
         inputCount += chunk.count
+        lastFeedTime = now()
     }
 
     func finish() {
@@ -113,6 +132,7 @@ final class StreamThrottler: StreamThrottling {
         scrollTrigger = 0
         serverDone = false
         tickCount = 0
+        lastFeedTime = 0
     }
 
     // MARK: - Display Link
@@ -137,7 +157,8 @@ final class StreamThrottler: StreamThrottling {
         displayLink = nil
     }
 
-    private func tick(timestamp: CFTimeInterval) {
+    /// Driven by the display link; internal so tests can step time manually.
+    func tick(timestamp: CFTimeInterval) {
         // Real elapsed time since the last tick. Falls back to the nominal interval
         // on the first tick (when there's no previous timestamp to diff against).
         let dt = lastTickTime > 0 ? max(0, timestamp - lastTickTime) : 1 / Double(maxFrameRate)
@@ -145,7 +166,13 @@ final class StreamThrottler: StreamThrottling {
 
         let distance = inputCount - scanCount
         guard distance > 0 else {
-            if serverDone { completeDisplay() }
+            if serverDone {
+                completeDisplay()
+            } else if inputCount > displayedCount,
+                      now() - lastFeedTime >= stallGrace
+            {
+                revealStalledTail()
+            }
             return
         }
 
@@ -184,6 +211,15 @@ final class StreamThrottler: StreamThrottling {
         if serverDone, displayedCount >= inputCount {
             completeDisplay()
         }
+    }
+
+    /// Reveals everything buffered, including any partial trailing word.
+    /// Runs when the cursor has caught up but the stream has been quiet for
+    /// `stallGrace`: the word is fully received, so hiding it reads as a hang.
+    private func revealStalledTail() {
+        scanCount = inputCount
+        displayedCount = inputCount
+        displayedText = fullText
     }
 
     /// Trims a streamed prefix back to the last completed word so we never reveal a

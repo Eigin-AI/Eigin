@@ -259,6 +259,9 @@ final class AgenticChatLoop {
             var firstTokenAt: ContinuousClock.Instant?
 
             do {
+                // `shouldStop` exits inside this loop return without a drain:
+                // `handleStop()` commits `buildCheckpoint()` — including partial
+                // prose — and replaces the streaming row in the same UI update.
                 for try await event in stream {
                     if shouldStop { return [] }
 
@@ -299,6 +302,9 @@ final class AgenticChatLoop {
                     }
                 }
             } catch is CancellationError {
+                // Either handleStop already committed partial prose via its
+                // checkpoint, or the whole turn is being torn down — nothing
+                // to preserve here.
                 await reportAttempt(
                     provider: provider, start: streamStart,
                     firstTokenAt: firstTokenAt, result: .cancelled
@@ -381,6 +387,9 @@ final class AgenticChatLoop {
                 safeProducedCount = produced.count
 
                 // Check if the caller wants to stop early (e.g. background decision tool fired).
+                // No drain needed: the round's prose was already drained and
+                // committed before tool execution, and the throttler is parked
+                // in .waiting with empty buffers.
                 if shouldTerminate?() == true {
                     break
                 }
@@ -885,8 +894,12 @@ final class AgenticChatLoop {
         // orphaned tool calls (assistant with tool_calls but missing results).
         var result = Array(produced.prefix(safeProducedCount))
 
-        // Append partial prose if we're streaming content without pending tool calls.
-        if chatPhase == .streamingProse, !contentBuffer.isEmpty, pendingToolCalls.isEmpty {
+        // Recover prose buffered by an uncommitted round, whether stopped
+        // mid-stream (.streamingProse) or after the stream ended with tool
+        // calls pending (.readyToExecute). Committing prose alone is safe:
+        // the round's tool calls are still pending, so leaving them out can't
+        // orphan anything, and the round would otherwise commit nothing.
+        if !contentBuffer.isEmpty, chatPhase == .streamingProse || chatPhase == .readyToExecute {
             result.append(ChatMessage(role: "assistant", content: contentBuffer))
         }
 
