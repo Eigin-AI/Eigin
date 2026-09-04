@@ -1,0 +1,1 @@
+assistant,chat,chatbot,agent,llm,local,offline,memory,private,calendar,reminders,companion,notes

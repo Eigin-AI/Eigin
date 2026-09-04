@@ -1,12 +1,9 @@
-What would you tell an AI, if you knew it was truly yours?
+What would you tell an AI if you knew it was truly yours?
 
-Eigin is that AI.
+Eigin is that AI. It runs on your device, under your control. You choose the model, and you own the memory.
 
-Running on your own hardware, under your control. You choose the model. You own the memory. Nothing leaves unless you decide it does.
+It starts blank and learns what matters to you: your people, projects, and plans. It keeps your calendar and reminders, searches the web, and follows up on the things you care about. When it acts, it asks first.
 
-* Knows you well: remembers what matters and gets sharper the more you use it
-* Human-first: only acts in your interest and with your permission
-* Private by design: conversations stay on your device, not ours
-* Choose any model: connect the AI provider you trust, switch anytime
+The more you share, the better it works. And because it's yours, you can actually share.
 
-The more you share with it, the more useful it becomes. And because it's yours, you can actually share. No questions about who owns your words. No concern that your emotions are training someone else's model. No doubt that your deepest thoughts stay exactly where they should - with you.
+Own your AI, starting now.

@@ -1,0 +1,5 @@
+The first release of Eigin.
+
+Memory that learns what matters to you. Your choice of model, on your device or in the cloud. Calendar, reminders, email and web search, with a confirmation before it acts.
+
+Questions or ideas? Reach us at support@eigin.ai.
