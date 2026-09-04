@@ -1,5 +1,7 @@
 Eigin is a personal AI assistant. There is no account and no sign-in. Our self-assessment against the App Store Review Guidelines is at https://docs.eigin.ai/compliance/app-store.html
 
+A short walkthrough video of the steps below: https://youtu.be/21q-JgungI8
+
 GETTING STARTED
 
 1. Open the app. Onboarding asks for your name and what you want help with.
