@@ -28,3 +28,80 @@ struct StreamThrottlerTests {
         #expect(wholeWords("one two   thre") == "one two   ")
     }
 }
+
+@Suite("StreamThrottler streaming and tail reveal")
+@MainActor
+struct StreamThrottlerTailRevealTests {
+    /// Mutable fake clock so tests control both `now()` and tick timestamps.
+    private final class Clock: @unchecked Sendable {
+        var time: TimeInterval = 0
+    }
+
+    private func makeThrottler(clock: Clock, stallGrace: TimeInterval = 0.45) -> StreamThrottler {
+        // High catch-up rate so a single tick exhausts the buffer.
+        StreamThrottler(
+            catchUpRate: 100,
+            stallGrace: stallGrace,
+            now: { clock.time }
+        )
+    }
+
+    @Test func revealsWholeWordsBeforeGraceElapses() {
+        let clock = Clock()
+        let throttler = makeThrottler(clock: clock)
+
+        throttler.feed("hello wor")
+        clock.time = 0.1
+        throttler.tick(timestamp: 0.1)
+
+        #expect(throttler.displayedText == "hello ")
+    }
+
+    @Test func revealsTrailingPartialWordAfterStallGrace() {
+        let clock = Clock()
+        let throttler = makeThrottler(clock: clock)
+
+        throttler.feed("hello wor")
+        clock.time = 0.1
+        throttler.tick(timestamp: 0.1)
+        clock.time = 0.5
+        throttler.tick(timestamp: 0.5)
+
+        #expect(throttler.displayedText == "hello wor")
+    }
+
+    @Test func finishFlushesBufferedTailOnNextTick() {
+        let clock = Clock()
+        let throttler = makeThrottler(clock: clock)
+
+        throttler.feed("hello wor")
+        clock.time = 0.1
+        throttler.tick(timestamp: 0.1)
+        #expect(throttler.displayedText == "hello ")
+
+        throttler.finish()
+        throttler.tick(timestamp: 0.15)
+
+        #expect(throttler.displayedText == "hello wor")
+        #expect(throttler.phase == .done)
+    }
+
+    @Test func feedingAfterStallRevealResumesWholeWordPace() {
+        let clock = Clock()
+        let throttler = makeThrottler(clock: clock)
+
+        throttler.feed("hello wor")
+        clock.time = 0.1
+        throttler.tick(timestamp: 0.1)
+        clock.time = 0.5
+        throttler.tick(timestamp: 0.5)
+        #expect(throttler.displayedText == "hello wor")
+
+        // Stream resumes mid-word: the joined word shows once complete.
+        throttler.feed("ld there")
+        clock.time = 0.6
+        throttler.tick(timestamp: 0.6)
+
+        #expect(throttler.displayedText == "hello world ")
+    }
+}
