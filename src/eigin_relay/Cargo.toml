@@ -1,6 +1,6 @@
 [package]
 name = "eigin-relay"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2024"
 # The relay server is the default binary; `rotate-key` (src/bin/) is an admin tool run
 # explicitly. Both are auto-discovered; only the default needs naming.
