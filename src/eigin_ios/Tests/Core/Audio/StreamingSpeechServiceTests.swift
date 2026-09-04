@@ -265,6 +265,176 @@ struct StreamingSpeechServiceTests {
         #expect(fake.spokenTexts[1] == "Second paragraph.")
         #expect(fake.spokenTexts[2] == "Third paragraph.")
     }
+
+    // MARK: - Segment Flush (tool-call round boundary)
+
+    @Test @MainActor func flushSegmentSpeaksBufferedTextWithoutCompleting() {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        var completed = false
+        service.onComplete = { completed = true }
+
+        service.feedDelta("Let me look that up for you.")
+        // Normally below the streaming flush threshold — the segment boundary
+        // flushes it regardless (bug 207: agent waited for the whole turn).
+        #expect(fake.spokenTexts.isEmpty)
+        service.flushSegment()
+
+        #expect(fake.spokenTexts.count == 1)
+
+        // The stream stays open: draining the utterance must not complete.
+        fake.simulateFinish(fake.spokenTexts[0])
+        #expect(!completed)
+    }
+
+    @Test @MainActor func segmentsSpeakInOrderAndCompleteAfterFinish() {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        var completed = false
+        service.onComplete = { completed = true }
+
+        // Round 1: pre-tool prose, flushed at the tool-call boundary.
+        service.feedDelta("Calling the search tool now.")
+        service.flushSegment()
+        // Round 2: post-tool prose, ends the turn.
+        service.feedDelta("Here is what I found.")
+        service.finish()
+
+        #expect(fake.spokenTexts.count == 2)
+        #expect(fake.spokenTexts[0] == "Calling the search tool now.")
+        #expect(fake.spokenTexts[1] == "Here is what I found.")
+
+        fake.simulateFinish("Calling the search tool now.")
+        #expect(!completed)
+        fake.simulateFinish("Here is what I found.")
+        #expect(completed)
+    }
+
+    @Test @MainActor func flushSegmentWithNothingBufferedIsANoop() {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        var completed = false
+        service.onComplete = { completed = true }
+
+        service.flushSegment()
+
+        #expect(fake.spokenTexts.isEmpty)
+        #expect(!completed)
+
+        // The stream still works normally afterwards.
+        service.feedDelta("Still here.")
+        service.finish()
+        #expect(fake.spokenTexts.count == 1)
+    }
+
+    // MARK: - Playback Drain (tool sequencing)
+
+    @Test @MainActor func drainReturnsImmediatelyWhenNothingPending() async {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        // Must not hang on the 1s timeout.
+        let start = Date.now
+        await service.waitUntilPlaybackDrains(timeout: 1)
+        #expect(Date.now.timeIntervalSince(start) < 0.5)
+    }
+
+    @Test @MainActor func drainResumesWhenUtteranceFinishes() async {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        service.feedDelta("Searching my knowledge base.")
+        service.flushSegment()
+
+        let start = Date.now
+        let waiter = Task { await service.waitUntilPlaybackDrains(timeout: 30) }
+        try? await Task.sleep(for: .milliseconds(50))
+
+        fake.simulateFinish(fake.spokenTexts[0])
+        await waiter.value
+        // Resumed by the finish, not by the 30s timeout.
+        #expect(Date.now.timeIntervalSince(start) < 5)
+    }
+
+    @Test @MainActor func drainResumesOnTimeout() async {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        service.feedDelta("Searching my knowledge base.")
+        service.flushSegment()
+
+        let start = Date.now
+        // No simulateFinish — only the bound can release the waiter.
+        await service.waitUntilPlaybackDrains(timeout: 0.5)
+        #expect(Date.now.timeIntervalSince(start) >= 0.4)
+    }
+
+    @Test @MainActor func drainBoundResetsOnPlaybackProgress() async {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        service.feedDelta("A long multi-utterance reply.")
+        service.flushSegment()
+
+        let start = Date.now
+        let waiter = Task { await service.waitUntilPlaybackDrains(timeout: 0.6) }
+
+        // Playback keeps making progress past the original bound — the wait
+        // must ride along instead of releasing at timeout.
+        for index in 0 ..< 4 {
+            let text = fake.spokenTexts.first ?? "x"
+            fake.onWillSpeak?(NSRange(location: 0, length: 3), text)
+            try? await Task.sleep(for: .milliseconds(index == 0 ? 200 : 300))
+        }
+
+        fake.simulateFinish(fake.spokenTexts[0])
+        await waiter.value
+
+        // Released by the finish, well past the 0.6s bound — an absolute
+        // timeout would have cut the wait at ~0.6s, mid-speech.
+        let elapsed = Date.now.timeIntervalSince(start)
+        #expect(elapsed >= 1.1)
+        #expect(elapsed < 3)
+    }
+
+    @Test @MainActor func drainResumesOnCancel() async {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        service.feedDelta("Searching my knowledge base.")
+        service.flushSegment()
+
+        let start = Date.now
+        let waiter = Task { await service.waitUntilPlaybackDrains(timeout: 30) }
+        try? await Task.sleep(for: .milliseconds(50))
+
+        service.cancel()
+        await waiter.value
+        #expect(Date.now.timeIntervalSince(start) < 5)
+    }
+
+    @Test @MainActor func markAudioEndedRearmsAudioStarted() {
+        let fake = FakeSpeechSynthesizer()
+        let service = Self.makeService(fake: fake)
+
+        var audioStarts = 0
+        service.onAudioStarted = { audioStarts += 1 }
+
+        service.feedDelta("First segment here.")
+        service.flushSegment()
+        fake.onWillSpeak?(NSRange(location: 0, length: 5), fake.spokenTexts[0])
+        #expect(audioStarts == 1)
+
+        // Segments keep the stream open, so the drain boundary must re-arm
+        // onAudioStarted for the next segment's first frame — otherwise a live
+        // call stays "thinking" forever (bug 207 device feedback).
+        service.markAudioEnded()
+        fake.onWillSpeak?(NSRange(location: 0, length: 5), fake.spokenTexts[0])
+        #expect(audioStarts == 2)
+    }
 }
 
 @Suite("DefaultSpeechService — Sanitization")

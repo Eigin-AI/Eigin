@@ -73,18 +73,17 @@ struct LiveCallStatus: View {
     }
 
     /// The label the service wants right now, or nil for streaming phases.
+    /// Tool calls surface here only in the thinking stage — agent text only
+    /// streams while actually speaking.
     private var desiredLabel: String? {
-        if let permission = service.chatLoop.pendingPermission {
-            return permission.toolDisplayName
-        }
         switch service.phase {
         case .processing:
-            return service.activeToolDisplayName
+            service.activeToolDisplayName
                 ?? Localized.Agent.thinking
         case .idle:
-            return Localized.Network.connecting
+            Localized.Network.connecting
         case .listening, .speaking:
-            return nil
+            nil
         }
     }
 

@@ -83,6 +83,19 @@ final class AgenticChatLoop {
     let isBootstrap: Bool
     /// Optional callback fired on each content delta (used by live call for streaming TTS).
     var onContentDelta: ((String) -> Void)?
+    /// Fired when a round ends with a tool call and prose was buffered for it
+    /// (used by live call to flush TTS so pre-tool prose speaks while the tool
+    /// executes). Not fired when the round had no prose.
+    var onSegmentEnd: (() -> Void)?
+    /// Awaited before executing each model-requested tool call — lets the
+    /// caller sequence action after speech (e.g. live call letting the agent
+    /// finish saying what it's about to do before the tool runs). Receives the
+    /// tool name. Not awaited for gatekeeper-supplied initial calls or
+    /// local-model inline tools.
+    var beforeToolCall: ((String) async -> Void)?
+    /// Fired after each model-requested tool call completes — lets the caller
+    /// restore its waiting feedback once tool work is over.
+    var afterToolCall: (() -> Void)?
     /// Callback fired when the user grants "allow for chat" — caller persists the grants.
     var onChatGrant: (([ToolCapability]) -> Void)?
     private(set) var throttler: any StreamThrottling
@@ -339,6 +352,8 @@ final class AgenticChatLoop {
                     // typing indicator visible throughout tool execution.
                     throttler.resetKeepingPhase(.waiting)
                 } else {
+                    // Speak the pre-tool prose while the tool executes (live call).
+                    onSegmentEnd?()
                     // Drain streaming text before committing the message.
                     throttler.finish()
                     await waitForThrottlerDrain()
@@ -368,9 +383,13 @@ final class AgenticChatLoop {
                 for call in pendingToolCalls {
                     if shouldStop { return [] }
 
+                    await beforeToolCall?(call.function.name)
+
                     let result = await executeToolCall(
                         call, agent: agent, executor: currentExecutor
                     )
+
+                    afterToolCall?()
 
                     let toolMessage = ChatMessage(
                         role: "tool",

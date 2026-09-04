@@ -78,6 +78,33 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
         }
     }
 
+    /// Fails the current generation loudly: drains every pending text without
+    /// a live finish marker through `onFinish` (speech is skipped) so the
+    /// caller's completion bookkeeping drains and the live-call turn never
+    /// wedges on a silently dropped finish callback. Texts whose markers are
+    /// still scheduled in the player are left alone — their markers will fire
+    /// normally, and draining them here would double-fire.
+    private func failGeneration() {
+        var orphans = pendingTexts
+        // Remove one entry per live marker, so duplicate texts keep their
+        // unmatched copies.
+        for text in scheduledUtterances {
+            if let index = orphans.firstIndex(of: text) {
+                orphans.remove(at: index)
+            }
+        }
+        pendingTexts.removeAll()
+        scheduledUtterances.removeAll()
+        utteranceTexts.removeAll()
+        nextUtteranceIndex = 0
+        finishWhenReady = false
+        isGenerationActive = false
+        playbackBuffer = nil
+        for text in orphans {
+            onFinish?(text)
+        }
+    }
+
     func prepare() async {
         try? await modelManager.load()
     }
@@ -104,8 +131,9 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
     }
 
     /// Rebuild the output engine on the new route, resuming the unplayed tail
-    /// of the current utterance. No re-speak, so nothing repeats and the
-    /// finish markers still fire, keeping the caller's turn bookkeeping intact.
+    /// of the current utterance. The in-flight fragment is clipped rather
+    /// than replayed, so nothing repeats and the finish markers still fire,
+    /// keeping the caller's turn bookkeeping intact.
     func handleRouteChange() {
         resumablePlayer?.handleRouteChange()
     }
@@ -168,6 +196,9 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
             do {
                 try await modelManager.load()
             } catch {
+                if await MainActor.run(body: { self.generationID == myID }) {
+                    await MainActor.run { self.failGeneration() }
+                }
                 return
             }
 
@@ -177,6 +208,9 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
             do {
                 session = try manager.makeSession(voice: voiceName)
             } catch {
+                if await MainActor.run(body: { self.generationID == myID }) {
+                    await MainActor.run { self.failGeneration() }
+                }
                 return
             }
 
@@ -198,16 +232,22 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
 
             var previousUtteranceIndex: Int = -1
             var willSpeakFired: Set<Int> = []
+            // Utterance indices whose finish marker has been scheduled, so the
+            // end-of-stream sweep below only marks utterances that never got one.
+            var finishedUtterances: Set<Int> = []
 
             do {
                 for try await frame in session.frames {
                     try Task.checkCancellation()
                     guard await MainActor.run(body: { self.generationID == myID }) else { break }
 
-                    let uttIdx = frame.utteranceIndex ?? previousUtteranceIndex
+                    let uttIdx = frame.utteranceIndex ?? max(previousUtteranceIndex, 0)
 
                     if uttIdx != previousUtteranceIndex {
-                        if previousUtteranceIndex >= 0 {
+                        if previousUtteranceIndex >= 0,
+                           !finishedUtterances.contains(previousUtteranceIndex)
+                        {
+                            finishedUtterances.insert(previousUtteranceIndex)
                             let prevText = await MainActor
                                 .run { self.utteranceTexts[previousUtteranceIndex] }
                             if let prevText {
@@ -277,12 +317,27 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
             }
 
             guard await MainActor.run(body: { self.generationID == myID }) else { return }
-            if previousUtteranceIndex >= 0 {
-                let lastText = await MainActor.run { self.utteranceTexts[previousUtteranceIndex] }
-                if let lastText {
-                    await MainActor.run {
-                        self.scheduleFinishMarker(for: lastText)
-                    }
+            // Close the session before the sweep runs, so a speak() landing in
+            // the sweep's suspension hops starts a fresh generation (whose
+            // enqueue loop reads pendingTexts) instead of enqueueing into the
+            // finished session, which would orphan text. Then schedule a finish
+            // marker for every utterance that never got one. Normal path: just
+            // the last utterance. Also covers frames without utterance indices
+            // and streams that ended without frames at all, which previously
+            // dropped onFinish and wedged the turn.
+            let unmatched = await MainActor.run {
+                self.session = nil
+                self.isGenerationActive = false
+                return self.utteranceTexts
+                    .sorted { $0.key < $1.key }
+                    .filter { !finishedUtterances.contains($0.key) }
+                    .map { (index: $0.key, text: $0.value) }
+            }
+            for entry in unmatched {
+                guard await MainActor.run(body: { self.generationID == myID }) else { return }
+                await MainActor.run {
+                    self.scheduleFinishMarker(for: entry.text)
+                    self.scheduleInterUtteranceSilence()
                 }
             }
             await MainActor.run {

@@ -24,8 +24,21 @@ protocol SpeechService {
     func speak(_ text: String)
     func stop()
 
-    // Streaming
+    /// Streaming
     func feedDelta(_ delta: String)
+    /// Flushes the buffered text and ends the current TTS generation segment
+    /// (e.g. at a tool-call round boundary) while keeping the stream open:
+    /// no `onComplete` fires and playback continues into the next segment.
+    func flushSegment()
+    /// Suspends until every queued utterance has finished playing, or until
+    /// `timeout` elapses — whichever comes first. Returns immediately when
+    /// nothing is pending. Also resumes on `cancel`/`reset`.
+    func waitUntilPlaybackDrains(timeout: TimeInterval) async
+    /// Marks the point where speech has fully drained (e.g. a tool-call
+    /// boundary), so the next segment's first audio frame fires
+    /// `onAudioStarted` again. Call once the drain wait resolves — timeout
+    /// included — at a segment boundary.
+    func markAudioEnded()
     func finish()
     func cancel()
     func reset()
@@ -89,6 +102,13 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
     private var spokenOffset = 0
     private var streamFinished = false
     private var spokenPrefix = ""
+    /// Waiter for `waitUntilPlaybackDrains`, plus its inactivity watchdog.
+    private var drainContinuation: CheckedContinuation<Void, Never>?
+    private var drainWatchdogTask: Task<Void, Never>?
+    /// Last playback progress (utterance will-speak/finish). The drain wait
+    /// releases when this goes quiet for the caller's bound — long healthy
+    /// speech keeps resetting it, only a stall releases early.
+    private var lastPlaybackProgress = Date.now
     /// FIFO queue mapping sanitized → original text for progress tracking.
     /// Using an ordered array avoids key collisions when the same sentence
     /// appears twice in a turn (a plain dictionary would overwrite the first entry).
@@ -213,6 +233,64 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
         tryScheduleBuffered()
     }
 
+    /// Flush the buffered text and end the TTS generation segment while
+    /// keeping the stream open — used at tool-call round boundaries so the
+    /// pre-tool prose speaks while the tool runs. Unlike `finish()`,
+    /// `streamFinished` stays false so draining utterances never fires
+    /// `onComplete`; the next `feedDelta` resumes seamlessly.
+    func flushSegment() {
+        guard isSpeaking else { return }
+
+        let remaining = String(contentBuffer.dropFirst(spokenOffset))
+        let trimmed = remaining.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            queueUtterance(trimmed)
+            spokenOffset = contentBuffer.count
+        }
+
+        // End the engine's generation so the utterance boundaries don't knit
+        // the two segments into one, but leave the stream open for the next.
+        synthesizer.finishSpeaking()
+        streamFinished = false
+    }
+
+    /// Suspends until every queued utterance has finished playing, until
+    /// playback makes no progress for `timeout` seconds, or until
+    /// `cancel`/`reset` — whichever comes first. Returns immediately when
+    /// nothing is pending. Progress (playback events) resets the bound, so
+    /// long but healthy speech always waits out fully.
+    func waitUntilPlaybackDrains(timeout: TimeInterval) async {
+        guard pendingUtterances > 0 else { return }
+        // A prior, still-suspended waiter is stale — release it.
+        finishDrainWait()
+        lastPlaybackProgress = .now
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            drainContinuation = continuation
+            drainWatchdogTask = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1))
+                    guard let self, drainContinuation != nil else { return }
+                    guard Date.now.timeIntervalSince(lastPlaybackProgress)
+                        >= timeout else { continue }
+                    finishDrainWait()
+                    return
+                }
+            }
+        }
+    }
+
+    /// Releases any pending `waitUntilPlaybackDrains` waiter.
+    private func finishDrainWait() {
+        drainWatchdogTask?.cancel()
+        drainWatchdogTask = nil
+        drainContinuation?.resume()
+        drainContinuation = nil
+    }
+
+    func markAudioEnded() {
+        hasAudioStarted = false
+    }
+
     /// Flush all remaining text and begin speaking. Fires `onComplete`
     /// when the last utterance finishes (or immediately if nothing queued).
     func finish() {
@@ -235,6 +313,7 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
     /// Stop the synthesizer immediately, flush all state, and reject late callbacks.
     func cancel() {
         synthesizer.stopSpeaking()
+        finishDrainWait()
         contentBuffer = ""
         spokenPrefix = ""
         spokenOffset = 0
@@ -268,6 +347,7 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
     /// Zero all state for the next turn.
     func reset() {
         synthesizer.stopSpeaking()
+        finishDrainWait()
         contentBuffer = ""
         speakingText = ""
         spokenPrefix = ""
@@ -376,6 +456,7 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
     private func wireCallbacks() {
         synthesizer.onFinish = { [weak self] sanitizedText in
             guard let self else { return }
+            lastPlaybackProgress = .now
             // Remove the first matching entry (FIFO) so duplicate sentences
             // are handled correctly without key collisions.
             let original: String
@@ -391,6 +472,9 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
                 spokenPrefix += " " + original
             }
             pendingUtterances -= 1
+            if pendingUtterances <= 0 {
+                finishDrainWait()
+            }
 
             if isOneShotMode {
                 if pendingUtterances <= 0 {
@@ -412,6 +496,7 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
 
         synthesizer.onWillSpeak = { [weak self] range, sanitizedText in
             guard let self else { return }
+            lastPlaybackProgress = .now
             if !hasAudioStarted {
                 hasAudioStarted = true
                 onAudioStarted?()
@@ -561,6 +646,9 @@ struct PreviewSpeechService: SpeechService {
     func speak(_ text: String) {}
     func stop() {}
     func feedDelta(_ delta: String) {}
+    func flushSegment() {}
+    func waitUntilPlaybackDrains(timeout: TimeInterval) async {}
+    func markAudioEnded() {}
     func finish() {}
     func cancel() {}
     func reset() {}

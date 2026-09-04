@@ -109,6 +109,162 @@ struct AgenticChatLoopTests {
         #expect(produced[2].content == "Got it!")
     }
 
+    @Test @MainActor func segmentEndFiresAtToolRoundWithBufferedProse() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let toolCall = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+
+        // Round 1: prose followed by a tool call — the round boundary.
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Let me check my identity. "),
+            .toolCall(toolCall),
+            .finished(.toolCalls),
+        ])
+        // Round 2: final content.
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Got it!"),
+            .finished(.stop),
+        ])
+
+        fakeToolExecutor.setResult(for: "call_1", content: "{\"result\":\"I am a test agent.\"}")
+
+        var segmentEnds = 0
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.onSegmentEnd = { segmentEnds += 1 }
+
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Read my identity")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        #expect(segmentEnds == 1)
+    }
+
+    @Test @MainActor func segmentEndSkippedAtToolRoundWithoutProse() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let toolCall = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+
+        // Round 1: tool call with no prose before it.
+        fakeChatService.enqueueEventStream([
+            .toolCall(toolCall),
+            .finished(.toolCalls),
+        ])
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Got it!"),
+            .finished(.stop),
+        ])
+
+        fakeToolExecutor.setResult(for: "call_1", content: "{\"result\":\"I am a test agent.\"}")
+
+        var segmentEnds = 0
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.onSegmentEnd = { segmentEnds += 1 }
+
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Read my identity")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        #expect(segmentEnds == 0)
+    }
+
+    @Test @MainActor func segmentEndNotFiredOnContentOnlyTurn() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Just an answer."),
+            .finished(.stop),
+        ])
+
+        var segmentEnds = 0
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.onSegmentEnd = { segmentEnds += 1 }
+
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        #expect(segmentEnds == 0)
+    }
+
+    @Test @MainActor func beforeToolCallRunsBeforeEachToolExecution() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let firstCall = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+        let secondCall = ToolCall(
+            id: "call_2", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"user\"}")
+        )
+
+        fakeChatService.enqueueEventStream([
+            .toolCall(firstCall),
+            .toolCall(secondCall),
+            .finished(.toolCalls),
+        ])
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Got it!"),
+            .finished(.stop),
+        ])
+
+        fakeToolExecutor.setResult(for: "read_core", content: "{\"result\":\"ok\"}")
+
+        var beforeCalls: [String] = []
+        var afterCalls = 0
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.beforeToolCall = { name in beforeCalls.append(name) }
+        loop.afterToolCall = { afterCalls += 1 }
+
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Read my identity")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        // A wait before and a callback after each tool execution, and execution
+        // still completes.
+        #expect(beforeCalls == ["read_core", "read_core"])
+        #expect(afterCalls == 2)
+        #expect(produced.count == 4)
+    }
+
     /// A mid-round prose message's feed row ("msg-<localID>") must match the id the live
     /// streaming row used while that prose was still displaying (`streamingItemID`).
     /// If they diverge, the feed sees a new row identity when the round seals and
