@@ -1,19 +1,19 @@
 @testable import Eigin
 import Testing
 
-struct ThinkingTimelineTests {
+struct MorphTimelineTests {
     @Test func entryScalesInThenSettles() {
-        let timeline = ThinkingTimeline()
+        let timeline = MorphTimeline()
         #expect(timeline.entryScale(at: 0) == 0)
-        #expect(timeline.entryScale(at: ThinkingTimeline.entryDuration) == 1)
+        #expect(timeline.entryScale(at: MorphTimeline.entryDuration) == 1)
         #expect(timeline.entryScale(at: 5) == 1)
         // Overshoot curve rises above 1 before settling.
-        let midpoint = timeline.entryScale(at: ThinkingTimeline.entryDuration * 0.6)
+        let midpoint = timeline.entryScale(at: MorphTimeline.entryDuration * 0.6)
         #expect(midpoint > 1)
     }
 
     @Test func startsAsCircle() {
-        let timeline = ThinkingTimeline()
+        let timeline = MorphTimeline()
         let pose = timeline.pose(at: 0)
         #expect(pose.from == 0)
         #expect(pose.to == 0)
@@ -21,23 +21,23 @@ struct ThinkingTimelineTests {
     }
 
     @Test func sameSeedSameChoreography() {
-        let a = ThinkingTimeline(seed: 42).pose(at: 17.3)
-        let b = ThinkingTimeline(seed: 42).pose(at: 17.3)
+        let a = MorphTimeline(seed: 42).pose(at: 17.3)
+        let b = MorphTimeline(seed: 42).pose(at: 17.3)
         #expect(a == b)
     }
 
     @Test func differentSeedLikelyDifferentPose() {
         // Not a guarantee per seed, but across several seeds the poses differ.
-        let baseline = ThinkingTimeline(seed: 1).pose(at: 17.3)
+        let baseline = MorphTimeline(seed: 1).pose(at: 17.3)
         let anyDifference = (2 ... 12).contains { seed in
-            ThinkingTimeline(seed: UInt64(seed)).pose(at: 17.3) != baseline
+            MorphTimeline(seed: UInt64(seed)).pose(at: 17.3) != baseline
         }
         #expect(anyDifference)
     }
 
     @Test func loopVisitsEveryFormOnce() {
-        let timeline = ThinkingTimeline(seed: 11)
-        let count = ThinkingForm.all.count
+        let timeline = MorphTimeline(seed: 11)
+        let count = MorphForm.all.count
         // The seeded loop starts and ends on the circle, visiting each form
         // exactly once in between.
         #expect(timeline.sequence.first == 0)
@@ -48,11 +48,11 @@ struct ThinkingTimelineTests {
     }
 
     @Test func consecutiveFormsNeverRepeat() {
-        let timeline = ThinkingTimeline(seed: 7)
+        let timeline = MorphTimeline(seed: 7)
         // Past the initial hold the figure is always morphing between
         // distinct forms, including across the loop seam.
         for t in stride(
-            from: ThinkingTimeline.initialHold + 0.01,
+            from: MorphTimeline.initialHold + 0.01,
             to: 120,
             by: 0.05
         ) {
@@ -62,10 +62,10 @@ struct ThinkingTimelineTests {
     }
 
     @Test func travelStaysInRhythmBounds() throws {
-        let travels = ThinkingTimeline.Rhythm.allCases.map(\.travel)
+        let travels = MorphTimeline.Rhythm.allCases.map(\.travel)
         let bounds = try #require(travels.map(\.lowerBound).min()) ... travels.map(\.upperBound)
             .max()!
-        for segment in ThinkingTimeline(seed: 9).segments {
+        for segment in MorphTimeline(seed: 9).segments {
             #expect(bounds.contains(segment.travel))
         }
     }
@@ -73,11 +73,11 @@ struct ThinkingTimelineTests {
     @Test func breathStaysSubtle() {
         // Phase is offset by π/2 (prototype parity), so the breath starts at
         // its maximum — invisible anyway, since entry scale is 0 at that moment.
-        let timeline = ThinkingTimeline()
-        #expect(timeline.breath(at: 0) == 1 + ThinkingTimeline.breathScaleAmplitude)
+        let timeline = MorphTimeline()
+        #expect(timeline.breath(at: 0) == 1 + MorphTimeline.breathScaleAmplitude)
         for t in stride(from: 0.0, to: 60, by: 0.1) {
             let breath = timeline.breath(at: t)
-            #expect(abs(breath - 1) <= ThinkingTimeline.breathScaleAmplitude + 0.0001)
+            #expect(abs(breath - 1) <= MorphTimeline.breathScaleAmplitude + 0.0001)
         }
     }
 }

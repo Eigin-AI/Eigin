@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The thinking indicator: a near-circle that scales in and morphs through the
-/// forms in `ThinkingForm.all` while breathing, with a line of copy that
+/// forms in `MorphForm.all` while breathing, with a line of copy that
 /// speaks up as the wait drags on.
 ///
 /// Fully time-derived: the choreography is recomputed from `shownAt` every
@@ -21,10 +21,6 @@ struct ThinkingIndicator: View {
     let priorElapsed: TimeInterval
     /// Whether the turn is currently parked waiting for the user.
     let isStalled: Bool
-
-    private var timeline: ThinkingTimeline {
-        ThinkingTimeline(seed: UInt64(bitPattern: Int64(shownAt.timeIntervalSince1970 * 1000)))
-    }
 
     @Environment(\.colors) private var colors
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -48,11 +44,13 @@ struct ThinkingIndicator: View {
         let elapsed = (clockStart.map { date.timeIntervalSince($0) } ?? 0) + priorElapsed
         let stage = isStalled ? nil : ThinkingCopy.stage(at: elapsed)
         return HStack(spacing: Spacing.n12) {
-            Canvas { canvas, size in
-                let t = date.timeIntervalSince(shownAt)
-                let path = indicatorPath(at: t, entryAt: t, in: size)
-                canvas.fill(path, with: .color(colors.button.spot.base))
-            }
+            // The chat wait is always thinking, so the wobble runs at full
+            // intensity from entry. The blob drives its own timeline.
+            MorphBlob(
+                shownAt: shownAt,
+                intensity: .full,
+                color: colors.button.spot.base
+            )
             .frame(width: Self.slotSize.width, height: Self.slotSize.height)
 
             // A single Text morphing between rungs: no structural change, so
@@ -64,70 +62,6 @@ struct ThinkingIndicator: View {
                 .contentTransition(.interpolate)
         }
         .animation(.easeInOut(duration: 0.4), value: stage)
-    }
-
-    /// The indicator's path at `t` seconds since it appeared.
-    /// Under reduce motion: a still circle at full size.
-    private func indicatorPath(
-        at t: TimeInterval, entryAt entry: TimeInterval, in size: CGSize
-    ) -> Path {
-        let timeline = timeline
-        let forms = ThinkingForm.all
-
-        let pose = reduceMotion ? ThinkingTimeline.Pose(from: 0, to: 0, progress: 0) : timeline
-            .pose(at: t)
-        let from = forms[pose.from]
-        let to = forms[pose.to]
-        let progress = pose.progress
-
-        let width = from.size.width + (to.size.width - from.size.width) * progress
-        let height = from.size.height + (to.size.height - from.size.height) * progress
-
-        let entry = reduceMotion ? 1 : timeline.entryScale(at: entry)
-        let breath = reduceMotion ? 1 : timeline.breath(at: t)
-        let scale = entry * breath
-
-        let halfWidth = width / 2 * scale
-        let halfHeight = height / 2 * scale
-        if halfWidth <= 0 || halfHeight <= 0 { return Path() }
-
-        // Centred in the slot — the box itself hugs the left edge where
-        // assistant text starts, but the shape shifts around its own centre.
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        var samples: [CGPoint] = []
-        samples.reserveCapacity(ThinkingForm.pointCount)
-        for i in 0 ..< ThinkingForm.pointCount {
-            let a = from.points[i % from.points.count]
-            let b = to.points[i % to.points.count]
-            samples.append(CGPoint(
-                x: center.x + (a.x + (b.x - a.x) * progress) * halfWidth,
-                y: center.y + (a.y + (b.y - a.y) * progress) * halfHeight
-            ))
-        }
-        return SplineOutline.path(through: samples)
-    }
-}
-
-/// Closed Catmull-Rom spline: a smooth outline through evenly spaced samples.
-enum SplineOutline {
-    static func path(through points: [CGPoint]) -> Path {
-        var path = Path()
-        let count = points.count
-        guard count > 2 else { return path }
-        path.move(to: points[0])
-        for i in 0 ..< count {
-            let p0 = points[(i - 1 + count) % count]
-            let p1 = points[i]
-            let p2 = points[(i + 1) % count]
-            let p3 = points[(i + 2) % count]
-            path.addCurve(
-                to: p2,
-                control1: CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6),
-                control2: CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
-            )
-        }
-        path.closeSubpath()
-        return path
     }
 }
 
@@ -159,8 +93,8 @@ enum SplineOutline {
 #Preview("Form library") {
     VStack(spacing: Spacing.n32) {
         HStack(spacing: Spacing.n20) {
-            ForEach(0 ..< ThinkingForm.all.count, id: \.self) { i in
-                let form = ThinkingForm.all[i]
+            ForEach(0 ..< MorphForm.all.count, id: \.self) { i in
+                let form = MorphForm.all[i]
                 SplineOutline.path(through: form.points.map {
                     CGPoint(x: $0.x * form.size.width / 4, y: $0.y * form.size.height / 4)
                 })

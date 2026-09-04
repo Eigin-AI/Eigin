@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// One form in the thinking figure's library.
+/// One form in the blob's library.
 ///
 /// Any closed single-subpath outline becomes a form: it is flattened to a
 /// dense polyline and resampled to a fixed number of equidistant points.
 /// That shared point count — with matched winding and start point — is what
 /// lets any form glide into any other without a cut.
-struct ThinkingForm: Equatable {
+struct MorphForm: Equatable {
     /// Sample points every form carries — the invariant behind morphing.
     static let pointCount = 60
 
@@ -27,23 +27,23 @@ struct ThinkingForm: Equatable {
     /// A family of near-circles — different weightings and slight wobbles,
     /// like one hand-drawn circle shifting its weight between imperfect
     /// tracings. The one place to add, remove or reorder forms.
-    static let all: [ThinkingForm] = [
+    static let all: [MorphForm] = [
         // The resting circle.
-        ThinkingForm(path: FormPath.ellipse(), size: CGSize(width: 32, height: 32)),
+        MorphForm(path: FormPath.ellipse(), size: CGSize(width: 32, height: 32)),
         // Slightly smaller — a caught breath.
-        ThinkingForm(path: FormPath.ellipse(), size: CGSize(width: 27, height: 27)),
+        MorphForm(path: FormPath.ellipse(), size: CGSize(width: 27, height: 27)),
         // Pulled out to the right.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 1, amount: 0.13, phase: .zero)]),
             size: CGSize(width: 34, height: 34)
         ),
         // Weighted toward the upper left.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 1, amount: 0.12, phase: .degrees(200))]),
             size: CGSize(width: 34, height: 34)
         ),
         // Uneven: a hand-drawn wobble, heavier low-left.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 1, amount: 0.11, phase: .degrees(35)),
                 (lobes: 2, amount: 0.06, phase: .degrees(110)),
@@ -51,7 +51,7 @@ struct ThinkingForm: Equatable {
             size: CGSize(width: 33, height: 33)
         ),
         // Bottom-weighted with a subtly dented side.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 1, amount: 0.14, phase: .degrees(90)),
                 (lobes: 3, amount: 0.05, phase: .zero),
@@ -59,22 +59,22 @@ struct ThinkingForm: Equatable {
             size: CGSize(width: 34, height: 34)
         ),
         // Tilted oval.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 2, amount: 0.13, phase: .degrees(30))]),
             size: CGSize(width: 33, height: 33)
         ),
         // Pulling harder: leaning lower-right.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 1, amount: 0.17, phase: .degrees(310))]),
             size: CGSize(width: 35, height: 35)
         ),
         // Pulling harder: a stretchier oval.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 2, amount: 0.14, phase: .degrees(70))]),
             size: CGSize(width: 35, height: 35)
         ),
         // Another uneven wobble, heavier to the left.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 1, amount: 0.13, phase: .degrees(150)),
                 (lobes: 2, amount: 0.08, phase: .degrees(20)),
@@ -82,12 +82,12 @@ struct ThinkingForm: Equatable {
             size: CGSize(width: 33, height: 33)
         ),
         // Pulled toward the lower left.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([(lobes: 1, amount: 0.15, phase: .degrees(120))]),
             size: CGSize(width: 34, height: 34)
         ),
         // Wide oval with a light wobble.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 2, amount: 0.12, phase: .degrees(10)),
                 (lobes: 1, amount: 0.05, phase: .degrees(200)),
@@ -95,7 +95,7 @@ struct ThinkingForm: Equatable {
             size: CGSize(width: 35, height: 35)
         ),
         // Strong pull to the upper right with a soft dent opposite.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 1, amount: 0.16, phase: .degrees(30)),
                 (lobes: 3, amount: 0.05, phase: .degrees(90)),
@@ -103,7 +103,7 @@ struct ThinkingForm: Equatable {
             size: CGSize(width: 35, height: 35)
         ),
         // Wobbly, heavier to the left with a high-frequency dent.
-        ThinkingForm(
+        MorphForm(
             path: FormPath.blob([
                 (lobes: 1, amount: 0.12, phase: .degrees(300)),
                 (lobes: 3, amount: 0.07, phase: .degrees(150)),
