@@ -455,72 +455,26 @@ struct ChatFeed: View {
     }
 
     private func itemRow(for item: ChatItem) -> some View {
-        itemView(for: item)
-            .growIn(isNew: scroll.isLiveRow(item.id, phase: throttler.phase))
-            .id(item.id)
-    }
-
-    @ViewBuilder
-    private func itemView(for item: ChatItem) -> some View {
-        switch item {
-        case .message(let id, let role, let content, let attachments):
-            let showsUserMessageFooter =
-                role == "user"
-                    && id == items.last?.id
-                    && !pagination.hasNewerMessages
-                    && !isStreaming
-                    && onUserMessageFooterAction != nil
-            // Retry re-appends the user message via `send`, so it declares the
-            // `.sending` intent — otherwise the pin handler would no-op and the
-            // retried message wouldn't anchor to the top of the viewport.
-            let retryAction: (() -> Void)? = onUserMessageFooterAction.map { action in
+        ChatFeedRow(
+            item: item,
+            isStreamingRow: item.id == streamingItemID && throttler.phase == .streaming,
+            showsUserMessageFooter:
+            item.id == items.last?.id
+                && !pagination.hasNewerMessages
+                && !isStreaming
+                && onUserMessageFooterAction != nil,
+            onUserMessageFooterAction: onUserMessageFooterAction.map { action in
+                // Retry re-appends the user message via `send`, so it declares
+                // the `.sending` intent — otherwise the pin handler would no-op
+                // and the retried message wouldn't anchor to the viewport top.
                 { scroll.declareSending(); action() }
-            }
-            let isStreamingRow = id == streamingItemID && throttler.phase == .streaming
-            ChatMessageView(
-                role: role,
-                content: content,
-                attachments: attachments,
-                messageID: id,
-                isActivelyStreaming: isStreamingRow,
-                showFooter: role == "assistant" && !isStreamingRow,
-                showUserMessageFooter: showsUserMessageFooter,
-                onUserMessageFooterAction: retryAction
-            )
-            .equatable()
-        case .status(_, let text):
-            HStack(spacing: Spacing.n8) {
-                ProgressView()
-                Text(text)
-                    .typography(Typography.note)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-            .padding(.horizontal, breakpoint.inner)
-        case .error(_, let error):
-            if error.recovery == .purchaseEiginRelayCredits {
-                CreditsRecoveryCard(error: error)
-                    .padding(.horizontal, breakpoint.inner)
-            } else {
-                AppCard(
-                    error.title,
-                    explainer: error.suggestion,
-                    action: { sheets.selectedError = error }
-                )
-                .padding(.horizontal, breakpoint.inner)
-            }
-        case .toolGroup(_, let tools):
-            ToolGroupView(tools: tools)
-                .padding(.horizontal, breakpoint.inner)
-        case .options(_, let set):
-            OptionsGroupView(
-                set: set,
-                onSelect: { interactions.onOptionSelected?($0) },
-                onFocusInput: { isInputFocused = true }
-            )
-        case .compaction(_, let progress, let summary):
-            CompactionDivider(progress: progress, summary: summary)
-                .padding(.horizontal, breakpoint.inner)
-        }
+            },
+            onOptionSelected: interactions.onOptionSelected,
+            onFocusInput: { isInputFocused = true },
+            onSelectError: { sheets.selectedError = $0 }
+        )
+        .growIn(isNew: scroll.isLiveRow(item.id, phase: throttler.phase))
+        .id(item.id)
     }
 
     private func sendMessage(mode: InteractionMode = .text) {

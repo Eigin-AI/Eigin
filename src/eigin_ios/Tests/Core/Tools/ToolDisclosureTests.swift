@@ -140,6 +140,38 @@ struct ToolDisclosureTests {
         #expect(value?.contains("Main St") == true)
     }
 
+    @Test func calendarEventReadsAsWordsNotTimestamps() {
+        let tool = CreateCalendarEventTool(calendarService: nil, canPromptUser: false)
+        let disclosure = tool.disclosure(for: call(
+            name: "create_calendar_event",
+            arguments: "{\"title\":\"Dentist\",\"start_date\":\"2026-08-21 14:00\",\"end_date\":\"2026-08-21 15:00\"}"
+        ))
+        let value = inlineValue(disclosure)
+        // The sheet is read by a person, so no machine timestamps.
+        #expect(value?.contains("2026-08-21") == false)
+        #expect(value?.contains("Aug") == true)
+    }
+
+    @Test func calendarEventSameDayRangeShowsTheDateOnce() {
+        let tool = CreateCalendarEventTool(calendarService: nil, canPromptUser: false)
+        let disclosure = tool.disclosure(for: call(
+            name: "create_calendar_event",
+            arguments: "{\"title\":\"Dentist\",\"start_date\":\"2026-08-21 14:00\",\"end_date\":\"2026-08-21 15:00\"}"
+        ))
+        let value = inlineValue(disclosure) ?? ""
+        #expect(value.components(separatedBy: "Aug").count - 1 == 1)
+    }
+
+    @Test func calendarEventCrossDayRangeShowsBothDates() {
+        let tool = CreateCalendarEventTool(calendarService: nil, canPromptUser: false)
+        let disclosure = tool.disclosure(for: call(
+            name: "create_calendar_event",
+            arguments: "{\"title\":\"Conference\",\"start_date\":\"2026-08-21 09:00\",\"end_date\":\"2026-08-23 17:00\"}"
+        ))
+        let value = inlineValue(disclosure) ?? ""
+        #expect(value.components(separatedBy: "Aug").count - 1 == 2)
+    }
+
     @Test func reminderIncludesDueDate() {
         let tool = ManageReminderTool(reminderService: nil, canPromptUser: false)
         let disclosure = tool.disclosure(for: call(

@@ -34,6 +34,8 @@ All lanes take `env:staging` or `env:production` (default `staging`), matching
 | Lane | What it does |
 |---|---|
 | `beta` | Archive + upload to TestFlight |
+| `screenshots` | Capture App Store screenshots by running the UI tests against `EiginDev` |
+| `sync_screenshots` | Push `screenshots/` to App Store Connect, no binary |
 | `sync_metadata` | Push `metadata/` listing copy only, no binary |
 | `sync_iap` | Push `iap/*.yml` in-app purchase definitions |
 
@@ -46,7 +48,11 @@ for why, and the actual submission workflow.
 - `Fastfile` — lane definitions; `profile(env)` derives scheme/bundle
   id/team from `env`.
 - `Deliverfile` — App Store metadata defaults.
+- `Snapfile` — `snapshot` config: `EiginScreenshots` scheme (builds `EiginDev`,
+  runs `EiginUITests`), `en-US`, 6.9-inch iPhone.
 - `metadata/` — App Store listing copy, one folder per locale.
+- `screenshots/` — generated captures (gitignored); see
+  [docs/src/ios/screenshots.md](../../../docs/src/ios/screenshots.md).
 - `iap/*.yml` — in-app purchase definitions.
 - `actions/sync_in_app_purchases.rb` — custom action backing `sync_iap`.
 - `AuthKey/` — App Store Connect API key (gitignored).

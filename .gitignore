@@ -26,7 +26,8 @@ src/eigin_ios/Resources/Assets.xcassets/Icons
 ## Fastlane build artifacts
 src/eigin_ios/fastlane/report.xml
 src/eigin_ios/fastlane/Preview.html
-src/eigin_ios/fastlane/screenshots/**/*.png
+# Generated captures — run `just release ios <env> screenshots` to regenerate.
+src/eigin_ios/fastlane/screenshots/
 src/eigin_ios/fastlane/test_output
 src/eigin_ios/vendor/bundle
 

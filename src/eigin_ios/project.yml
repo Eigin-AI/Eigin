@@ -62,6 +62,20 @@ schemes:
       config: Debug
       targets:
         - EiginTests
+  # Test scheme for automated App Store screenshots — snapshot builds the dev
+  # app and drives it through EiginUITests (see fastlane/Snapfile).
+  EiginScreenshots:
+    build:
+      targets:
+        EiginDev: all
+        EiginUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - EiginUITests
+
   EiginWidgetsExtension:
     build:
       targets:
@@ -81,7 +95,13 @@ targets:
     type: application
     platform: iOS
     sources:
-      - Sources
+      - path: Sources
+        excludes:
+          - "Info*.plist"
+          # Screenshot automation is dev-only, never shipped: the whole debug
+          # folder, plus the bridge the installer stages through.
+          - "App/Debug/Screenshots/**"
+          - "App/ScreenshotMode.swift"
       - Resources
     dependencies:
       - package: swift-markdown
@@ -183,6 +203,20 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.tests
 
+  EiginUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - EiginUITests
+    dependencies:
+      - target: EiginDev
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.uitests
+        TEST_TARGET_NAME: EiginDev
+
   EiginWidgetsExtension:
     type: app-extension
     platform: iOS
@@ -271,6 +305,14 @@ targets:
         # via info.path, so neither may be copied into the bundle as a resource.
         excludes:
           - "Info*.plist"
+      # Screenshot automation: the launch stub compiles into this target only.
+      - path: Sources/App/Debug/Screenshots
+      # Test doubles reused for screenshot scenes (also compiled into EiginTests).
+      - Tests/Fakes/FakeCalendarService.swift
+      - Tests/Fakes/FakeHealthService.swift
+      - Tests/Fakes/FakeRelayClient.swift
+      - Tests/Fakes/FakeReminderService.swift
+      - Tests/Fakes/FakeStoreKitPurchaseService.swift
       - Resources
     dependencies:
       - package: swift-markdown
@@ -328,6 +370,9 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "6.0"
+        # Marks the dev target; the screenshot test doubles key on it (they are
+        # also compiled into the app target, where `@testable import` is invalid).
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: EIGIN_DEV
         GENERATE_INFOPLIST_FILE: true
         MARKETING_VERSION: "1.0.0"
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Dev
