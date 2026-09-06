@@ -7,6 +7,7 @@ use crate::{config, localize};
 ///
 /// - Swift: runs swiftformat --lint on iOS sources, tests, and scripts.
 /// - Rust: runs cargo fmt --check on the relay and tools crates.
+/// - Web: runs prettier --check + eslint on design/web.
 /// - Localization: validates that all String(localized:) keys exist in Localized.swift.
 #[derive(clap::Args)]
 pub struct LintArgs {}
@@ -44,6 +45,27 @@ pub fn run(_args: LintArgs) -> Result<()> {
         )? {
             failed = true;
         }
+    }
+
+    // Web: prettier --check + eslint. Skipped with a note without node_modules.
+    let web = format!("{root}/design/web");
+    if std::path::Path::new(&format!("{web}/node_modules")).is_dir() {
+        if !run_cmd(
+            Command::new("npx")
+                .args(["prettier", "--check", "src", "tests"])
+                .current_dir(&web),
+            "prettier --check",
+        )? {
+            failed = true;
+        }
+        if !run_cmd(
+            Command::new("npx").args(["eslint", "."]).current_dir(&web),
+            "eslint",
+        )? {
+            failed = true;
+        }
+    } else {
+        println!("Skipping web lint: design/web/node_modules missing.");
     }
 
     let root = config::repo_root()?;

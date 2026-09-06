@@ -76,7 +76,7 @@ _test-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Run tests (target: all | ios | relay, variant: unit | postgres)')]
+[doc('Run tests (target: all | ios | relay | web, variant: unit | postgres)')]
 test target="all" variant="unit" env="staging" verbose="false":
     #!/usr/bin/env bash
     if [ "{{ target }}" = "ios" ] || [ "{{ target }}" = "all" ]; then just _test-ios {{ env }} {{ verbose }}; fi
@@ -87,6 +87,20 @@ test target="all" variant="unit" env="staging" verbose="false":
             just _test-relay {{ verbose }}
         fi
     fi
+    if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _test-web; fi
+
+# svelte-check + a vite build: the compile gate. Skipped without node_modules
+# (npm install runs automatically via `just run web`).
+[private]
+_test-web:
+    #!/usr/bin/env bash
+    set -e
+    cd design/web
+    if [ ! -d node_modules ]; then
+        echo "Skipping web tests: node_modules missing (run npm install in design/web)."
+        exit 0
+    fi
+    npm run test
 
 [private]
 _test-relay-postgres:
@@ -210,15 +224,15 @@ assets *args:
 # CLI; these recipes name the arguments and hand them over. Slots are quoted
 # because a device can be called "Daniel's iPhone (2)".
 
-[doc('Run a target detached (target: relay | ios). ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
+[doc('Run a target detached (target: relay | web | ios). ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
 run target="relay" mode="" value="" env="":
     @{{ tools }} run {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }}
 
-[doc('Stop a detached target (target: relay)')]
+[doc('Stop a detached target (target: relay | web)')]
 stop target="relay":
     @{{ tools }} stop {{ quote(target) }}
 
-[doc('Show target logs (target: relay | ios). ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
+[doc('Show target logs (target: relay | web | ios). ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
 [arg("follow", short="f", long="follow", value="true")]
 [arg("since", long="since")]
 logs target="relay" mode="" value="" env="" since="" follow="false":

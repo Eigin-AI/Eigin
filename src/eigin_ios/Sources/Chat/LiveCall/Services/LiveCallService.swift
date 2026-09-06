@@ -39,11 +39,11 @@ final class LiveCallService: @unchecked Sendable {
             }
         }
 
-        var iconName: String {
+        var icon: Image {
             switch self {
-            case .fast: "hare"
-            case .balanced: "gauge.medium"
-            case .slow: "tortoise"
+            case .fast: Iconography.Functional.Speed.fast
+            case .balanced: Iconography.Functional.Speed.balanced
+            case .slow: Iconography.Functional.Speed.slow
             }
         }
     }

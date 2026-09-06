@@ -5,6 +5,7 @@ use std::process::Command;
 ///
 /// - Swift: runs swiftformat on iOS sources, tests, and scripts.
 /// - Rust: runs cargo fmt on the relay and tools crates.
+/// - Web: runs prettier + eslint --fix on design/web.
 #[derive(clap::Args)]
 pub struct FormatArgs {}
 
@@ -38,7 +39,30 @@ pub fn run(_args: FormatArgs) -> Result<()> {
         "cargo fmt (tools)",
     )?;
 
+    let web = format!("{root}/design/web");
+    if web_installed(&web) {
+        run_cmd(
+            Command::new("npx")
+                .args(["prettier", "--write", "src", "tests"])
+                .current_dir(&web),
+            "prettier",
+        )?;
+        run_cmd(
+            Command::new("npx")
+                .args(["eslint", "--fix", "."])
+                .current_dir(&web),
+            "eslint --fix",
+        )?;
+    } else {
+        println!("Skipping web formatting: design/web/node_modules missing.");
+    }
+
     Ok(())
+}
+
+/// Whether web tooling is installed — skipped with a note when it isn't.
+fn web_installed(web_dir: &str) -> bool {
+    std::path::Path::new(&format!("{web_dir}/node_modules")).is_dir()
 }
 
 fn run_cmd(cmd: &mut Command, label: &str) -> Result<()> {

@@ -1,7 +1,7 @@
+use crate::design::tokens;
 use anyhow::{Context, Result};
 use minijinja::Environment;
 use serde_json::Value;
-use std::fs;
 use std::process::Command;
 
 use super::fonts::InstalledFonts;
@@ -45,13 +45,6 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("color_hex", include_str!("templates/color_hex.swift.jinja")),
 ];
 
-pub fn load_tokens(repo_root: &str) -> Result<Value> {
-    let tokens_path = format!("{repo_root}/design/tokens.json");
-    let content =
-        fs::read_to_string(&tokens_path).with_context(|| format!("reading {tokens_path}"))?;
-    serde_json::from_str(&content).context("parsing design/tokens.json")
-}
-
 pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>) -> Result<()> {
     let output_dir = format!("{repo_root}/src/eigin_ios/Sources/Core/Design/Generated");
 
@@ -63,7 +56,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     }
 
     // Spacing
-    let scale = model::parse_spacing(tokens)?;
+    let scale = tokens::parse_spacing(tokens)?;
     render_and_write(
         &env,
         "spacing",
@@ -83,7 +76,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     )?;
 
     // StrokeWeight
-    let scale = model::parse_stroke_weight(tokens)?;
+    let scale = tokens::parse_stroke_weight(tokens)?;
     render_and_write(
         &env,
         "stroke_weight",
@@ -93,7 +86,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     )?;
 
     // Sizing
-    let scale = model::parse_sizing(tokens)?;
+    let scale = tokens::parse_sizing(tokens)?;
     let sizing_body = scale.render_body();
     let sizing_output = format!(
         "{GENERATED_HEADER}import SwiftUI\n\n/// Component sizing dimensions. Generated from design/tokens.json.\nenum Sizing {{\n{sizing_body}}}\n"
@@ -101,7 +94,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     codegen::write_file(&output_dir, "Sizing.swift", &sizing_output)?;
 
     // Grid
-    let scale = model::parse_grid(tokens)?;
+    let scale = tokens::parse_grid(tokens)?;
     render_and_write(
         &env,
         "grid",
@@ -140,7 +133,7 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
     )?;
 
     // ResolvedColors
-    let tree = model::parse_color_tree(tokens)?;
+    let tree = tokens::parse_color_tree(tokens)?;
     let struct_body = tree.render_struct_body();
     let rc_output = format!(
         "{GENERATED_HEADER}import SwiftUI\n\n/// Resolved color set for a given theme and color scheme. Generated from design/tokens.json.\nstruct ResolvedColors {{\n{struct_body}}}\n"

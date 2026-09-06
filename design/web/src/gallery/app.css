@@ -1,0 +1,122 @@
+/* Gallery chrome — built from design tokens, so the scratchpad itself looks
+   like Eigin. Components pages and screens render inside EiginRoot. */
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+}
+
+/* The surface comes from EiginRoot, so the chrome follows the scheme toggle. */
+.gallery {
+  background: inherit;
+}
+
+.gallery {
+  display: flex;
+  height: 100%;
+}
+
+.sidebar {
+  width: 260px;
+  flex: none;
+  border-right: 1px solid var(--color-border-standard-base);
+  padding: var(--spacing-n16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-n16);
+  overflow-y: auto;
+}
+
+.sidebar h1 {
+  margin: 0;
+}
+
+.gallery > .content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-n32) var(--spacing-n40);
+  background: var(--color-surface-standard-base);
+}
+
+/* Components pages: plain document flow on the gallery surface. */
+.doc {
+  max-width: 900px;
+}
+
+/* Typography comes from the .t-* class on the heading itself. */
+.doc > h2 {
+  margin: var(--spacing-n40) 0 var(--spacing-n16);
+  text-transform: capitalize;
+}
+
+.doc > h2:first-child {
+  margin-top: 0;
+}
+
+/* A phone canvas in a catalog page: the same frame the screens use, hugging
+   its content. */
+.doc .canvas {
+  width: max-content;
+  margin-bottom: var(--spacing-n40);
+}
+
+/* Specimens hug their content; anything meant to fill says so itself, the way
+   `Button.large` does. Stretching by default made every tag a full-width bar. */
+.doc .specimen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-n8);
+}
+
+/* Screens: dark page behind the phone frame. */
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* Frames centre; the pickers above them start at the leading edge. */
+  align-items: safe center;
+  gap: var(--spacing-n24);
+  padding: var(--spacing-n24);
+  overflow-x: auto;
+  background: var(--color-surface-standard-alternative);
+  border-radius: var(--radius-card);
+  min-height: 100%;
+}
+
+/* Pinned to the stage's corner, so it never moves as pickers come and go. */
+.stage-tools {
+  position: absolute;
+  top: var(--spacing-n24);
+  right: var(--spacing-n24);
+  z-index: 2;
+}
+
+/* Device first, then the configurations that device offers, then whatever the
+   screen itself wants to drive. A screen with many states makes a track wider
+   than the stage, so the row scrolls rather than clipping its last option. */
+.device-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  gap: var(--spacing-n8);
+  width: max-content;
+  max-width: 100%;
+}
+
+.device-picker > * {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.device-picker > *::-webkit-scrollbar {
+  display: none;
+}

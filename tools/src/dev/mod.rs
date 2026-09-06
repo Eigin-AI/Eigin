@@ -10,14 +10,15 @@ mod device;
 mod ios;
 mod logs;
 mod relay;
+mod web;
 
 use crate::config::model::Env;
 use logs::Since;
 
-/// Start a target: `relay [env]`, `ios simulator [env]`, `ios device [name] [env]`.
+/// Start a target: `relay [env]`, `ios simulator [env]`, `ios device [name] [env]`, `web`.
 #[derive(clap::Args)]
 pub struct RunArgs {
-    /// relay | ios
+    /// relay | ios | web
     target: String,
     /// Mode for ios (simulator | device), then a device name and environment.
     args: Vec<String>,
@@ -26,14 +27,14 @@ pub struct RunArgs {
 /// Stop a detached target.
 #[derive(clap::Args)]
 pub struct StopArgs {
-    /// relay
+    /// relay | web
     target: String,
 }
 
 /// Show a target's logs.
 #[derive(clap::Args)]
 pub struct LogsArgs {
-    /// relay | ios
+    /// relay | ios | web
     target: String,
     /// Mode for ios (simulator | device), then a device name, environment and window.
     args: Vec<String>,
@@ -157,7 +158,20 @@ pub fn run(args: RunArgs) -> Result<()> {
                 _ => ios::run_device(slots.name.as_deref(), env, &root),
             }
         }
-        other => bail!("Unknown run target: {other} (use relay | ios)"),
+        "web" => {
+            let slots = classify(
+                &args.args,
+                Accepts {
+                    name: false,
+                    since: false,
+                },
+            )?;
+            if slots.env.is_some() {
+                bail!("the gallery needs no environment: just run web");
+            }
+            web::start(&root)
+        }
+        other => bail!("Unknown run target: {other} (use relay | ios | web)"),
     }
 }
 
@@ -165,7 +179,8 @@ pub fn stop(args: StopArgs) -> Result<()> {
     let root = crate::config::repo_root()?;
     match args.target.as_str() {
         "relay" => relay::stop(&root),
-        other => bail!("Unknown stop target: {other} (use relay)"),
+        "web" => web::stop(&root),
+        other => bail!("Unknown stop target: {other} (use relay | web)"),
     }
 }
 
@@ -206,7 +221,16 @@ pub fn logs(args: LogsArgs) -> Result<()> {
                 _ => ios::simulator_logs(env, &since, args.follow, &root),
             }
         }
-        other => bail!("Unknown logs target: {other} (use relay | ios)"),
+        "web" => {
+            if slots.env.is_some() {
+                bail!("just logs web reads one log file, so it takes no environment");
+            }
+            if let Some(name) = slots.name {
+                bail!("Unrecognised argument: {name}");
+            }
+            web::show_logs(since, args.follow, &root)
+        }
+        other => bail!("Unknown logs target: {other} (use relay | ios | web)"),
     }
 }
 

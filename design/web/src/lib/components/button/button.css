@@ -1,0 +1,195 @@
+/*
+ * The shared button primitives behind every component in this folder: the
+ * `.eigin-btn` and `.eigin-action` families. Anything component-specific
+ * lives in that component's own <style> block.
+ *
+ * States are overlay fills, so the base background stays and each interaction
+ * state paints `::before` on top. Variant + size classes set the CSS custom
+ * props consumed here.
+ */
+
+.eigin-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Hover / pressed / disabled overlays, opacity-driven. */
+.eigin-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: transparent;
+  opacity: 0;
+  transition: opacity var(--motion-normal) var(--motion-easing-smooth);
+  pointer-events: none;
+}
+
+.eigin-btn:hover:not(:disabled)::before,
+.eigin-btn.eigin-force-hover:not(:disabled)::before {
+  background: var(--btn-hover);
+  opacity: 1;
+}
+
+.eigin-btn:active:not(:disabled)::before,
+.eigin-btn.eigin-force-pressed:not(:disabled)::before {
+  background: var(--btn-pressed);
+  opacity: 1;
+  transition: opacity var(--motion-fast) var(--motion-easing-snap);
+}
+
+.eigin-btn:disabled::before,
+.eigin-btn.eigin-force-disabled::before {
+  background: var(--btn-disabled);
+  opacity: 1;
+}
+
+/* Disabled label colour — each variant brings its own foreground. */
+.eigin-btn:disabled,
+.eigin-btn.eigin-force-disabled {
+  color: var(--btn-fg-disabled, var(--color-text-standard-disabled));
+  cursor: default;
+}
+
+.eigin-btn:focus-visible {
+  outline: 2px solid var(--color-interaction-border-focus);
+  outline-offset: 2px;
+}
+
+.eigin-btn:focus {
+  outline: none;
+}
+
+/* Label takes the interactive-width column when a trailing element exists. */
+.eigin-btn .eigin-trailing-spacer {
+  flex: 1;
+}
+
+/* --- Variants ----------------------------------------------------------- */
+
+.eigin-btn.primary {
+  --btn-bg: var(--color-button-standard-primary);
+  --btn-fg: var(--color-text-button-onPrimary);
+  --btn-hover: var(--color-interaction-light-hover);
+  --btn-pressed: var(--color-interaction-light-pressed);
+  --btn-disabled: var(--color-interaction-light-disabled);
+}
+
+.eigin-btn.secondary {
+  --btn-bg: var(--color-button-standard-secondary);
+  --btn-fg: var(--color-text-button-onSecondary);
+  --btn-fg-disabled: var(--color-text-button-onSecondary);
+  --btn-hover: var(--color-interaction-light-hover);
+  --btn-pressed: var(--color-interaction-light-pressed);
+  --btn-disabled: var(--color-interaction-light-disabled);
+}
+
+.eigin-btn.spot {
+  --btn-bg: var(--color-button-spot-base);
+  --btn-fg: var(--color-text-button-onSpot);
+  --btn-hover: var(--color-interaction-dark-hover);
+  --btn-pressed: var(--color-interaction-dark-pressed);
+  --btn-disabled: var(--color-interaction-dark-disabled);
+}
+
+.eigin-btn.destructive {
+  --btn-bg: var(--color-button-destructive-base);
+  --btn-fg: var(--color-text-button-onSpot);
+  --btn-hover: var(--color-interaction-dark-hover);
+  --btn-pressed: var(--color-interaction-dark-pressed);
+  --btn-disabled: var(--color-interaction-dark-disabled);
+}
+
+.eigin-btn.open {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-button-spot-base);
+  --btn-hover: var(--color-interaction-open-hover);
+  --btn-pressed: var(--color-interaction-open-pressed);
+}
+
+/* With a trailing element the label goes back to the leading edge
+   — label, spacer, then trailing. */
+.eigin-btn.has-trailing {
+  justify-content: flex-start;
+}
+
+/* --- Sizes -------------------------------------------------------------- */
+
+.eigin-btn.large {
+  width: 100%;
+  height: var(--sizing-button-height-large);
+  padding: 0 var(--spacing-n40);
+  gap: var(--sizing-button-gap-large);
+}
+
+.eigin-btn.medium {
+  height: var(--sizing-button-height-medium);
+  padding: 0 var(--spacing-n40);
+  gap: var(--sizing-button-gap-medium);
+}
+
+.eigin-btn.small {
+  height: var(--sizing-button-height-small);
+  padding: 0 var(--spacing-n24);
+  gap: var(--sizing-button-gap-small);
+}
+
+.eigin-btn.extraSmall {
+  height: var(--sizing-button-height-extraSmall);
+  padding: 0 var(--spacing-n24);
+  gap: var(--sizing-button-gap-extraSmall);
+}
+
+/* `open` has no chrome to fill, so it hugs its label at every size — the hit
+   area is the text, not the column it sits in. This diverges from the
+   stretched `large` used for every other variant, deliberately. */
+.eigin-btn.open {
+  width: auto;
+  height: auto;
+  padding: 0;
+}
+
+/* --- Action (circular) variant ------------------------------------------ */
+
+.eigin-btn.action {
+  width: var(--btn-action-size);
+  height: var(--btn-action-size);
+  min-width: var(--btn-action-size);
+  padding: 0;
+  justify-content: center;
+}
+
+.eigin-btn.action.large {
+  --btn-action-size: var(--sizing-button-action-large);
+  width: var(--btn-action-size);
+}
+
+.eigin-btn.action.medium {
+  --btn-action-size: var(--sizing-button-action-medium);
+}
+
+.eigin-btn.action.small {
+  --btn-action-size: var(--sizing-button-action-small);
+}
+
+.eigin-btn.action.extraSmall {
+  --btn-action-size: var(--sizing-button-action-extraSmall);
+}
+
+/* --- Tag ---------------------------------------------------------------- */
+
+.eigin-btn.tag {
+  height: var(--sizing-button-height-tag);
+  padding: 0 var(--spacing-n24);
+  gap: var(--sizing-button-gap-small);
+}

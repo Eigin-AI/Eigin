@@ -34,6 +34,13 @@ impl InstalledFonts {
     pub fn family_features(&self, family: &str) -> &[FontFeature] {
         self.features.get(family).map(Vec::as_slice).unwrap_or(&[])
     }
+
+    /// Family names declared in tokens, sorted for stable output.
+    pub fn family_names(&self) -> Vec<&str> {
+        let mut names: Vec<&str> = self.families.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        names
+    }
 }
 
 /// Checks `design/assets/fonts/` for OTF/TTF files. If any are present, copies
