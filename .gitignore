@@ -126,3 +126,6 @@ infra/**/backend.tf
 
 ## Xcode device-build artifacts
 src/eigin_ios/DeviceDerivedData
+
+## Web test-runner artifacts (design/web)
+test-results/

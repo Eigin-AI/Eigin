@@ -2,77 +2,20 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::codegen::ios::fmt_cgfloat;
-use crate::codegen::ios::hex_literal;
+use crate::codegen::ios::{fmt_cgfloat, hex_literal};
+use crate::design::tokens::{
+    ColorTree, SizingEntry, SizingScale, TYPOGRAPHY_FIELDS, parse_dimension, resolve_letter_spacing,
+};
 
 use super::fonts::InstalledFonts;
 use super::swift_mappings::{
-    is_color_token, parse_dimension, resolve_alias, resolve_letter_spacing, swift_font_design,
-    swift_font_weight, swift_text_style, swift_type_name, text_style_default_size,
+    swift_font_design, swift_font_weight, swift_text_style, swift_type_name,
+    text_style_default_size,
 };
-
-/// Canonical spacing scale order.
-///
-/// Tokens are listed in the visual order they appear on screen (ascending
-/// size) rather than alphabetically so the generated Swift file reads as a
-/// logical progression. When adding a token to design/tokens.json, add the
-/// key here too — tokens present in tokens.json but absent from this list are
-/// silently skipped by codegen.
-pub const SPACING_FIELDS: &[&str] = &[
-    "n2", "n4", "n8", "n12", "n16", "n20", "n24", "n28", "n32", "n40", "n48", "n56", "n64", "n72",
-    "n80", "n88", "n128",
-];
-
-/// Canonical typography scale order.
-///
-/// Tokens follow the visual hierarchy used in the design system rather than
-/// alphabetical order so the generated file reads top-down from headlines down
-/// to caption text. When adding a token to design/tokens.json, add the key
-/// here too.
-pub const TYPOGRAPHY_FIELDS: &[&str] = &[
-    "display",
-    "titleXl",
-    "titleL",
-    "titleM",
-    "titleS",
-    "titleXS",
-    "authorL",
-    "authorS",
-    "standfirst",
-    "body",
-    "code",
-    "chatMessage",
-    "chatMessageUser",
-    "button",
-    "buttonSmall",
-    "buttonLarge",
-    "navTab",
-    "tag",
-    "miniLabel",
-    "note",
-    "description",
-    "descriptionSmall",
-    "descriptionExpo",
-];
-
-const GRID_BREAKPOINTS: &[(&str, &str, &str)] = &[
-    ("mobile", "mobile", "Mobile width — iPhone (Figma: mobile)."),
-    ("tablet", "tablet", "Tablet width — iPad (Figma: tablet)."),
-    (
-        "desktop",
-        "desktop",
-        "Desktop width — large iPad / desktop (Figma: desktop).",
-    ),
-];
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-#[derive(Clone, Debug, Serialize)]
-pub struct SpacingScale {
-    pub entries: Vec<DimensionEntry>,
-}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct RadiusScale {
@@ -80,54 +23,10 @@ pub struct RadiusScale {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct StrokeWeightScale {
-    pub entries: Vec<DimensionEntry>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct DimensionEntry {
-    pub name: String,
-    pub pts: f64,
-    pub description: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize)]
 pub struct RadiusEntry {
     pub name: String,
     pub swift_value: String,
     pub description: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct SizingScale {
-    pub entries: Vec<SizingEntry>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub enum SizingEntry {
-    Leaf {
-        name: String,
-        pts: f64,
-    },
-    Group {
-        name: String,
-        children: Vec<SizingEntry>,
-    },
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct GridScale {
-    pub breakpoints: Vec<GridBreakpoint>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct GridBreakpoint {
-    pub name: String,
-    pub doc: String,
-    pub columns: u64,
-    pub outer: f64,
-    pub inner: f64,
-    pub gutter: f64,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -146,19 +45,6 @@ pub struct TypographyStyle {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct ColorTree {
-    pub name: String,
-    pub children: Vec<ColorTree>,
-    pub leaf: Option<ColorLeaf>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-pub struct ColorLeaf {
-    pub light_hex: String,
-    pub dark_hex: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
 pub struct FontRegistrationInfo {
     pub file_names: Vec<String>,
     pub large_title_ps: String,
@@ -168,34 +54,6 @@ pub struct FontRegistrationInfo {
 // ---------------------------------------------------------------------------
 // Parse into typed models
 // ---------------------------------------------------------------------------
-
-pub fn parse_spacing(tokens: &Value) -> Result<SpacingScale> {
-    let group = tokens
-        .get("spacing")
-        .with_context(|| "tokens.json: missing 'spacing' group")?;
-
-    let mut entries = Vec::new();
-    for name in SPACING_FIELDS {
-        let token = group
-            .get(name)
-            .with_context(|| format!("tokens.json: missing spacing.{name}"))?;
-        let raw = token
-            .get("$value")
-            .and_then(Value::as_str)
-            .with_context(|| format!("spacing.{name}: missing string $value"))?;
-        let pts = parse_dimension(raw)
-            .with_context(|| format!("spacing.{name}: invalid dimension '{raw}'"))?;
-        entries.push(DimensionEntry {
-            name: name.to_string(),
-            pts,
-            description: token
-                .get("$description")
-                .and_then(Value::as_str)
-                .map(String::from),
-        });
-    }
-    Ok(SpacingScale { entries })
-}
 
 pub fn parse_radius(tokens: &Value) -> Result<RadiusScale> {
     let group = tokens
@@ -228,116 +86,6 @@ pub fn parse_radius(tokens: &Value) -> Result<RadiusScale> {
         });
     }
     Ok(RadiusScale { entries })
-}
-
-pub fn parse_stroke_weight(tokens: &Value) -> Result<StrokeWeightScale> {
-    let group = tokens
-        .get("strokeWeight")
-        .with_context(|| "tokens.json: missing 'strokeWeight' group")?;
-
-    let obj = group
-        .as_object()
-        .context("strokeWeight group is not an object")?;
-    let mut entries = Vec::new();
-    for (name, token) in obj {
-        let raw = token
-            .get("$value")
-            .and_then(Value::as_str)
-            .with_context(|| format!("strokeWeight.{name}: missing string $value"))?;
-        let pts = parse_dimension(raw)
-            .with_context(|| format!("strokeWeight.{name}: invalid dimension '{raw}'"))?;
-        entries.push(DimensionEntry {
-            name: name.clone(),
-            pts,
-            description: token
-                .get("$description")
-                .and_then(Value::as_str)
-                .map(String::from),
-        });
-    }
-    Ok(StrokeWeightScale { entries })
-}
-
-pub fn parse_sizing(tokens: &Value) -> Result<SizingScale> {
-    let group = tokens
-        .get("sizing")
-        .with_context(|| "tokens.json: missing 'sizing' group")?;
-    let entries = parse_sizing_group(tokens, group)?;
-    Ok(SizingScale { entries })
-}
-
-fn parse_sizing_group(tokens: &Value, node: &Value) -> Result<Vec<SizingEntry>> {
-    let obj = node.as_object().context("sizing node is not an object")?;
-    let mut entries = Vec::new();
-    for (key, value) in obj {
-        if key.starts_with('$') {
-            continue;
-        }
-        let token_type = value.get("$type").and_then(Value::as_str);
-        if token_type == Some("dimension") {
-            let raw = value
-                .get("$value")
-                .and_then(Value::as_str)
-                .with_context(|| format!("sizing token '{key}': missing $value"))?;
-            let resolved = resolve_alias(tokens, raw, "light", 0)
-                .with_context(|| format!("sizing token '{key}': alias resolution failed"))?;
-            let pts = parse_dimension(resolved)
-                .with_context(|| format!("sizing token '{key}': invalid dimension '{resolved}'"))?;
-            entries.push(SizingEntry::Leaf {
-                name: key.clone(),
-                pts,
-            });
-        } else if token_type == Some("number") {
-            let raw = value
-                .get("$value")
-                .and_then(Value::as_f64)
-                .with_context(|| format!("sizing token '{key}': number $value must be numeric"))?;
-            entries.push(SizingEntry::Leaf {
-                name: key.clone(),
-                pts: raw,
-            });
-        } else {
-            let children = parse_sizing_group(tokens, value)?;
-            entries.push(SizingEntry::Group {
-                name: key.clone(),
-                children,
-            });
-        }
-    }
-    Ok(entries)
-}
-
-pub fn parse_grid(tokens: &Value) -> Result<GridScale> {
-    let group = tokens
-        .get("grid")
-        .with_context(|| "tokens.json: missing 'grid' group")?;
-
-    let mut breakpoints = Vec::new();
-    for (token_key, swift_name, doc) in GRID_BREAKPOINTS {
-        let bp = group
-            .get(token_key)
-            .with_context(|| format!("tokens.json: missing grid.{token_key}"))?;
-
-        let columns = bp
-            .get("columns")
-            .and_then(|t| t.get("$value"))
-            .and_then(Value::as_u64)
-            .with_context(|| format!("grid.{token_key}.columns: missing integer $value"))?;
-
-        let outer = parse_grid_dimension(bp, token_key, "outer")?;
-        let inner = parse_grid_dimension(bp, token_key, "inner")?;
-        let gutter = parse_grid_dimension(bp, token_key, "gutter")?;
-
-        breakpoints.push(GridBreakpoint {
-            name: swift_name.to_string(),
-            doc: doc.to_string(),
-            columns,
-            outer,
-            inner,
-            gutter,
-        });
-    }
-    Ok(GridScale { breakpoints })
 }
 
 pub fn parse_typography(tokens: &Value, fonts: Option<&InstalledFonts>) -> Result<TypographyScale> {
@@ -497,61 +245,6 @@ fn resolve_features(
         .collect()
 }
 
-pub fn parse_color_tree(tokens: &Value) -> Result<ColorTree> {
-    let group = tokens
-        .get("color")
-        .with_context(|| "tokens.json: missing 'color' group")?;
-    let children = parse_color_subtree(tokens, group)?;
-    Ok(ColorTree {
-        name: "color".to_string(),
-        children,
-        leaf: None,
-    })
-}
-
-fn parse_color_subtree(tokens: &Value, node: &Value) -> Result<Vec<ColorTree>> {
-    let obj = node.as_object().context("color node is not an object")?;
-    let mut entries = Vec::new();
-    for (key, value) in obj {
-        if key.starts_with('$') {
-            continue;
-        }
-        if is_color_token(value) {
-            let light_raw = value
-                .get("$value")
-                .and_then(Value::as_str)
-                .with_context(|| format!("color.{key}: missing $value"))?;
-            let dark_raw = value
-                .get("$modes")
-                .and_then(|m| m.get("dark"))
-                .and_then(Value::as_str)
-                .unwrap_or(light_raw);
-
-            let light_hex = resolve_alias(tokens, light_raw, "light", 0)
-                .with_context(|| format!("resolving color.{key} in light mode"))?;
-            let dark_hex = resolve_alias(tokens, dark_raw, "dark", 0)
-                .with_context(|| format!("resolving color.{key} in dark mode"))?;
-
-            entries.push(ColorTree {
-                name: key.clone(),
-                children: vec![],
-                leaf: Some(ColorLeaf {
-                    light_hex: light_hex.to_string(),
-                    dark_hex: dark_hex.to_string(),
-                }),
-            });
-        } else {
-            let children = parse_color_subtree(tokens, value)?;
-            entries.push(ColorTree {
-                name: key.clone(),
-                children,
-                leaf: None,
-            });
-        }
-    }
-    Ok(entries)
-}
-
 pub fn build_font_registration(fonts: Option<&InstalledFonts>) -> Option<FontRegistrationInfo> {
     fonts.map(|installed| FontRegistrationInfo {
         file_names: installed.file_names.clone(),
@@ -564,16 +257,6 @@ pub fn build_font_registration(fonts: Option<&InstalledFonts>) -> Option<FontReg
             .unwrap_or("NorthEastCN-SemiBold")
             .to_string(),
     })
-}
-
-fn parse_grid_dimension(bp: &Value, bp_key: &str, field: &str) -> Result<f64> {
-    let raw = bp
-        .get(field)
-        .and_then(|t| t.get("$value"))
-        .and_then(Value::as_str)
-        .with_context(|| format!("grid.{bp_key}.{field}: missing string $value"))?;
-    parse_dimension(raw)
-        .with_context(|| format!("grid.{bp_key}.{field}: invalid dimension '{raw}'"))
 }
 
 // ---------------------------------------------------------------------------
@@ -595,7 +278,7 @@ impl SizingEntry {
     fn render(&self, depth: usize) -> String {
         let indent = "    ".repeat(depth);
         match self {
-            SizingEntry::Leaf { name, pts } => {
+            SizingEntry::Leaf { name, pts, .. } => {
                 format!(
                     "{indent}static let {name}: CGFloat = {}\n",
                     fmt_cgfloat(*pts)

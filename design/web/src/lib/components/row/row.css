@@ -1,0 +1,23 @@
+/*
+ * The hairline between members of a content group. It lives here rather than
+ * in the group's scoped styles because it crosses a component boundary: the
+ * group owns the boundary, the member draws it.
+ *
+ * Any two members are divided, not just two rows — iOS settings groups mix
+ * rows with pickers and disclosures, and the run of hairlines must not break.
+ *
+ * Inset to where the row's text starts, so the card's edge stays clean.
+ */
+.eigin-rows > * + * {
+  position: relative;
+}
+
+.eigin-rows > * + *::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--spacing-n24);
+  right: 0;
+  height: 1px;
+  background: var(--color-input-standard-inactive);
+}

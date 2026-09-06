@@ -1,0 +1,80 @@
+/**
+ * Maps highlight.js token classes onto the Eigin code palette.
+ *
+ * Mirrors CodeHighlightCSS.swift: several selectors share one token, since the
+ * palette is deliberately coarser than highlight.js's token set.
+ */
+
+.hljs {
+  color: var(--color-code-plain);
+  background: none;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--color-code-comment);
+}
+
+.hljs-keyword,
+.hljs-literal,
+.hljs-doctag,
+.hljs-formula,
+.hljs-selector-tag {
+  color: var(--color-code-keyword);
+  font-weight: 600;
+}
+
+.hljs-built_in,
+.hljs-type,
+.hljs-tag,
+.hljs-name,
+.hljs-meta,
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: var(--color-code-type);
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--color-code-function);
+}
+
+.hljs-string,
+.hljs-char,
+.hljs-regexp,
+.hljs-meta-string,
+.hljs-template-string {
+  color: var(--color-code-string);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--color-code-number);
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-params,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-pseudo {
+  color: var(--color-code-variable);
+}
+
+.hljs-link {
+  color: var(--color-code-link);
+}
+
+.hljs-addition {
+  color: var(--color-code-inserted);
+}
+
+.hljs-deletion {
+  color: var(--color-code-deleted);
+}

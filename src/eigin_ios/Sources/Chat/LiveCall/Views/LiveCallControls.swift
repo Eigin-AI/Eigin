@@ -29,7 +29,7 @@ struct LiveCallControls: View {
                             Haptics.light()
                             service.responseSpeed = speed
                         } label: {
-                            Label(speed.label, systemImage: speed.iconName)
+                            Label { Text(speed.label) } icon: { speed.icon }
                         }
                     }
                 } label: {
@@ -40,17 +40,16 @@ struct LiveCallControls: View {
 
     private var speedActionButton: some View {
         AppActionButton(
-            icon: Image(systemName: service.responseSpeed.iconName),
+            icon: service.responseSpeed.icon,
             variant: .primary,
             size: .medium,
             action: {}
         )
-        .contentTransition(.symbolEffect(.replace))
     }
 
     private var hangUpButton: some View {
         AppActionButton(
-            icon: Image(systemName: "phone.down.fill"),
+            icon: Iconography.Functional.phoneDown,
             variant: .destructive,
             size: .medium,
             action: {
@@ -62,7 +61,7 @@ struct LiveCallControls: View {
 
     private var interruptButton: some View {
         AppActionButton(
-            icon: Image(systemName: "hand.raised.fill"),
+            icon: Iconography.Functional.hand,
             variant: .primary,
             size: .medium,
             action: {

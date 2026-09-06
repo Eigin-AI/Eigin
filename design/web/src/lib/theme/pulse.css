@@ -1,0 +1,27 @@
+/*
+ * A slow opacity pulse marking something as live: a tool still running, a
+ * control waiting on the network.
+ *
+ * Callers run it at two depths, so --pulse-depth chooses; it stays a property
+ * until a depth token exists to promote it to.
+ *
+ * The one-second period is a rhythm rather than a transition tier, so it is
+ * written here instead of drawn from the motion duration tokens.
+ */
+.eigin-pulse {
+  --pulse-depth: 0.7;
+
+  animation: eigin-pulse 1s var(--motion-easing-smooth) infinite alternate;
+}
+
+@keyframes eigin-pulse {
+  to {
+    opacity: var(--pulse-depth);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eigin-pulse {
+    animation: none;
+  }
+}

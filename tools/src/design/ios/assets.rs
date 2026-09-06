@@ -4,7 +4,7 @@ use regex::Regex;
 use serde_json::Value;
 use std::fs;
 
-use super::swift_mappings::resolve_alias;
+use crate::design::tokens::resolve_alias;
 
 const ICON_SIZE: u32 = 1024;
 const LOGO_FRACTION: f32 = 0.70;
