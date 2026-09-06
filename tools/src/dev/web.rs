@@ -62,6 +62,7 @@ pub fn start(root: &str) -> Result<()> {
         .context("generating web tokens")?;
 
     stop_running(root)?;
+    reclaim_port(DEFAULT_PORT)?;
 
     let log = fs::OpenOptions::new()
         .create(true)
@@ -145,6 +146,51 @@ pub fn show_logs(since: Option<Since>, follow: bool, root: &str) -> Result<()> {
     Ok(())
 }
 
+/// A gallery from another checkout keeps running when its worktree is removed,
+/// and its pid file goes with it. Clear one off our port; refuse anything else.
+fn reclaim_port(port: u16) -> Result<()> {
+    for pid in listeners(port) {
+        let command = process_command(pid);
+        if !is_gallery(&command) {
+            bail!("port {port} is held by pid {pid} ({command}) — stop it and try again");
+        }
+        println!("→ Reclaiming port {port} from a stale gallery (pid {pid})…");
+        if kill(pid, "TERM") {
+            wait_for_exit(pid);
+        }
+    }
+    Ok(())
+}
+
+/// A gallery is a vite from some checkout's web dir, ours or another's.
+fn is_gallery(command: &str) -> bool {
+    command.contains(&format!("{WEB_DIR}/node_modules/.bin/vite"))
+}
+
+fn listeners(port: u16) -> Vec<u32> {
+    let Ok(output) = Command::new("lsof")
+        .args(["-ti", &format!("tcp:{port}"), "-sTCP:LISTEN"])
+        .stderr(std::process::Stdio::null())
+        .output()
+    else {
+        return Vec::new();
+    };
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| line.trim().parse().ok())
+        .collect()
+}
+
+fn process_command(pid: u32) -> String {
+    Command::new("ps")
+        .args(["-o", "command=", "-p", &pid.to_string()])
+        .output()
+        .ok()
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .filter(|command| !command.is_empty())
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
 fn stop_running(root: &str) -> Result<()> {
     if let Some(pid) = read_pid(root)
         && kill(pid, "TERM")
@@ -197,4 +243,23 @@ fn wait_until_serving(port: u16) -> bool {
         std::thread::sleep(Duration::from_millis(100));
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognises_a_gallery_from_another_checkout() {
+        let command = "node /Users/me/Repositories/eigin.feature-web/design/web/node_modules/.bin/vite --port 5173 --strictPort";
+        assert!(is_gallery(command));
+    }
+
+    #[test]
+    fn leaves_an_unrelated_server_alone() {
+        assert!(!is_gallery(
+            "node /Users/me/other-app/node_modules/.bin/vite --port 5173"
+        ));
+        assert!(!is_gallery("python -m http.server 5173"));
+    }
 }
