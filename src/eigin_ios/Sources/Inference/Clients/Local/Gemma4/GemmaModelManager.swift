@@ -32,22 +32,32 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private var transient: Transient = .idle
 
     var state: AssetState {
+#if EIGIN_DEV
+        // Screenshot scenes report the model as installed without one on disk.
+        if let simulatedState { return simulatedState }
+#endif
         switch transient {
-        case .queued: .queued
-        case .downloading(let info): .downloading(info)
-        case .preparing: .preparing(fractionCompleted: nil)
-        case .failed(let m): .failed(m)
-        case .unavailable(let m): .unavailable(m)
+        case .queued: return .queued
+        case .downloading(let info): return .downloading(info)
+        case .preparing: return .preparing(fractionCompleted: nil)
+        case .failed(let m): return .failed(m)
+        case .unavailable(let m): return .unavailable(m)
         case .idle:
-            if llm != nil { .ready }
-            else if isReady { .downloaded }
-            else if !hasRequiredRAM() { .unavailable(Localized.Model.insufficientRAM) }
-            else { .notDownloaded }
+            if llm != nil { return .ready }
+            if isReady { return .downloaded }
+            if !hasRequiredRAM() { return .unavailable(Localized.Model.insufficientRAM) }
+            return .notDownloaded
         }
     }
 
     /// The loaded inference engine, available after ``load()``.
     private(set) var llm: GemmaRuntime?
+
+#if EIGIN_DEV
+    /// Forces the reported state without a model on disk. Set only by the
+    /// dev-only screenshot module.
+    var simulatedState: AssetState?
+#endif
     private(set) var isLoading = false
 
     private var downloadTask: Task<Void, Never>?

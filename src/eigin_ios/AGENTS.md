@@ -67,3 +67,9 @@ Formatting is enforced by SwiftFormat — config at `src/eigin_ios/.swiftformat`
 Framework is Swift Testing (`import Testing`, `@Test`, `@Suite`, `#expect`). One test file per service: `{Service}Tests.swift`. Fakes live in `Tests/Fakes/`. A common pattern is `FakeURLProtocol` injected into `URLSession` to intercept network calls without hitting the real network.
 
 Run with `just test ios`.
+
+## App Store screenshots
+
+Generated with `just release ios staging screenshots`. Scenes are view-only
+data under `Sources/App/Debug/Screenshots/` (dev target only) and never touch
+the live chat. See [`docs/src/ios/screenshots.md`](../../docs/src/ios/screenshots.md).

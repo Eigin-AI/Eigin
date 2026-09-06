@@ -3461,9 +3461,16 @@ enum Localized {
                 Localized.get("settings.info.modelNotDownloaded")
             }
 
-            /// Describes how many models are available for a provider
-            static func modelsAvailable(_ p1: String) -> String {
-                String(format: Localized.get("settings.info.modelsAvailable"), p1)
+            enum ModelsAvailable {
+                /// Describes how many models are available for a provider (one)
+                static func one(_ p1: String) -> String {
+                    String(format: Localized.get("settings.info.modelsAvailable.one"), p1)
+                }
+
+                /// Describes how many models are available for a provider (other)
+                static func other(_ p1: String) -> String {
+                    String(format: Localized.get("settings.info.modelsAvailable.other"), p1)
+                }
             }
         }
 

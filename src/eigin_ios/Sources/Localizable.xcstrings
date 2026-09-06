@@ -10353,8 +10353,25 @@
         }
       }
     },
-    "settings.info.modelsAvailable": {
-      "comment": "Describes how many models are available for a provider",
+    "settings.info.modelsAvailable.one": {
+      "comment": "Describes how many models are available for a provider (one)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tilgængelig model"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ model available"
+          }
+        }
+      }
+    },
+    "settings.info.modelsAvailable.other": {
+      "comment": "Describes how many models are available for a provider (other)",
       "localizations": {
         "da": {
           "stringUnit": {

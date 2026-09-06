@@ -1,0 +1,10 @@
+# Automated App Store screenshots (iPhone only — the app is phone-only, so
+# Apple's 6.9-inch requirement is met with one Pro Max capture set).
+#
+# To add a locale later, append it here (e.g. "da") — nothing else changes.
+devices(["iPhone 17 Pro Max"])
+languages(["en-US"])
+scheme("EiginScreenshots")
+output_directory("./fastlane/screenshots")
+clear_previous_screenshots(true)
+stop_after_first_error(true)

@@ -146,15 +146,17 @@ build target="all" env="staging" verbose="false":
 # --- Release ---
 
 # `env`/`track` default to the least public target: no args means staging beta.
-[doc('Build, sign and upload a release (target: ios, env: staging | production, track: beta | metadata | iap)')]
+[doc('Build, sign and upload a release (target: ios, env: staging | production, track: beta | metadata | iap | screenshots | sync-screenshots)')]
 release target="ios" env="staging" track="beta": generate
     #!/usr/bin/env bash
     set -euo pipefail
     if [ "{{ target }}" != "ios" ]; then echo "Unknown release target: {{ target }}"; exit 1; fi
     case "{{ track }}" in
-        beta)     lane=beta ;;
-        metadata) lane=sync_metadata ;;
-        iap)      lane=sync_iap ;;
+        beta)        lane=beta ;;
+        metadata)    lane=sync_metadata ;;
+        iap)         lane=sync_iap ;;
+        screenshots) lane=screenshots ;;
+        sync-screenshots) lane=sync_screenshots ;;
         *) echo "Unknown release track: {{ track }}"; exit 1 ;;
     esac
     # fastlane reads BUNDLE_ID / DEVELOPMENT_TEAM / ASC_* from the environment.

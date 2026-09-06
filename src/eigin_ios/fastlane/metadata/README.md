@@ -9,3 +9,7 @@ app name is a one-time identity setting managed by hand in App Store Connect.
 
 `just release ios <env> metadata` pushes changes without building or
 submitting a binary.
+
+Screenshots are not metadata: they are generated from the app and live in
+`fastlane/screenshots/` (gitignored), pushed by their own lane. See
+[docs/src/ios/screenshots.md](../../../../docs/src/ios/screenshots.md).

@@ -64,6 +64,7 @@
 - [iOS](./ios/README.md)
 - [Local model](./ios/local-model.md)
 - [Releasing](./ios/releasing.md)
+- [App Store screenshots](./ios/screenshots.md)
 
 # Compliance
 

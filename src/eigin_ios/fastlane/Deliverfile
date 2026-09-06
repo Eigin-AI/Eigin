@@ -2,4 +2,5 @@
 # per-env bundle id explicitly (see Fastfile's `profile`), overriding this.
 app_identifier ENV.fetch("BUNDLE_ID")
 metadata_path "./fastlane/metadata"
-skip_screenshots true # screenshot automation (snapshot) is a follow-up
+# Screenshot behavior is per lane: `sync_metadata` keeps skip_screenshots: true;
+# `sync_screenshots` uploads everything in fastlane/screenshots via deliver.

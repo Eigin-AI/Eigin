@@ -90,15 +90,22 @@ struct CreateCalendarEventTool: Tool {
         if let startString = ToolHelpers.stringArgument(toolCall, "start_date"),
            let start = LocalDateFormatter.parse(startString)
         {
-            let when: String = if let endString = ToolHelpers.stringArgument(toolCall, "end_date"),
-                                  let end = LocalDateFormatter.parse(endString)
+            var endText: String?
+            if let endString = ToolHelpers.stringArgument(toolCall, "end_date"),
+               let end = LocalDateFormatter.parse(endString)
             {
+                // Same-day ranges drop the repeated date: "Fri, Sep 11, 12:00 to 13:30".
+                endText = Calendar.current.isDate(end, inSameDayAs: start)
+                    ? EventTimestamp.time(for: end)
+                    : EventTimestamp.string(for: end)
+            }
+            let when: String = if let endText {
                 Localized.Permission.Disclosure.rangeFormat(
-                    LocalDateFormatter.string(from: start),
-                    LocalDateFormatter.string(from: end)
+                    EventTimestamp.string(for: start),
+                    endText
                 )
             } else {
-                LocalDateFormatter.string(from: start)
+                EventTimestamp.string(for: start)
             }
             summary = "\(title) (\(when))"
         }

@@ -308,7 +308,7 @@ struct ConnectionsView: View {
                                 .count(where: { KnownModelCatalog.lookup($0) != nil })
                             providerRow(
                                 name: provider.name,
-                                detail: Localized.Settings.Info.modelsAvailable("\(count)")
+                                detail: Self.modelsAvailable(count)
                             )
                         }
                         .buttonStyle(.plain)
@@ -350,7 +350,17 @@ struct ConnectionsView: View {
         }
     }
 
-    private func providerRow(name: String, detail: String) -> some View {
+    /// "1 model available" / "3 models available".
+    private static func modelsAvailable(_ count: Int) -> String {
+        count == 1
+            ? Localized.Settings.Info.ModelsAvailable.one("\(count)")
+            : Localized.Settings.Info.ModelsAvailable.other("\(count)")
+    }
+
+    private func providerRow(
+        name: String,
+        detail: String
+    ) -> some View {
         HStack(spacing: Spacing.n16) {
             VStack(alignment: .leading, spacing: Spacing.n4) {
                 Text(name)
@@ -392,7 +402,7 @@ struct ConnectionsView: View {
                         Text(reason)
                     case .ready:
                         let count = localProvider?.availableModels.count ?? 0
-                        Text(Localized.Settings.Info.modelsAvailable("\(count)"))
+                        Text(Self.modelsAvailable(count))
                     }
                 }
                 .typography(Typography.tag)

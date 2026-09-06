@@ -77,6 +77,30 @@ platform :ios do
     UI.success("Updated App Store listing for #{p[:bundle_id]} (#{p[:env]})")
   end
 
+  desc "Capture App Store screenshots (runs the UI tests against the dev app on a 6.9-inch simulator)"
+  lane :screenshots do
+    snapshot # Configuration in Snapfile: EiginScreenshots scheme (EiginDev + UI tests), en-US.
+  end
+
+  desc "Push App Store screenshots (env: staging | production)"
+  lane :sync_screenshots do |options|
+    p = profile(options.fetch(:env, "staging"))
+    api_key = asc_api_key
+    UI.important("Uploading screenshots for #{p[:bundle_id]} (#{p[:env]}) — check this exact app in App Store Connect")
+
+    deliver(
+      api_key: api_key,
+      app_identifier: p[:bundle_id], # no `name:` — app name is a one-time identity setting, managed by hand
+      skip_metadata: true,
+      skip_binary_upload: true,
+      submit_for_review: false,
+      force: true, # skip the interactive HTML diff prompt
+      run_precheck_before_submit: false,
+    )
+
+    UI.success("Uploaded screenshots for #{p[:bundle_id]} (#{p[:env]})")
+  end
+
   desc "Push in-app purchase definitions (env: staging | production)"
   lane :sync_iap do |options|
     p = profile(options.fetch(:env, "staging"))

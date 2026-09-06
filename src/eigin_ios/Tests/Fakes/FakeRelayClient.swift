@@ -1,4 +1,10 @@
+#if EIGIN_DEV
+// Compiled into the EiginDev app target for screenshot automation, where the
+// app's own module is already in scope. EiginTests also compiles this file,
+// with an explicit @testable import.
+#else
 @testable import Eigin
+#endif
 import Foundation
 
 /// Programmable `RelayClient` for tests. Each handler defaults to throwing `.notConfigured`.
