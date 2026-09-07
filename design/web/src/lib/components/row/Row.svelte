@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Icon from "../icon/Icon.svelte";
+  import Mark from "../status/Mark.svelte";
   import type { IconName } from "../../generated/icons";
 
   interface Props {
@@ -11,8 +12,15 @@
     value?: string;
     /** Leading glyph. */
     icon?: IconName;
-    /** What the row promises: navigation, an external link, or nothing. */
-    accessory?: "chevron" | "link" | "none";
+    /** Stand-in mark for a row whose subject has no logo: its own initial. */
+    letter?: string;
+    /** What the row promises: navigation, an external link, adding, removing,
+        or nothing. */
+    accessory?: "chevron" | "link" | "plus" | "trash" | "none";
+    /** How loudly the row speaks. Accent is for the one thing you might be
+        hunting for in a settled list; muted defers to somewhere else;
+        destructive keeps its red to the glyph. */
+    tone?: "standard" | "accent" | "muted" | "destructive";
     /** A control in place of the accessory — a switch, a small button. */
     trailing?: Snippet;
     onclick?: () => void;
@@ -23,13 +31,25 @@
     description,
     value,
     icon,
+    letter,
     accessory = "chevron",
+    tone = "standard",
     trailing,
     onclick,
   }: Props = $props();
 
   const interactive = $derived(Boolean(onclick));
   const showsAccessory = $derived(!trailing && accessory !== "none");
+
+  const accessoryIcon = $derived<IconName>(
+    accessory === "link"
+      ? "functional/arrow/up_right"
+      : accessory === "plus"
+        ? "functional/plus"
+        : accessory === "trash"
+          ? "functional/trash"
+          : "functional/chevron/right",
+  );
 </script>
 
 <!--
@@ -37,12 +57,22 @@
   optional supporting line, an optional value, and a trailing accessory or
   control.
 
+  Adding, removing and deferring are this row in another tone, not components
+  of their own: a plus in the accent adds to the group it closes, a muted
+  chevron opens the longer version, and a trash with its red kept to the glyph
+  takes the connection away. Sharing one implementation is also what keeps
+  their metrics honest — as separate components they stood 9px short.
+
   Web-first: iOS repeats this layout by hand on every settings screen rather
   than sharing a component.
 -->
 {#snippet contents()}
   {#if icon}
     <span class="glyph"><Icon name={icon} size={24} /></span>
+  {:else if letter}
+    <!-- Same circle the identity header uses, sized to the glyph slot: a row
+         of services keeps one leading column whether or not we ship a logo. -->
+    <span class="glyph"><Mark {letter} size={32} /></span>
   {/if}
 
   <span class="labels">
@@ -59,11 +89,8 @@
   {#if trailing}
     {@render trailing()}
   {:else if showsAccessory}
-    <span class="accessory" class:chevron={accessory === "chevron"}>
-      <Icon
-        name={accessory === "chevron" ? "functional/chevron/down" : "functional/arrow/up_right"}
-        size={16}
-      />
+    <span class="accessory">
+      <Icon name={accessoryIcon} size={16} />
     </span>
   {/if}
 {/snippet}
@@ -71,11 +98,11 @@
 <!-- A row that does something is a button; a row that only states something is
      a plain element, so it never sits in the tab order promising an action. -->
 {#if interactive}
-  <button class="eigin-row interactive" type="button" {onclick}>
+  <button class="eigin-row interactive {tone}" type="button" {onclick}>
     {@render contents()}
   </button>
 {:else}
-  <div class="eigin-row">
+  <div class="eigin-row {tone}">
     {@render contents()}
   </div>
 {/if}
@@ -99,9 +126,15 @@
     cursor: pointer;
   }
 
+  /* A fixed box, so a logo and a letter mark start on the same column and the
+     titles beside them line up whichever a row happens to have. */
   .glyph {
     display: flex;
     flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     color: var(--color-icon-standard-base);
   }
 
@@ -123,6 +156,26 @@
 
   .title {
     color: var(--color-text-standard-base);
+  }
+
+  /* Adding is the one thing in a list of settled rows you might be hunting
+     for, so the whole line is allowed to be the thing the eye lands on. */
+  .accent .title,
+  .accent .accessory {
+    color: var(--color-accent);
+  }
+
+  /* What it opens is optional: the card above already said what you needed. */
+  .muted .title {
+    color: var(--color-text-standard-muted);
+  }
+
+  /* Never a red label. `text.standard.error` is #FF0004, a pure signal red
+     meant for filled buttons and glyphs, and at title weight on a warm page it
+     is the only cold, fully saturated thing on screen. Kept to the glyph, the
+     same red does its job without shouting. */
+  .destructive .accessory {
+    color: var(--color-text-standard-error);
   }
 
   .description,
@@ -149,10 +202,5 @@
     display: flex;
     flex: none;
     color: var(--color-text-standard-muted);
-  }
-
-  /* One asset, two directions: the chevron points the way in. */
-  .chevron {
-    transform: rotate(-90deg);
   }
 </style>

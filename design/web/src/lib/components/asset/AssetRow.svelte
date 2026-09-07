@@ -83,7 +83,7 @@
     }
   });
 
-  /* Ready is excluded: a finished circle is a neutral fill, not an accent ring. */
+  /* Ready is excluded: a finished circle is a filled status dot, not a ring. */
   const showsArc = $derived(
     state.kind === "downloading" || state.kind === "downloaded" || state.kind === "preparing",
   );
@@ -105,8 +105,9 @@
         : undefined,
   );
 
-  /* Accent arrow to download, neutral x to cancel, neutral trash to delete.
-     Nothing where the row has nothing to offer. */
+  /* Accent arrow to download, neutral x to cancel, red trash to delete — the
+     same red the remove row keeps to its glyph. Nothing where the row has
+     nothing to offer. */
   const control = $derived.by(() => {
     switch (state.kind) {
       case "notDownloaded":
@@ -132,7 +133,9 @@
 
 <!--
   One atom for anything downloadable: a progress circle, the name, one
-  meta line of facts, one trailing control. Numbers rather than spinners —
+  meta line of facts, one trailing control. The circle carries the connection
+  status colours — accent while it works, green when ready, notice amber when
+  unavailable, negative red when it failed. Numbers rather than spinners —
   a transfer shows percent and, once a rate is stable, a time left. Warnings
   are informational: the reason is the copy, and there is no action in the row.
 -->
@@ -189,11 +192,13 @@
         {/if}
 
         {#if state.kind === "ready"}
+          <!-- The same green the status line uses, four times the size: an
+               asset that finished is a connection that is up. -->
           <circle
             cx={RING / 2}
             cy={RING / 2}
             r={RING / 2}
-            fill="var(--color-border-standard-base)"
+            fill="var(--color-icon-signal-approve)"
           />
         {/if}
 
@@ -219,6 +224,7 @@
       <button
         class="control"
         class:spot={control.spot}
+        class:destructive={control.key === "delete"}
         type="button"
         aria-label={control.key}
         onclick={control.run}
@@ -330,6 +336,12 @@
   .control.spot {
     background: var(--color-accent);
     color: var(--color-text-button-onSpot);
+  }
+
+  /* Red kept to the glyph, never the whole control: deleting is not urgent,
+     and a filled red circle would outshout the screen's own action. */
+  .control.destructive {
+    color: var(--color-text-standard-error);
   }
 
   @media (prefers-reduced-motion: reduce) {

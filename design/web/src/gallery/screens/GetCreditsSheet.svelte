@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Sheet } from "@lib";
+  import { ContentGroup, Icon, Row, Sheet } from "@lib";
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -22,21 +22,29 @@
 >
   {#snippet primary()}
     <div class="packs">
-      {#each packs as pack (pack.credits)}
-        <button class="pack" type="button">
-          <span class="t-titleXS">{pack.credits} credits</span>
-          <span class="t-buttonSmall price">{pack.price}</span>
-        </button>
-      {/each}
+      <!-- One card of rows, as the relay sheet uses: three prices are a list
+           to compare, not three separate offers. -->
+      <ContentGroup>
+        {#each packs as pack (pack.credits)}
+          <Row title="{pack.credits} credits" onclick={() => {}}>
+            {#snippet trailing()}
+              <span class="t-buttonSmall price">{pack.price}</span>
+            {/snippet}
+          </Row>
+        {/each}
+      </ContentGroup>
 
       <button class="restore" type="button">
         <Icon name="functional/refresh" size={14} />
         <span class="t-note">Restore credits</span>
       </button>
 
+      <!-- Matches the iOS disclosure: footnote tone, the privacy link on its
+           own line, and the whole thing quieter than body text. -->
       <p class="t-note disclosure">
-        Payments are handled by the App Store. Eigin Relay routes your requests to third-party AI
-        providers in Europe.
+        Payments are handled by the App Store. Conversations you send are processed by third-party
+        AI providers in the EU on Eigin's behalf.
+        <a class="policy" href="https://www.eigin.ai/privacy/">See the privacy policy.</a>
       </p>
     </div>
   {/snippet}
@@ -47,39 +55,33 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-n12);
-    padding: 0 var(--sizing-pageLayout-headerGrouping-px-mobile);
+    /* Cards run to the page inset, as they do on a settings screen: the
+       card is the wide thing and its own padding holds the content to the
+       grid. The header above keeps the sheet's deeper text inset. */
+    padding: 0 var(--spacing-n16);
   }
 
-  .pack {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-n16);
-    box-sizing: border-box;
-    width: 100%;
-    padding: var(--spacing-n20) var(--spacing-n24);
-    border: none;
-    border-radius: var(--radius-card);
-    background: var(--color-button-standard-secondary);
-    color: var(--color-text-standard-base);
-    font-family: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-
+  /* One column of prices rather than three pills of different widths. The
+     minimum is on the content box, not the border box: with `border-box` the
+     padding ate into it, so a long price still outgrew a short one. */
   .price {
+    min-width: 6.5ch;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
     padding: var(--spacing-n12) var(--spacing-n20);
     border-radius: var(--radius-full);
     background: var(--color-button-spot-base);
     color: var(--color-text-button-onSpot);
   }
 
-  /* Lifted off the packs so it reads as its own secondary action. */
+  /* Lifted off the packs so it reads as its own secondary action, and inset
+     by a pack's own padding so it starts on the same column the pack labels
+     do rather than at the card's edge. */
   .restore {
     display: flex;
     align-items: center;
     gap: var(--spacing-n4);
-    margin-top: var(--spacing-n16);
+    margin: var(--spacing-n16) var(--spacing-n24) 0;
     padding: 0;
     border: none;
     background: transparent;
@@ -88,8 +90,16 @@
     cursor: pointer;
   }
 
+  /* Sits close under restore: the two are the sheet's tail, and only the
+     restore action needs lifting off the packs. */
   .disclosure {
-    margin: 0;
-    color: var(--color-text-standard-muted);
+    margin: 0 var(--spacing-n24);
+    color: var(--color-text-standard-disabled);
+  }
+
+  .policy {
+    display: block;
+    margin-top: var(--spacing-n8);
+    color: var(--color-text-standard-link);
   }
 </style>

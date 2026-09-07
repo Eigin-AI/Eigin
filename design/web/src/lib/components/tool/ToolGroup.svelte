@@ -30,7 +30,7 @@
   >
     {#if grouped}
       <span class="chevron" class:open={expanded}>
-        <Icon name="functional/chevron/down" size="fill" />
+        <Icon name="functional/chevron/right" size="fill" />
       </span>
     {/if}
 
@@ -90,12 +90,12 @@
     margin-right: var(--spacing-n8);
     color: var(--color-text-standard-muted);
     opacity: 0.4;
-    transform: rotate(-90deg);
     transition: transform var(--motion-normal) var(--motion-easing-smooth);
   }
 
+  /* The asset points the way in; opening turns it down. */
   .chevron.open {
-    transform: rotate(0deg);
+    transform: rotate(90deg);
   }
 
   /* Matches a tool row's box exactly, so swapping the summary for the count

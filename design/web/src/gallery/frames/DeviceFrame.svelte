@@ -171,6 +171,17 @@
     padding-block: var(--spacing-n24);
   }
 
+  /* iOS overlays its scrollbars. A Mac set to always show them reserves a
+     gutter instead, which narrows every screen in the frame by however wide
+     that gutter is, so nothing inside the frame draws one. */
+  .device-screen :global(*) {
+    scrollbar-width: none;
+  }
+
+  .device-screen :global(*::-webkit-scrollbar) {
+    display: none;
+  }
+
   .device-viewport {
     position: relative;
     height: 100%;

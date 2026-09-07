@@ -1,8 +1,23 @@
 <script lang="ts">
-  import { ActionButton, AssetRow, Button, ContentGroup, NavigationHeader, Row } from "@lib";
-  import type { AssetState } from "@lib";
+  import {
+    ActionButton,
+    AssetRow,
+    Button,
+    ContentGroup,
+    IdentityHeader,
+    NavigationHeader,
+    Row,
+  } from "@lib";
+  import type { AssetState, ConnectionState } from "@lib";
+  import LocalModelInfoSheet from "@gallery/screens/LocalModelInfoSheet.svelte";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
+  import ScreenScroll from "@gallery/screens/ScreenScroll.svelte";
+  import { untrack } from "svelte";
   import { useStageControls } from "@gallery/screens/stageControls.svelte";
+
+  /** Opens the sheet with the screen; used by the sheet's own entry. */
+  const { infoOpen = false }: { infoOpen?: boolean } = $props();
+  let showInfo = $state(untrack(() => infoOpen));
 
   const kinds = ["not installed", "downloading", "preparing", "ready", "unavailable"] as const;
   let kind = $state<(typeof kinds)[number]>("ready");
@@ -16,20 +31,34 @@
     ready: { kind: "ready" },
     unavailable: {
       kind: "unavailable",
-      reason:
-        "This device doesn't have enough memory to run the local model. iPhone 15 or later is required.",
+      reason: "This device doesn't have the hardware required to run the model.",
     },
   };
 
-  /* One button carries the whole decision: get it, stop it, or remove it. */
+  /* The header says whether you can use it; the asset row below says what the
+     download is doing. Neither repeats the other. */
+  const status = $derived.by<{ state: ConnectionState; label: string }>(() => {
+    switch (kind) {
+      case "ready":
+        return { state: "connected", label: "Ready to use" };
+      case "downloading":
+      case "preparing":
+        return { state: "attention", label: "Getting ready" };
+      case "unavailable":
+        return { state: "unavailable", label: "Not supported" };
+      default:
+        return { state: "off", label: "Not installed" };
+    }
+  });
+
+  /* One button carries the whole decision: get it, or stop getting it. */
   const action = $derived.by(() => {
     switch (kind) {
       case "not installed":
         return { label: "Download", variant: "primary" as const };
       case "downloading":
+      case "preparing":
         return { label: "Cancel", variant: "secondary" as const };
-      case "ready":
-        return { label: "Delete", variant: "secondary" as const };
       default:
         return undefined;
     }
@@ -42,9 +71,12 @@
 {/snippet}
 
 <!--
-  The on-device model: what it is, what to expect of it, and the one decision
-  worth making about it. The row carries the live status, so it drops its own
-  control — the action is the button at the bottom.
+  The model on the phone, on the same anatomy as every other provider: who it
+  is, the facts, then the one thing to do about it.
+
+  It is the one provider you have to fetch before you can use it, so the asset
+  row sits where another screen lists its models, with the download directly
+  under the thing being downloaded.
 -->
 <div class="local">
   <NavigationHeader title="Local model">
@@ -53,59 +85,50 @@
     {/snippet}
   </NavigationHeader>
 
-  <div class="body">
-    <div class="head">
-      <AssetRow
-        name="Gemma 4 E2B"
-        state={states[kind]}
-        sizeDescription="~2.6 GB"
-        showsAction={false}
-      />
+  <ScreenScroll>
+    <IdentityHeader
+      name="Local model"
+      kind="On this phone"
+      icon="functional/lock"
+      state={status.state}
+      status={status.label}
+    />
 
-      <!-- What you can't read off the title, the row, or the description. -->
-      <ContentGroup>
-        <Row title="Good for" value="Quick chats, web search" accessory="none" />
-        <Row title="Limitations" value="Basic reasoning, few tools" accessory="none" />
-        <Row title="Size on device" value="~2.6 GB" accessory="none" />
-      </ContentGroup>
+    <ContentGroup>
+      <Row title="Good for" value="Quick chats, web search" accessory="none" />
+      <Row title="Limitations" value="Complex tasks, tool use" accessory="none" />
+      <Row title="How it works" tone="muted" onclick={() => (showInfo = true)} />
+    </ContentGroup>
 
-      <p class="t-description blurb">On-device assistant model</p>
-    </div>
+    <!-- The row carries the live state and its own size, so the screen says
+         neither: its button is the only place the decision lives. -->
+    <AssetRow
+      name="Gemma 4 E2B"
+      state={states[kind]}
+      sizeDescription="~2.6 GB"
+      showsAction={false}
+    />
 
     {#if action}
       <Button label={action.label} variant={action.variant} onclick={() => {}} />
     {/if}
-  </div>
+
+    {#if kind === "ready"}
+      <ContentGroup>
+        <Row title="Delete model" accessory="trash" tone="destructive" onclick={() => {}} />
+      </ContentGroup>
+    {/if}
+  </ScreenScroll>
+
+  <LocalModelInfoSheet bind:open={showInfo} />
 </div>
 
 <style>
   .local {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  /* Facts at the top, the decision anchored at the bottom. */
-  .body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: var(--spacing-n32);
-    overflow-y: auto;
-    padding: var(--spacing-n8) var(--spacing-n24) var(--spacing-n32);
-  }
-
-  .head {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-n16);
-  }
-
-  .blurb {
-    margin: 0;
-    color: var(--color-text-standard-muted);
   }
 </style>
