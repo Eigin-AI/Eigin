@@ -68,11 +68,13 @@
     return catalogEntries.find((entry) => entry.id === here.id)?.component;
   });
 
-  const screen = $derived.by(() => {
+  const entry = $derived.by(() => {
     const here = route;
     if (here.kind !== "screen") return undefined;
-    return screenEntries.find((entry) => entry.id === here.id)?.component;
+    return screenEntries.find((candidate) => candidate.id === here.id);
   });
+
+  const screen = $derived(entry?.component);
 
   const controls = stageControls();
 
@@ -174,6 +176,13 @@
               <ScreenPlaceholder id={route.id} />
             {/if}
           </DeviceFrame>
+
+          <!-- What the screen is for, in a sentence or two. It sits under the
+               phone rather than in the sidebar: you read it while looking at
+               the thing it describes. -->
+          {#if entry?.about}
+            <p class="t-description stage-about">{entry.about}</p>
+          {/if}
         </div>
       {:else}
         <div class="doc">

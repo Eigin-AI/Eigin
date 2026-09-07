@@ -1,79 +1,100 @@
 <script lang="ts">
-  import { slide } from "svelte/transition";
-  import { Icon, Sheet, SubtleActionButton } from "@lib";
+  import { ContentGroup, Notice, Row, SearchField, Sheet } from "@lib";
+  import type { IconName } from "@lib";
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
-  /* OAuth presets are featured; the rest sit behind a fold as a grid. */
-  const oauth = [
-    { name: "EUrouter", emoji: "🇪🇺" },
-    { name: "OpenRouter", emoji: "🌐" },
+  let query = $state("");
+
+  /* Providers you have already connected are left out entirely: you reached
+     this sheet from the list they are on, so offering them again would be
+     offering a thing you cannot do. */
+  const connected = ["Anthropic"];
+
+  /* Sign-in first: nothing to paste, nothing to lose. OpenAI appears in both
+     groups because it genuinely offers both, and the group you pick from is
+     the way you want to connect. */
+  const signIn: { name: string; icon: IconName }[] = [
+    { name: "EUrouter", icon: "provider/eurouter" },
+    { name: "OpenRouter", icon: "provider/openrouter" },
+    { name: "OpenAI", icon: "provider/openai" },
   ];
 
-  /* The set carries the provider marks already; no need for a stand-in. */
-  const apiKeyPresets = [
-    { name: "OpenAI", logo: "provider/openai" },
-    { name: "Anthropic", logo: "provider/anthropic" },
-    { name: "Google", logo: "provider/google" },
-    { name: "Mistral", logo: "provider/mistral" },
-    { name: "Berget AI", logo: "provider/berget" },
-    { name: "Infercom", logo: "provider/infercom" },
-  ] as const;
+  const apiKey: { name: string; icon: IconName }[] = [
+    { name: "OpenAI", icon: "provider/openai" },
+    { name: "Anthropic", icon: "provider/anthropic" },
+    { name: "Google", icon: "provider/google" },
+    { name: "Mistral", icon: "provider/mistral" },
+    { name: "Groq", icon: "provider/groq" },
+    { name: "Berget AI", icon: "provider/berget" },
+    { name: "Infercom", icon: "provider/infercom" },
+  ];
 
-  let showKeys = $state(true);
+  const available = (list: { name: string; icon: IconName }[]) =>
+    list.filter(
+      (preset) =>
+        !connected.includes(preset.name) &&
+        preset.name.toLowerCase().includes(query.trim().toLowerCase()),
+    );
+
+  const shownSignIn = $derived(available(signIn));
+  const shownApiKey = $derived(available(apiKey));
+  const nothingFound = $derived(shownSignIn.length + shownApiKey.length === 0);
 </script>
 
 <!--
-  The first step of adding a provider. OAuth providers are offered outright;
-  everything that wants an API key waits behind a fold, with the custom
-  provider at the end of the grid.
+  Picking a provider to add.
+
+  Two groups, named for what you will be asked to do rather than for the
+  protocol behind it, and sign-in first because it asks least of you. Connect
+  by address is always the last thing in the sheet, so the way in for anything
+  we have never heard of never moves.
 -->
 <Sheet
   bind:open
-  title="AI Provider"
-  description="Eigin uses cloud AI to think: the choice is yours. You can switch anytime."
+  title="Add a provider"
+  description="Eigin uses cloud AI to think. You can connect more than one, and switch anytime."
 >
   {#snippet primary()}
     <div class="select">
-      <div class="featured">
-        {#each oauth as preset (preset.name)}
-          <div class="oauth">
-            <span class="flag">{preset.emoji}</span>
-            <SubtleActionButton label="Use {preset.name}" size="medium" onclick={() => {}}>
-              {#snippet icon()}<Icon name="functional/arrow/right" size={24} />{/snippet}
-            </SubtleActionButton>
-          </div>
-        {/each}
-      </div>
+      <SearchField bind:value={query} placeholder="Search providers" />
 
-      <div class="fold">
-        <button class="fold-head" type="button" onclick={() => (showKeys = !showKeys)}>
-          <span class="t-navTab">Or connect with an API key</span>
-          <span class="chevron" class:open={showKeys}>
-            <Icon name="functional/chevron/down" size={16} />
-          </span>
-        </button>
+      <!-- A search that finds nothing is not a dead end here: the last group
+           in the sheet takes anything, so the notice hands straight to it. -->
+      {#if nothingFound}
+        <Notice
+          tone="info"
+          title="We don't know that one"
+          body="Eigin has a curated list of provider presets, but you can connect any AI provider with an OpenAI-compatible API by address."
+        />
+      {/if}
 
-        {#if showKeys}
-          <!-- The fold rolls open, and the sheet grows with it. -->
-          <div class="keys" transition:slide={{ duration: 250 }}>
-            <div class="grid">
-              {#each apiKeyPresets as preset (preset.name)}
-                <button class="tile" type="button">
-                  <span class="logo"><Icon name={preset.logo} size={36} /></span>
-                  <span class="t-button">{preset.name}</span>
-                </button>
-              {/each}
-            </div>
-            <SubtleActionButton label="Custom Provider" size="medium" onclick={() => {}}>
-              {#snippet icon()}<Icon name="functional/plus" size={24} />{/snippet}
-            </SubtleActionButton>
-          </div>
-        {/if}
-      </div>
+      {#if shownSignIn.length > 0}
+        <ContentGroup label="Sign in">
+          {#each shownSignIn as preset (preset.name)}
+            <Row title={preset.name} icon={preset.icon} onclick={() => {}} />
+          {/each}
+        </ContentGroup>
+      {/if}
 
+      {#if shownApiKey.length > 0}
+        <ContentGroup label="Paste an API key">
+          {#each shownApiKey as preset (preset.name)}
+            <Row title={preset.name} icon={preset.icon} onclick={() => {}} />
+          {/each}
+        </ContentGroup>
+      {/if}
+
+      <ContentGroup footnote="Anything with an OpenAI-compatible API.">
+        <Row title="Connect by address" icon="functional/globe" onclick={() => {}} />
+      </ContentGroup>
+
+      <!-- Matches the iOS disclosure, down to the privacy link on its own
+           line: present before you commit, quieter than body text. -->
       <p class="t-note disclosure">
-        Connecting your own provider sends your conversations to that company under their terms.
+        Conversations you send go directly to the third-party AI provider you connect, under their
+        terms.
+        <a class="policy" href="https://www.eigin.ai/privacy/">See the privacy policy.</a>
       </p>
     </div>
   {/snippet}
@@ -84,95 +105,19 @@
     display: flex;
     flex-direction: column;
     gap: var(--sizing-pageLayout-gap);
-    padding: 0 var(--spacing-n24);
+    padding: 0 var(--spacing-n16);
   }
 
-  .featured {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-contentGrouping-gap);
-  }
-
-  /* A label and the thing it labels: the header grouping gap. */
-  .fold {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-headerGrouping-gap);
-  }
-
-  .keys {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-contentGrouping-gap);
-  }
-
-  .oauth {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-n16);
-  }
-
-  /* The icon rides in the button's trailing slot, and the spacer in there
-     pushes the button across the row beside the flag. */
-  .oauth :global(.eigin-btn) {
-    flex: 1;
-  }
-
-  .flag {
-    font-size: 28px;
-    line-height: 1;
-  }
-
-  .fold-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: var(--color-text-standard-muted);
-    font-family: inherit;
-    cursor: pointer;
-  }
-
-  /* Closed points right, open points down — one glyph, turned. */
-  .chevron {
-    display: inline-flex;
-    transform: rotate(-90deg);
-    transition: transform var(--motion-normal) var(--motion-easing-smooth);
-  }
-
-  .chevron.open {
-    transform: rotate(0deg);
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--sizing-pageLayout-contentGrouping-gap);
-  }
-
-  .tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-n16);
-    padding: var(--spacing-n24) var(--spacing-n8);
-    border: none;
-    border-radius: var(--radius-card);
-    background: var(--color-button-standard-secondary);
-    color: var(--color-text-standard-base);
-    font-family: inherit;
-    cursor: pointer;
-  }
-
-  .logo {
-    color: var(--color-text-standard-muted);
-  }
-
+  /* Level with the row text above it, like a group's own footnote. */
   .disclosure {
     margin: 0;
-    color: var(--color-text-standard-muted);
+    padding: 0 var(--spacing-n24);
+    color: var(--color-text-standard-disabled);
+  }
+
+  .policy {
+    display: block;
+    margin-top: var(--spacing-n8);
+    color: var(--color-text-standard-link);
   }
 </style>

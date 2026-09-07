@@ -90,6 +90,14 @@ body {
   min-height: 100%;
 }
 
+/* Reads as a caption to the phone above it, held to a comfortable measure. */
+.stage-about {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--color-text-standard-muted);
+  text-wrap: pretty;
+}
+
 /* Pinned to the stage's corner, so it never moves as pickers come and go. */
 .stage-tools {
   position: absolute;

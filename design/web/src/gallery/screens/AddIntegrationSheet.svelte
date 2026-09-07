@@ -1,98 +1,161 @@
 <script lang="ts">
-  import { ContentGroup, Icon, Row, Sheet, Tag } from "@lib";
+  import { ContentGroup, Icon, Notice, Row, SearchField, Sheet, Tag } from "@lib";
+  import type { IconName } from "@lib";
+  import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
+  import { useStageControls } from "@gallery/screens/stageControls.svelte";
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
-  /* The grid and the search field are both filters over the bundled types.
-     An active category shows as a removable chip; clearing it shows the grid. */
-  const categories = [
-    { name: "Email", icon: "functional/mail", available: true },
-    { name: "Family & School", icon: "functional/school", available: true },
-    { name: "Health", icon: "functional/heart", available: false },
-    { name: "Music", icon: "functional/music", available: false },
-  ] as const;
+  let query = $state("");
 
-  const emailTypes = [
-    { name: "Google", description: "Gmail, Calendar and Contacts", connected: true },
-    { name: "Microsoft", description: "Outlook mail and calendar", connected: false },
+  /* One catalogue, whatever is behind each entry. Which of these is built in
+     and which is a server someone runs is a fact on its own screen, so it is
+     not a way of sorting this list. These are what we would suggest first,
+     rather than what happens to be popular. */
+  const recommended: {
+    name: string;
+    description: string;
+    icon?: IconName;
+    letter?: string;
+  }[] = [
+    { name: "Google", description: "Gmail, Calendar and Contacts", icon: "service/google" },
+    { name: "Microsoft", description: "Outlook mail and calendar", icon: "service/microsoft" },
+    { name: "iCloud", description: "Mail, calendar and contacts", icon: "service/icloud" },
+    { name: "Notion", description: "Notes and databases", letter: "N" },
+    { name: "Other email", description: "Any account with IMAP", icon: "functional/mail" },
+  ];
+
+  const categories: {
+    name: string;
+    icon: IconName;
+    services: { name: string; description: string; icon?: IconName; letter?: string }[];
+  }[] = [
     {
-      name: "Other email (IMAP)",
-      description: "Connect any email account with IMAP, such as iCloud.",
-      connected: false,
+      name: "Mail and calendar",
+      icon: "functional/mail",
+      services: [
+        { name: "Google", description: "Gmail, Calendar and Contacts", icon: "service/google" },
+        { name: "Microsoft", description: "Outlook mail and calendar", icon: "service/microsoft" },
+        { name: "iCloud", description: "Mail, calendar and contacts", icon: "service/icloud" },
+        { name: "Proton", description: "Mail and calendar", icon: "service/proton" },
+        { name: "Fastmail", description: "Mail and calendar", letter: "F" },
+        { name: "Other email", description: "Any account with IMAP", icon: "functional/mail" },
+      ],
+    },
+    {
+      name: "Notes and documents",
+      icon: "functional/note",
+      services: [
+        { name: "Notion", description: "Notes and databases", letter: "N" },
+        { name: "Linear", description: "Issues and projects", icon: "service/linear" },
+      ],
+    },
+    {
+      name: "Home and devices",
+      icon: "functional/sound",
+      services: [
+        {
+          name: "Home Assistant",
+          description: "Lights, heating and sensors",
+          icon: "service/homeassistant",
+        },
+        { name: "Spotify", description: "Music and playlists", icon: "service/spotify" },
+      ],
+    },
+    {
+      name: "Travel",
+      icon: "functional/location",
+      services: [],
     },
   ];
 
-  let category = $state<string | undefined>(undefined);
-  let search = $state("");
+  /* Browsing narrows the same sheet rather than opening another: the chip says
+     where you are and clears back to the top. */
+  let category = $state("none");
+  const chosen = $derived(categories.find((entry) => entry.name === category));
 
-  const filtered = $derived(category === "Email" || search ? emailTypes : undefined);
+  useStageControls(() => browse);
+
+  const matches = (text: string) => text.toLowerCase().includes(query.trim().toLowerCase());
+  const listed = $derived(chosen ? chosen.services : recommended);
+  const shownServices = $derived(listed.filter((entry) => matches(entry.name)));
+  const shownCategories = $derived(query || chosen ? [] : categories);
+  const nothingFound = $derived(shownServices.length === 0);
 </script>
 
+<!-- Browsing is a tap in the app; here it is also driven by hand. -->
+{#snippet browse()}
+  <OptionSelector
+    options={["none", ...categories.map((entry) => entry.name)]}
+    bind:value={category}
+  />
+{/snippet}
+
 <!--
-  Connecting a new integration: pick a type, run its auth, save. The category
-  grid stands in for browsing; picking one filters to a list and leaves a chip
-  to clear. A type already connected is inert and ticked — one account per type.
+  Adding anything Eigin can reach: a built-in account or a server someone
+  runs, in one list.
+
+  People arrive knowing what they want it to do, not which protocol it speaks,
+  so the catalogue is sorted by that and the mechanism never appears here.
+  Connect by address is always last, so the way in for anything we have never
+  heard of never moves — and it promises only a try, since what answers there
+  decides what we can do with it.
 -->
 <Sheet
   bind:open
-  title="Add Integration"
-  description="Search for a service, or browse by what you need it to do."
+  title="Add an integration"
+  description="Use your existing accounts and tools in Eigin."
 >
   {#snippet primary()}
     <div class="add">
-      <label class="search">
-        <Icon name="functional/search" size={20} />
-        <input class="t-description" placeholder="Search integrations" bind:value={search} />
-      </label>
+      <SearchField bind:value={query} placeholder="Search integrations" />
 
-      <div class="results">
-        {#if category}
-          <div class="chip">
-            <Tag label={category} onclick={() => (category = undefined)}>
-              {#snippet trailing()}<Icon name="functional/x" size={16} />{/snippet}
-            </Tag>
-          </div>
-        {/if}
+      {#if chosen}
+        <div class="chip">
+          <Tag label={chosen.name} onclick={() => (category = "none")}>
+            {#snippet trailing()}<Icon name="functional/x" size={16} />{/snippet}
+          </Tag>
+        </div>
+      {/if}
 
-        {#if filtered}
-          <ContentGroup>
-            {#each filtered as type (type.name)}
-              {#if type.connected}
-                <Row
-                  title={type.name}
-                  description={type.description}
-                  accessory="none"
-                  trailing={connected}
-                />
-              {:else}
-                <Row title={type.name} description={type.description} onclick={() => {}} />
-              {/if}
-            {/each}
-          </ContentGroup>
-        {:else}
-          <div class="grid">
-            {#each categories as entry (entry.name)}
-              <button
-                class="tile"
-                class:inert={!entry.available}
-                type="button"
-                disabled={!entry.available}
-                onclick={() => (category = entry.name)}
-              >
-                <Icon name={entry.icon} size={28} />
-                <span class="t-button">{entry.name}</span>
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      {#if nothingFound}
+        <Notice
+          tone="info"
+          title={chosen ? "Nothing here yet" : "We don't know that one"}
+          body={chosen
+            ? "We have not added anything to this category yet. You can still connect a service by address."
+            : "Eigin has a curated list of integrations, but you can try connecting any service by address."}
+        />
+      {/if}
+
+      {#if shownServices.length > 0}
+        <ContentGroup label={chosen ? undefined : query ? "Matches" : "Recommended"}>
+          {#each shownServices as entry (entry.name)}
+            <Row
+              title={entry.name}
+              description={entry.description}
+              icon={entry.icon}
+              letter={entry.letter}
+              onclick={() => {}}
+            />
+          {/each}
+        </ContentGroup>
+      {/if}
+
+      {#if shownCategories.length > 0}
+        <ContentGroup label="Browse">
+          {#each shownCategories as entry (entry.name)}
+            <Row title={entry.name} icon={entry.icon} onclick={() => (category = entry.name)} />
+          {/each}
+        </ContentGroup>
+      {/if}
+
+      <ContentGroup footnote="Give Eigin an address and it will work out what is there.">
+        <Row title="Connect by address" icon="functional/globe" onclick={() => {}} />
+      </ContentGroup>
     </div>
   {/snippet}
 </Sheet>
-
-{#snippet connected()}
-  <span class="tick"><Icon name="functional/check_circle" size={20} /></span>
-{/snippet}
 
 <style>
   .add {
@@ -102,68 +165,13 @@
     padding: 0 var(--spacing-n16);
   }
 
-  .search {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-n8);
-    box-sizing: border-box;
-    height: var(--sizing-input-height);
-    padding: 0 var(--sizing-input-px-left);
-    border-radius: var(--radius-full);
-    background: var(--color-input-standard-active);
-    color: var(--color-text-standard-muted);
-  }
-
-  .search input {
-    flex: 1;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    color: var(--color-text-standard-base);
-    font: inherit;
-    outline: none;
-  }
-
-  /* The chip is grouped with the list it filters. */
-  .results {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-contentGrouping-gap);
-  }
-
+  /* Sits with the list it filters, at the gap a group's label would take:
+     the chip names the list, so the list drops its own label. */
   .chip {
     display: flex;
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--sizing-pageLayout-contentGrouping-gap);
-  }
-
-  .tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-n16);
-    padding: var(--spacing-n24) var(--spacing-n8);
-    border: none;
-    border-radius: var(--radius-card);
-    background: var(--color-button-standard-secondary);
-    color: var(--color-text-standard-base);
-    font-family: inherit;
-    text-align: center;
-    cursor: pointer;
-  }
-
-  /* A category awaiting its first provider stays visible but inert. */
-  .tile.inert {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .tick {
-    display: inline-flex;
-    color: var(--color-icon-signal-approve);
+    margin-bottom: calc(
+      var(--spacing-n8) - var(--sizing-pageLayout-gap) +
+        var(--sizing-pageLayout-contentGrouping-gap)
+    );
   }
 </style>

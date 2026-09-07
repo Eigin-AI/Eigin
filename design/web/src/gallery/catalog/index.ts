@@ -15,6 +15,7 @@ import Navigation from "@gallery/catalog/components/Navigation.svelte";
 import Rows from "@gallery/catalog/components/Rows.svelte";
 import Sheets from "@gallery/catalog/components/Sheets.svelte";
 import Spacing from "@gallery/catalog/fundamentals/Spacing.svelte";
+import Status from "@gallery/catalog/components/Status.svelte";
 import Typography from "@gallery/catalog/fundamentals/Typography.svelte";
 
 export interface CatalogEntry {
@@ -40,8 +41,9 @@ export const catalogEntries: CatalogEntry[] = [
   { id: "navigation", title: "Navigation", section: "components", component: Navigation },
   { id: "chat", title: "Chat messages", section: "components", component: Chat },
   { id: "morph", title: "Morph blob", section: "components", component: Morph },
-  { id: "content", title: "Code & markdown", section: "components", component: Content },
-  { id: "rows", title: "Rows & groups", section: "components", component: Rows },
-  { id: "assets", title: "Asset row", section: "components", component: Assets },
+  { id: "content", title: "Formatting", section: "components", component: Content },
+  { id: "rows", title: "Content groups", section: "components", component: Rows },
+  { id: "assets", title: "Assets", section: "components", component: Assets },
   { id: "sheets", title: "Sheets", section: "components", component: Sheets },
+  { id: "status", title: "Status", section: "components", component: Status },
 ];
