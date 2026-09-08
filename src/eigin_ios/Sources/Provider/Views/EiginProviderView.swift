@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// The Eigin credits home: shows the user's summed credit balance, a way to buy more, and
-/// plain-language information about how the relay keeps inference private.
+/// The Eigin Relay screen: the balance as the first fact, what the relay is,
+/// and the one button that buys more.
 ///
-/// Reached from the permanent Eigin row in ``ConnectionsView``, mirroring how On-Device opens
-/// ``LocalProviderView``.
+/// Reached from the permanent Eigin Relay row in ``ConnectionsView``. An
+/// empty account is the one state that stops Eigin working, so the header
+/// says so and the button below answers it — the notice never carries its own
+/// action beyond being a shortcut to it.
 struct EiginProviderView: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -15,7 +17,7 @@ struct EiginProviderView: View {
     var body: some View {
         VStack(spacing: 0) {
             AppNavigationHeader(
-                title: "Eigin",
+                title: Localized.Provider.Eigin.title,
                 leading: {
                     AppActionButton(
                         icon: Iconography.Functional.Arrow.left,
@@ -26,16 +28,36 @@ struct EiginProviderView: View {
                 }
             )
 
-            Spacer(minLength: Spacing.n40)
-            balance
-            Spacer(minLength: Spacing.n40)
-            bottomGroup
-                .padding(.horizontal, Spacing.n24)
+            AppAnchoredScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    AppIdentityHeader(
+                        name: Localized.Provider.Eigin.title,
+                        kind: Localized.Provider.Eigin.rowSubtitle,
+                        state: connectionState,
+                        status: statusLabel
+                    ) {
+                        AppBrandAvatar(image: Iconography.Brand.avatar, size: 64)
+                    }
+
+                    if let notice { notice }
+
+                    facts
+
+                    Spacer(minLength: 0)
+
+                    AppButton(Localized.Provider.Eigin.getMoreCredits, variant: .spot) {
+                        showPurchase = true
+                    }
+                }
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
                 .padding(.bottom, Spacing.n32)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .animation(Animations.smooth, value: model.totalCredits)
         .task { await model.onAppear() }
         .appSheet(
             isPresented: $showPurchase,
@@ -55,61 +77,84 @@ struct EiginProviderView: View {
         }
     }
 
-    /// Pitch card, primary action, and the "learn more" button, anchored at the bottom.
-    private var bottomGroup: some View {
-        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            AppCard(
-                Localized.Provider.Eigin.blurbTitle,
-                explainer: Localized.Provider.Eigin.blurbBody,
-                width: .infinity
+    // MARK: - Credit state
+
+    /// Empty is yours to fix (the button answers it); low is a heads-up;
+    /// anything else is simply up.
+    private enum CreditState {
+        case empty
+        case runningLow
+        case fine
+    }
+
+    private var creditState: CreditState {
+        switch model.totalCredits {
+        case ..<1: .empty
+        case ..<100: .runningLow
+        default: .fine
+        }
+    }
+
+    private var connectionState: ConnectionState {
+        creditState == .empty ? .attention : .connected
+    }
+
+    private var statusLabel: String {
+        switch creditState {
+        case .empty: Localized.Provider.Relay.Status.outOfCredits
+        default: Localized.Provider.Relay.Status.ready
+        }
+    }
+
+    /// The notice raises the problem; the screen's primary button answers it.
+    private var notice: AppNotice? {
+        switch creditState {
+        case .empty:
+            AppNotice(
+                tone: .warning,
+                title: Localized.Provider.Relay.Notice.pausedTitle,
+                body: Localized.Provider.Relay.Notice.pausedBody,
+                action: { showPurchase = true }
             )
-            AppButton(Localized.Provider.Eigin.getMoreCredits, variant: .spot) {
-                showPurchase = true
-            }
-            AppSubtleActionButton(
-                Localized.Provider.Eigin.learnHowItWorks,
-                icon: Image(systemName: "chevron.right")
-            ) {
-                showInfo = true
-            }
+        case .runningLow:
+            AppNotice(
+                tone: .info,
+                title: Localized.Provider.Relay.Notice.runningLowTitle,
+                body: Localized.Provider.Relay.Notice.runningLowBody
+            )
+        case .fine:
+            nil
         }
     }
 
-    private var balance: some View {
-        VStack(spacing: Spacing.n8) {
-            Text(verbatim: "\(model.totalCredits)")
-                .typography(Typography.display)
-                .foregroundStyle(colors.text.standard.base)
-                .contentTransition(.numericText())
-            HStack(spacing: Spacing.n8) {
-                Text(Localized.Provider.Eigin.creditsCaption)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.muted)
-                refreshButton
-            }
-        }
-        .animation(Animations.smooth, value: model.totalCredits)
-    }
+    // MARK: - Facts
 
-    /// Fixed-size refresh control beside the caption. Swaps the circular-arrow glyph for a spinner
-    /// while refreshing so the surrounding text never shifts.
-    private var refreshButton: some View {
-        Button {
-            Task { await model.refresh() }
-        } label: {
-            ZStack {
-                if model.isRefreshing {
-                    ProgressView().controlSize(.mini)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
-            .frame(width: 22, height: 22)
-        }
-        .buttonStyle(.plain)
-        .disabled(model.isRefreshing)
+    private var facts: some View {
+        AppRowsGroup(
+            footnote: Localized.Provider.Relay.factsFootnote,
+            rows: [
+                AppRowSpec(
+                    title: Localized.Provider.Relay.Facts.credits,
+                    value: "\(model.totalCredits)",
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Provider.Relay.Facts.hostedIn,
+                    value: Localized.Provider.Relay.Facts.hostedInValue,
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Provider.Relay.Facts.conversationsStored,
+                    value: Localized.Provider.Relay.Facts.conversationsStoredValue,
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Provider.Relay.Facts.howItWorks,
+                    tone: .muted,
+                    action: { showInfo = true }
+                ),
+            ]
+        )
     }
 }
 

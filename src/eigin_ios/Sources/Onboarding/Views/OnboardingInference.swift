@@ -40,7 +40,7 @@ struct OnboardingInference: View {
 
     private var connectSheetTitle: String {
         switch selectedMode {
-        case .preset(let preset): preset.name
+        case .preset(let preset, _): preset.name
         case .custom: Localized.Provider.Picker.customProvider
         case nil: ""
         }
@@ -48,7 +48,7 @@ struct OnboardingInference: View {
 
     private var connectSheetDescription: String? {
         switch selectedMode {
-        case .preset(let preset): preset.helpText
+        case .preset(let preset, _): preset.helpText
         case .custom: Localized.Provider.Setup.Custom.apiRequirement
         case nil: nil
         }
@@ -79,7 +79,7 @@ struct OnboardingInference: View {
             isPresented: $showCredits,
             title: Localized.Provider.Eigin.getCreditsTitle,
             description: Localized.Provider.Eigin.getCreditsDescription,
-            detents: [.medium, .large]
+            fitsContent: true
         ) {
             // Only an actual purchase proceeds; dismissing the sheet stays put.
             GetCreditsSheetContent(model: creditsModel) {
@@ -104,7 +104,8 @@ struct OnboardingInference: View {
             ProviderSelectSheetContent { selection in
                 showProviderSelect = false
                 switch selection {
-                case .preset(let preset): selectedMode = .preset(preset)
+                case .preset(let preset, let method):
+                    selectedMode = .preset(preset, method: method)
                 case .custom: selectedMode = .custom
                 }
                 showProviderConnect = true
@@ -114,7 +115,8 @@ struct OnboardingInference: View {
             isPresented: $showProviderConnect,
             title: connectSheetTitle,
             description: connectSheetDescription,
-            detents: [.large]
+            detents: [.large],
+            fitsContent: true
         ) {
             if let mode = selectedMode {
                 ProviderConnectSheetContent(

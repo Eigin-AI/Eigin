@@ -170,7 +170,7 @@ final class DefaultIntegrationOAuthService: IntegrationOAuthService, @unchecked 
     }
 }
 
-/// User-facing: surfaced directly in ``AddIntegration``'s error UI, so
+/// User-facing: surfaced directly in ``ConnectIntegrationSheet``'s error UI, so
 /// unlike ``EmailProviderError`` these are localized.
 enum IntegrationOAuthError: Error, LocalizedError, Equatable {
     case userCancelled

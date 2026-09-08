@@ -266,6 +266,18 @@ enum Localized {
         }
     }
 
+    enum Capability {
+        /// The Aula capability, e.g. a connected Aula account.
+        static var aula: String {
+            Localized.get("capability.aula")
+        }
+
+        /// The email capability, e.g. a connected Google or IMAP account.
+        static var email: String {
+            Localized.get("capability.email")
+        }
+    }
+
     enum Chat {
         /// A label for a chat list item that is currently selected.
         static var allChats: String {
@@ -425,6 +437,11 @@ enum Localized {
             /// Button label to dismiss a prompt without acting
             static var notNow: String {
                 Localized.get("common.actions.notNow")
+            }
+
+            /// Generic confirmation button.
+            static var ok: String {
+                Localized.get("common.actions.ok")
             }
 
             /// Button label to open a named item; %@ is substituted with the item name
@@ -1189,6 +1206,369 @@ enum Localized {
         }
     }
 
+    enum Integration {
+        /// Alert title after a partial OAuth consent. First argument is the account, second the
+        /// capability names.
+        static func partialGrant(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("integration.partialGrant"), p1, p2)
+        }
+
+        /// Alert body after a partial OAuth consent.
+        static var partialGrantBody: String {
+            Localized.get("integration.partialGrantBody")
+        }
+
+        enum Add {
+            /// Footnote under the connect-by-address row.
+            static var addressFootnote: String {
+                Localized.get("integration.add.addressFootnote")
+            }
+
+            /// Label over the category rows.
+            static var browseLabel: String {
+                Localized.get("integration.add.browseLabel")
+            }
+
+            /// Row connecting any service by MCP address.
+            static var connectByAddress: String {
+                Localized.get("integration.add.connectByAddress")
+            }
+
+            /// Description of the add-integration sheet.
+            static var description: String {
+                Localized.get("integration.add.description")
+            }
+
+            /// Info notice body for a category with no entries yet.
+            static var emptyCategoryBody: String {
+                Localized.get("integration.add.emptyCategoryBody")
+            }
+
+            /// Info notice title for a category with no entries yet.
+            static var emptyCategoryTitle: String {
+                Localized.get("integration.add.emptyCategoryTitle")
+            }
+
+            /// Label over the search results list.
+            static var matchesLabel: String {
+                Localized.get("integration.add.matchesLabel")
+            }
+
+            /// Label over the default catalogue list.
+            static var recommendedLabel: String {
+                Localized.get("integration.add.recommendedLabel")
+            }
+
+            /// Search field placeholder in the add-integration sheet.
+            static var searchPlaceholder: String {
+                Localized.get("integration.add.searchPlaceholder")
+            }
+
+            /// Title of the add-integration catalogue sheet.
+            static var title: String {
+                Localized.get("integration.add.title")
+            }
+
+            /// Info notice body when a search finds nothing.
+            static var unknownBody: String {
+                Localized.get("integration.add.unknownBody")
+            }
+
+            /// Info notice title when a search finds nothing.
+            static var unknownTitle: String {
+                Localized.get("integration.add.unknownTitle")
+            }
+        }
+
+        enum Connect {
+            /// Sheet description for the address route.
+            static var addressDescription: String {
+                Localized.get("integration.connect.addressDescription")
+            }
+
+            /// Field: the MCP server address.
+            static var addressField: String {
+                Localized.get("integration.connect.addressField")
+            }
+
+            /// Sheet title while connecting an MCP server by address.
+            static var addressTitle: String {
+                Localized.get("integration.connect.addressTitle")
+            }
+
+            /// Field: the IMAP app password.
+            static var appPasswordField: String {
+                Localized.get("integration.connect.appPasswordField")
+            }
+
+            /// Secondary button on a failure step, returning to the catalogue.
+            static var chooseAnother: String {
+                Localized.get("integration.connect.chooseAnother")
+            }
+
+            /// Sheet title on the connected step.
+            static var connectedTitle: String {
+                Localized.get("integration.connect.connectedTitle")
+            }
+
+            /// Button that hands over to a service sign-in. The argument is the service name.
+            static func continueWith(_ p1: String) -> String {
+                String(format: Localized.get("integration.connect.continueWith"), p1)
+            }
+
+            /// Field: the IMAP account address.
+            static var emailField: String {
+                Localized.get("integration.connect.emailField")
+            }
+
+            /// Field: the incoming mail host.
+            static var imapField: String {
+                Localized.get("integration.connect.imapField")
+            }
+
+            /// Failure text when an address cannot be parsed.
+            static var invalidAddress: String {
+                Localized.get("integration.connect.invalidAddress")
+            }
+
+            /// Identity header kind line on the connected step.
+            static var kindLabel: String {
+                Localized.get("integration.connect.kindLabel")
+            }
+
+            /// Field on the connected step: the inferred display name, editable.
+            static var nameField: String {
+                Localized.get("integration.connect.nameField")
+            }
+
+            /// Field: the outgoing mail host.
+            static var smtpField: String {
+                Localized.get("integration.connect.smtpField")
+            }
+
+            enum Credentials {
+                /// Info notice body when an MCP server needs client credentials.
+                static var body: String {
+                    Localized.get("integration.connect.credentials.body")
+                }
+
+                /// Info notice title when an MCP server needs client credentials.
+                static var title: String {
+                    Localized.get("integration.connect.credentials.title")
+                }
+            }
+
+            enum Description {
+                /// Sheet description for the browser sign-in route (Aula). The argument is the
+                /// service name.
+                static func browserSignIn(_ p1: String) -> String {
+                    String(
+                        format: Localized.get("integration.connect.description.browserSignIn"),
+                        p1
+                    )
+                }
+
+                /// Sheet description for the mail-account route.
+                static var mailAccount: String {
+                    Localized.get("integration.connect.description.mailAccount")
+                }
+
+                /// Sheet description for the OAuth route. The argument is the service name.
+                static func signIn(_ p1: String) -> String {
+                    String(format: Localized.get("integration.connect.description.signIn"), p1)
+                }
+            }
+
+            enum Failed {
+                /// Error notice body for a failed MCP address.
+                static var addressBody: String {
+                    Localized.get("integration.connect.failed.addressBody")
+                }
+
+                /// Error notice title for a failed MCP address.
+                static var addressTitle: String {
+                    Localized.get("integration.connect.failed.addressTitle")
+                }
+
+                /// Error notice body for a failed mail account.
+                static var mailBody: String {
+                    Localized.get("integration.connect.failed.mailBody")
+                }
+
+                /// Error notice title for a failed mail account.
+                static var mailTitle: String {
+                    Localized.get("integration.connect.failed.mailTitle")
+                }
+
+                /// Error notice body for a failed sign-in. The argument is the service name.
+                static func signInBody(_ p1: String) -> String {
+                    String(format: Localized.get("integration.connect.failed.signInBody"), p1)
+                }
+
+                /// Error notice title for a failed sign-in.
+                static var signInTitle: String {
+                    Localized.get("integration.connect.failed.signInTitle")
+                }
+            }
+
+            enum Status {
+                /// Status line on the connected step.
+                static var connectedLabel: String {
+                    Localized.get("integration.connect.status.connectedLabel")
+                }
+            }
+
+            enum Working {
+                /// Info notice body while a connection is verified.
+                static var checkingBody: String {
+                    Localized.get("integration.connect.working.checkingBody")
+                }
+
+                /// Info notice title while a connection is verified.
+                static var checkingTitle: String {
+                    Localized.get("integration.connect.working.checkingTitle")
+                }
+
+                /// Info notice body during sign-in. The argument is the service name.
+                static func waitingBody(_ p1: String) -> String {
+                    String(format: Localized.get("integration.connect.working.waitingBody"), p1)
+                }
+
+                /// Info notice title while a browser sign-in is in flight.
+                static var waitingTitle: String {
+                    Localized.get("integration.connect.working.waitingTitle")
+                }
+            }
+        }
+
+        enum Offers {
+            /// Footnote under the offers list.
+            static var footnote: String {
+                Localized.get("integration.offers.footnote")
+            }
+
+            /// Empty state when the offers search finds nothing. The argument is the query.
+            static func noMatches(_ p1: String) -> String {
+                String(format: Localized.get("integration.offers.noMatches"), p1)
+            }
+
+            /// Search field placeholder. First argument is the item count, second the noun.
+            static func searchPlaceholder(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("integration.offers.searchPlaceholder"), p1, p2)
+            }
+
+            /// Title of the read-only offers list.
+            static var title: String {
+                Localized.get("integration.offers.title")
+            }
+        }
+
+        enum Screen {
+            /// Row title of the active-provider switch. The argument is the capability name.
+            static func activeForRow(_ p1: String) -> String {
+                String(format: Localized.get("integration.screen.activeForRow"), p1)
+            }
+
+            /// Section label over the per-capability active-provider switches.
+            static var activeLabel: String {
+                Localized.get("integration.screen.activeLabel")
+            }
+
+            /// Category label under an integration's name on its screen, the way provider screens
+            /// say AI provider.
+            static var kindLabel: String {
+                Localized.get("integration.screen.kindLabel")
+            }
+
+            /// Section label over a built-in account’s capabilities.
+            static var offersLabel: String {
+                Localized.get("integration.screen.offersLabel")
+            }
+
+            /// Footnote when some capabilities were skipped at sign-in.
+            static var partialFootnote: String {
+                Localized.get("integration.screen.partialFootnote")
+            }
+
+            /// Destructive row that removes the integration. The argument is the integration name.
+            static func remove(_ p1: String) -> String {
+                String(format: Localized.get("integration.screen.remove"), p1)
+            }
+
+            /// Removal confirmation alert title. The argument is the integration name.
+            static func removeTitle(_ p1: String) -> String {
+                String(format: Localized.get("integration.screen.removeTitle"), p1)
+            }
+
+            /// Removal confirmation message for a built-in integration.
+            static var removeWarning: String {
+                Localized.get("integration.screen.removeWarning")
+            }
+
+            /// Muted row that opens the full tools list. The argument is the tool count.
+            static func showAllTools(_ p1: String) -> String {
+                String(format: Localized.get("integration.screen.showAllTools"), p1)
+            }
+
+            /// Footnote when the tools list is capped. The argument is the total tool count.
+            static func toolsFootnote(_ p1: String) -> String {
+                String(format: Localized.get("integration.screen.toolsFootnote"), p1)
+            }
+
+            /// Fact value: the integration is a built-in account.
+            static var viaBuiltin: String {
+                Localized.get("integration.screen.viaBuiltin")
+            }
+
+            /// Fact value: the integration is an MCP server. The only place the word MCP appears.
+            static var viaServer: String {
+                Localized.get("integration.screen.viaServer")
+            }
+
+            enum Facts {
+                /// Fact row: the MCP server address.
+                static var address: String {
+                    Localized.get("integration.screen.facts.address")
+                }
+
+                /// Fact row: the mechanism behind the integration.
+                static var connectsVia: String {
+                    Localized.get("integration.screen.facts.connectsVia")
+                }
+            }
+
+            enum Notice {
+                /// Warning notice body for an expired sign-in. The argument is the integration
+                /// name.
+                static func expiredBody(_ p1: String) -> String {
+                    String(format: Localized.get("integration.screen.notice.expiredBody"), p1)
+                }
+
+                /// Warning notice title for an expired sign-in.
+                static var expiredTitle: String {
+                    Localized.get("integration.screen.notice.expiredTitle")
+                }
+
+                /// Error notice title for an MCP server error.
+                static var serverTitle: String {
+                    Localized.get("integration.screen.notice.serverTitle")
+                }
+            }
+
+            enum Status {
+                /// Status line when the integration works.
+                static var connected: String {
+                    Localized.get("integration.screen.status.connected")
+                }
+
+                /// Status line when the integration needs a fresh sign-in.
+                static var reconnectNeeded: String {
+                    Localized.get("integration.screen.status.reconnectNeeded")
+                }
+            }
+        }
+    }
+
     enum Integrations {
         enum Action {
             /// Button label to disconnect a connected integration
@@ -1271,6 +1651,13 @@ enum Localized {
             }
         }
 
+        enum Google {
+            /// Subtitle for the Google integration type in the connect picker
+            static var description: String {
+                Localized.get("integrations.google.description")
+            }
+        }
+
         enum Imap {
             /// Section header for the account (email/password) fields in the IMAP connect form
             static var accountSection: String {
@@ -1327,6 +1714,13 @@ enum Localized {
             /// IMAP connect form
             static var usernameField: String {
                 Localized.get("integrations.imap.usernameField")
+            }
+        }
+
+        enum Microsoft {
+            /// Subtitle for the Microsoft integration type in the connect picker
+            static var description: String {
+                Localized.get("integrations.microsoft.description")
             }
         }
 
@@ -2765,10 +3159,155 @@ enum Localized {
             }
         }
 
+        enum AiScreen {
+            /// Inline label while validating a key or sign-in.
+            static var checkingConnection: String {
+                Localized.get("provider.ai-screen.checkingConnection")
+            }
+
+            /// Identity header kind line for a connected AI provider.
+            static var kindLabel: String {
+                Localized.get("provider.ai-screen.kindLabel")
+            }
+
+            /// Footnote under the models group. First argument is enabled count, second is total.
+            static func modelsFootnote(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("provider.ai-screen.modelsFootnote"), p1, p2)
+            }
+
+            /// Footnote when no models are enabled. The argument is the provider name.
+            static func modelsFootnoteNone(_ p1: String) -> String {
+                String(format: Localized.get("provider.ai-screen.modelsFootnoteNone"), p1)
+            }
+
+            /// Section label above the provider models group.
+            static var modelsLabel: String {
+                Localized.get("provider.ai-screen.modelsLabel")
+            }
+
+            /// Destructive row that removes the provider. The argument is the provider name.
+            static func remove(_ p1: String) -> String {
+                String(format: Localized.get("provider.ai-screen.remove"), p1)
+            }
+
+            /// Removal confirmation alert title. The argument is the provider name.
+            static func removeTitle(_ p1: String) -> String {
+                String(format: Localized.get("provider.ai-screen.removeTitle"), p1)
+            }
+
+            /// Button that applies a replaced API key.
+            static var saveKey: String {
+                Localized.get("provider.ai-screen.saveKey")
+            }
+
+            /// Muted row that opens the searchable models screen. The argument is the model count.
+            static func showAllModels(_ p1: String) -> String {
+                String(format: Localized.get("provider.ai-screen.showAllModels"), p1)
+            }
+
+            enum Facts {
+                /// Fact row: the mechanism (API key or sign-in).
+                static var connectsVia: String {
+                    Localized.get("provider.ai-screen.facts.connectsVia")
+                }
+
+                /// Fact row: the stored API key, masked.
+                static var key: String {
+                    Localized.get("provider.ai-screen.facts.key")
+                }
+            }
+
+            enum Status {
+                /// Status line when the provider works.
+                static var connected: String {
+                    Localized.get("provider.ai-screen.status.connected")
+                }
+
+                /// Status line when the provider fails its last check.
+                static var notWorking: String {
+                    Localized.get("provider.ai-screen.status.notWorking")
+                }
+            }
+        }
+
         enum AppleIntelligence {
             /// Description shown for the Apple Intelligence provider option
             static var description: String {
                 Localized.get("provider.appleIntelligence.description")
+            }
+        }
+
+        enum Connect {
+            /// Field: the base URL of a custom provider or MCP server.
+            static var addressField: String {
+                Localized.get("provider.connect.addressField")
+            }
+
+            /// Sheet title while connecting by address, before the address has answered.
+            static var addressTitle: String {
+                Localized.get("provider.connect.addressTitle")
+            }
+
+            /// Secondary button on a failure step, returning to the provider list.
+            static var chooseAnother: String {
+                Localized.get("provider.connect.chooseAnother")
+            }
+
+            /// Footnote on the connected step.
+            static var doneFootnote: String {
+                Localized.get("provider.connect.doneFootnote")
+            }
+
+            /// Link that opens the provider key console.
+            static var getApiKey: String {
+                Localized.get("provider.connect.getApiKey")
+            }
+
+            /// Row value on the connected step: model count.
+            static func modelsAvailable(_ p1: String) -> String {
+                String(format: Localized.get("provider.connect.modelsAvailable"), p1)
+            }
+
+            /// Row title on the connected step: models seen at the address.
+            static var modelsRowTitle: String {
+                Localized.get("provider.connect.modelsRowTitle")
+            }
+
+            /// Field on the connected step: the inferred display name, editable.
+            static var nameField: String {
+                Localized.get("provider.connect.nameField")
+            }
+
+            /// Fact value: provider connects through a pasted API key.
+            static var viaApiKey: String {
+                Localized.get("provider.connect.viaApiKey")
+            }
+
+            /// Fact value: provider connects through account sign-in.
+            static var viaSignIn: String {
+                Localized.get("provider.connect.viaSignIn")
+            }
+
+            enum Working {
+                /// Info notice body while credentials are validated.
+                static var checkingBody: String {
+                    Localized.get("provider.connect.working.checkingBody")
+                }
+
+                /// Info notice title while credentials are validated.
+                static var checkingTitle: String {
+                    Localized.get("provider.connect.working.checkingTitle")
+                }
+
+                /// Info notice body during sign-in. The argument is the provider name.
+                static func waitingBody(_ p1: String) -> String {
+                    String(format: Localized.get("provider.connect.working.waitingBody"), p1)
+                }
+
+                /// Info notice title while a browser sign-in is in flight.
+                static var waitingTitle: String {
+                    Localized.get("provider.connect.working.waitingTitle")
+                }
             }
         }
 
@@ -2783,6 +3322,20 @@ enum Localized {
             /// need to have credits on their API key provider account to continue.
             static func warningFormat(_ p1: String) -> String {
                 String(format: Localized.get("provider.credits.warningFormat"), p1)
+            }
+        }
+
+        enum Description {
+            enum Models {
+                /// Hub row description for a provider with one model.
+                static func one(_ p1: String) -> String {
+                    String(format: Localized.get("provider.description.models.one"), p1)
+                }
+
+                /// Hub row description for a provider with several models.
+                static func other(_ p1: String) -> String {
+                    String(format: Localized.get("provider.description.models.other"), p1)
+                }
             }
         }
 
@@ -2962,6 +3515,11 @@ enum Localized {
             static var rowSubtitle: String {
                 Localized.get("provider.eigin.rowSubtitle")
             }
+
+            /// Title of the Eigin Relay provider screen and hub row.
+            static var title: String {
+                Localized.get("provider.eigin.title")
+            }
         }
 
         enum EmptyState {
@@ -2972,19 +3530,155 @@ enum Localized {
             }
         }
 
+        enum Local {
+            /// Secondary button that cancels an active download.
+            static var cancelDownload: String {
+                Localized.get("provider.local.cancelDownload")
+            }
+
+            /// Destructive row that deletes the downloaded model.
+            static var deleteModel: String {
+                Localized.get("provider.local.deleteModel")
+            }
+
+            /// Description of the local model info sheet.
+            static var infoDescription: String {
+                Localized.get("provider.local.infoDescription")
+            }
+
+            /// Title of the local model info sheet.
+            static var infoTitle: String {
+                Localized.get("provider.local.infoTitle")
+            }
+
+            /// Identity header kind line for the local model, and its hub row description.
+            static var kindLabel: String {
+                Localized.get("provider.local.kindLabel")
+            }
+
+            /// Title of the local model screen and hub row.
+            static var title: String {
+                Localized.get("provider.local.title")
+            }
+
+            enum Info {
+                /// Info row body: deliberate choice.
+                static var chosenBody: String {
+                    Localized.get("provider.local.info.chosenBody")
+                }
+
+                /// Info row: picking the local model deliberately.
+                static var chosenTitle: String {
+                    Localized.get("provider.local.info.chosenTitle")
+                }
+
+                /// Info row body: offline use.
+                static var offlineBody: String {
+                    Localized.get("provider.local.info.offlineBody")
+                }
+
+                /// Info row: when the local model is reached for automatically.
+                static var offlineTitle: String {
+                    Localized.get("provider.local.info.offlineTitle")
+                }
+
+                /// Info row body: trade-offs.
+                static var smallerBody: String {
+                    Localized.get("provider.local.info.smallerBody")
+                }
+
+                /// Info row: trade-offs of the local model.
+                static var smallerTitle: String {
+                    Localized.get("provider.local.info.smallerTitle")
+                }
+            }
+
+            enum Status {
+                /// Status line when the download failed.
+                static var downloadFailed: String {
+                    Localized.get("provider.local.status.downloadFailed")
+                }
+
+                /// Status line while downloading or preparing.
+                static var gettingReady: String {
+                    Localized.get("provider.local.status.gettingReady")
+                }
+
+                /// Status line before the model is downloaded.
+                static var notInstalled: String {
+                    Localized.get("provider.local.status.notInstalled")
+                }
+
+                /// Status line when the device cannot run the model.
+                static var notSupported: String {
+                    Localized.get("provider.local.status.notSupported")
+                }
+
+                /// Status line when the local model is installed.
+                static var ready: String {
+                    Localized.get("provider.local.status.ready")
+                }
+            }
+        }
+
         enum Models {
             /// A message displayed when a provider has no supported models.
             static var empty: String {
                 Localized.get("provider.models.empty")
             }
 
+            /// Empty state when the model search finds nothing. The argument is the query.
+            static func noMatches(_ p1: String) -> String {
+                String(format: Localized.get("provider.models.noMatches"), p1)
+            }
+
             /// A message displayed when no models match a search query.
             static var noSearchResults: String {
                 Localized.get("provider.models.noSearchResults")
             }
+
+            /// Group label: recognised models below the ranking cut.
+            static var other: String {
+                Localized.get("provider.models.other")
+            }
+
+            /// Group label: the top of the catalogue ranking.
+            static var recommended: String {
+                Localized.get("provider.models.recommended")
+            }
+
+            /// Search field placeholder. The argument is the model count.
+            static func searchPrompt(_ p1: String) -> String {
+                String(format: Localized.get("provider.models.searchPrompt"), p1)
+            }
+
+            /// Title of the searchable provider models screen.
+            static var title: String {
+                Localized.get("provider.models.title")
+            }
+
+            /// Group label: model IDs the catalogue has never seen.
+            static var unknown: String {
+                Localized.get("provider.models.unknown")
+            }
+
+            /// Footnote under the Unknown group.
+            static var unknownFootnote: String {
+                Localized.get("provider.models.unknownFootnote")
+            }
         }
 
         enum Picker {
+            /// Footnote under the connect-by-address row.
+            static var addressFootnote: String {
+                Localized.get("provider.picker.addressFootnote")
+            }
+
+            /// Row that connects any OpenAI-compatible provider by URL.
+            static var connectByAddress: String {
+                Localized.get("provider.picker.connectByAddress")
+            }
+
             /// Label for custom provider option
             static var customProvider: String {
                 Localized.get("provider.picker.customProvider")
@@ -3003,6 +3697,101 @@ enum Localized {
             /// Searchable prompt for provider picker
             static var searchPrompt: String {
                 Localized.get("provider.picker.searchPrompt")
+            }
+
+            /// Info notice body when a search finds no preset.
+            static var unknownNoticeBody: String {
+                Localized.get("provider.picker.unknownNoticeBody")
+            }
+
+            /// Info notice when a search finds no preset.
+            static var unknownNoticeTitle: String {
+                Localized.get("provider.picker.unknownNoticeTitle")
+            }
+
+            enum Group {
+                /// Group label: providers connected by pasting a key.
+                static var apiKey: String {
+                    Localized.get("provider.picker.group.apiKey")
+                }
+
+                /// Group label: providers connected through account sign-in.
+                static var signIn: String {
+                    Localized.get("provider.picker.group.signIn")
+                }
+            }
+        }
+
+        enum Relay {
+            /// Footnote under the relay facts card.
+            static var factsFootnote: String {
+                Localized.get("provider.relay.factsFootnote")
+            }
+
+            enum Facts {
+                /// Fact row label: whether chats are kept.
+                static var conversationsStored: String {
+                    Localized.get("provider.relay.facts.conversationsStored")
+                }
+
+                /// Fact row value: whether chats are kept.
+                static var conversationsStoredValue: String {
+                    Localized.get("provider.relay.facts.conversationsStoredValue")
+                }
+
+                /// Fact row: the current credit balance.
+                static var credits: String {
+                    Localized.get("provider.relay.facts.credits")
+                }
+
+                /// Fact row label: where the relay runs.
+                static var hostedIn: String {
+                    Localized.get("provider.relay.facts.hostedIn")
+                }
+
+                /// Fact row value: where the relay runs.
+                static var hostedInValue: String {
+                    Localized.get("provider.relay.facts.hostedInValue")
+                }
+
+                /// Muted row that opens the relay info sheet.
+                static var howItWorks: String {
+                    Localized.get("provider.relay.facts.howItWorks")
+                }
+            }
+
+            enum Notice {
+                /// Warning notice body for an empty balance.
+                static var pausedBody: String {
+                    Localized.get("provider.relay.notice.pausedBody")
+                }
+
+                /// Warning notice title for an empty balance.
+                static var pausedTitle: String {
+                    Localized.get("provider.relay.notice.pausedTitle")
+                }
+
+                /// Info notice body when credits are close to running out.
+                static var runningLowBody: String {
+                    Localized.get("provider.relay.notice.runningLowBody")
+                }
+
+                /// Info notice title when credits are close to running out.
+                static var runningLowTitle: String {
+                    Localized.get("provider.relay.notice.runningLowTitle")
+                }
+            }
+
+            enum Status {
+                /// Status line when the balance is zero.
+                static var outOfCredits: String {
+                    Localized.get("provider.relay.status.outOfCredits")
+                }
+
+                /// Status line when the relay is usable.
+                static var ready: String {
+                    Localized.get("provider.relay.status.ready")
+                }
             }
         }
 
@@ -4563,6 +5352,11 @@ enum Localized {
         /// Field placeholder or label for the agent name input
         static var agentName: String {
             Localized.get("ui.agent-name")
+        }
+
+        /// Hub section label above the AI providers group.
+        static var aiProviders: String {
+            Localized.get("ui.aiProviders")
         }
 
         /// Generic 'All' filter or tab label

@@ -36,6 +36,11 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
     var body: some View {
         VStack(spacing: Sizing.PageLayout.pyTop) {
             header()
+                // Keep the header at its ideal height: once the presentation
+                // clamps to a fitted detent, a squeezed frame never changes
+                // and a late rewrap (Dynamic Type, another locale) could
+                // never grow the detent back.
+                .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
                     headerHeight = $0
                     reportIntrinsicHeight()
@@ -139,6 +144,54 @@ private struct AppSheetContainer<Primary: View, Secondary: View>: View {
             primary: primary,
             secondary: secondary,
             intrinsicHeight: fitsContent ? $fittedHeight : nil
+        )
+        .presentationDetents(resolvedDetents)
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(Radius.card)
+        .presentationBackground { SheetBackground() }
+    }
+}
+
+/// A content-fitted sheet whose view draws its own header — for stepful flows
+/// whose title and description change as the sheet advances, which the
+/// `title`-based `.appSheet` API cannot express. Reuses ``AppSheet``'s
+/// measurement so the presentation hugs the content at any font size.
+struct AppFittedSheet<Header: View, Primary: View, Secondary: View>: View {
+    @ViewBuilder let header: () -> Header
+    @ViewBuilder let primary: () -> Primary
+    @ViewBuilder let secondary: () -> Secondary
+    /// Fixed detents in place of content-fitting. iOS 26 floats partial-height
+    /// sheets and snaps full-height ones flush, so a sheet whose height crosses
+    /// that boundary changes width; a flow that swaps between tall and short
+    /// states can avoid the jump by presenting at one fixed detent.
+    var detents: Set<PresentationDetent>?
+
+    init(
+        @ViewBuilder header: @escaping () -> Header,
+        @ViewBuilder primary: @escaping () -> Primary,
+        @ViewBuilder secondary: @escaping () -> Secondary = { EmptyView() },
+        detents: Set<PresentationDetent>? = nil
+    ) {
+        self.header = header
+        self.primary = primary
+        self.secondary = secondary
+        self.detents = detents
+    }
+
+    @State private var fittedHeight: CGFloat = 0
+    @Environment(\.colors) private var colors
+
+    private var resolvedDetents: Set<PresentationDetent> {
+        if let detents { return detents }
+        return fittedHeight > 0 ? [.height(fittedHeight)] : [.large]
+    }
+
+    var body: some View {
+        AppSheet(
+            header: header,
+            primary: primary,
+            secondary: secondary,
+            intrinsicHeight: detents == nil ? $fittedHeight : nil
         )
         .presentationDetents(resolvedDetents)
         .presentationDragIndicator(.visible)

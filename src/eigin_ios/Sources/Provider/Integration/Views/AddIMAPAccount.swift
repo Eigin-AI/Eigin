@@ -3,13 +3,13 @@ import SwiftData
 import SwiftUI
 
 /// Sheet for connecting an IMAP/SMTP email account: collect server settings,
-/// verify the connection, then save. Presented from ``AddIntegration`` when
-/// the user picks the IMAP type, or from ``IntegrationDetail`` to reconnect
-/// an existing account in place, mirroring how OAuth types launch a browser
-/// from the same picker.
+/// verify the connection, then save. Presented from ``ConnectIntegrationSheet`` when
+/// ``IntegrationScreen`` to reconnect an existing account in place. Adding a
+/// new account runs through ``ConnectIntegrationSheet``; this sheet owns the
+/// long form either way.
 struct AddIMAPAccount: View {
     /// Called after the integration is saved, so the presenting
-    /// ``AddIntegration`` sheet can dismiss itself too.
+    /// ``ConnectIntegrationSheet`` sheet can dismiss itself too.
     var onConnected: () -> Void = {}
 
     /// The existing integration when this sheet runs as an in-place reconnect

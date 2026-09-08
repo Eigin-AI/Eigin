@@ -1,91 +1,58 @@
 import SwiftUI
 
-/// Purchase options for Eigin credits. Each row buys a `PurchasableCredit`; the relay grants the
-/// credits and the wallet is stored. Dismisses on a successful purchase. The pricing note lives in
-/// the sheet's description.
+/// Purchase options for Eigin credits. Each row buys a `PurchasableCredit`;
+/// the relay grants the credits and the wallet is stored. The pricing note
+/// lives in the sheet's description, restore sits under the packs as its own
+/// quieter action. Three prices are a list to compare, not three separate
+/// offers — so one card of rows, with the price pills sharing a width so the
+/// right edge is one line.
 struct GetCreditsSheetContent: View {
     @Environment(\.colors) private var colors
     @Environment(\.horizontalSizeClass) private var sizeClass
     let model: EiginCreditsModel
     let onPurchased: () -> Void
 
+    /// The packs card runs to the same page inset as every other card on
+    /// these screens; the sheet header keeps its own deeper inset.
     private var px: CGFloat {
-        sizeClass == .regular
-            ? Sizing.PageLayout.HeaderGrouping.Px.tablet
-            : Sizing.PageLayout.HeaderGrouping.Px.mobile
+        Spacing.n16
     }
 
     var body: some View {
-        VStack(spacing: Spacing.n12) {
-            if model.products.isEmpty {
-                emptyState
-            } else {
-                ForEach(model.products) { product in
-                    productRow(product)
+        ScrollView {
+            VStack(spacing: Spacing.n12) {
+                if model.products.isEmpty {
+                    emptyState
+                } else {
+                    packs
                 }
+
+                restoreButton
+
+                if let error = model.error {
+                    Text(error)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.error)
+                        .multilineTextAlignment(.center)
+                }
+
+                // Third-party disclosure before the user commits to Eigin
+                // cloud (App Store guideline 5.1.2).
+                ThirdPartyDisclosureText(variant: .eiginCloud)
+                    .padding(.leading, Spacing.n24)
             }
-
-            restoreButton
-
-            if let error = model.error {
-                Text(error)
-                    .typography(Typography.note)
-                    .foregroundStyle(colors.text.standard.error)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, Spacing.n4)
-            }
-
-            // Third-party disclosure before the user commits to Eigin cloud
-            // (App Store guideline 5.1.2).
-            ThirdPartyDisclosureText(variant: .eiginCloud)
+            .padding(.horizontal, px)
         }
-        .padding(.horizontal, px)
         .task { await model.loadProductsIfNeeded() }
     }
 
-    /// Re-redeem the account's purchase history so credits survive a reinstall. Plain text so it
-    /// reads as a secondary action next to the credit packs; notes and errors sit under it.
-    /// Hidden until the product list has loaded so the empty-state spinner stays clean.
-    @ViewBuilder
-    private var restoreButton: some View {
-        if model.hasLoadedProducts {
-            Button {
-                Task {
-                    if await model.restorePurchases() { onPurchased() }
-                }
-            } label: {
-                HStack(spacing: Spacing.n4) {
-                    if model.isRestoring {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    Text(Localized.Provider.Eigin.restoreCredits)
-                }
-                .typography(Typography.note)
-                .foregroundStyle(
-                    model.isRestoring ? colors.text.standard.disabled : colors.text.standard.muted
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .disabled(model.isPurchasing || model.isRestoring)
-            // Lifted off the credit packs so it reads as its own secondary action.
-            .padding(.top, Spacing.n16)
-        }
-    }
+    // MARK: - Packs
 
-    @ViewBuilder
-    private var emptyState: some View {
-        if model.hasLoadedProducts {
-            Text(Localized.Provider.Eigin.noProducts)
-                .typography(Typography.description)
-                .foregroundStyle(colors.text.standard.muted)
-                .multilineTextAlignment(.center)
-        } else {
-            ProgressView()
-                .padding(.vertical, Spacing.n32)
+    private var packs: some View {
+        AppContentGroup {
+            ForEach(model.products) { product in
+                productRow(product)
+            }
         }
     }
 
@@ -102,18 +69,20 @@ struct GetCreditsSheetContent: View {
                 Spacer()
                 priceTag(product)
             }
+            .padding(.vertical, Spacing.n16)
             .padding(.horizontal, Spacing.n24)
-            .padding(.vertical, Spacing.n20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colors.button.standard.secondary)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(model.isPurchasing || model.isRestoring)
     }
 
+    /// One column of prices rather than three pills of different widths: the
+    /// minimum is content-box, with tabular numerals keeping the right edge
+    /// one line. The pill never disappears: while its own purchase runs, the
+    /// spinner lives inside it, so the row holds its shape.
     private func priceTag(_ product: PurchasableCredit) -> some View {
-        Group {
+        HStack {
             if model.purchasingID == product.id {
                 ProgressView()
                     .controlSize(.small)
@@ -121,12 +90,77 @@ struct GetCreditsSheetContent: View {
             } else {
                 Text(product.displayPrice)
                     .typography(Typography.buttonSmall)
+                    .monospacedDigit()
                     .foregroundStyle(colors.text.button.onSpot)
             }
         }
         .padding(.horizontal, Spacing.n20)
         .padding(.vertical, Spacing.n12)
-        .background(colors.button.spot.base)
+        .frame(minWidth: 65)
+        .background(model.purchasingID == product.id ? colors.button.spot.base.opacity(0.4) : colors
+            .button.spot.base)
         .clipShape(Capsule())
     }
+
+    // MARK: - Around the packs
+
+    /// Re-redeem the account's purchase history so credits survive a
+    /// reinstall. Lifted off the packs so it reads as its own secondary
+    /// action, inset to start on the same column the pack labels do.
+    @ViewBuilder
+    private var restoreButton: some View {
+        if model.hasLoadedProducts {
+            Button {
+                Task {
+                    if await model.restorePurchases() { onPurchased() }
+                }
+            } label: {
+                HStack(spacing: Spacing.n4) {
+                    if model.isRestoring {
+                        // The spinner takes the arrows' place: same slot, no
+                        // doubling up, and the text never shifts.
+                        ProgressView().controlSize(.small)
+                            .tint(colors.text.standard.disabled)
+                    } else {
+                        Iconography.Functional.refresh
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14, height: 14)
+                            .foregroundStyle(colors.text.standard.muted)
+                    }
+                    Text(Localized.Provider.Eigin.restoreCredits)
+                        .typography(Typography.note)
+                        .foregroundStyle(
+                            model.isRestoring
+                                ? colors.text.standard.disabled
+                                : colors.text.standard.muted
+                        )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isPurchasing || model.isRestoring)
+            // Lifted off the packs onto the pack-label column.
+            .padding(.top, Spacing.n16)
+            .padding(.horizontal, Spacing.n24)
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        if model.hasLoadedProducts {
+            Text(Localized.Provider.Eigin.noProducts)
+                .typography(Typography.description)
+                .foregroundStyle(colors.text.standard.muted)
+                .multilineTextAlignment(.center)
+        } else {
+            ProgressView()
+                .padding(.vertical, Spacing.n32)
+        }
+    }
+}
+
+#Preview {
+    GetCreditsSheetContent(model: EiginCreditsModel(), onPurchased: {})
+        .previewEnvironment()
 }
