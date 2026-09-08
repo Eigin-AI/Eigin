@@ -2,30 +2,34 @@ import Factory
 import SwiftData
 import SwiftUI
 
+/// The connections hub: two questions, not four mechanisms.
+///
+/// Providers are where the thinking happens; integrations are everything
+/// Eigin can reach on your behalf. Whether an integration is built in, an MCP
+/// server or another agent is a fact on its own screen, not a group in this
+/// list, so there is one place to look and one way to add. Descriptions say
+/// what a connection gives you; only a connection that needs something from
+/// you carries a status.
 struct ConnectionsView: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @Injected(\.keychainService) private var keychainService
-    @Injected(\.integrationManager) private var integrationManager
     @Injected(\.integrationOAuthService) private var oauthService
+    @Injected(\.integrationManager) private var integrationManager
+    @Injected(\.mcpServerManager) private var mcpServerManager
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query(sort: \MCPServer.createdAt) private var mcpServers: [MCPServer]
     @Query(sort: \Integration.createdAt) private var integrations: [Integration]
-    @Query private var capabilitySelections: [CapabilityProviderSelection]
     @State private var showSelectSheet = false
     @State private var showConnectSheet = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
-    @State private var showingAddMCPServer = false
-    @State private var showingAddIntegration = false
+    @State private var showAddIntegration = false
+    /// The connect sheet stacks over the add sheet, as provider connect does
+    /// over provider select.
+    @State private var connectTarget: ConnectTarget?
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
     private var localPreset: ProviderPreset? {
         ProviderPreset.all.first { ProviderPreset.isLocal($0.baseURL) }
-    }
-
-    private var localProvider: Provider? {
-        providers.first { ProviderPreset.isLocal($0.baseURL) }
     }
 
     private var cloudProviders: [Provider] {
@@ -33,20 +37,8 @@ struct ConnectionsView: View {
             .filter { !ProviderPreset.isLocal($0.baseURL) && !ProviderPreset.isRelay($0.baseURL) }
     }
 
-    private var connectSheetTitle: String {
-        switch selectedMode {
-        case .preset(let preset): preset.name
-        case .custom: Localized.Provider.Picker.customProvider
-        case nil: ""
-        }
-    }
-
-    private var connectSheetDescription: String? {
-        switch selectedMode {
-        case .preset(let preset): preset.helpText
-        case .custom: Localized.Provider.Setup.Custom.apiRequirement
-        case nil: nil
-        }
+    private var connectedBaseURLs: [String] {
+        providers.map(\.baseURL)
     }
 
     var body: some View {
@@ -67,7 +59,6 @@ struct ConnectionsView: View {
                 VStack(spacing: Sizing.PageLayout.gap) {
                     providersGroup
                     integrationsGroup
-                    mcpServersGroup
                 }
                 .padding(.horizontal, Spacing.n16)
                 .padding(.top, Spacing.n8)
@@ -83,11 +74,11 @@ struct ConnectionsView: View {
             description: Localized.Onboarding.Provider.cloudExplanation,
             detents: [.large]
         ) {
-            ProviderSelectSheetContent { selection in
+            ProviderSelectSheetContent(connectedBaseURLs: connectedBaseURLs) { selection in
                 showSelectSheet = false
                 switch selection {
-                case .preset(let preset):
-                    selectedMode = .preset(preset)
+                case .preset(let preset, let method):
+                    selectedMode = .preset(preset, method: method)
                 case .custom:
                     selectedMode = .custom
                 }
@@ -98,7 +89,8 @@ struct ConnectionsView: View {
             isPresented: $showConnectSheet,
             title: connectSheetTitle,
             description: connectSheetDescription,
-            detents: [.large]
+            detents: [.large],
+            fitsContent: true
         ) {
             if let mode = selectedMode {
                 ProviderConnectSheetContent(
@@ -115,391 +107,201 @@ struct ConnectionsView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingAddMCPServer) {
-            AddMCPServer()
-        }
-        .sheet(isPresented: $showingAddIntegration) {
-            AddIntegration()
-        }
-    }
-
-    // MARK: - Integrations
-
-    /// Connected integrations grouped by the capability they were granted for,
-    /// labeled with the capability's ``IntegrationCategory`` display name. An
-    /// integration providing several capabilities appears in a section for each.
-    private struct CapabilitySection: Identifiable {
-        let capability: Capability
-        let providers: [Integration]
-        var id: Capability {
-            capability
-        }
-
-        var sectionTitle: String {
-            IntegrationCategory.category(for: capability)?.displayName ?? capability.rawValue
-                .titleCased
-        }
-    }
-
-    private var capabilitySections: [CapabilitySection] {
-        var byCapability: [Capability: [Integration]] = [:]
-        for integration in integrations where integration.isEnabled {
-            guard let type = BundledIntegrationType.type(forID: integration.typeID)
-            else { continue }
-            let granted = type.providedCapabilities
-                .filter { integration.grantedCapabilities.contains($0.rawValue) }
-            for capability in granted {
-                byCapability[capability, default: []].append(integration)
+        .appSheet(
+            isPresented: $showAddIntegration,
+            title: Localized.Integration.Add.title,
+            description: Localized.Integration.Add.description,
+            detents: [.large]
+        ) {
+            AddIntegrationSheetContent { target in
+                showAddIntegration = false
+                connectTarget = target
             }
         }
-        return byCapability
-            .map { capability, providers in
-                CapabilitySection(
-                    capability: capability,
-                    providers: providers.sorted { $0.createdAt < $1.createdAt }
+        .sheet(isPresented: Binding(
+            get: { connectTarget != nil },
+            set: { if !$0 { connectTarget = nil } }
+        )) {
+            if let target = connectTarget {
+                ConnectIntegrationSheet(
+                    target: target,
+                    onConnected: {
+                        Haptics.success()
+                        connectTarget = nil
+                    },
+                    onCancelled: {
+                        connectTarget = nil
+                        showAddIntegration = true
+                    }
                 )
             }
-            .sorted { $0.capability.rawValue < $1.capability.rawValue }
-    }
-
-    private func activeIntegrationID(for section: CapabilitySection) -> UUID? {
-        integrationManager.activeIntegration(
-            for: section.capability,
-            integrations: integrations,
-            selections: capabilitySelections
-        )?.id
-    }
-
-    /// One labeled card per category, followed by a single "Add Integration"
-    /// action covering all of them.
-    private var integrationsGroup: some View {
-        VStack(spacing: Sizing.PageLayout.gap) {
-            ForEach(capabilitySections) { section in
-                VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                    sectionLabel(section.sectionTitle)
-
-                    AppCardSurface(padding: 0) {
-                        VStack(spacing: 0) {
-                            ForEach(
-                                Array(section.providers.enumerated()),
-                                id: \.element.id
-                            ) { providerIndex, integration in
-                                if providerIndex > 0 {
-                                    Divider().padding(.leading, Spacing.n24)
-                                }
-
-                                integrationRow(
-                                    integration,
-                                    capability: section.capability,
-                                    isActive: activeIntegrationID(for: section) == integration.id,
-                                    showsSelector: section.providers.count > 1
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            AppButton(
-                Localized.Settings.Action.addIntegration,
-                variant: .secondary,
-                size: .medium,
-                action: { showingAddIntegration = true },
-                trailing: {
-                    Image(systemName: "plus")
-                        .typography(Typography.miniLabel)
-                }
-            )
         }
-    }
-
-    /// A single provider row for a capability section. The trailing radio
-    /// (shown only when the capability has more than one provider) sets this
-    /// integration as the active one for `capability` without navigating; the
-    /// text area navigates to ``IntegrationDetail`` (remove/inspect).
-    private func integrationRow(
-        _ integration: Integration,
-        capability: Capability,
-        isActive: Bool,
-        showsSelector: Bool
-    ) -> some View {
-        HStack(spacing: Spacing.n16) {
-            if showsSelector {
-                Button {
-                    integrationManager.setActiveProvider(
-                        integration,
-                        for: capability,
-                        in: modelContext
-                    )
-                } label: {
-                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(isActive ? colors.accent : colors.text.standard.muted)
-                }
-                .buttonStyle(.plain)
-            }
-
-            NavigationLink {
-                IntegrationDetail(integration: integration)
-                    .hidesTabBar()
-            } label: {
-                HStack(spacing: Spacing.n16) {
-                    VStack(alignment: .leading, spacing: Spacing.n4) {
-                        Text(BundledIntegrationType.type(forID: integration.typeID)?
-                            .displayName ?? integration.typeID)
-                            .typography(Typography.titleXS)
-                            .foregroundStyle(colors.text.standard.base)
-                        Text(integration.accountLabel)
-                            .typography(Typography.tag)
-                            .foregroundStyle(colors.text.standard.muted)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    if IntegrationHealthMonitor.shared.needsReconnect(
-                        integration,
-                        oauthService: oauthService
-                    ) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.error)
-                            .accessibilityLabel(Localized.Integrations.Status.reconnectNeeded)
-                    }
-                    Image(systemName: "chevron.right")
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n16)
     }
 
     // MARK: - Providers
 
+    /// The models Eigin thinks with.
     private var providersGroup: some View {
-        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            sectionLabel(Localized.Ui.providers)
-
-            AppCardSurface(padding: 0) {
-                VStack(spacing: 0) {
-                    // Eigin relay
-                    NavigationLink {
-                        EiginProviderView()
-                            .hidesTabBar()
-                    } label: {
-                        providerRow(
-                            name: "Eigin",
-                            detail: Localized.Provider.Eigin.rowSubtitle
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    // Cloud providers
-                    ForEach(cloudProviders) { provider in
-                        Divider().padding(.leading, Spacing.n24)
-
-                        NavigationLink {
-                            EditProvider(provider: provider)
-                                .hidesTabBar()
-                        } label: {
-                            let count = provider.availableModels
-                                .count(where: { KnownModelCatalog.lookup($0) != nil })
-                            providerRow(
-                                name: provider.name,
-                                detail: Self.modelsAvailable(count)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // On-device model
-                    if let preset = localPreset, gemmaManager.isSupported {
-                        Divider().padding(.leading, Spacing.n24)
-
-                        NavigationLink {
-                            LocalProviderView(preset: preset)
-                                .hidesTabBar()
-                        } label: {
-                            onDeviceRow
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Divider().padding(.leading, Spacing.n24)
-
-                    // Add provider action
-                    Button { showSelectSheet = true } label: {
-                        HStack(spacing: Spacing.n16) {
-                            Text(Localized.Settings.Action.addProvider)
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.accent)
-                            Spacer()
-                            Image(systemName: "plus")
-                                .typography(Typography.miniLabel)
-                                .foregroundStyle(colors.accent)
-                        }
-                        .padding(.horizontal, Spacing.n24)
-                        .padding(.vertical, Spacing.n16)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
+        AppContentGroup(label: Localized.Ui.aiProviders) {
+            NavigationLink {
+                EiginProviderView()
+                    .hidesTabBar()
+            } label: {
+                AppRow(
+                    AppRowSpec(
+                        title: Localized.Provider.Eigin.title,
+                        description: Localized.Provider.Eigin.rowSubtitle
+                    )
+                )
             }
+            .buttonStyle(.plain)
+
+            ForEach(cloudProviders) { provider in
+                RowHairline()
+                NavigationLink {
+                    AiProviderScreen(provider: provider)
+                        .hidesTabBar()
+                } label: {
+                    AppRow(providerRowSpec(provider))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let preset = localPreset, gemmaManager.isSupported {
+                RowHairline()
+                NavigationLink {
+                    LocalProviderView(preset: preset)
+                        .hidesTabBar()
+                } label: {
+                    AppRow(localRowSpec)
+                }
+                .buttonStyle(.plain)
+            }
+
+            RowHairline()
+            AppRow(
+                AppRowSpec(
+                    id: "add-provider",
+                    title: Localized.Settings.Action.addProvider,
+                    accessory: .plus,
+                    tone: .accent,
+                    action: { showSelectSheet = true }
+                )
+            )
         }
     }
 
-    /// "1 model available" / "3 models available".
-    private static func modelsAvailable(_ count: Int) -> String {
+    private func providerRowSpec(_ provider: Provider) -> AppRowSpec {
+        AppRowSpec(
+            title: provider.name,
+            description: Self.modelsDescription(provider.enabledModels.count)
+        )
+    }
+
+    private var localRowSpec: AppRowSpec {
+        AppRowSpec(
+            title: Localized.Provider.Local.title,
+            description: Localized.Provider.Local.kindLabel
+        )
+    }
+
+    /// The count a person can act on: what appears in the agent tab now.
+    private static func modelsDescription(_ count: Int) -> String {
         count == 1
-            ? Localized.Settings.Info.ModelsAvailable.one("\(count)")
-            : Localized.Settings.Info.ModelsAvailable.other("\(count)")
+            ? Localized.Provider.Description.Models.one("1")
+            : Localized.Provider.Description.Models.other("\(count)")
     }
 
-    private func providerRow(
-        name: String,
-        detail: String
-    ) -> some View {
-        HStack(spacing: Spacing.n16) {
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(name)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                Text(detail)
-                    .typography(Typography.tag)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
-        }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n16)
-        .contentShape(Rectangle())
-    }
+    // MARK: - Integrations
 
-    private var onDeviceRow: some View {
-        HStack(spacing: Spacing.n16) {
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(Localized.Provider.Picker.onDeviceModel)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                Group {
-                    switch gemmaManager.state {
-                    case .notDownloaded, .failed:
-                        Text(Localized.Settings.Info.modelNotDownloaded)
-                    case .queued:
-                        Text(Localized.Asset.queued)
-                    case .downloading:
-                        Text(Localized.Settings.Info.modelDownloading)
-                    case .downloaded, .preparing:
-                        Text(Localized.Settings.Info.modelDownloaded)
-                    case .unavailable(let reason):
-                        // The reason carries the actual blocker (RAM or disk),
-                        // so a low-disk user isn't told the device can't run it.
-                        Text(reason)
-                    case .ready:
-                        let count = localProvider?.availableModels.count ?? 0
-                        Text(Self.modelsAvailable(count))
-                    }
+    /// Everything Eigin can reach on your behalf, in one list.
+    private var integrationsGroup: some View {
+        AppContentGroup(label: Localized.Ui.integrations) {
+            ForEach(integrationSubjects) { subject in
+                if subject.id != integrationSubjects.first?.id {
+                    RowHairline()
                 }
-                .typography(Typography.tag)
-                .foregroundStyle(colors.text.standard.muted)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
-        }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n16)
-        .contentShape(Rectangle())
-    }
-
-    // MARK: - MCP Servers
-
-    private var mcpServersGroup: some View {
-        VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-            sectionLabel(Localized.Ui.mcpServers)
-
-            AppCardSurface(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(mcpServers.enumerated()), id: \.element.id) { index, server in
-                        if index > 0 {
-                            Divider().padding(.leading, Spacing.n24)
-                        }
-
-                        NavigationLink {
-                            MCPServerDetail(server: server)
-                                .hidesTabBar()
-                        } label: {
-                            mcpServerRow(server)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    if !mcpServers.isEmpty {
-                        Divider().padding(.leading, Spacing.n24)
-                    }
-
-                    // Add MCP server action
-                    Button { showingAddMCPServer = true } label: {
-                        HStack(spacing: Spacing.n16) {
-                            Text(Localized.Settings.Action.addMcpServer)
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.accent)
-                            Spacer()
-                            Image(systemName: "plus")
-                                .typography(Typography.miniLabel)
-                                .foregroundStyle(colors.accent)
-                        }
-                        .padding(.horizontal, Spacing.n24)
-                        .padding(.vertical, Spacing.n16)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                NavigationLink {
+                    IntegrationScreen(subject: subject)
+                        .hidesTabBar()
+                } label: {
+                    AppRow(integrationRowSpec(subject))
                 }
+                .buttonStyle(.plain)
             }
+
+            if !integrationSubjects.isEmpty {
+                RowHairline()
+            }
+            AppRow(
+                AppRowSpec(
+                    id: "add-integration",
+                    title: Localized.Settings.Action.addIntegration,
+                    accessory: .plus,
+                    tone: .accent,
+                    action: { showAddIntegration = true }
+                )
+            )
         }
     }
 
-    private func mcpServerRow(_ server: MCPServer) -> some View {
-        HStack(spacing: Spacing.n16) {
-            VStack(alignment: .leading, spacing: Spacing.n4) {
-                Text(server.name)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                if !server.cachedToolNames.isEmpty {
-                    Text(verbatim: "\(server.cachedToolNames.count) \(Localized.Mcp.tools)")
-                        .typography(Typography.tag)
-                        .foregroundStyle(colors.text.standard.muted)
-                } else {
-                    Text(server.url)
-                        .typography(Typography.tag)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
-        }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n16)
-        .contentShape(Rectangle())
+    private var integrationSubjects: [IntegrationScreen.Subject] {
+        var subjects: [IntegrationScreen.Subject] = integrations
+            .filter(\.isEnabled)
+            .map { .builtin($0) }
+        subjects.append(contentsOf: mcpServers.map { .server($0) })
+        return subjects
     }
 
-    // MARK: - Helpers
+    private func integrationRowSpec(_ subject: IntegrationScreen.Subject) -> AppRowSpec {
+        switch subject {
+        case .builtin(let integration):
+            let type = BundledIntegrationType.type(forID: integration.typeID)
+            let needsReconnect = IntegrationHealthMonitor.shared.needsReconnect(
+                integration,
+                oauthService: oauthService
+            )
+            return AppRowSpec(
+                id: integration.id.uuidString,
+                title: type?.displayName ?? integration.typeID,
+                description: integration.accountLabel,
+                trailing: needsReconnect
+                    ? .status(.attention, Localized.Integrations.Status.reconnectNeeded)
+                    : nil
+            )
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .typography(Typography.miniLabel)
-            .foregroundStyle(colors.text.standard.muted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.n8)
+        case .server(let server):
+            let needsAttention = mcpServerManager
+                .connectionErrors[server.id] != nil
+            return AppRowSpec(
+                id: server.id.uuidString,
+                title: server.name,
+                description: server.cachedToolNames.isEmpty
+                    ? server.url
+                    : "\(server.cachedToolNames.count) \(Localized.Mcp.tools)",
+                trailing: needsAttention
+                    ? .status(.attention, Localized.Integration.Screen.Status.reconnectNeeded)
+                    : nil
+            )
+        }
+    }
+
+    // MARK: - Sheets
+
+    private var connectSheetTitle: String {
+        switch selectedMode {
+        case .preset(let preset, _): preset.name
+        case .custom: Localized.Provider.Connect.addressTitle
+        case nil: ""
+        }
+    }
+
+    private var connectSheetDescription: String? {
+        switch selectedMode {
+        case .preset(let preset, _): preset.helpText
+        case .custom: Localized.Provider.Setup.Custom.apiRequirement
+        case nil: nil
+        }
     }
 }
 

@@ -164,9 +164,10 @@ struct AssetRow: View {
                     .transition(.opacity)
             }
 
-            // The fill grows out of the completed ring.
+            // The fill grows out of the completed ring. Ready is approve
+            // green: the one settled state, distinct from the neutral track.
             Circle()
-                .fill(colors.border.standard.base)
+                .fill(colors.icon.signal.approve)
                 .opacity(isReady ? 1 : 0)
                 .scaleEffect(isReady ? 1 : 0.1)
 
@@ -230,7 +231,8 @@ struct AssetRow: View {
     }
 
     private var showsRing: Bool {
-        signalTint == nil
+        // Ready is a finished disc: the track has no longer anything to say.
+        !isReady && signalTint == nil
     }
 
     /// Queued and fractionless preparing both drift: neither can be measured.
@@ -299,8 +301,9 @@ struct AssetRow: View {
                 ControlSpec(
                     key: "delete",
                     background: colors.button.navigation.base,
+                    // Red stays on the glyph, never the whole control.
                     icon: Iconography.Functional.trash,
-                    tint: colors.icon.standard.base,
+                    tint: colors.text.standard.error,
                     action: delete
                 )
             }

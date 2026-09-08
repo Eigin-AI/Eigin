@@ -51,7 +51,7 @@ struct ModelPicker: View {
             )
 
             List {
-                if provider.availableModels.isEmpty {
+                if selectableModels.isEmpty {
                     // No cached models: keep the loading state until the background refresh
                     // resolves,
                     // then show a genuine empty-catalog message if it still came back empty.
@@ -72,18 +72,17 @@ struct ModelPicker: View {
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
-            // Render the cached catalog immediately, then refresh in the background so the list
-            // reflects models the provider has added or retired since it was last fetched.
-            await enrich(models: provider.availableModels)
+            // Render the cached catalog immediately, then refresh in the background so the
+            // list reflects what the provider serves now. Only the enabled
+            // models appear: the switches on the provider screens decide
+            // what this picker offers, and a refresh never re-widens it.
+            await enrich(models: selectableModels)
             isLoaded = true
 
             isRefreshing = true
-            let previous = provider.availableModels
-            let refreshed = try? await refresher.refresh(provider, apiKeyOverride: nil)
+            _ = try? await refresher.refresh(provider, apiKeyOverride: nil)
             isRefreshing = false
-            if let refreshed, refreshed != previous {
-                await enrich(models: refreshed)
-            }
+            await enrich(models: selectableModels)
         }
     }
 
@@ -243,6 +242,15 @@ struct ModelPicker: View {
     // MARK: - Preparation
 
     /// Enriches the given model IDs with catalog metadata, then rebuilds the grouped lists.
+    /// What the picker offers: the models the provider screens left enabled,
+    /// minus anything the provider has retired since.
+    private var selectableModels: [String] {
+        let available = Set(provider.availableModels)
+        return provider.availableModels.isEmpty
+            ? provider.enabledModels
+            : provider.enabledModels.filter { available.contains($0) }
+    }
+
     private func enrich(models: [String]) async {
         let enriched = await modelMetadataService.enrich(
             modelIDs: models,
@@ -261,7 +269,7 @@ struct ModelPicker: View {
         // Deduplicate defensively: a cached list (or a provider that lists a model twice) would
         // otherwise crash the rank-map build and yield non-unique `ForEach` ids.
         var seen = Set<String>()
-        let all = provider.availableModels.filter { seen.insert($0).inserted }
+        let all = selectableModels.filter { seen.insert($0).inserted }
 
         let known = all.filter { metadata[$0] != nil && matchesSearch($0) }
         let unknown = all.filter { metadata[$0] == nil && matchesSearch($0) }

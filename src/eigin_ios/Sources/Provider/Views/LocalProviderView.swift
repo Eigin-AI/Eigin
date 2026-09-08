@@ -1,19 +1,23 @@
 import SwiftData
 import SwiftUI
 
-/// Manages the on-device Gemma model: download, preparation, and deletion.
+/// The model on the phone, on the same anatomy as every other provider: who
+/// it is, the facts, then the one thing to do about it.
 ///
-/// Built around the shared ``AssetRow`` with a minimal metadata block — what
-/// the model is, how big it is, that it runs on device — and state-appropriate
-/// primary actions. The row carries the live status; this screen carries the
-/// decisions.
+/// It is the one provider you have to fetch before you can use it, so the
+/// asset row sits where another screen lists its models, with the download
+/// directly under the thing being downloaded. The header says whether you can
+/// use it; the asset row says what the download is doing; neither repeats the
+/// other.
 struct LocalProviderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
 
     let preset: ProviderPreset
 
+    @State private var showInfo = false
     @State private var showDeleteConfirm = false
     @Bindable private var gemmaManager = GemmaModelManager.shared
 
@@ -30,12 +34,10 @@ struct LocalProviderView: View {
         }
     }
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         VStack(spacing: 0) {
             AppNavigationHeader(
-                title: Localized.Provider.Picker.onDeviceModel,
+                title: Localized.Provider.Local.title,
                 leading: {
                     AppActionButton(
                         icon: Iconography.Functional.Arrow.left,
@@ -46,33 +48,41 @@ struct LocalProviderView: View {
                 }
             )
 
-            VStack(spacing: Spacing.n32) {
-                VStack(alignment: .leading, spacing: Spacing.n16) {
-                    // Status first, then the facts, then the prose. The
-                    // action lives in the button below, so the row omits its
-                    // own control.
+            AppAnchoredScrollView {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    AppIdentityHeader(
+                        name: Localized.Provider.Local.title,
+                        kind: Localized.Provider.Local.kindLabel,
+                        state: connectionState,
+                        status: statusLabel,
+                        icon: Iconography.Functional.lock
+                    )
+
+                    facts
+
+                    // The row carries the live state and its own size, so the
+                    // screen says neither: its button is the only place the
+                    // decision lives.
                     AssetRow(asset: gemmaManager, showsAction: false)
 
-                    metadataFacts
+                    if let action {
+                        AppButton(action.label, variant: action.variant) { action.act() }
+                    }
 
-                    Text(gemmaManager.downloadDescription)
-                        .typography(Typography.description)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if gemmaManager.state == .ready {
+                        deleteGroup
+                    }
                 }
-
-                Spacer()
-
-                actions
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
             }
-            .padding(.horizontal, Spacing.n24)
-            .padding(.top, Spacing.n8)
-            .padding(.bottom, Spacing.n32)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .keepScreenAwake(isPreparing)
+        .animation(Animations.smooth, value: gemmaManager.state)
         .task {
             if gemmaManager.state == .downloaded {
                 await gemmaManager.compile()
@@ -86,101 +96,121 @@ struct LocalProviderView: View {
                 ensureLocalProvider()
             }
         }
+        .appSheet(
+            isPresented: $showInfo,
+            title: Localized.Provider.Local.infoTitle,
+            description: Localized.Provider.Local.infoDescription,
+            fitsContent: true
+        ) {
+            LocalModelInfoSheetContent()
+        }
     }
 
-    // MARK: - Metadata
+    // MARK: - Header state
 
-    /// What you can't read off the title, the row, or the description: what
-    /// to expect from it, what not to, and what it costs in storage.
-    private var metadataFacts: some View {
-        AppCardSurface(padding: 0) {
-            VStack(spacing: 0) {
-                factRow(
-                    Localized.Model.Facts.goodFor,
+    private var connectionState: ConnectionState {
+        switch gemmaManager.state {
+        case .ready:
+            .connected
+        case .downloading, .downloaded, .preparing, .queued:
+            .attention
+        case .failed:
+            .attention
+        case .unavailable:
+            .unavailable
+        case .notDownloaded:
+            .off
+        }
+    }
+
+    private var statusLabel: String {
+        switch gemmaManager.state {
+        case .ready: Localized.Provider.Local.Status.ready
+        case .notDownloaded: Localized.Provider.Local.Status.notInstalled
+        case .queued, .downloading, .downloaded, .preparing:
+            Localized.Provider.Local.Status.gettingReady
+        case .unavailable: Localized.Provider.Local.Status.notSupported
+        case .failed: Localized.Provider.Local.Status.downloadFailed
+        }
+    }
+
+    // MARK: - Facts
+
+    /// The screen states the facts; the info sheet answers the question
+    /// behind them.
+    private var facts: some View {
+        AppRowsGroup(
+            rows: [
+                AppRowSpec(
+                    title: Localized.Model.Facts.goodFor,
                     value: Localized.Model.Facts.goodForValue,
-                    divider: true
-                )
-                factRow(
-                    Localized.Model.Facts.limitations,
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Model.Facts.limitations,
                     value: Localized.Model.Facts.limitationsValue,
-                    divider: true
-                )
-                factRow(
-                    Localized.Model.Facts.sizeOnDevice,
-                    value: gemmaManager.sizeDescription ?? ""
-                )
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Provider.Relay.Facts.howItWorks,
+                    tone: .muted,
+                    action: { showInfo = true }
+                ),
+            ]
+        )
     }
 
-    private func factRow(_ label: String, value: String, divider: Bool = false) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.n16) {
-                Text(label)
-                    .typography(Typography.description)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(colors.text.standard.base)
-                    .fixedSize(horizontal: true, vertical: false)
-                Spacer(minLength: 0)
-                Text(value)
-                    .typography(Typography.description)
-                    .foregroundStyle(colors.text.standard.muted)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, Spacing.n20)
-            .padding(.vertical, Spacing.n16)
-            .contentShape(Rectangle())
+    // MARK: - Action
 
-            if divider {
-                Divider().padding(.leading, Spacing.n20)
-            }
-        }
+    /// One button carries the whole decision: get it, or stop getting it.
+    private struct Action {
+        let label: String
+        let variant: AppButtonVariant
+        let act: () -> Void
     }
 
-    // MARK: - Actions
-
-    /// One full-width button that carries the screen's whole decision:
-    /// download it, stop it, or remove it.
-    @ViewBuilder
-    private var actions: some View {
+    private var action: Action? {
         switch gemmaManager.state {
         case .notDownloaded:
-            AppButton(Localized.Common.Actions.download) {
+            Action(label: Localized.Common.Actions.download, variant: .primary) {
                 Haptics.light()
                 Task { await gemmaManager.download() }
             }
-
         case .failed:
-            AppButton(Localized.Common.Actions.retry) {
+            Action(label: Localized.Common.Actions.retry, variant: .primary) {
                 Task { await gemmaManager.download() }
             }
-
-        case .queued, .downloading:
-            AppButton(Localized.LocalModel.cancel, variant: .secondary) {
+        case .queued, .downloading, .downloaded, .preparing:
+            Action(label: Localized.Provider.Local.cancelDownload, variant: .secondary) {
                 gemmaManager.cancel()
             }
+        case .ready, .unavailable:
+            nil
+        }
+    }
 
-        case .ready:
-            AppButton(Localized.LocalModel.delete, variant: .secondary) {
-                showDeleteConfirm = true
+    private var deleteGroup: some View {
+        AppRowsGroup(
+            rows: [
+                AppRowSpec(
+                    title: Localized.Provider.Local.deleteModel,
+                    accessory: .trash,
+                    tone: .destructive,
+                    action: { showDeleteConfirm = true }
+                ),
+            ]
+        )
+        .confirmationDialog(
+            Localized.Provider.Local.deleteModel,
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(Localized.Common.Actions.delete, role: .destructive) {
+                deleteModel()
             }
-            .confirmationDialog(
-                Localized.LocalModel.delete,
-                isPresented: $showDeleteConfirm,
-                titleVisibility: .visible
-            ) {
-                Button(Localized.Common.Actions.delete, role: .destructive) {
-                    deleteModel()
-                }
-                Button(Localized.Common.Actions.cancel, role: .cancel) {}
-            } message: {
-                Text(Localized.Model.removeWarning)
-            }
-
-        case .downloaded, .preparing, .unavailable:
-            EmptyView()
+            Button(Localized.Common.Actions.cancel, role: .cancel) {}
+        } message: {
+            Text(Localized.Model.removeWarning)
         }
     }
 
@@ -202,4 +232,12 @@ struct LocalProviderView: View {
         }
         Haptics.success()
     }
+}
+
+#Preview {
+    let preset = ProviderPreset.all.first { ProviderPreset.isLocal($0.baseURL) }!
+    return NavigationStack {
+        LocalProviderView(preset: preset)
+    }
+    .previewEnvironment()
 }

@@ -1,8 +1,8 @@
 import Foundation
 
 /// Shared completion step for OAuth-backed integration types, used by both
-/// connecting a new account (``AddIntegration``) and reconnecting an existing
-/// one (``IntegrationDetail``) so the two can't drift apart.
+/// connecting a new account (``ConnectIntegrationSheet``) and reconnecting an existing
+/// one (``IntegrationScreen``) so the two can't drift apart.
 enum IntegrationConnect {
     /// The connect outcome an ``Integration`` row needs: the label to show and
     /// which of the type's capabilities the grant actually covers.

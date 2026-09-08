@@ -1,5 +1,6 @@
 import Factory
 import Foundation
+import SwiftUI
 
 /// Compile-time catalog entry for a connectable integration (analogous to
 /// ``BundledSkill``). An ``Integration`` is a connected instance of one of
@@ -37,12 +38,18 @@ struct IntegrationType: Sendable {
     /// Google address) using the just-issued access token. Defaults to
     /// `displayName` when a type has no better source (or the fetch fails).
     let accountLabel: @Sendable (String) async -> String?
+    /// The design-system brand mark, where one ships. Row callers fall back
+    /// to the initial (``AppMark``) without it.
+    let brandImage: Image?
 
     init(
         id: String,
         displayName: String,
         description: String,
         systemImage: String,
+        // The design-system brand mark, where one ships. Row callers fall
+        // back to the initial (``AppMark``) without it.
+        brandImage: Image? = nil,
         providedCapabilities: Set<Capability>,
         category: IntegrationCategory,
         authKind: IntegrationAuthKind,
@@ -62,6 +69,7 @@ struct IntegrationType: Sendable {
         self.toolCapabilities = toolCapabilities
         self.makeTools = makeTools
         self.accountLabel = accountLabel
+        self.brandImage = brandImage
     }
 
     /// Which of `providedCapabilities` are actually usable given the OAuth
@@ -86,8 +94,9 @@ enum BundledIntegrationType {
     static let google = IntegrationType(
         id: "google",
         displayName: "Google",
-        description: "Connect a Google account to read and send email.",
+        description: Localized.Integrations.Google.description,
         systemImage: "envelope.fill",
+        brandImage: Iconography.Service.google,
         providedCapabilities: [.email],
         category: .email,
         authKind: .oauth(configFactory: GoogleOAuth.config),
@@ -118,8 +127,9 @@ enum BundledIntegrationType {
     static let microsoft = IntegrationType(
         id: "microsoft",
         displayName: "Microsoft",
-        description: "Connect a Microsoft account to read and send email.",
+        description: Localized.Integrations.Microsoft.description,
         systemImage: "envelope.fill",
+        brandImage: Iconography.Service.microsoft,
         providedCapabilities: [.email],
         category: .email,
         authKind: .oauth(configFactory: MicrosoftOAuth.config),
@@ -150,6 +160,7 @@ enum BundledIntegrationType {
         displayName: Localized.Integrations.Imap.displayName,
         description: Localized.Integrations.Imap.description,
         systemImage: "envelope.fill",
+        brandImage: Iconography.Functional.mail,
         providedCapabilities: [.email],
         category: .email,
         authKind: .imap,
@@ -177,6 +188,7 @@ enum BundledIntegrationType {
         displayName: Localized.Integrations.Aula.displayName,
         description: Localized.Integrations.Aula.description,
         systemImage: "figure.child",
+        brandImage: Iconography.Functional.school,
         providedCapabilities: [.aula],
         category: .familyAndSchool,
         authKind: .webSession(configFactory: AulaOAuth.config),

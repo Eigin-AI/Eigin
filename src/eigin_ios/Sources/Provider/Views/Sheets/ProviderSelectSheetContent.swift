@@ -1,146 +1,135 @@
 import SwiftUI
 
-/// User selection from the provider sheet.
+/// User selection from the provider sheet: a preset plus the way you want
+/// to connect it — the group you picked the row from — or anything at all
+/// via address (the custom route).
 enum ProviderSelection {
-    case preset(ProviderPreset)
+    case preset(ProviderPreset, method: ProviderPreset.AuthMethod)
     case custom
 }
 
-/// Content for the provider selection sheet.
-///
-/// Shared between onboarding and Settings → Connections. Presents OAuth
-/// providers as featured buttons and API key providers in a collapsible grid,
-/// with a custom-provider tile appended to the grid.
+/// The catalogue of providers, grouped by what you will be asked to do rather
+/// than by the protocol behind it. Sign-in first because it asks least of you.
+/// Connect-by-address is always the last thing in the sheet, so the way in for
+/// anything we have never heard of never moves. Shared between onboarding and
+/// the connections hub.
 struct ProviderSelectSheetContent: View {
     @Environment(\.colors) private var colors
 
+    /// Presets already connected, omitted entirely: you reached this sheet
+    /// from the list they are on, so offering them again would be offering a
+    /// thing you cannot do.
+    var connectedBaseURLs: [String] = []
+
     let onSelect: (ProviderSelection) -> Void
 
-    @State private var showAPIKeyOptions = false
+    @State private var searchText = ""
 
-    private var oauthPresets: [ProviderPreset] {
-        ProviderPreset.all.filter { $0.authMethod == .oAuthPKCE }
+    init(connectedBaseURLs: [String] = [], onSelect: @escaping (ProviderSelection) -> Void) {
+        self.connectedBaseURLs = connectedBaseURLs
+        self.onSelect = onSelect
+    }
+
+    /// Sign-in route: OAuth presets. API-key route: everything that can take
+    /// a key — a preset offering both genuinely appears in both groups,
+    /// because the group you pick from IS the way you want to connect.
+    private var signInPresets: [ProviderPreset] {
+        filtered(ProviderPreset.all.filter { $0.authMethod == .oAuthPKCE })
     }
 
     private var apiKeyPresets: [ProviderPreset] {
-        ProviderPreset.all.filter {
-            $0.authMethod == .apiKey && !ProviderPreset.isLocal($0.baseURL)
-        }
+        filtered(
+            ProviderPreset.all.filter {
+                ($0.authMethod == .apiKey || $0.apiKeyURL != nil)
+                    && !ProviderPreset.isLocal($0.baseURL)
+                    && !ProviderPreset.isRelay($0.baseURL)
+            }
+        )
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Sizing.PageLayout.ContentGrouping.gap),
-        GridItem(.flexible(), spacing: Sizing.PageLayout.ContentGrouping.gap),
-    ]
+    private func filtered(_ presets: [ProviderPreset]) -> [ProviderPreset] {
+        presets
+            .filter { !connectedBaseURLs.contains($0.baseURL) }
+            .filter { name in
+                guard !searchText.isEmpty else { return true }
+                return name.name.lowercased().contains(searchText.lowercased())
+            }
+    }
+
+    private var nothingFound: Bool {
+        signInPresets.isEmpty && apiKeyPresets.isEmpty
+    }
 
     var body: some View {
-        VStack(spacing: Sizing.PageLayout.gap) {
-            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                // OAuth providers — featured options
-                ForEach(oauthPresets) { preset in
-                    HStack(spacing: Spacing.n16) {
-                        if let emoji = preset.region?.emoji {
-                            Text(emoji)
-                                .font(.system(size: 28))
-                        }
+        ScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppSearchField(
+                    text: $searchText,
+                    placeholder: Localized.Provider.Picker.searchPrompt
+                )
 
-                        AppSubtleActionButton(
-                            Localized.Provider.Setup.oauthConnect(preset.name),
-                            icon: Iconography.Functional.Arrow.right,
-                            size: .medium
-                        ) {
-                            onSelect(.preset(preset))
-                        }
-                    }
+                if nothingFound {
+                    AppNotice(
+                        tone: .info,
+                        title: Localized.Provider.Picker.unknownNoticeTitle,
+                        body: Localized.Provider.Picker.unknownNoticeBody
+                    )
                 }
+
+                if !signInPresets.isEmpty {
+                    AppRowsGroup(
+                        label: Localized.Provider.Picker.Group.signIn,
+                        rows: signInPresets.map { preset in
+                            AppRowSpec(
+                                id: preset.id,
+                                title: preset.name,
+                                icon: markIcon(for: preset),
+                                action: { onSelect(.preset(preset, method: .oAuthPKCE)) }
+                            )
+                        }
+                    )
+                }
+
+                if !apiKeyPresets.isEmpty {
+                    AppRowsGroup(
+                        label: Localized.Provider.Picker.Group.apiKey,
+                        rows: apiKeyPresets.map { preset in
+                            AppRowSpec(
+                                id: preset.id,
+                                title: preset.name,
+                                icon: markIcon(for: preset),
+                                action: { onSelect(.preset(preset, method: .apiKey)) }
+                            )
+                        }
+                    )
+                }
+
+                // The way in for anything we have never heard of never moves.
+                AppRowsGroup(
+                    footnote: Localized.Provider.Picker.addressFootnote,
+                    rows: [
+                        AppRowSpec(
+                            id: "address",
+                            title: Localized.Provider.Picker.connectByAddress,
+                            icon: Iconography.Functional.globe,
+                            action: { onSelect(.custom) }
+                        ),
+                    ]
+                )
+
+                // Third-party disclosure before the user connects a provider of
+                // their own (App Store guideline 5.1.2).
+                ThirdPartyDisclosureText(variant: .ownProvider)
             }
-
-            // API key — collapsible
-            VStack(spacing: Sizing.PageLayout.HeaderGrouping.gap) {
-                HStack {
-                    Text(Localized.Provider.Setup.apiKeyAlternative)
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.muted)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .rotationEffect(showAPIKeyOptions ? .degrees(90) : .zero)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(Animations.smooth) {
-                        showAPIKeyOptions.toggle()
-                    }
-                }
-
-                if showAPIKeyOptions {
-                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                        LazyVGrid(
-                            columns: columns,
-                            spacing: Sizing.PageLayout.ContentGrouping.gap
-                        ) {
-                            ForEach(apiKeyPresets) { preset in
-                                Button { onSelect(.preset(preset)) } label: {
-                                    presetTile(preset)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
-                        AppSubtleActionButton(
-                            Localized.Provider.Picker.customProvider,
-                            icon: Iconography.Functional.plus,
-                            size: .medium
-                        ) {
-                            onSelect(.custom)
-                        }
-                    }
-                }
-            }
-
-            // Third-party disclosure before the user connects a provider of
-            // their own (App Store guideline 5.1.2).
-            ThirdPartyDisclosureText(variant: .ownProvider)
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
         }
-        .padding(.horizontal, Spacing.n24)
+        .scrollBounceBehavior(.basedOnSize)
     }
 
-    // MARK: - Subviews
-
-    @ViewBuilder
-    private func providerIcon(for preset: ProviderPreset) -> some View {
-        if let logo = preset.logo {
-            Image(uiImage: logo)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 36, height: 36)
-        } else if let systemImage = preset.systemImage {
-            Image(systemName: systemImage)
-                .font(.system(size: 24))
-                .foregroundStyle(colors.text.standard.muted)
-                .frame(width: 36, height: 36)
-        }
-    }
-
-    private func presetTile(_ preset: ProviderPreset) -> some View {
-        VStack(spacing: Spacing.n16) {
-            providerIcon(for: preset)
-
-            Text(preset.name)
-                .typography(Typography.button)
-                .foregroundStyle(colors.text.standard.base)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.n24)
-        .padding(.horizontal, Spacing.n8)
-        .background(
-            colors.button.standard.secondary,
-            in: RoundedRectangle(cornerRadius: Radius.card)
-        )
+    private func markIcon(for preset: ProviderPreset) -> Image? {
+        preset.logo.map(Image.init(uiImage:))
     }
 }
 

@@ -22,7 +22,6 @@ struct ThirdPartyDisclosureText: View {
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, Spacing.n8)
     }
 
     private var sentence: AttributedString {

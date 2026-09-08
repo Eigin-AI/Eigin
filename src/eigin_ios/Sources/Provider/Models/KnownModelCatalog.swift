@@ -71,7 +71,40 @@ enum KnownModelCatalog {
 
     /// Returns the catalog entry matching `modelID`, or `nil` if unknown.
     static func lookup(_ modelID: String) -> KnownModelEntry? {
-        lookup(modelID, in: entries)?.entry
+        preparedLookup(modelID)?.entry
+    }
+
+    /// One string a lookup can match against: an entry's `pattern` or one of
+    /// its aliases, with its normalized form kept beside the original.
+    private struct NormalizedCandidate {
+        /// The candidate as written (the `pattern` or an alias), so matched
+        /// length math stays on the same form the caller sees.
+        let raw: String
+        let normalized: String
+        let entry: KnownModelEntry
+    }
+
+    /// Normalization allocates (lowercase, replaces, suffix trims), and model
+    /// lists run into the hundreds, so the catalogue's candidates are
+    /// normalized once instead of on every lookup. Order matches the naive
+    /// scan: each entry's pattern comes before its aliases, entries in
+    /// catalogue order.
+    private static let normalizedCandidates: [NormalizedCandidate] = entries.flatMap { entry in
+        ([entry.pattern] + entry.aliases).map {
+            NormalizedCandidate(raw: $0, normalized: normalize($0), entry: entry)
+        }
+    }
+
+    private static func preparedLookup(
+        _ modelID: String
+    ) -> (entry: KnownModelEntry, matched: String)? {
+        let bare = normalize(stripPrefix(modelID))
+        for candidate in normalizedCandidates
+            where matchesPattern(bare, pattern: candidate.normalized)
+        {
+            return (candidate.entry, candidate.raw)
+        }
+        return nil
     }
 
     /// Resolves `modelID` against an arbitrary entry list, returning the matched
@@ -96,7 +129,13 @@ enum KnownModelCatalog {
     /// `"claude-haiku-4-5-20251001"`, or `"2025-04-14"` from `"gpt-4.1-2025-04-14"`).
     /// Returns `nil` if the model is unknown or the ID has no suffix beyond the pattern.
     static func versionTag(for modelID: String) -> String? {
-        versionTag(for: modelID, in: entries)
+        let bare = normalize(stripPrefix(modelID))
+        guard let match = preparedLookup(modelID) else { return nil }
+        let matchedLength = normalize(match.matched).count
+        guard bare.count > matchedLength else { return nil }
+        let suffix = bare[bare.index(bare.startIndex, offsetBy: matchedLength)...]
+        let tag = String(suffix.drop(while: { $0 == "-" || $0 == "@" || $0 == ":" }))
+        return tag.isEmpty ? nil : tag
     }
 
     /// Version-tag extraction against an arbitrary entry list. Chops the ID by the

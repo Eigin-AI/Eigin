@@ -14,6 +14,14 @@ enum Capability: String, Codable, CaseIterable, Sendable {
     case email
     case aula
 
+    /// The user-facing name, from the string catalog.
+    var displayName: String {
+        switch self {
+        case .email: Localized.Capability.email
+        case .aula: Localized.Capability.aula
+        }
+    }
+
     /// The permissions-UI category that tools providing this capability are
     /// grouped under. `nil` when the capability has no integration-backed
     /// category — those categories show in the permissions UI regardless of

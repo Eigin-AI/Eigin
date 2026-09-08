@@ -6,14 +6,21 @@ import WebKit
 /// Sheet for connecting Aula: runs the real UniLogin/MitID login in an
 /// interactive `WKWebView` (see ``AulaLoginWebView``), then verifies the
 /// resulting session and saves it as an integration. Presented from
-/// ``AddIntegration`` when the user picks the Aula type, or from
-/// ``IntegrationDetail`` to reconnect an existing account in place. See
+/// ``ConnectIntegrationSheet`` when the user picks the Aula type, or from
+/// ``IntegrationScreen`` to reconnect an existing account in place. See
 /// `docs/src/integrations/aula.md` for why Aula needs a custom web view
 /// instead of `ASWebAuthenticationSession`.
 struct AddAulaAccount: View {
     /// Invoked after the integration is saved, so the presenting sheet can
     /// dismiss itself too.
     var onConnected: () -> Void = {}
+    /// Invoked when the sign-in itself is over and only verification
+    /// remains: the presenter replaces this sheet with its own waiting
+    /// state. Without it, verification keeps an in-place spinner.
+    var onVerifying: (() -> Void)?
+    /// Invoked when connecting fails; the presenter shows the failure in
+    /// its own design. Without it, the error stays on this sheet.
+    var onFailure: ((String) -> Void)?
 
     let config: PKCEOAuthConfig
     /// The existing integration when this sheet runs as an in-place reconnect
@@ -113,7 +120,7 @@ struct AddAulaAccount: View {
     /// Direct path: the web view actually caught the callback redirect (rare,
     /// only when the Aula app isn't installed to steal the universal link).
     private func handleCallback(callbackURL: URL, cookies: [HTTPCookie]) {
-        phase = .verifying
+        beginVerifying()
         Task {
             do {
                 let code = try PKCEOAuthFlow.validateCallback(
@@ -142,7 +149,7 @@ struct AddAulaAccount: View {
         cookies: [HTTPCookie],
         userAgent: String?
     ) {
-        phase = .verifying
+        beginVerifying()
         Task {
             do {
                 let result = try await AulaFormWalker.walk(
@@ -218,9 +225,24 @@ struct AddAulaAccount: View {
         failWithMessage(error.localizedDescription)
     }
 
+    /// Hand the wait back to the presenter when it asked for that; the
+    /// waiting and failed states are its design, not a login page's.
+    private func beginVerifying() {
+        if let onVerifying {
+            onVerifying()
+        } else {
+            phase = .verifying
+        }
+    }
+
     private func failWithMessage(_ message: String) {
-        phase = .error(message)
-        Haptics.error()
+        if let onFailure {
+            onFailure(message)
+            dismiss()
+        } else {
+            phase = .error(message)
+            Haptics.error()
+        }
     }
 
     /// A friendly label for the connection — the children's names when we have
