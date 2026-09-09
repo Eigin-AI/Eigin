@@ -5,7 +5,7 @@ import Foundation
 /// Produced by ``KnowledgeHydrator`` and consumed by
 /// ``RelevantKnowledgeSource`` for markdown formatting. Pre-formatted so the
 /// source can render without touching FFI types.
-struct RelevantKnowledgeEntry {
+struct RelevantKnowledgeEntry: Sendable {
     /// Normalised `type.shortID` form, e.g. `"actor.mette"`.
     let qualifiedID: String
     /// The underlying entity type (`"actor"`, `"thing"`, `"fact"`, etc.).
@@ -33,7 +33,6 @@ struct RelevantKnowledgeEntry {
 ///
 /// All errors are swallowed and logged; an empty result is the safe fallback
 /// at every step so a degraded knowledge service never blocks a turn.
-@MainActor
 enum KnowledgeHydrator {
     /// Maximum entries surfaced in the hint block.
     static let maxEntries: Int = 3
