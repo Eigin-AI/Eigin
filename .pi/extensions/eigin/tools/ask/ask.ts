@@ -15,7 +15,12 @@ import { withHerdrBlocked } from "../../observability/herdr.ts";
 
 export const ASK_QUESTIONS_TOOL = "ask_questions";
 
-export function registerAskQuestionsTool(pi: ExtensionAPI): void {
+/** AFK mode auto-selects the recommended option for each question. */
+export interface AskQuestionsOptions {
+	isAfk(): boolean;
+}
+
+export function registerAskQuestionsTool(pi: ExtensionAPI, options: AskQuestionsOptions): void {
 	const schema = Type.Object({
 		questions: Type.Array(
 			Type.Object({
@@ -68,6 +73,19 @@ export function registerAskQuestionsTool(pi: ExtensionAPI): void {
 						},
 					],
 					terminate: true,
+				};
+			}
+
+			// AFK: auto-pick the recommended (first) option of each question
+			// without showing a dialog, so the agent keeps moving unattended.
+			if (options.isAfk()) {
+				const answers: AskAnswer[] = questions.map((q) => ({
+					question: q.question,
+					choice: { title: q.options[0].title, recommended: true },
+				}));
+				return {
+					content: [{ type: "text", text: `AFK: auto-selected the recommended option for each question.\n\n${formatAnswers(answers)}` }],
+					details: { answers },
 				};
 			}
 
