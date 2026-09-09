@@ -247,7 +247,9 @@ actor DefaultModelRouter: ModelRouter {
         guard localModelReadiness() else {
             return declined("the on-device model is not downloaded")
         }
-        guard let model = local.availableModels.first else {
+        // Rank-best, not array-first: with two on-device models enabled the fallback
+        // should pick the stronger one, matching rankedCandidates' best-first intent.
+        guard let model = offer(for: local).min(by: { rank(of: $0) < rank(of: $1) }) else {
             return declined("the on-device provider lists no model")
         }
 
@@ -275,6 +277,17 @@ actor DefaultModelRouter: ModelRouter {
 
     // MARK: - Candidates
 
+    /// The pool Auto routing chooses from: the user's enabled models that the provider
+    /// still serves, falling back to the full fetched catalogue when nothing is enabled
+    /// (a legacy provider seeded before the field). One gate for both candidate
+    /// selection and the offline/local fallback, so a disabled model never returns
+    /// through health.
+    private func offer(for provider: RoutingProvider) -> [String] {
+        guard !provider.enabledModels.isEmpty else { return provider.availableModels }
+        let served = Set(provider.availableModels)
+        return provider.enabledModels.filter { served.contains($0) }
+    }
+
     /// A requirement the router is willing to give up, in the order it gives them up.
     ///
     /// Vision goes first: the pipeline strips the images and tells the model it cannot
@@ -298,8 +311,7 @@ actor DefaultModelRouter: ModelRouter {
         relaxing concessions: [Concession] = [.vision, .contextWindow],
         relaxHealth: Bool = true
     ) -> [String] {
-        let ranked = provider.availableModels
-            .filter { KnownModelCatalog.lookup($0) != nil }
+        let ranked = KnownModelCatalog.knownModels(in: offer(for: provider))
             .sorted { rank(of: $0) < rank(of: $1) }
 
         let ladder = relaxationLadder(from: request.requirements, conceding: concessions)

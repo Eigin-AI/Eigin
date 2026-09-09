@@ -19,12 +19,13 @@ struct ModelRouterTests {
     private let cloudID = UUID()
     private let localID = UUID()
 
-    private func cloud(_ models: [String]? = nil) -> RoutingProvider {
+    private func cloud(_ models: [String]? = nil, enabled: [String] = []) -> RoutingProvider {
         RoutingProvider(
             id: cloudID,
             name: "Test Cloud",
             baseURL: "https://cloud.test/v1",
-            availableModels: models ?? [Self.best, Self.second, Self.third, Self.sightless]
+            availableModels: models ?? [Self.best, Self.second, Self.third, Self.sightless],
+            enabledModels: enabled
         )
     }
 
@@ -292,6 +293,92 @@ struct ModelRouterTests {
         )
         #expect(route.model == "vendor/mystery-model-1")
         #expect(route.change == nil)
+    }
+
+    // MARK: - Enabled models
+
+    @Test("Auto routing skips a model the user disabled")
+    func disabledModelIsSkipped() async {
+        let router = makeRouter()
+        // Only `second` is enabled; `best` ranks higher but is switched off.
+        let provider = cloud(enabled: [Self.second])
+        let route = await router.resolve(request(model: Self.best, providers: [provider]))
+        #expect(route.model == Self.second)
+        #expect(route.model != Self.best)
+    }
+
+    @Test(
+        "a disabled model is not reinstated when every enabled one is quarantined"
+    )
+    func disabledModelIsNotReinstatedViaQuarantine() async {
+        let clock = TestClock()
+        let router = makeRouter(clock: clock)
+        let provider = cloud(enabled: [Self.second])
+
+        // Quarantine the only enabled model. `best` is healthy and still served, but the
+        // user turned it off, so the quarantine fallback must not reach for it.
+        _ = await router.retry(
+            after: failure(503), request: request(model: Self.second, providers: [provider])
+        )
+        clock.advance(60)
+
+        let route = await router.resolve(
+            request(model: Self.second, providers: [provider])
+        )
+        // Stays on the quarantined enabled model rather than the disabled `best`.
+        #expect(route.model == Self.second)
+        #expect(route.model != Self.best)
+    }
+
+    @Test(
+        "a provider with no models enabled falls back to the full catalogue"
+    )
+    func emptyEnablementFallsBackToFullCatalogue() async {
+        let router = makeRouter()
+        // Empty enablement: a legacy provider seeded before the field existed. The full
+        // fetched catalogue is the offer, so `best` is selectable.
+        let provider = cloud([Self.best, Self.second], enabled: [])
+        // Drive a switch off `second` so the resolve can land on `best`. A fresh
+        // `resolve` alone would not: the first turn sets the session clock without a
+        // reset, so stickiness keeps the agent on the healthy `second`.
+        _ = await router.retry(
+            after: failure(503), request: request(model: Self.second, providers: [provider])
+        )
+        let route = await router.resolve(
+            request(model: Self.second, providers: [provider])
+        )
+        #expect(route.model == Self.best)
+    }
+
+    @Test("the offline fallback takes the enabled on-device model, not the first served")
+    func offlineFallbackRespectsEnabledLocal() async {
+        let router = makeRouter(reachability: FakeNetworkReachability(isReachable: false))
+        let preferred = "local/experimental"
+        let local = RoutingProvider(
+            id: localID,
+            name: "On device",
+            baseURL: "local://",
+            availableModels: [Self.onDevice, preferred],
+            enabledModels: [preferred]
+        )
+        let route = await router.resolve(
+            request(model: Self.best, providers: [cloud(), local])
+        )
+        #expect(route.providerID == localID)
+        #expect(route.model == preferred)
+        #expect(route.model != Self.onDevice)
+    }
+
+    @Test("a model kept enabled but retired from the catalogue is not chosen")
+    func staleEnabledModelIsNotChosen() async {
+        let router = makeRouter()
+        // `best` is still switched on, but the provider no longer serves it; `second`
+        // is what remains. Without intersecting enabled against available, Auto would
+        // stay on the dead `best`.
+        let provider = cloud([Self.second], enabled: [Self.best, Self.second])
+        let route = await router.resolve(request(model: Self.best, providers: [provider]))
+        #expect(route.model == Self.second)
+        #expect(route.model != Self.best)
     }
 
     // MARK: - canSatisfy

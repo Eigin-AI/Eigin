@@ -116,12 +116,10 @@ struct ContentView: View {
         Task { @MainActor in
             guard let models = try? await relayClient.models(), !models.isEmpty else { return }
             provider.availableModels = models
-            if provider.enabledModels.isEmpty {
-                provider.enabledModels = [
-                    KnownModelCatalog.bestModel(from: models) ?? "",
-                ]
-                .filter { !$0.isEmpty }
-            }
+            // The Eigin relay is the user's own provider, and its models come and go
+            // with the relay — there is no per-model toggle for it — so every known
+            // served model is always on.
+            provider.enabledModels = KnownModelCatalog.knownModels(in: models)
         }
     }
 }

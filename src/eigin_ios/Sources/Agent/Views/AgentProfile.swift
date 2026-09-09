@@ -329,12 +329,21 @@ struct AgentProfile: View {
                 guard newID != agent.providerID else { return }
                 agent.providerID = newID
                 // A model pinned on the old provider means nothing on the new one, so
-                // seed a sensible starting point and let the router take it from there.
+                // switch to Auto and force-resolve against the new provider's enabled
+                // models. Seed a synchronous starting point so the UI never shows the
+                // old provider's model, then let the router own the real choice.
                 agent.autoModel = true
-                if let newProvider = providers.first(where: { $0.id == newID }),
-                   let bestModel = KnownModelCatalog.bestModel(from: newProvider.availableModels)
-                {
-                    agent.model = bestModel
+                if let newProvider = providers.first(where: { $0.id == newID }) {
+                    // Seed a synchronous starting point from the served-and-enabled
+                    // models so the UI never shows the old provider's model or a
+                    // stale ID; the router owns the real choice right after.
+                    let served = Set(newProvider.availableModels)
+                    let selectable = newProvider.enabledModels.filter { served.contains($0) }
+                    let seeded = selectable.isEmpty ? newProvider.availableModels : selectable
+                    if let best = KnownModelCatalog.bestModel(from: seeded) {
+                        agent.model = best
+                    }
+                    Task { await AgentAutoRouting.forceResolve(agent: agent) }
                 }
             }
         )

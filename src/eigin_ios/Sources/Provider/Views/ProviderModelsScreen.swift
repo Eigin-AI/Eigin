@@ -205,6 +205,8 @@ struct ProviderModelsScreen: View {
             provider.enabledModels.append(modelID)
         }
         Haptics.light()
+        // A disabled model may be the one a running agent is on; force-resolve now.
+        Task { await AgentAutoRouting.forceResolveAgents(on: provider) }
     }
 
     // MARK: - Names
