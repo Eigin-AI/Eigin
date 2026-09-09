@@ -158,10 +158,10 @@ private struct AppDisclosurePreview: View {
 
     private var placeholderContent: some View {
         VStack(alignment: .leading, spacing: Spacing.n12) {
-            Text("Any content folds out here.")
+            Text(verbatim: "Any content folds out here.")
                 .typography(Typography.description)
                 .foregroundStyle(colors.text.standard.base)
-            Text("Buttons, lists, options — the disclosure stays agnostic.")
+            Text(verbatim: "Buttons, lists, options — the disclosure stays agnostic.")
                 .typography(Typography.descriptionSmall)
                 .foregroundStyle(colors.text.standard.muted)
         }

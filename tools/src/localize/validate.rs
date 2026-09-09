@@ -57,5 +57,12 @@ pub fn run_with_root(args: ValidateArgs, root: &str) -> Result<bool> {
         }
     }
 
+    // The coverage check is part of lint: a key with a translation for some
+    // languages but not a required one fails here. The generate command only
+    // warns; lint is the gate.
+    if !super::check_all(root, None)? {
+        all_passed = false;
+    }
+
     Ok(all_passed)
 }

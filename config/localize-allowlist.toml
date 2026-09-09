@@ -1,0 +1,23 @@
+# Keys intentionally exempt from the localization tools.
+#
+# Every entry needs a reason. Two uses:
+#   - coverage check: a key missing a required language is not flagged.
+#   - generate: a key skipped by the generator (not `domain.element` shaped)
+#     is not reported in the skipped-key summary.
+#
+# Prefer fixing the call site (e.g. Text(verbatim:)) so the key is never
+# extracted, over adding it here.
+#
+# Format: one [[keys]] table per key.
+
+[[keys]]
+key = "a11y_task_list_item_checked"
+reason = "NSLocalizedString with %d format params the generated enum can't type. Accessed directly in String+.swift."
+
+[[keys]]
+key = "a11y_task_list_item_unchecked"
+reason = "NSLocalizedString with %d format params the generated enum can't type. Accessed directly in String+.swift."
+
+[[keys]]
+key = "markdown_list_item"
+reason = "NSLocalizedString with %d format params the generated enum can't type. Accessed directly in String+.swift."

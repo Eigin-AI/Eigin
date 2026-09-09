@@ -88,7 +88,7 @@ fn generates_static_var_for_no_params() {
     )
     .unwrap();
 
-    let entries = parser::parse(path.to_str().unwrap()).unwrap();
+    let entries = parser::parse(path.to_str().unwrap()).unwrap().entries;
     let output = generator::emit(&entries);
 
     assert!(output.contains("enum Chat {"));
@@ -105,7 +105,7 @@ fn generates_static_func_for_params() {
     )
     .unwrap();
 
-    let entries = parser::parse(path.to_str().unwrap()).unwrap();
+    let entries = parser::parse(path.to_str().unwrap()).unwrap().entries;
     let output = generator::emit(&entries);
 
     assert!(output.contains("static func greeting(_ p1: String) -> String {"));
@@ -122,7 +122,7 @@ fn includes_comment_as_doc_comment() {
     )
     .unwrap();
 
-    let entries = parser::parse(path.to_str().unwrap()).unwrap();
+    let entries = parser::parse(path.to_str().unwrap()).unwrap().entries;
     let output = generator::emit(&entries);
 
     assert!(output.contains("/// The chat title"));
@@ -134,7 +134,7 @@ fn escapes_swift_keyword_leaf() {
     let path = dir.path().join("test.xcstrings");
     fs::write(&path, xcstrings(&[("chat.default", None, Some("Default"))])).unwrap();
 
-    let entries = parser::parse(path.to_str().unwrap()).unwrap();
+    let entries = parser::parse(path.to_str().unwrap()).unwrap().entries;
     let output = generator::emit(&entries);
 
     assert!(output.contains("static var `default`: String"));
@@ -150,9 +150,36 @@ fn renames_type_container_to_kind() {
     )
     .unwrap();
 
-    let entries = parser::parse(path.to_str().unwrap()).unwrap();
+    let entries = parser::parse(path.to_str().unwrap()).unwrap().entries;
     let output = generator::emit(&entries);
 
     assert!(output.contains("enum Kind {"));
     assert!(!output.contains("enum Type {"));
+}
+
+// --- parser skip handling ---
+
+#[test]
+fn parse_collects_skipped_keys() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("test.xcstrings");
+    // '2 CHATS' (no dot) and 'bad..key' (empty segment) are not domain.element;
+    // 'chat.title' is valid.
+    fs::write(
+        &path,
+        xcstrings(&[
+            ("2 CHATS", None, Some("2 chats")),
+            ("bad..key", None, Some("bad")),
+            ("chat.title", Some("The chat title"), Some("Chat")),
+        ]),
+    )
+    .unwrap();
+
+    let result = parser::parse(path.to_str().unwrap()).unwrap();
+    assert_eq!(result.entries.len(), 1);
+    assert_eq!(result.entries[0].key, "chat.title");
+    let skipped_keys: Vec<&str> = result.skipped.iter().map(|s| s.key.as_str()).collect();
+    assert_eq!(skipped_keys.len(), 2);
+    assert!(skipped_keys.contains(&"2 CHATS"));
+    assert!(skipped_keys.contains(&"bad..key"));
 }

@@ -548,6 +548,28 @@ enum Localized {
         }
     }
 
+    enum Credits {
+        /// A label showing the number of credits in a wallet.
+        static func count(_ p1: String) -> String {
+            String(format: Localized.get("credits.count"), p1)
+        }
+
+        /// A label displaying the credit count and product identifier for a store product.
+        static func countAndProduct(_ p1: String, _ p2: String) -> String {
+            String(format: Localized.get("credits.countAndProduct"), p1, p2)
+        }
+
+        /// A button label that triggers a diagnostic of the StoreKit framework.
+        static var diagnose: String {
+            Localized.get("credits.diagnose")
+        }
+
+        /// A button label that refreshes the user's credit wallet balances.
+        static var refreshBalances: String {
+            Localized.get("credits.refreshBalances")
+        }
+    }
+
     enum Debug {
         /// Button to delete all listed items
         static var deleteAllListed: String {
@@ -726,6 +748,13 @@ enum Localized {
         /// Navigation link to app log viewer
         static var viewAppLog: String {
             Localized.get("development.viewAppLog")
+        }
+
+        enum Credits {
+            /// Credits section title and its navigation row in the development menu.
+            static var title: String {
+                Localized.get("development.credits.title")
+            }
         }
 
         enum Section {
@@ -4618,6 +4647,18 @@ enum Localized {
         }
     }
 
+    enum Store {
+        /// A message displayed when there are no products to show.
+        static var noProducts: String {
+            Localized.get("store.noProducts")
+        }
+
+        /// A button label that refreshes the list of available in-app purchases.
+        static var refreshProducts: String {
+            Localized.get("store.refreshProducts")
+        }
+    }
+
     enum Timestamp {
         /// Relative timestamp group label for messages sent moments ago
         static var justNow: String {
@@ -5934,6 +5975,23 @@ enum Localized {
         /// Status label shown while the TTS engine is speaking
         static var speaking: String {
             Localized.get("voice.speaking")
+        }
+    }
+
+    enum Wallet {
+        /// A button label that deletes all wallets.
+        static var deleteAll: String {
+            Localized.get("wallet.deleteAll")
+        }
+
+        /// A message displayed when there are no wallets to display.
+        static var empty: String {
+            Localized.get("wallet.empty")
+        }
+
+        /// A button label that evicts empty wallets.
+        static var evictEmpty: String {
+            Localized.get("wallet.evictEmpty")
         }
     }
 

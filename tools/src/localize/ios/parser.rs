@@ -9,7 +9,25 @@ pub struct CatalogEntry {
     pub param_count: usize,
 }
 
-pub fn parse(path: &str) -> Result<Vec<CatalogEntry>> {
+/// A catalog key skipped by the generator because it is not `domain.element`
+/// shaped — typically a string Xcode auto-extracted from a `Text("…")` literal.
+#[derive(Clone)]
+pub struct SkippedKey {
+    pub key: String,
+}
+
+/// Result of parsing the catalog: emitted entries plus keys skipped by the
+/// generator because they are not `domain.element` shaped.
+///
+/// Skipped keys are not failures. They are surfaced as a single aggregate
+/// warning by the generate command so that copy accidentally left as a
+/// literal stands out, instead of one per-key `WARNING` line per generate.
+pub struct ParseResult {
+    pub entries: Vec<CatalogEntry>,
+    pub skipped: Vec<SkippedKey>,
+}
+
+pub fn parse(path: &str) -> Result<ParseResult> {
     let content = fs::read_to_string(path).with_context(|| format!("reading {path}"))?;
     let json: serde_json::Value =
         serde_json::from_str(&content).with_context(|| format!("parsing {path}"))?;
@@ -19,23 +37,16 @@ pub fn parse(path: &str) -> Result<Vec<CatalogEntry>> {
         .context("invalid catalog format: missing 'strings' object")?;
 
     let mut entries = Vec::new();
+    let mut skipped = Vec::new();
 
     for (key, value) in strings {
         let segments: Vec<&str> = key.split('.').collect();
 
-        if segments.len() < 2 {
-            eprintln!("WARNING: Skipping key '{key}' — must have at least domain.element");
-            continue;
-        }
-        if segments.iter().any(|s| s.is_empty()) {
-            eprintln!("WARNING: Skipping key '{key}' — empty segment detected");
-            continue;
-        }
-        if !is_valid_swift_identifier(segments[0]) {
-            eprintln!(
-                "WARNING: Skipping key '{key}' — domain '{}' is not a valid Swift identifier",
-                segments[0]
-            );
+        if segments.len() < 2
+            || segments.iter().any(|s| s.is_empty())
+            || !is_valid_swift_identifier(segments[0])
+        {
+            skipped.push(SkippedKey { key: key.clone() });
             continue;
         }
 
@@ -56,5 +67,5 @@ pub fn parse(path: &str) -> Result<Vec<CatalogEntry>> {
     }
 
     entries.sort_by(|a, b| a.key.cmp(&b.key));
-    Ok(entries)
+    Ok(ParseResult { entries, skipped })
 }
