@@ -120,6 +120,14 @@ pub struct LocalizeConfig {
     pub formatter: Option<String>,
     #[serde(rename = "validate-sources")]
     pub validate_sources: Option<String>,
+    /// Languages every key must translate into, e.g. `["en", "da"]`.
+    /// The coverage check warns on generate and fails lint for any key
+    /// missing a required language.
+    #[serde(rename = "required-languages")]
+    pub required_languages: Option<Vec<String>>,
+    /// Path (relative to repo root) to a TOML allowlist file of keys
+    /// intentionally exempt from the coverage check.
+    pub allowlist: Option<String>,
 }
 
 /// Everything committed under `config/`.

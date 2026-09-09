@@ -165,14 +165,14 @@ private struct HeaderFullPreview: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.n16) {
                     Text(
-                        "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes."
+                        verbatim: "You have a hard time making it to your appointment with Thomas in Brønshøj at 5pm. Your workshop at the office ends at 4:30pm, and the trip takes about 35 minutes."
                     )
                     .typography(Typography.chatMessage)
                     .foregroundStyle(colors.text.standard.base)
 
                     HStack {
                         Spacer()
-                        Text("What do you suggest?")
+                        Text(verbatim: "What do you suggest?")
                             .typography(Typography.chatMessageUser)
                             .foregroundStyle(colors.text.standard.base)
                             .padding(Spacing.n16)
@@ -181,7 +181,7 @@ private struct HeaderFullPreview: View {
                     }
 
                     Text(
-                        "I can move the appointment, send Thomas a message, or find a faster route. What works best?"
+                        verbatim: "I can move the appointment, send Thomas a message, or find a faster route. What works best?"
                     )
                     .typography(Typography.chatMessage)
                     .foregroundStyle(colors.text.standard.base)
@@ -211,7 +211,7 @@ private struct HeaderLeadingPreview: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.n16) {
-                    Text("Conversation content goes here")
+                    Text(verbatim: "Conversation content goes here")
                         .typography(Typography.body)
                         .foregroundStyle(colors.text.standard.base)
                 }

@@ -3,3 +3,5 @@ localize.source = "src/eigin_ios/Sources/Localizable.xcstrings"
 localize.output = "src/eigin_ios/Sources/Core/Localized.swift"
 localize.formatter = "swiftformat"
 localize.validate-sources = "src/eigin_ios/Sources"
+localize.required-languages = ["en", "da"]
+localize.allowlist = "config/localize-allowlist.toml"

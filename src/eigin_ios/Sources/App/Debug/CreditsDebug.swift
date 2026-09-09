@@ -36,7 +36,7 @@ struct CreditsDebug: View {
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "bag", color: .green)
-                        Text("Refresh products")
+                        Text(Localized.Store.refreshProducts)
                         Spacer()
                         if isBusy { ProgressView() }
                     }
@@ -53,7 +53,7 @@ struct CreditsDebug: View {
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "arrow.clockwise", color: .blue)
-                        Text("Refresh balances")
+                        Text(Localized.Credits.refreshBalances)
                     }
                 }
                 .disabled(isBusy)
@@ -64,7 +64,7 @@ struct CreditsDebug: View {
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "trash", color: .orange)
-                        Text("Evict empty wallets")
+                        Text(Localized.Wallet.evictEmpty)
                     }
                 }
 
@@ -74,7 +74,7 @@ struct CreditsDebug: View {
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "trash.slash", color: .red)
-                        Text("Delete all wallets")
+                        Text(Localized.Wallet.deleteAll)
                     }
                 }
                 .disabled(wallets.isEmpty)
@@ -88,7 +88,7 @@ struct CreditsDebug: View {
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "stethoscope", color: .purple)
-                        Text("Diagnose StoreKit")
+                        Text(Localized.Credits.diagnose)
                         Spacer()
                         if isBusy { ProgressView() }
                     }
@@ -114,7 +114,7 @@ struct CreditsDebug: View {
 
             Section("Products") {
                 if products.isEmpty {
-                    Text("No products — tap Refresh products")
+                    Text(Localized.Store.noProducts)
                         .typography(Typography.miniLabel)
                         .foregroundStyle(colors.text.standard.muted)
                 } else {
@@ -126,9 +126,12 @@ struct CreditsDebug: View {
                                 SettingsIcon(systemName: "creditcard.fill", color: .green)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(product.displayName)
-                                    Text("\(product.credits) cr · \(product.id)")
-                                        .font(Typography.miniLabel.font.monospaced())
-                                        .foregroundStyle(colors.text.standard.muted)
+                                    Text(Localized.Credits.countAndProduct(
+                                        "\(product.credits)",
+                                        product.id
+                                    ))
+                                    .font(Typography.miniLabel.font.monospaced())
+                                    .foregroundStyle(colors.text.standard.muted)
                                 }
                                 Spacer()
                                 Text(product.displayPrice)
@@ -142,7 +145,7 @@ struct CreditsDebug: View {
 
             Section("Wallets") {
                 if wallets.isEmpty {
-                    Text("No wallets")
+                    Text(Localized.Wallet.empty)
                         .typography(Typography.miniLabel)
                         .foregroundStyle(colors.text.standard.muted)
                 } else {
@@ -152,7 +155,7 @@ struct CreditsDebug: View {
                                 Text(maskToken(wallet.token))
                                     .font(Typography.miniLabel.font.monospaced())
                                 Spacer()
-                                Text("\(wallet.credits) cr")
+                                Text(Localized.Credits.count("\(wallet.credits)"))
                                     .font(Typography.miniLabel.font.bold())
                             }
                             Text(wallet.status.rawValue)

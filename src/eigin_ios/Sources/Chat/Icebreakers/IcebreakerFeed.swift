@@ -102,7 +102,7 @@ private struct IcebreakerFeedPreview: View {
     /// A stand-in for the chat input pill, so the feed previews in context.
     private var mockInput: some View {
         HStack {
-            Text("Chat with Eigin")
+            Text(verbatim: "Chat with Eigin")
                 .typography(Typography.chatMessage)
                 .foregroundStyle(colors.text.standard.muted)
             Spacer()

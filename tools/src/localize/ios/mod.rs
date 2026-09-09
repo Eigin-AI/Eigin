@@ -11,6 +11,8 @@ use std::process::Command;
 
 use crate::config::LocalizeConfig;
 
+use crate::localize::ios::parser::SkippedKey;
+
 pub fn validate(repo_root: &str, config: &LocalizeConfig) -> Result<bool> {
     let sources = config
         .validate_sources
@@ -21,12 +23,12 @@ pub fn validate(repo_root: &str, config: &LocalizeConfig) -> Result<bool> {
     validator::validate(&sources_dir, &output)
 }
 
-pub fn generate(repo_root: &str, config: &LocalizeConfig) -> Result<()> {
+pub fn generate(repo_root: &str, config: &LocalizeConfig) -> Result<Vec<SkippedKey>> {
     let source = format!("{repo_root}/{}", config.source);
     let output_path = format!("{repo_root}/{}", config.output);
 
-    let entries = parser::parse(&source)?;
-    let swift_code = generator::emit(&entries);
+    let result = parser::parse(&source)?;
+    let swift_code = generator::emit(&result.entries);
 
     fs::write(&output_path, &swift_code).with_context(|| format!("writing {output_path}"))?;
 
@@ -41,5 +43,5 @@ pub fn generate(repo_root: &str, config: &LocalizeConfig) -> Result<()> {
     }
 
     println!("Generated {output_path}");
-    Ok(())
+    Ok(result.skipped)
 }

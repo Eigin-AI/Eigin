@@ -155,13 +155,13 @@ struct DevelopmentMenu: View {
                 }
             }
 
-            Section("Credits") {
+            Section(Localized.Development.Credits.title) {
                 NavigationLink {
                     CreditsDebug()
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "creditcard", color: .green)
-                        Text("Credits")
+                        Text(Localized.Development.Credits.title)
                     }
                 }
             }

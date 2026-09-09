@@ -50,20 +50,20 @@ private struct AppCardSurfacePreview: View {
     var body: some View {
         VStack(spacing: Spacing.n16) {
             AppCardSurface {
-                Text("Any content goes here, with consistent padding.")
+                Text(verbatim: "Any content goes here, with consistent padding.")
                     .typography(Typography.description)
                     .foregroundStyle(colors.text.standard.base)
             }
 
             AppCardSurface(action: { print("Tapped") }) {
                 HStack(spacing: Spacing.n8) {
-                    Text("🚀")
+                    Text(verbatim: "🚀")
                         .font(.system(size: 28))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Tappable card")
+                        Text(verbatim: "Tappable card")
                             .typography(Typography.titleXS)
                             .foregroundStyle(colors.text.standard.base)
-                        Text("2 CHATS")
+                        Text(verbatim: "2 CHATS")
                             .typography(Typography.tag)
                             .foregroundStyle(colors.text.standard.muted)
                     }
