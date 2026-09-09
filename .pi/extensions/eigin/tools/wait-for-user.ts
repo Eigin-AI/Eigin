@@ -28,6 +28,8 @@ export const WAIT_FOR_USER_TOOL = "wait_for_user";
 export interface WaitForUserController {
 	stage(): string;
 	planInjection(): Promise<string | null>;
+	/** AFK mode signals "ready" immediately without blocking on the user. */
+	isAfk(): boolean;
 }
 
 export function registerWaitForUserTool(pi: ExtensionAPI, controller: WaitForUserController): void {
@@ -74,9 +76,13 @@ export function registerWaitForUserTool(pi: ExtensionAPI, controller: WaitForUse
 				};
 			}
 
-			const result = await withHerdrBlocked(pi, "Over to you", () =>
-				confirmWithNote(ctx.ui, "Over to you", detail, [confirmLabel, "Stop — I'll type instead"]),
-			);
+			// AFK: don't wait — proceed as if the user signalled ready, so the agent
+			// re-reads the plan (Plan) or pulls MR comments (Merge) and moves on.
+			const result = controller.isAfk()
+				? { confirmed: true }
+				: await withHerdrBlocked(pi, "Over to you", () =>
+					confirmWithNote(ctx.ui, "Over to you", detail, [confirmLabel, "Stop — I'll type instead"]),
+				);
 
 			// Esc or "Stop" — the user doesn't want to signal now. End the turn
 			// quietly; they'll send a normal message when they're ready.

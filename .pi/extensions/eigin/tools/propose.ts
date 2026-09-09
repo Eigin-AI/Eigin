@@ -25,6 +25,8 @@ export const PROPOSE_TOOL = "propose_stage";
 export interface StageController {
   current(): StageId;
   currentWorkflow(): WorkflowId;
+  /** AFK mode auto-approves the transition without showing the dialog. */
+  isAfk(): boolean;
   setStage(
     id: StageId,
     ctx: ExtensionContext,
@@ -120,9 +122,14 @@ export function registerProposeTool(
       const detail = params.reason
         ? params.reason
         : `Move to the ${stage.label} stage?`;
-      const result = await withHerdrBlocked(pi, `Advance to ${stage.label}?`, () =>
-        confirmWithNote(ctx.ui, `Advance to ${stage.label}?`, detail),
-      );
+
+      // AFK: skip the prompt entirely and proceed as if the user approved.
+      // No `herdr:blocked` is emitted — the point of AFK is to not stall.
+      const result = controller.isAfk()
+        ? { confirmed: true }
+        : await withHerdrBlocked(pi, `Advance to ${stage.label}?`, () =>
+            confirmWithNote(ctx.ui, `Advance to ${stage.label}?`, detail),
+          );
 
       // Esc / cancel — stay put, nothing to react to.
       if (!result) {

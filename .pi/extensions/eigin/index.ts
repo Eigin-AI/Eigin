@@ -92,6 +92,8 @@
  *   workflow/review-handoff.ts composes the kickoff handing a branch to the reviewer sub-agent
  *   workflow/branch-diff.ts  writes the branch's diff against main to .pi/review/<branch>.diff
  *   workflow/task-list.ts pure task-list state (add/resolve/format), rendered with the stage hint
+ *   workflow/afk-mode.ts  pure AFK (away-from-keyboard) mode state
+ *   workflow/afk-block.ts  AFK pre-empt via guardrails' own permission-gate rules
  *   observability/session-name.ts    pure prompt builder + name cleanup + last-user-text extraction
  *   observability/generate-session-name.ts one-shot LLM call producing the session name
  *   observability/bell.ts            terminal BEL write
@@ -117,6 +119,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ringBell } from "./observability/bell.ts";
 import { withHerdrBlocked } from "./observability/herdr.ts";
+import { emptyAfk, isAfk, setAfk, toggleAfk, type AfkState } from "./workflow/afk-mode.ts";
+import { afkBlockedCommand } from "./workflow/afk-block.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
 import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
@@ -180,9 +184,11 @@ const ALWAYS_ON_TOOLS = [
 ];
 const STATUS_KEY = "stage";
 const TASKS_STATUS_KEY = "tasks";
+const AFK_STATUS_KEY = "afk";
 const STATE_TYPE = "stage-mode";
 const TASK_STATE_TYPE = "task-list";
 const ACTIVE_PLAN_STATE_TYPE = "active-plan";
+const AFK_STATE_TYPE = "afk-mode";
 const DEFAULT_WORKFLOW: WorkflowId = "feature";
 
 // Offer plan->build compaction only once context has built up enough to matter.
@@ -235,6 +241,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
   let currentStage: StageId = firstStage(getWorkflow(DEFAULT_WORKFLOW));
   let taskListState: TaskListState = emptyTaskList();
   let activePlanState: ActivePlanState = noActivePlan();
+  let afkState: AfkState = emptyAfk();
   let sessionCwd = process.cwd();
   let hasAutoNamed = false;
 
@@ -272,10 +279,19 @@ export default function stageExtension(pi: ExtensionAPI): void {
       STATUS_KEY,
       ctx.ui.theme.fg(color, `${workflowLabel(workflow)} > ${stage.label}`),
     );
+    const afkOn = isAfk(afkState);
+    ctx.ui.setStatus(
+      AFK_STATUS_KEY,
+      afkOn ? ctx.ui.theme.fg("warning", "AFK") : undefined,
+    );
   }
 
   function persist(): void {
     pi.appendEntry(STATE_TYPE, { workflow: currentWorkflow, stage: currentStage });
+  }
+
+  function persistAfk(): void {
+    pi.appendEntry(AFK_STATE_TYPE, { enabled: isAfk(afkState) });
   }
 
   // --- Session naming / bell ----------------------------------------------
@@ -390,16 +406,18 @@ export default function stageExtension(pi: ExtensionAPI): void {
     const model = ctx.modelRegistry.find(pref.provider, pref.id);
     if (!model) return; // Preferred model not configured; skip silently.
 
-    // Default to keeping the current model — switching is opt-in.
-    const result = await withHerdrBlocked(pi, `Switch model for ${stage.label}?`, () =>
-      confirmWithNote(
-        ctx.ui,
-        `Switch model for ${stage.label}?`,
-        `Use ${pref.id} for the ${stage.label} stage? (current: ${ctx.model?.id ?? "none"})`,
-        ["Switch", "Keep current"],
-        1,
-      ),
-    );
+    // AFK: switch to the role's model without asking.
+    const result = isAfk(afkState)
+      ? { confirmed: true }
+      : await withHerdrBlocked(pi, `Switch model for ${stage.label}?`, () =>
+          confirmWithNote(
+            ctx.ui,
+            `Switch model for ${stage.label}?`,
+            `Use ${pref.id} for the ${stage.label} stage? (current: ${ctx.model?.id ?? "none"})`,
+            ["Switch", "Keep current"],
+            1,
+          ),
+        );
     if (!result?.confirmed) return;
 
     const success = await pi.setModel(model);
@@ -435,12 +453,14 @@ export default function stageExtension(pi: ExtensionAPI): void {
       return false;
     }
 
-    const ok = await withHerdrBlocked(pi, "Compact context before Build?", () =>
-      ctx.ui.confirm(
-        "Compact context before Build?",
-        "The approved plan is already saved as a file. Summarize the planning discussion (decisions, constraints, discoveries) and start Build from a compacted context + the plan, instead of carrying the full discussion forward.",
-      ),
-    );
+    const ok = isAfk(afkState)
+      ? true
+      : await withHerdrBlocked(pi, "Compact context before Build?", () =>
+          ctx.ui.confirm(
+            "Compact context before Build?",
+            "The approved plan is already saved as a file. Summarize the planning discussion (decisions, constraints, discoveries) and start Build from a compacted context + the plan, instead of carrying the full discussion forward.",
+          ),
+        );
     if (!ok) {
       await suggestModel(buildStage, ctx);
       return false;
@@ -484,12 +504,14 @@ export default function stageExtension(pi: ExtensionAPI): void {
    * stage-guidance continuation.
    */
   async function offerMergeHandoff(ctx: ExtensionContext): Promise<boolean> {
-    const ok = await withHerdrBlocked(pi, "Review the changes before Merge?", () =>
-      ctx.ui.confirm(
-        "Review the changes before Merge?",
-        `Run the reviewer over this branch's diff against ${REVIEW_GUIDE} first, so the MR opens on feedback that's already addressed.`,
-      ),
-    );
+    const ok = isAfk(afkState)
+      ? true
+      : await withHerdrBlocked(pi, "Review the changes before Merge?", () =>
+          ctx.ui.confirm(
+            "Review the changes before Merge?",
+            `Run the reviewer over this branch's diff against ${REVIEW_GUIDE} first, so the MR opens on feedback that's already addressed.`,
+          ),
+        );
     if (!ok) return false;
 
     let diffPath: string | null;
@@ -667,14 +689,37 @@ export default function stageExtension(pi: ExtensionAPI): void {
     },
   });
 
+  // --- AFK mode ---------------------------------------------------------
+
+  pi.registerCommand("eigin:afk", {
+    description:
+      "Toggle AFK mode. On: auto-approve this extension's own dialogs (stage transitions, model switch, compaction, pre-merge review, ask_questions, wait_for_user) and block dangerous commands (rm -rf, sudo, …) that guardrails would otherwise prompt on and hang. Guardrails' auto-deny patterns (force-push, terraform apply, git merge/rebase/reset) still hard-block as normal. Persisted, so resumed sessions stay AFK.",
+    handler: async (args, ctx) => {
+      // `/eigin:afk on` / `off` set it explicitly; bare toggle flips state.
+      const arg = args.trim().toLowerCase();
+      if (arg === "on") afkState = setAfk(true);
+      else if (arg === "off") afkState = setAfk(false);
+      else afkState = toggleAfk(afkState);
+      persistAfk();
+      updateStatus(ctx);
+      ctx.ui.notify(
+        isAfk(afkState)
+          ? "AFK on — dialogs auto-proceed up to the MR"
+          : "AFK off — dialogs need you again",
+        isAfk(afkState) ? "warning" : "info",
+      );
+    },
+  });
+
   // --- Tools -------------------------------------------------------------
 
   registerProposeTool(pi, {
     current: () => currentStage,
     currentWorkflow: () => currentWorkflow,
+    isAfk: () => isAfk(afkState),
     setStage,
   });
-  registerAskQuestionsTool(pi);
+  registerAskQuestionsTool(pi, { isAfk: () => isAfk(afkState) });
   registerRoleCommand(pi, { activeRole: () => activeStage().role });
   registerReviewCommand(pi, {
     activePlanPath: () => activePlanState.path ?? undefined,
@@ -711,6 +756,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
   registerWaitForUserTool(pi, {
     stage: () => currentStage,
     planInjection: () => buildPlanInjection(),
+    isAfk: () => isAfk(afkState),
   });
 
   // --- Session naming / bell events ---------------------------------------
@@ -753,6 +799,22 @@ export default function stageExtension(pi: ExtensionAPI): void {
   // --- Stage write scope ---------------------------------------------
 
   pi.on("tool_call", async (event) => {
+    // AFK pre-empt for the guardrails permission gate: guardrails' confirm
+    // dialog would hang while AFK (UI is present, so its non-interactive
+    // hard-block path doesn't trigger). We load before guardrails, so block a
+    // risky bash command here — reusing guardrails' own detection — before its
+    // dialog opens. The agent sees `blocked` and routes around it.
+    if (isAfk(afkState) && event.toolName === "bash") {
+      const command = (event.input as { command?: string }).command ?? "";
+      const blocked = command ? await afkBlockedCommand(command, sessionCwd) : null;
+      if (blocked) {
+        return {
+          block: true,
+          reason: `AFK: blocked a dangerous command (${blocked.reason}) that guardrails would otherwise prompt on and hang. Re-run attended, or allow it via /eigin:afk off.`,
+        };
+      }
+    }
+
     // Project-scoped default: web_search skips the browser curator unless the
     // caller asked for a specific workflow (see tool-defaults.ts).
     applyWebSearchDefault(event.toolName, event.input as ToolCallInput);
@@ -871,9 +933,19 @@ export default function stageExtension(pi: ExtensionAPI): void {
       activePlanState = setActivePlan(noActivePlan(), lastPlan.data.path);
     }
 
+    // Restore AFK so a resumed/Herder-relaunched session keeps moving unattended.
+    const lastAfk = entries
+      .filter(
+        (e: { type: string; customType?: string }) =>
+          e.type === "custom" && e.customType === AFK_STATE_TYPE,
+      )
+      .pop() as { data?: { enabled?: boolean } } | undefined;
+    if (lastAfk?.data) afkState = setAfk(!!lastAfk.data.enabled);
+
     // Brand-new session (nothing persisted yet): let the user pick a workflow
-    // up front instead of silently defaulting to Feature.
-    if (isFreshSession && ctx.hasUI) {
+    // up front instead of silently defaulting to Feature. Skip the picker
+    // when AFK is already on (a resumed AFK session) so it doesn't stall.
+    if (isFreshSession && ctx.hasUI && !isAfk(afkState)) {
       const labels = WORKFLOWS.map((w) => workflowOption(w, false, ctx.ui.theme));
       const choice = await withHerdrBlocked(pi, "Pick a workflow", () =>
         ctx.ui.select("Pick a workflow:", labels),
