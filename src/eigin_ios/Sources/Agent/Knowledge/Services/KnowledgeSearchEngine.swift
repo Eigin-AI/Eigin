@@ -15,7 +15,7 @@ import Foundation
 /// link-suggestion helpers.
 enum KnowledgeSearchEngine {
     /// One scored entity result with its backing source metadata.
-    struct ScoredEntity {
+    struct ScoredEntity: Sendable {
         let entity: FirmEntity
         /// Normalised `type.shortID` form, regardless of whether the
         /// underlying ``FirmEntity/id`` is already qualified.
@@ -41,7 +41,6 @@ enum KnowledgeSearchEngine {
     /// keyword-match path and rely purely on cosine similarity. Results are
     /// unsorted and zero-scored entries are dropped; callers apply their own
     /// thresholds and limits.
-    @MainActor
     static func score(
         queryEmbedding: [Double],
         keywordNeedle: String? = nil,
@@ -143,7 +142,6 @@ enum KnowledgeSearchEngine {
     /// call site only has a query string and wants a ready-to-render list.
     /// The keyword path is always enabled here, matching the behaviour of
     /// the original `searchResult` implementation.
-    @MainActor
     static func search(
         query: String,
         typeFilter: String? = nil,
