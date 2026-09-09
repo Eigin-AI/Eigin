@@ -397,7 +397,7 @@ struct ProviderConnectSheetContent: View {
         provider.availableModels = createdModels
         // Recommended and Other arrive on; unknown IDs start off and say why
         // on the models screen.
-        provider.enabledModels = createdModels.filter { KnownModelCatalog.lookup($0) != nil }
+        provider.enabledModels = KnownModelCatalog.knownModels(in: createdModels)
         modelContext.insert(provider)
 
         keychainService.save(key: keychainService.providerKey(for: provider.id), value: token)

@@ -29,7 +29,28 @@ struct RoutingProvider: Sendable, Equatable {
     let id: UUID
     let name: String
     let baseURL: String
+    /// Every model the provider currently serves — the fetched catalogue, kept fresh by
+    /// ``ProviderModelRefresher``.
     let availableModels: [String]
+    /// The models the user left switched on, their preferred subset of
+    /// ``availableModels``. Auto routing treats this as the offer, so it never picks a
+    /// model the user turned off. Empty for legacy providers seeded before the field
+    /// existed; both cases fall back to the full catalogue.
+    let enabledModels: [String]
+
+    init(
+        id: UUID,
+        name: String,
+        baseURL: String,
+        availableModels: [String],
+        enabledModels: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.baseURL = baseURL
+        self.availableModels = availableModels
+        self.enabledModels = enabledModels
+    }
 
     var isLocal: Bool {
         ProviderPreset.isLocal(baseURL)

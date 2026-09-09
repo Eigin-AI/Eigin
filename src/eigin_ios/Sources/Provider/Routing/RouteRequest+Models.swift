@@ -48,7 +48,8 @@ extension RoutingProvider {
             id: provider.id,
             name: provider.name,
             baseURL: provider.baseURL,
-            availableModels: provider.availableModels
+            availableModels: provider.availableModels,
+            enabledModels: provider.enabledModels
         )
     }
 }

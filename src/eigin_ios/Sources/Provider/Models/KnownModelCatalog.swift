@@ -237,6 +237,13 @@ enum KnownModelCatalog {
         bestModel(from: available, ranking: preferenceRanking, in: entries)
     }
 
+    /// The models in `available` the catalog recognises. What gets enabled when a
+    /// provider is seeded: unknown IDs are left off and explained on the models
+    /// screen until the user opts them in.
+    static func knownModels(in available: [String]) -> [String] {
+        available.filter { lookup($0) != nil }
+    }
+
     /// Selection core with injectable ranking and catalog, mirroring the `lookup(_:in:)`
     /// seam, so tests exercise the selection behavior rather than the current ranking.
     static func bestModel(
