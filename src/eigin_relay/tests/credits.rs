@@ -50,8 +50,23 @@ async fn make_state(
     verifier: FakeVerifier,
     product_credits: HashMap<String, i64>,
     upstream: impl UpstreamClient + 'static,
-    _initial_balance_millicredits: i64,
-    admit_floor_millicredits: i64,
+) -> Arc<AppState> {
+    make_state_with_ledger_and_upstream(
+        verifier,
+        product_credits,
+        Arc::new(InMemoryLedger::default()),
+        upstream,
+    )
+    .await
+}
+
+/// Shared builder for credit-flow tests: a configurable upstream plus a shared ledger
+/// so tests can drive and inspect balances directly.
+async fn make_state_with_ledger_and_upstream(
+    verifier: FakeVerifier,
+    product_credits: HashMap<String, i64>,
+    ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
+    upstream: impl UpstreamClient + 'static,
 ) -> Arc<AppState> {
     let mut canonical_models = HashMap::new();
     canonical_models.insert("test-model".to_string(), test_model());
@@ -76,7 +91,7 @@ async fn make_state(
         search_pool_max: 1000,
         search_window: Duration::from_secs(30 * 24 * 60 * 60),
         quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
-        ledger: Arc::new(InMemoryLedger::default()),
+        ledger,
         apple_verifier: Arc::new(verifier),
         grant_verifier: Arc::new(FakeGrantVerifier::failing()),
         product_credits,
@@ -88,7 +103,6 @@ async fn make_state(
         provider_keys,
         canonical_models,
         alias_map,
-        admit_floor_millicredits,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         assets_config: HashMap::new(),
         assets_cache: Default::default(),
@@ -221,14 +235,7 @@ async fn products_lists_catalog_as_whole_credits_sorted_by_id() {
     product_credits.insert("ai.eigin.credits.100".into(), 100_000i64);
 
     let verifier = FakeVerifier::with_transaction("tx-001", "ai.eigin.credits.500");
-    let state = make_state(
-        verifier,
-        product_credits,
-        FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, product_credits, FakeUpstream::with_usage(0, 0)).await;
     let app = build_router(state);
 
     let json = products(&app).await;
@@ -247,14 +254,7 @@ async fn redeem_mints_wallet_and_returns_token() {
     products.insert("ai.eigin.credits.500".into(), 500_000i64);
 
     let verifier = FakeVerifier::with_transaction("tx-001", "ai.eigin.credits.500");
-    let state = make_state(
-        verifier,
-        products,
-        FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, products, FakeUpstream::with_usage(0, 0)).await;
     let app = build_router(state);
 
     let json = redeem(&app, "fake-jws").await;
@@ -310,48 +310,13 @@ async fn make_state_with_ledger(
     product_credits: HashMap<String, i64>,
     ledger: Arc<dyn eigin_relay::credits::CreditLedger>,
 ) -> Arc<AppState> {
-    let mut canonical_models = HashMap::new();
-    canonical_models.insert("test-model".to_string(), test_model());
-    let mut alias_map = HashMap::new();
-    alias_map.insert("test-model".to_string(), "test-model".to_string());
-
-    let mut provider_clients = HashMap::new();
-    provider_clients.insert(
-        "default".to_string(),
-        Arc::new(FakeUpstream::with_usage(0, 0)) as Arc<dyn UpstreamClient>,
-    );
-    let mut provider_keys = HashMap::new();
-    provider_keys.insert("default".to_string(), "test-key".to_string());
-
-    Arc::new(AppState {
-        search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
-        eigin_relay_keys: vec!["relay-key".into()],
-        ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
-        trusted_proxy_hops: 1,
-        webhook_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
-        search_pool_max: 1000,
-        search_window: Duration::from_secs(30 * 24 * 60 * 60),
-        quota: Arc::new(eigin_relay::quota::InMemoryQuota::default()),
-        ledger,
-        apple_verifier: Arc::new(verifier),
-        grant_verifier: Arc::new(FakeGrantVerifier::failing()),
+    make_state_with_ledger_and_upstream(
+        verifier,
         product_credits,
-        token_encryption_key: [0u8; 32],
-        token_encryption_key_secondary: None,
-        sandbox_budget_credits: 25_000,
-        sandbox_budget_window: Duration::from_secs(30 * 24 * 60 * 60),
-        provider_clients,
-        provider_keys,
-        canonical_models,
-        alias_map,
-        admit_floor_millicredits: 50_000,
-        token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
-        assets_config: HashMap::new(),
-        assets_cache: Default::default(),
-        asset_store: Arc::new(eigin_relay::assets::store::InertAssetStore),
-        presign_expiry: Duration::from_secs(86_400),
-    })
+        ledger,
+        FakeUpstream::with_usage(0, 0),
+    )
+    .await
 }
 
 async fn make_grant_state(
@@ -394,7 +359,6 @@ async fn make_grant_state(
         provider_keys,
         canonical_models,
         alias_map,
-        admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         assets_config: HashMap::new(),
         assets_cache: Default::default(),
@@ -499,14 +463,7 @@ async fn balance_returns_current_credits() {
     products.insert("ai.eigin.credits.500".into(), 500_000i64);
 
     let verifier = FakeVerifier::with_transaction("tx-002", "ai.eigin.credits.500");
-    let state = make_state(
-        verifier,
-        products,
-        FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, products, FakeUpstream::with_usage(0, 0)).await;
     let app = build_router(state);
 
     let json = redeem(&app, "fake-jws").await;
@@ -524,8 +481,6 @@ async fn balance_with_unknown_token_returns_401() {
         FakeVerifier::failing(),
         HashMap::new(),
         FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
     )
     .await;
     let app = build_router(state);
@@ -542,14 +497,7 @@ async fn chat_debits_balance_after_stream() {
     let verifier = FakeVerifier::with_transaction("tx-003", "ai.eigin.credits.500");
     // Upstream reports 1000 prompt tokens (non-cached) + 500 output tokens.
     // Cost = (1000 * 10_000 + 500 * 20_000) / 1_000_000 = 20 millicredits.
-    let state = make_state(
-        verifier,
-        products,
-        FakeUpstream::with_usage(1000, 500),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, products, FakeUpstream::with_usage(1000, 500)).await;
     let app = build_router(Arc::clone(&state));
 
     let json = redeem(&app, "fake-jws").await;
@@ -570,7 +518,7 @@ async fn chat_forwards_prompt_cache_key_to_upstream() {
 
     let verifier = FakeVerifier::with_transaction("tx-cache-key", "ai.eigin.credits.500");
     let upstream = CapturingUpstream::default();
-    let state = make_state(verifier, products, upstream.clone(), 0, 50_000).await;
+    let state = make_state(verifier, products, upstream.clone()).await;
     let app = build_router(state);
 
     let json = redeem(&app, "fake-jws").await;
@@ -611,14 +559,7 @@ async fn chat_non_streaming_debits_balance() {
     let verifier = FakeVerifier::with_transaction("tx-003b", "ai.eigin.credits.500");
     // Upstream reports 1000 prompt tokens (non-cached) + 500 output tokens.
     // Cost = (1000 * 10_000 + 500 * 20_000) / 1_000_000 = 20 millicredits.
-    let state = make_state(
-        verifier,
-        products,
-        BufferUpstream::with_usage(1000, 500),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, products, BufferUpstream::with_usage(1000, 500)).await;
     let app = build_router(Arc::clone(&state));
 
     let json = redeem(&app, "fake-jws").await;
@@ -633,18 +574,18 @@ async fn chat_non_streaming_debits_balance() {
 }
 
 #[tokio::test]
-async fn chat_below_floor_returns_402() {
-    let mut products = HashMap::new();
-    // Mint just 10 credits (10_000 millicredits), floor is 50_000 → immediately blocked.
-    products.insert("ai.eigin.credits.small".into(), 10_000i64);
+async fn chat_with_zero_balance_returns_402() {
+    use eigin_relay::credits::CreditLedger;
+    use eigin_relay::credits::token;
 
-    let verifier = FakeVerifier::with_transaction("tx-004", "ai.eigin.credits.small");
-    let state = make_state(
-        verifier,
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let ledger: Arc<dyn CreditLedger> = Arc::new(InMemoryLedger::default());
+    let state = make_state_with_ledger(
+        FakeVerifier::with_transaction("tx-004", "ai.eigin.credits.500"),
         products,
-        FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
+        Arc::clone(&ledger),
     )
     .await;
     let app = build_router(state);
@@ -652,8 +593,98 @@ async fn chat_below_floor_returns_402() {
     let json = redeem(&app, "fake-jws").await;
     let token = json["token"].as_str().unwrap().to_owned();
 
+    // Drain the wallet to zero. With the reservation gate a non-positive balance
+    // can't cover even the nominal hold, so the next request is refused.
+    let hash = token::hash(&token);
+    let wallet = ledger.find_by_token_hash(&hash).await.unwrap().unwrap();
+    ledger
+        .debit(wallet.id, wallet.balance_millicredits)
+        .await
+        .unwrap();
+
     let status = chat(&app, &token, "test-model").await;
     assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+}
+
+#[tokio::test]
+async fn concurrent_requests_cannot_overdraw_beyond_reservations() {
+    use eigin_relay::credits::{CreditLedger, token};
+    use eigin_relay::inference::{estimate, rates, usage::UsageBlock};
+    use futures::future::join_all;
+
+    // A wallet with barely a few reservations worth of balance. Without the
+    // pre-forward reservation, N concurrent requests would each pass the balance
+    // check against the same balance and drive it N× the request cost negative.
+    const N: usize = 64;
+    const INITIAL_MC: i64 = 50;
+
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.tiny".into(), INITIAL_MC);
+
+    let ledger: Arc<dyn CreditLedger> = Arc::new(InMemoryLedger::default());
+    let state = make_state_with_ledger_and_upstream(
+        FakeVerifier::with_transaction("tx-concurrent", "ai.eigin.credits.tiny"),
+        products,
+        Arc::clone(&ledger),
+        FakeUpstream::with_usage(1000, 500),
+    )
+    .await;
+    let app = build_router(Arc::clone(&state));
+
+    let token_str = redeem(&app, "fake-jws").await["token"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    // Costs for the request under test, computed via the same public API the relay uses.
+    let body =
+        serde_json::json!({"model":"test-model","messages":[{"role":"user","content":"hi"}]});
+    let est = estimate::estimate_usage(&body).unwrap();
+    let reservation_mc = rates::compute_cost(&est, &test_model());
+    let actual_mc = rates::compute_cost(
+        &UsageBlock {
+            prompt_tokens: 1000,
+            completion_tokens: 500,
+            cached_tokens: 0,
+        },
+        &test_model(),
+    );
+
+    // Fire N identical requests concurrently. Each estimates `reservation_mc` and
+    // (if admitted) settles at `actual_mc`.
+    let statuses = join_all((0..N).map(|_| chat(&app, &token_str, "test-model")))
+        .await
+        .to_vec();
+    // Let the spawned settle tasks finish.
+    tokio::time::sleep(Duration::from_millis(80)).await;
+
+    let succeeded = statuses.iter().filter(|&&s| s == StatusCode::OK).count() as i64;
+
+    let hash = token::hash(&token_str);
+    let wallet = ledger.find_by_token_hash(&hash).await.unwrap().unwrap();
+    let final_balance = wallet.balance_millicredits;
+
+    // The gate triggered: not every concurrent request was admitted.
+    assert!(
+        succeeded < N as i64,
+        "all {N} requests admitted — reservation gate did not engage"
+    );
+
+    // Admissions are bounded by the balance and the per-request estimate, not by N:
+    // each reserve needs balance >= reservation_mc, and the balance only decreases
+    // during the reserve phase, so admitted reservations can't sum past the balance.
+    assert!(
+        succeeded * reservation_mc <= INITIAL_MC,
+        "admitted {succeeded} × {reservation_mc} = {} reservations against {INITIAL_MC} mc",
+        succeeded * reservation_mc
+    );
+
+    // Each admitted request charges exactly actual_mc; each refusal charges nothing.
+    assert_eq!(
+        final_balance,
+        INITIAL_MC - succeeded * actual_mc,
+        "settlement must reconcile every reservation to actual usage"
+    );
 }
 
 #[tokio::test]
@@ -662,14 +693,7 @@ async fn chat_with_unknown_model_returns_400() {
     products.insert("ai.eigin.credits.500".into(), 500_000i64);
 
     let verifier = FakeVerifier::with_transaction("tx-005", "ai.eigin.credits.500");
-    let state = make_state(
-        verifier,
-        products,
-        FakeUpstream::with_usage(0, 0),
-        0,
-        50_000,
-    )
-    .await;
+    let state = make_state(verifier, products, FakeUpstream::with_usage(0, 0)).await;
     let app = build_router(state);
 
     let json = redeem(&app, "fake-jws").await;
@@ -822,7 +846,6 @@ async fn webhook_rate_limited_after_limit() {
         provider_keys,
         canonical_models,
         alias_map,
-        admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         assets_config: HashMap::new(),
         assets_cache: Default::default(),
@@ -1063,7 +1086,6 @@ async fn make_sandbox_state(
         provider_keys: HashMap::new(),
         canonical_models: HashMap::new(),
         alias_map: HashMap::new(),
-        admit_floor_millicredits: 50_000,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         assets_config: HashMap::new(),
         assets_cache: Default::default(),

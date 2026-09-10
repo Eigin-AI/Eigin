@@ -1,14 +1,18 @@
 //! POST /v1/chat/completions — the core inference proxy handler.
 //!
 //! Flow:
-//! 1. Validate bearer token and wallet status + balance (admit floor check).
-//! 2. Per-token rate limiting (per-IP is applied by the router layer).
-//! 3. Parse body minimally: extract `model` (must be in catalog) and `stream` flag.
+//! 1. Validate bearer token and wallet status; per-token rate limiting (per-IP
+//!    is applied by the router layer).
+//! 2. Parse body minimally: extract `model` (must be in catalog) and `stream` flag.
 //!    If streaming, inject `stream_options: {include_usage: true}`.
 //!    Never log the body content.
+//! 3. Reserve the estimated cost against the balance before forwarding — an atomic
+//!    conditional debit that refuses on overdraft, so concurrent requests can't each
+//!    draw the same balance.
 //! 4. Forward to upstream; stream bytes straight through for SSE, buffer for JSON.
 //! 5. While relaying, scan SSE lines for the usage block.
-//! 6. After stream completes, debit based on actual usage (or fallback).
+//! 6. After the stream completes, settle by applying `actual − reserved` (charge the
+//!    overrun, refund the surplus). A failed forward refunds the reservation in full.
 
 use std::sync::Arc;
 
@@ -22,10 +26,11 @@ use serde_json::Value;
 
 use crate::AppState;
 use crate::auth::WalletBearer;
-use crate::credits::{CreditLedger, Wallet, WalletStatus};
+use crate::credits::{CreditLedger, LedgerError, Wallet, WalletStatus};
 use crate::error::AppError;
 use crate::inference::catalog::ModelConfig;
 use crate::inference::estimate;
+use crate::inference::rates;
 use crate::inference::upstream::{BoxStream, UpstreamResponse};
 use crate::inference::usage::{self, UsageBlock};
 
@@ -33,50 +38,107 @@ use crate::inference::usage::{self, UsageBlock};
 /// Applies backpressure to the upstream reader if the client is slow to consume.
 const STREAM_CHANNEL_BUFFER: usize = 64;
 
+/// Nominal hold applied when a request carries no estimable content (e.g. vision
+/// messages). A positive hold means an unestimable request still requires a
+/// positive balance to admit, rather than being free.
+const NOMINAL_HOLD_MILLICREDITS: i64 = 1;
+
 pub async fn handle(
     State(state): State<Arc<AppState>>,
     WalletBearer(wallet): WalletBearer,
     body: Bytes,
 ) -> Result<Response, AppError> {
-    // Admit check and per-token rate limiting.
+    // Wallet status + per-token rate limiting. Per-IP limiting is handled by the router layer.
     admit(&state, &wallet)?;
 
     // Parse body to extract `model` and `stream`. Don't log the prompts.
     let (model_config, forwarded_body, estimated_usage) = prepare_body(body, &state)?;
 
+    // Resolve the upstream provider before reserving, so a misconfigured provider
+    // fails (503) without holding credits against the balance.
     let provider_id = &model_config.provider;
-
     let client = state.provider_clients.get(provider_id).ok_or_else(|| {
         AppError::ServiceUnavailable(format!("provider {provider_id} not configured"))
     })?;
-
     let api_key = state.provider_keys.get(provider_id).ok_or_else(|| {
         AppError::ServiceUnavailable(format!("provider {provider_id} has no key"))
     })?;
 
-    // Forward to upstream.
-    let upstream_response = client.chat_completions(forwarded_body, api_key).await?;
+    // Reserve the estimated cost before forwarding. This is the concurrency-safe
+    // balance gate: concurrent requests can't each draw the same balance, because
+    // each hold is an atomic conditional debit that refuses on overdraft.
+    let reserved_millicredits = reservation_millicredits(estimated_usage.as_ref(), &model_config);
+    reserve(&state.ledger, wallet.id, reserved_millicredits).await?;
+
+    // Forward to upstream. A failure here sends nothing to the client, so the
+    // reservation is refunded in full — we never charge for an unserved request.
+    let upstream_response = match client.chat_completions(forwarded_body, api_key).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            refund_reservation(&state.ledger, wallet.id, reserved_millicredits).await;
+            return Err(e);
+        }
+    };
 
     match upstream_response {
-        UpstreamResponse::Stream(stream) => {
-            relay_stream(stream, &state, wallet, model_config, estimated_usage)
-        }
+        UpstreamResponse::Stream(stream) => relay_stream(
+            stream,
+            &state,
+            wallet,
+            model_config,
+            estimated_usage,
+            reserved_millicredits,
+        ),
         UpstreamResponse::Buffer(bytes) => {
-            relay_buffer(bytes, &state, wallet, &model_config, estimated_usage).await
+            relay_buffer(
+                bytes,
+                &state,
+                wallet,
+                &model_config,
+                estimated_usage,
+                reserved_millicredits,
+            )
+            .await
         }
     }
 }
 
-/// Check that the wallet is active and above the admit floor, then apply the
-/// per-token rate limit. Per-IP limiting is handled by the router layer.
+/// Check that the wallet is active and apply the per-token rate limit. The balance
+/// gate is the reservation in [`handle`], not a static floor — a wallet with any
+/// positive balance is admitted as long as it can cover the estimated cost.
 fn admit(state: &AppState, wallet: &Wallet) -> Result<(), AppError> {
-    if wallet.status != WalletStatus::Active
-        || wallet.balance_millicredits < state.admit_floor_millicredits
-    {
+    if wallet.status != WalletStatus::Active {
         return Err(AppError::InsufficientCredits);
     }
     state.token_rate_limiter.check(wallet.id)?;
     Ok(())
+}
+
+/// The millicredits held against the balance before serving a request. Uses the
+/// request estimate when available; otherwise a nominal 1 mc so an unestimable
+/// request still requires a positive balance to admit.
+fn reservation_millicredits(estimated: Option<&UsageBlock>, model: &ModelConfig) -> i64 {
+    match estimated {
+        Some(u) => rates::compute_cost(u, model),
+        None => NOMINAL_HOLD_MILLICREDITS,
+    }
+}
+
+/// Reserve the estimated cost, mapping an overdraft to a 402.
+async fn reserve(
+    ledger: &Arc<dyn CreditLedger>,
+    wallet_id: uuid::Uuid,
+    millicredits: i64,
+) -> Result<(), AppError> {
+    ledger
+        .reserve(wallet_id, millicredits)
+        .await
+        .map_err(|e| match e {
+            LedgerError::InsufficientBalance | LedgerError::NotFound => {
+                AppError::InsufficientCredits
+            }
+            other => AppError::Internal(format!("ledger reserve: {other}")),
+        })
 }
 
 /// Parse the request body, resolve model aliases, look up the model config, and inject
@@ -137,13 +199,14 @@ fn prepare_body(
 }
 
 /// Relay an SSE stream to the client, scanning for usage chunks as they pass through.
-/// Spawns a task that relays chunks and debits the ledger when the stream completes.
+/// Spawns a task that relays chunks and reconciles the reservation when the stream completes.
 fn relay_stream(
     mut stream: BoxStream,
     state: &AppState,
     wallet: Wallet,
     model_config: ModelConfig,
     estimated_usage: Option<UsageBlock>,
+    reserved_millicredits: i64,
 ) -> Result<Response, AppError> {
     let wallet_id = wallet.id;
     let ledger = Arc::clone(&state.ledger);
@@ -173,12 +236,13 @@ fn relay_stream(
             }
         }
 
-        // Debit after stream completes.
+        // Reconcile the reservation against actual usage after the stream completes.
         settle(
             ledger,
             wallet_id,
             found_usage,
             estimated_usage,
+            reserved_millicredits,
             &model_config,
         )
         .await;
@@ -195,13 +259,14 @@ fn relay_stream(
     Ok((StatusCode::OK, headers, body).into_response())
 }
 
-/// Relay a buffered JSON response to the client and debit synchronously.
+/// Relay a buffered JSON response to the client and reconcile the reservation synchronously.
 async fn relay_buffer(
     bytes: Bytes,
     state: &AppState,
     wallet: Wallet,
     model_config: &ModelConfig,
     estimated_usage: Option<UsageBlock>,
+    reserved_millicredits: i64,
 ) -> Result<Response, AppError> {
     let found_usage = usage::extract_from_response_body(&bytes);
     settle(
@@ -209,6 +274,7 @@ async fn relay_buffer(
         wallet.id,
         found_usage,
         estimated_usage,
+        reserved_millicredits,
         model_config,
     )
     .await;
@@ -221,30 +287,54 @@ async fn relay_buffer(
         .into_response())
 }
 
-/// Compute cost from usage and debit the ledger. Logs warnings/errors but never panics.
+/// Reconcile the reservation to actual usage: applies the signed delta
+/// `actual - reserved` (charge overrun, refund surplus). No-op on zero delta.
 ///
-/// Priority: actual upstream usage > estimated usage from request size > no charge.
-/// If neither is available the request had no estimable content — we skip the debit.
+/// Crash exposure: a crash between reserve and settle leaves the hold on the
+/// balance unreconciled (it persists in the wallet row). Bounded to one estimate.
+/// Tracked in #234.
 async fn settle(
     ledger: Arc<dyn CreditLedger>,
     wallet_id: uuid::Uuid,
     actual_usage: Option<UsageBlock>,
     estimated_usage: Option<UsageBlock>,
+    reserved_millicredits: i64,
     model: &ModelConfig,
 ) {
-    let millicredits = match actual_usage.or(estimated_usage) {
-        Some(u) => crate::inference::rates::compute_cost(&u, model),
-        None => {
-            tracing::warn!(
-                model = %model.id,
-                "no usage data and request was not estimable; skipping debit"
-            );
-            return;
-        }
+    let actual_cost = match actual_usage.or(estimated_usage) {
+        Some(u) => rates::compute_cost(&u, model),
+        None => 0,
     };
+    apply_delta(ledger, wallet_id, actual_cost - reserved_millicredits).await;
+}
 
-    if let Err(e) = ledger.debit(wallet_id, millicredits).await {
-        // An accepted small-loss risk: the user got their response but we couldn't debit.
-        tracing::error!(wallet_id = %wallet_id, error = %e, millicredits, "debit failed after inference");
+/// Refund the full reservation. Used when forwarding failed before any bytes
+/// reached the client — an unserved request never costs the user anything.
+async fn refund_reservation(
+    ledger: &Arc<dyn CreditLedger>,
+    wallet_id: uuid::Uuid,
+    reserved_millicredits: i64,
+) {
+    apply_delta(Arc::clone(ledger), wallet_id, -reserved_millicredits).await;
+}
+
+/// Apply a signed balance adjustment (positive charges, negative refunds). No-op on
+/// zero. A settle failure is an accepted small-loss risk: the user got their response
+/// but we couldn't reconcile the hold, so it stays as the charge.
+async fn apply_delta(
+    ledger: Arc<dyn CreditLedger>,
+    wallet_id: uuid::Uuid,
+    delta_millicredits: i64,
+) {
+    if delta_millicredits == 0 {
+        return;
+    }
+    if let Err(e) = ledger.debit(wallet_id, delta_millicredits).await {
+        tracing::error!(
+            wallet_id = %wallet_id,
+            error = %e,
+            delta_millicredits,
+            "settlement adjustment failed"
+        );
     }
 }

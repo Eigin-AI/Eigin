@@ -158,7 +158,6 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
         provider_keys,
         canonical_models,
         alias_map,
-        admit_floor_millicredits: 1,
         token_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         assets_config: HashMap::new(),
         assets_cache: Default::default(),

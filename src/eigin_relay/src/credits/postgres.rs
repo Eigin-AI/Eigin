@@ -178,6 +178,32 @@ impl CreditLedger for PostgresLedger {
         Ok(())
     }
 
+    async fn reserve(&self, wallet_id: Uuid, millicredits: i64) -> Result<(), LedgerError> {
+        // One conditional UPDATE: Postgres applies it atomically, so two
+        // concurrent holds can't both read a qualifying balance — the second finds
+        // the row already debited and its WHERE clause fails. ACID is enough here;
+        // no explicit transaction or SELECT ... FOR UPDATE needed.
+        let result = sqlx::query(
+            r#"
+            UPDATE wallets
+            SET balance_millicredits = balance_millicredits - $1,
+                updated_at = now()
+            WHERE id = $2 AND balance_millicredits - $1 >= 0
+            "#,
+        )
+        .bind(millicredits)
+        .bind(wallet_id)
+        .execute(&self.pool)
+        .await?;
+
+        // Zero rows affected means the WHERE clause failed (the wallet exists from
+        // the bearer lookup) — report insufficient balance, not not found.
+        if result.rows_affected() == 0 {
+            return Err(LedgerError::InsufficientBalance);
+        }
+        Ok(())
+    }
+
     async fn close(&self, wallet_id: Uuid, status: WalletStatus) -> Result<(), LedgerError> {
         let result = sqlx::query(
             r#"
@@ -281,6 +307,32 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(updated.balance_millicredits, 499_000);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires DATABASE_URL"]
+    async fn postgres_reserve_refuses_on_overdraft() {
+        let Some(ledger) = test_ledger().await else {
+            return;
+        };
+        let fp = Uuid::new_v4().to_string();
+        let wallet = ledger
+            .mint(NewWallet {
+                origin: &origin(),
+                fingerprint: &fp,
+                product_id: "prod.500",
+                millicredits: 1_000,
+                token_hash: &format!("hash_{fp}"),
+                token_ciphertext: "cipher",
+                key_fp: "fp0",
+            })
+            .await
+            .unwrap();
+        // A hold within balance succeeds and debits immediately.
+        ledger.reserve(wallet.id, 1_000).await.unwrap();
+        // A second hold against the now-empty balance is refused.
+        let err = ledger.reserve(wallet.id, 1).await.unwrap_err();
+        assert!(matches!(err, LedgerError::InsufficientBalance));
     }
 
     #[tokio::test]

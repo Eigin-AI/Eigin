@@ -77,8 +77,6 @@ pub struct AppState {
     pub canonical_models: HashMap<String, ModelConfig>,
     /// All accepted IDs (canonical + aliases) -> canonical ID.
     pub alias_map: HashMap<String, String>,
-    /// Admit floor in millicredits — reject if balance < this.
-    pub admit_floor_millicredits: i64,
     /// Per-token rate limiter (keyed by wallet UUID).
     pub token_rate_limiter: crate::RateLimiter<uuid::Uuid>,
 

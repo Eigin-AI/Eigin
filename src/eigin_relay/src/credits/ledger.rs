@@ -142,20 +142,23 @@ pub enum LedgerError {
     #[error("wallet not found")]
     NotFound,
 
+    #[error("insufficient balance to reserve the estimated cost")]
+    InsufficientBalance,
+
     #[error("ledger error: {0}")]
     Internal(String),
 }
 
-/// The credit ledger. Implementations must make all mutations atomic.
+/// The credit ledger. All mutations must be atomic — single-statement and
+/// conflict-checked, never read-modify-write across an await.
 ///
-/// Design constraints:
-/// - `mint` must be idempotent in intent: if a row with `(origin, fingerprint)` already
-///   exists, implementations return `Err(LedgerError::DuplicateFingerprint)` and the
-///   caller handles the re-resolve path.
-/// - `debit` must be a single atomic `UPDATE balance = balance - n` with no
-///   read-modify-write. It may produce a negative balance; callers enforce the floor
-///   before granting access.
-/// - `record_notification` must be insert-or-ignore so it is safe to call concurrently.
+/// - `mint` is idempotent on `(origin, fingerprint)` -> `DuplicateFingerprint`.
+/// - `reserve` holds an estimated cost before serving, refusing on overdraft so
+///   concurrent holds can't collectively push the balance negative. Reconciled to
+///   actual usage by `debit` at settle.
+/// - `debit` is a signed settlement delta (`actual - reserved`); may drive the
+///   balance slightly negative when usage exceeds the reservation.
+/// - `record_notification` is insert-or-ignore for concurrent safety.
 #[async_trait]
 pub trait CreditLedger: Send + Sync {
     /// Create a new wallet. Returns `DuplicateFingerprint` if (origin, fingerprint)
@@ -172,8 +175,17 @@ pub trait CreditLedger: Send + Sync {
     /// Look up a wallet by the SHA-256 hash of its bearer token.
     async fn find_by_token_hash(&self, token_hash: &str) -> Result<Option<Wallet>, LedgerError>;
 
-    /// Atomically debit millicredits from a wallet. The balance may go negative.
+    /// Atomically debit millicredits from a wallet. The amount is signed — settlement
+    /// passes `actual - reserved` (positive charges, negative refunds). The balance
+    /// may go negative when actual usage exceeds the prior reservation.
     async fn debit(&self, wallet_id: Uuid, millicredits: i64) -> Result<(), LedgerError>;
+
+    /// Reserve millicredits as an authorization hold before serving inference.
+    /// Admits only if the balance would remain non-negative, so concurrent
+    /// reservations against the same balance can't collectively overdraw. Returns
+    /// [`LedgerError::InsufficientBalance`] when the hold would overdraw. The held
+    /// amount is reconciled to actual usage by [`debit`] when the response settles.
+    async fn reserve(&self, wallet_id: Uuid, millicredits: i64) -> Result<(), LedgerError>;
 
     /// Zero the balance and mark a wallet as refunded or closed.
     async fn close(&self, wallet_id: Uuid, status: WalletStatus) -> Result<(), LedgerError>;
