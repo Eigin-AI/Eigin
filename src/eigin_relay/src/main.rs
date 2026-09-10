@@ -46,7 +46,6 @@ struct InferenceConfig {
     provider_clients: HashMap<String, Arc<dyn UpstreamClient>>,
     provider_keys: HashMap<String, String>,
     resolved_catalog: ResolvedCatalog,
-    admit_floor_millicredits: i64,
     token_rate_limiter: RateLimiter<uuid::Uuid>,
 }
 
@@ -111,7 +110,6 @@ async fn main() {
         provider_keys: inference.provider_keys,
         canonical_models: inference.resolved_catalog.canonical_models,
         alias_map: inference.resolved_catalog.alias_map,
-        admit_floor_millicredits: inference.admit_floor_millicredits,
         token_rate_limiter: inference.token_rate_limiter,
         assets_config: assets.assets_config,
         assets_cache: Default::default(),
@@ -397,12 +395,6 @@ fn configure_grant_verifier() -> Arc<dyn GrantVerifier> {
 }
 
 fn configure_inference() -> InferenceConfig {
-    let admit_floor_credits: i64 = env::var("ADMIT_FLOOR_CREDITS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(50);
-    let admit_floor_millicredits = admit_floor_credits * 1000;
-
     let token_rate_limit_requests: u32 = env::var("TOKEN_RATE_LIMIT_REQUESTS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -478,7 +470,6 @@ fn configure_inference() -> InferenceConfig {
         provider_clients,
         provider_keys,
         resolved_catalog,
-        admit_floor_millicredits,
         token_rate_limiter,
     }
 }

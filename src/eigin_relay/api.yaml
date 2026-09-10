@@ -574,7 +574,7 @@ paths:
       operationId: chatCompletions
       summary: Chat completion
       description: |
-        OpenAI-compatible proxy. Requires balance >= admit floor (~€0.50). Debits wallet after response using upstream token counts. Balance may go slightly negative on the last request before the floor.
+        OpenAI-compatible proxy. Reserves the estimated cost before forwarding (concurrent requests can't collectively overdraw), then settles against actual usage. Balance may go slightly negative on the final request. No static floor — users can spend down to their last credit.
       tags: [Inference]
       security:
         - EiginKey: []
@@ -638,7 +638,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "402":
-          description: Balance below admit floor or wallet not active.
+          description: Insufficient balance to reserve the estimated cost, or wallet not active.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }

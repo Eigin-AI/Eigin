@@ -28,7 +28,6 @@ module "relay" {
   eigin_relay_secondary_key         = var.eigin_relay_secondary_key
   token_encryption_secondary_key    = var.token_encryption_secondary_key
   grant_issuer                      = var.grant_issuer
-  admit_floor_credits               = var.admit_floor_credits
   token_rate_limit_requests         = var.token_rate_limit_requests
   token_rate_limit_window_seconds   = var.token_rate_limit_window_seconds
   ip_rate_limit_requests            = var.ip_rate_limit_requests

@@ -21,7 +21,6 @@ apple_app_apple_id            = ""
 sandbox_monthly_credit_budget = 5000
 
 # Relay: Inference config
-admit_floor_credits             = 25
 token_rate_limit_requests       = 100
 token_rate_limit_window_seconds = 60
 

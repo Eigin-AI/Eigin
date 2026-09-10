@@ -82,6 +82,23 @@ impl CreditLedger for InMemoryLedger {
             .find(|w| w.id == wallet_id)
             .ok_or(LedgerError::NotFound)?;
         // Atomic in memory: the Mutex guarantees no concurrent modification.
+        // Signed amount: settlement passes `actual - reserved` (negative refunds).
+        wallet.balance_millicredits -= millicredits;
+        Ok(())
+    }
+
+    async fn reserve(&self, wallet_id: Uuid, millicredits: i64) -> Result<(), LedgerError> {
+        let mut inner = self.inner.lock().unwrap();
+        let wallet = inner
+            .wallets
+            .iter_mut()
+            .find(|w| w.id == wallet_id)
+            .ok_or(LedgerError::NotFound)?;
+        // The Mutex holds across the check and the update, so no other task can
+        // read the same balance and slip in between them.
+        if wallet.balance_millicredits - millicredits < 0 {
+            return Err(LedgerError::InsufficientBalance);
+        }
         wallet.balance_millicredits -= millicredits;
         Ok(())
     }

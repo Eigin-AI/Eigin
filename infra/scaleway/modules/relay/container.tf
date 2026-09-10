@@ -29,7 +29,6 @@ resource "scaleway_container" "relay" {
     SANDBOX_MONTHLY_CREDIT_BUDGET     = tostring(var.sandbox_monthly_credit_budget)
     GRANT_PUBLIC_KEY                  = tls_private_key.grant.public_key_pem
     GRANT_ISSUER                      = var.grant_issuer
-    ADMIT_FLOOR_CREDITS               = tostring(var.admit_floor_credits)
     TOKEN_RATE_LIMIT_REQUESTS         = tostring(var.token_rate_limit_requests)
     TOKEN_RATE_LIMIT_WINDOW_SECONDS   = tostring(var.token_rate_limit_window_seconds)
     RATE_LIMIT_REQUESTS               = tostring(var.ip_rate_limit_requests)

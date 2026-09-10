@@ -100,12 +100,6 @@ variable "grant_issuer" {
   default     = "eigin"
 }
 
-variable "admit_floor_credits" {
-  description = "Minimum credits required to admit an inference request"
-  type        = number
-  default     = 50
-}
-
 variable "token_rate_limit_requests" {
   description = "Maximum inference completions per token per window"
   type        = number

@@ -40,7 +40,7 @@ src/
     rates.rs      — usage → millicredits cost computation
     usage.rs      — SSE/JSON usage-block extraction (never touches content)
     upstream.rs   — UpstreamClient trait + reqwest impl
-    handler.rs    — POST /v1/chat/completions (admit, stream, settle)
+    handler.rs    — POST /v1/chat/completions (reserve, stream, settle)
   assets/         — self-hosted model-asset mirror (manifests + presigned URLs)
     mod.rs        — public exports
     catalog.rs    — assets.toml loading (pinned versions + manifest shas)
@@ -103,7 +103,6 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | `WEBHOOK_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for the Apple webhook. |
 | `MODELS_CONFIG_PATH` | `config/models.toml` | Path to the model catalog TOML. |
 | `PRODUCTS_CONFIG_PATH` | `config/products.toml` | Path to the IAP product credit tiers TOML. |
-| `ADMIT_FLOOR_CREDITS` | `50` | Minimum credits required to admit an inference request (≈ €0.50). |
 | `TOKEN_RATE_LIMIT_REQUESTS` | `20` | Max inference completions per token per window. |
 | `TOKEN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for per-token limiting. |
 
@@ -135,7 +134,7 @@ MR bumps `assets.toml` (the image hash covers it, so the deploy is automatic). S
 
 **Zero content retention.** The inference proxy reads upstream usage metadata (token counts, model ID) from responses to compute cost. It never logs or stores prompt or response content. No content should appear in traces, logs, or debug output — do not add `tracing` calls that include request/response bodies.
 
-**Debit after spend.** Inference requests are admitted if balance > admit floor. The true cost is settled after the stream completes, using the upstream usage block. A request may cause the balance to go slightly negative; the next request is then blocked by the floor check.
+**Reserve then settle.** Inference requests reserve the estimated cost against the balance before forwarding — a conditional atomic debit that refuses if the balance can't cover it, so concurrent requests can't each draw the same balance and overspend. After the stream completes the reservation is reconciled to actual usage: the signed delta `actual − reserved` is applied (charging the overrun, refunding the surplus). A single request may push the balance slightly negative when actual usage exceeds the estimate; the next request is then refused, since the reservation requires a non-negative balance. There is no static admit floor — users can spend down to their last credit.
 
 ## API reference
 
