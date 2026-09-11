@@ -26,7 +26,8 @@ struct ConnectionsView: View {
     /// The connect sheet stacks over the add sheet, as provider connect does
     /// over provider select.
     @State private var connectTarget: ConnectTarget?
-    @Bindable private var gemmaManager = GemmaModelManager.shared
+    @Injected(\.gemmaModelManager) private var gemmaManager: any GemmaModelManaging
+    @Injected(\.integrationHealthMonitor) private var healthMonitor
 
     private var localPreset: ProviderPreset? {
         ProviderPreset.all.first { ProviderPreset.isLocal($0.baseURL) }
@@ -257,7 +258,7 @@ struct ConnectionsView: View {
         switch subject {
         case .builtin(let integration):
             let type = BundledIntegrationType.type(forID: integration.typeID)
-            let needsReconnect = IntegrationHealthMonitor.shared.needsReconnect(
+            let needsReconnect = healthMonitor.needsReconnect(
                 integration,
                 oauthService: oauthService
             )

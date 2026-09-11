@@ -1,3 +1,4 @@
+import Factory
 import SwiftUI
 
 /// Renders a block of markdown in Eigin's styling.
@@ -9,6 +10,7 @@ struct MarkdownBlockView: View {
     let text: String
 
     @Environment(\.markdownRenderConfig) private var config
+    @Injected(\.markdownDocumentCache) private var documentCache
     @State private var parsed: RenderableDocument?
 
     var body: some View {
@@ -20,17 +22,17 @@ struct MarkdownBlockView: View {
     /// so the block collapses and jostles the scroll position until the parse lands.
     private var document: RenderableDocument {
         parsed
-            ?? MarkdownDocumentCache.shared.document(for: text, config: config)
+            ?? documentCache.document(for: text, config: config)
             ?? RenderableDocument(plainText: text, config: config)
     }
 
     private func load() async {
-        if let cached = MarkdownDocumentCache.shared.document(for: text, config: config) {
+        if let cached = documentCache.document(for: text, config: config) {
             parsed = cached
             return
         }
         let document = await parseMarkdownDocument(text, config: config)
-        MarkdownDocumentCache.shared.store(document, for: text, config: config)
+        documentCache.store(document, for: text, config: config)
         parsed = document
     }
 

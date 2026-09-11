@@ -10,9 +10,10 @@ struct ContentView: View {
     @Injected(\.relayClient) private var relayClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Injected(\.tabBarVisibility) private var tabBarVisibility
     @AppStorage(PendingDestination.storageKey) private var pendingDestination: String?
     @State private var selectedTab = RootTab.chats
-    @Bindable private var gemmaManager = GemmaModelManager.shared
+    @Injected(\.gemmaModelManager) private var gemmaManager: any GemmaModelManaging
 
     var body: some View {
         ZStack {
@@ -29,7 +30,7 @@ struct ContentView: View {
         }
         .id("\(themeManager.currentTheme.id)-\(languageManager.currentLanguage.rawValue)")
         .onChange(of: selectedTab) {
-            TabBarVisibility.shared.popAll()
+            tabBarVisibility.popAll()
         }
         // The system runs the matching closure in-app shortly before the app
         // is foregrounded. ContentView hands the route to the shared pending
@@ -55,7 +56,7 @@ struct ContentView: View {
             ensureBackgroundSchedule()
             ensureEiginProvider()
             ensureLocalProvider()
-            GemmaModelManager.shared.prepareIfNeeded()
+            gemmaManager.prepareIfNeeded()
         }
         .onChange(of: gemmaManager.state) { _, newState in
             if newState == .ready || newState == .downloaded {
@@ -88,7 +89,7 @@ struct ContentView: View {
     /// provider was never created if the model finished compiling while the user wasn't on that
     /// screen. Running this on every foreground pass closes that gap.
     private func ensureLocalProvider() {
-        let state = GemmaModelManager.shared.state
+        let state = gemmaManager.state
         guard state == .ready || state == .downloaded else { return }
         let providers = (try? modelContext.fetch(FetchDescriptor<Provider>())) ?? []
         guard !providers.contains(where: { ProviderPreset.isLocal($0.baseURL) }) else { return }

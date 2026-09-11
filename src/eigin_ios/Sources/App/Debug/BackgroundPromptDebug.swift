@@ -1,7 +1,6 @@
-import Foundation
-import SwiftData
-
 #if DEBUG
+import Foundation
+
 struct BackgroundPromptTranscript: Codable, Identifiable {
     var id: Date {
         timestamp
@@ -16,11 +15,14 @@ struct BackgroundPromptTranscript: Codable, Identifiable {
     let reason: String
 }
 
-enum BackgroundPromptDebug {
+/// Dev inspector ring buffer for background-prompt transcripts, backed by
+/// `UserDefaults`. Conforms to ``BackgroundPromptTranscriptSink`` so the
+/// background service records through injection instead of `#if DEBUG` calls.
+struct BackgroundPromptDebug: BackgroundPromptTranscriptSink {
     private static let maxStored = 5
     private static let key = "backgroundPromptTranscripts"
 
-    static func store(
+    func store(
         systemPrompt: String,
         apiMessages: [ChatMessage],
         producedMessages: [ChatMessage],
@@ -38,28 +40,29 @@ enum BackgroundPromptDebug {
             reason: reason
         )
 
-        var transcripts = UserDefaults.standard.data(forKey: key)
-            .flatMap { try? JSONDecoder().decode([BackgroundPromptTranscript].self, from: $0) }
-            ?? []
-
+        var transcripts = Self.transcripts()
         transcripts.insert(transcript, at: 0)
-        if transcripts.count > maxStored {
-            transcripts = Array(transcripts.prefix(maxStored))
+        if transcripts.count > Self.maxStored {
+            transcripts = Array(transcripts.prefix(Self.maxStored))
         }
 
         if let data = try? JSONEncoder().encode(transcripts) {
-            UserDefaults.standard.set(data, forKey: key)
+            UserDefaults.standard.set(data, forKey: Self.key)
         }
     }
 
     static func getTranscripts() -> [BackgroundPromptTranscript] {
-        UserDefaults.standard.data(forKey: key)
-            .flatMap { try? JSONDecoder().decode([BackgroundPromptTranscript].self, from: $0) }
-            ?? []
+        transcripts()
     }
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    private static func transcripts() -> [BackgroundPromptTranscript] {
+        UserDefaults.standard.data(forKey: key)
+            .flatMap { try? JSONDecoder().decode([BackgroundPromptTranscript].self, from: $0) }
+            ?? []
     }
 }
 #endif

@@ -1,3 +1,4 @@
+import Factory
 import SwiftData
 import SwiftUI
 
@@ -19,7 +20,7 @@ struct LocalProviderView: View {
 
     @State private var showInfo = false
     @State private var showDeleteConfirm = false
-    @Bindable private var gemmaManager = GemmaModelManager.shared
+    @Injected(\.gemmaModelManager) private var gemmaManager: any GemmaModelManaging
 
     private var localProvider: Provider? {
         providers.first { ProviderPreset.isLocal($0.baseURL) }

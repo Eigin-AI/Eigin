@@ -25,6 +25,35 @@ extension Container {
         }.singleton
     }
 
+    // MARK: - View singletons
+
+    /// View-reachable singletons behind @Injected, so tests and screenshot
+    /// scenes override them like any other service.
+    @MainActor
+    var gemmaModelManager: Factory<any GemmaModelManaging> {
+        self { @MainActor in
+            GemmaModelManager.shared
+        }.singleton
+    }
+
+    @MainActor
+    var integrationHealthMonitor: Factory<any IntegrationHealthMonitoring> {
+        self { @MainActor in
+            IntegrationHealthMonitor.shared
+        }.singleton
+    }
+
+    @MainActor
+    var tabBarVisibility: Factory<TabBarVisibility> {
+        self { @MainActor in
+            TabBarVisibility.shared
+        }.singleton
+    }
+
+    var markdownDocumentCache: Factory<MarkdownDocumentCache> {
+        self { .shared }.singleton
+    }
+
     // MARK: - Speech Engine
 
     /// Every downloadable on-device asset: the local model plus all voice
