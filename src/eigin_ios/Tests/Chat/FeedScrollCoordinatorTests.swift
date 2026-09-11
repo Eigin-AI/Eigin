@@ -97,4 +97,57 @@ struct FeedScrollCoordinatorTests {
 
         #expect(coordinator.preStreamItemIDs.isEmpty)
     }
+
+    // MARK: - Default anchor
+
+    @Test("A normal conversation rests at the bottom")
+    func defaultAnchorBottom() {
+        let coordinator = FeedScrollCoordinator()
+
+        #expect(coordinator.defaultAnchor(isAgentOpened: false) == .bottom)
+    }
+
+    @Test("An agent-initiated opening anchors to the top")
+    func defaultAnchorTopForAgentOpen() {
+        let coordinator = FeedScrollCoordinator()
+
+        // Opens with a summary that's longer than one viewport — top anchor
+        // shows it from the top instead of bottom-anchoring past it.
+        #expect(coordinator.defaultAnchor(isAgentOpened: true) == .top)
+    }
+
+    @Test("A pinned turn drops the default anchor so it can't tug the pin")
+    func defaultAnchorNilWhilePinned() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.declareSending()
+        _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
+
+        #expect(coordinator.pinnedUserMessageID == "u1")
+        #expect(coordinator.defaultAnchor(isAgentOpened: false) == nil)
+    }
+
+    @Test("A pending pagination batch drops the default anchor")
+    func defaultAnchorNilWhilePaginating() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.beginLoadNewer(lastItemID: "a0")
+
+        #expect(coordinator.defaultAnchor(isAgentOpened: false) == nil)
+    }
+
+    @Test("A pin wins over an agent-opened flag")
+    func pinBeatsAgentOpen() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.declareSending()
+        _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
+
+        #expect(coordinator.defaultAnchor(isAgentOpened: true) == nil)
+    }
+
+    @Test("A pending pagination batch wins over an agent-opened flag")
+    func paginationBeatsAgentOpen() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.beginLoadNewer(lastItemID: "a0")
+
+        #expect(coordinator.defaultAnchor(isAgentOpened: true) == nil)
+    }
 }

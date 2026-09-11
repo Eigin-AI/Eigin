@@ -183,16 +183,25 @@ struct ChatFeed: View {
             && messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// True when the conversation opens with an agent-initiated message (no
+    /// user message first). `ChatFeed` applies the same `minHeight` +
+    /// `.topLeading` frame as the pinned-turn block, and the scroll anchor
+    /// uses `.top` so a long opening summary shows from its top.
+    private var isAgentOpened: Bool {
+        if case .message(_, let role, _, _) = items.first {
+            role != "user"
+        } else {
+            true
+        }
+    }
+
     /// The flat item list used when no user turn has been pinned yet.
     ///
     /// If the conversation opens with an agent-initiated message (no user
-    /// message first), we apply the same `minHeight` + `.topLeading` frame as
-    /// the pinned-turn block. Without it, `.defaultScrollAnchor(.bottom)`
-    /// pushes a short opening message to the bottom of the viewport.
-    @ViewBuilder private var agentInitiatedBlock: some View {
-        let isAgentOpened: Bool = if case .message(_, let role, _, _) = items
-            .first { role != "user" }
-        else { true }
+    /// message first), `minHeight` + `.topLeading` reserves a viewport-sized
+    /// block so the reply streams into place top-aligned rather than the row
+    /// sitting bare at the top with the live indicator attached below it.
+    private var agentInitiatedBlock: some View {
         VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
             ForEach(rows(items[...])) { item in
                 itemRow(for: item)
@@ -254,11 +263,10 @@ struct ChatFeed: View {
                         // taking its place) instead of popping.
                         .animation(.easeIn(duration: 0.2), value: isThinking)
                     } else {
-                        // When the conversation opens with an agent-initiated message
-                        // (no user turn yet), apply the same minHeight + topLeading
-                        // treatment as the pinned-turn block. Without it,
-                        // `.defaultScrollAnchor(.bottom)` pushes a short opening
-                        // message to the bottom of the viewport.
+                        // When the conversation opens with an agent-initiated
+                        // message (no user turn yet), the same minHeight +
+                        // topLeading treatment as the pinned-turn block reserves
+                        // the viewport for the live reply to fill top-aligned.
                         agentInitiatedBlock
                     }
 
@@ -279,7 +287,7 @@ struct ChatFeed: View {
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
             .opacity(isContentReady ? 1 : 0)
-            .defaultScrollAnchor(scroll.keepsBottomAnchor ? .bottom : nil)
+            .defaultScrollAnchor(scroll.defaultAnchor(isAgentOpened: isAgentOpened))
             .scrollDismissesKeyboard(.interactively)
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.visibleRect.maxY >= geometry.contentSize.height - 120
