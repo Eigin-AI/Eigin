@@ -11,12 +11,13 @@ import SwiftUI
 /// Owns its own safe-area handling: the surface background extends into the
 /// top safe area so the app background never shows behind the status bar,
 /// and `.safeAreaPadding(.top, Spacing.n4)` ensures a small minimum gap
-/// when the system inset is absent (e.g. landscape). Designed to be placed
-/// inside a `.safeAreaInset(edge: .top, spacing: 0)` slot on the scroll/feed
-/// content so SwiftUI positions it below the status bar automatically.
+/// when the system inset is absent (e.g. landscape).
 ///
-/// Only the `leading` slot is required. `center` and `trailing` default to
-/// `EmptyView` and can be omitted for simple back-nav headers.
+/// Place it as the top element of a `VStack(spacing: 0)` above the scrollable
+/// content; the header's own background bleeds into the top safe area, so the
+/// owner only needs an opaque content background below it. Only the `leading`
+/// slot is required. `center` and `trailing` default to `EmptyView` and can be
+/// omitted for simple back-nav headers.
 struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     @ViewBuilder let leading: () -> Leading
     @ViewBuilder let center: () -> Center
