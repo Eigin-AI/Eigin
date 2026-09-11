@@ -10,7 +10,7 @@ final class MarkdownDocumentCache: @unchecked Sendable {
 
     private let storage = NSCache<NSString, Entry>()
 
-    private init() {
+    init() {
         storage.countLimit = 256
     }
 

@@ -1,10 +1,13 @@
 import FoundationModels
 
+/// Per-chat `LanguageModelSession` cache for the Apple foundation model.
 @MainActor
 final class FoundationModelSessionStore {
     static let shared = FoundationModelSessionStore()
 
     private var sessions: [String: LanguageModelSession] = [:]
+
+    init() {}
 
     func hasSession(for chatKey: String) -> Bool {
         sessions[chatKey] != nil

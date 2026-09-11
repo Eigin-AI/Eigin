@@ -32,6 +32,7 @@ struct IntegrationScreen: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Injected(\.integrationHealthMonitor) private var healthMonitor
     @Query private var capabilitySelections: [CapabilityProviderSelection]
     @Query(sort: \Integration.createdAt) private var integrations: [Integration]
 
@@ -76,7 +77,7 @@ struct IntegrationScreen: View {
     private var needsReconnect: Bool {
         switch subject {
         case .builtin(let integration):
-            IntegrationHealthMonitor.shared.needsReconnect(
+            healthMonitor.needsReconnect(
                 integration,
                 oauthService: oauthService
             )
@@ -543,7 +544,7 @@ struct IntegrationScreen: View {
                 integration.accountLabel = result.accountLabel
                 integration.grantedCapabilities = result.grantedCapabilities.map(\.rawValue)
                 integration.updatedAt = .now
-                IntegrationHealthMonitor.shared.clearNeedsReconnect(integration.id)
+                healthMonitor.clearNeedsReconnect(integration.id)
                 isReconnecting = false
 
                 let ungranted = type.providedCapabilities.subtracting(result.grantedCapabilities)

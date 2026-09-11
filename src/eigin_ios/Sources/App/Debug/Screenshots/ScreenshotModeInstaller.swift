@@ -28,6 +28,14 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
 
         Self.registerFakes()
 
+        // The real model can't run on the simulator: scenes see it as ready.
+        Container.shared.gemmaModelManager.register { @MainActor in
+            FakeGemmaModelManager(state: .ready)
+        }
+        Container.shared.integrationHealthMonitor.register { @MainActor in
+            FakeIntegrationHealthMonitor()
+        }
+
         let container = try! ModelContainer(
             for: Schema(SchemaV9.models, version: SchemaV9.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
@@ -38,10 +46,7 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
 
         let context = container.mainContext
         let fixtures = ScreenshotFixtures.seed(into: context)
-        if scene == .connections {
-            // The real model can't run on the simulator; report it as installed.
-            GemmaModelManager.shared.simulatedState = .ready
-        } else if let chatTitle = scene.chatTitle {
+        if let chatTitle = scene.chatTitle {
             // A header chat for the canvas scenes; the conversation itself is
             // composed as view-only items (see ScreenshotCanvas).
             ScreenshotFixtures.chat(
@@ -53,6 +58,7 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
         }
         try? context.save()
 
+        // Fakes resolve through the container; no root-level overrides needed.
         ScreenshotMode.stage(
             root: AnyView(ScreenshotSceneRoot(scene: scene, chat: firstChat(in: context))),
             container: container

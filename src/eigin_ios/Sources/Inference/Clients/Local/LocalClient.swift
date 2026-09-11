@@ -1,6 +1,14 @@
 import Foundation
 
 struct LocalClient: LLMClient {
+    /// Session cache for the Apple foundation model. `nil` falls back to the
+    /// production `.shared` store, resolved on the main actor at use.
+    let sessions: FoundationModelSessionStore?
+
+    init(sessions: FoundationModelSessionStore? = nil) {
+        self.sessions = sessions
+    }
+
     func fetchModels() async throws -> [String] {
         var ready = [String]()
         if case .ready = await Self.appleFoundationModelStatus().state {

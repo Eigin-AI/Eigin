@@ -51,10 +51,16 @@ struct GemmaModelManagerTests {
         }
     }
 
+    /// Manager under test with no mirror-size fetch — gating tests don't need
+    /// the relay, and the real fetcher would reach the network.
+    private func makeManager(deviceInfo: FakeDeviceInfoService) -> GemmaModelManager {
+        GemmaModelManager(deviceInfo: deviceInfo, mirrorSizeFetcher: { _ in nil })
+    }
+
     // MARK: – RAM gating
 
     @Test func downloadTurnsUnavailableWhenRAMIsLow() async {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(
                 diskBytes: .max,
                 ramBytes: 2 * 1_073_741_824
@@ -72,7 +78,7 @@ struct GemmaModelManagerTests {
     /// An unsupported device shows the warning before any download attempt,
     /// not just after one.
     @Test func unsupportedDeviceIsUnavailableFromTheStart() {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
         )
 
@@ -82,7 +88,7 @@ struct GemmaModelManagerTests {
     }
 
     @Test func hasRequiredRAMReturnsFalseForTwoGigabytes() {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 2 * 1_073_741_824)
         )
         #expect(!manager.hasRequiredRAM())
@@ -91,21 +97,21 @@ struct GemmaModelManagerTests {
     @Test func hasRequiredRAMReturnsFalseForFourGigabytes() {
         // A 4 GB device (e.g. iPhone 13) can't run a long-context session plus a
         // voice model — it must be gated out.
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
         )
         #expect(!manager.hasRequiredRAM())
     }
 
     @Test func hasRequiredRAMReturnsTrueForSixGigabytes() {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 6 * 1_073_741_824)
         )
         #expect(manager.hasRequiredRAM())
     }
 
     @Test func insufficientResourcesDetailIsJSONWithMemoryFields() throws {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(ramBytes: 4 * 1_073_741_824)
         )
 
@@ -125,7 +131,7 @@ struct GemmaModelManagerTests {
     // MARK: – Storage gating
 
     @Test func downloadTurnsUnavailableWhenStorageIsLow() async {
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(diskBytes: 1)
         )
         await manager.download()
@@ -140,7 +146,7 @@ struct GemmaModelManagerTests {
     @Test func downloadStartsWhenStorageIsAdequate() {
         let required = GemmaModelManager.minimumRequiredFreeSpaceBytes
 
-        let manager = GemmaModelManager(
+        let manager = makeManager(
             deviceInfo: FakeDeviceInfoService(diskBytes: required + 1)
         )
 

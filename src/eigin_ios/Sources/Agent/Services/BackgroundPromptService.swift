@@ -39,13 +39,24 @@ enum BackgroundPromptService {
         summary: nil, deliverAt: nil, agentName: nil, agentEmoji: nil
     )
 
+    /// Where `run` records transcripts when the caller doesn't supply one.
+    private static var defaultSink: any BackgroundPromptTranscriptSink {
+#if DEBUG
+        DebugTranscriptSink()
+#else
+        NoOpTranscriptSink()
+#endif
+    }
+
     /// Runs a single background agent turn. Returns the result indicating whether to notify.
     /// Pass `modeOverride` to force a specific mode (useful for debugging); otherwise the most
     /// overdue mode is
-    /// selected.
+    /// selected. Pass `transcriptSink` to record the loop transcript (debug builds record
+    /// into ``BackgroundPromptDebug`` by default).
     static func run(
         container: ModelContainer,
-        modeOverride: BackgroundRunMode? = nil
+        modeOverride: BackgroundRunMode? = nil,
+        transcriptSink: any BackgroundPromptTranscriptSink = defaultSink
     ) async -> Result {
         let context = ModelContext(container)
 
@@ -216,8 +227,7 @@ enum BackgroundPromptService {
             }
             AppLogger.info("\(public: reason)", category: .backgroundPrompt)
 
-#if DEBUG
-            BackgroundPromptDebug.store(
+            transcriptSink.store(
                 systemPrompt: systemPrompt,
                 apiMessages: apiMessages,
                 producedMessages: produced,
@@ -225,7 +235,6 @@ enum BackgroundPromptService {
                 signal: "silent (\(mode.rawValue))",
                 reason: reason
             )
-#endif
 
             return silentResult
         }
@@ -235,8 +244,7 @@ enum BackgroundPromptService {
             category: .backgroundPrompt
         )
 
-#if DEBUG
-        BackgroundPromptDebug.store(
+        transcriptSink.store(
             systemPrompt: systemPrompt,
             apiMessages: apiMessages,
             producedMessages: produced,
@@ -244,7 +252,6 @@ enum BackgroundPromptService {
             signal: "notify (\(mode.rawValue)): \(title)",
             reason: "Agent chose to notify"
         )
-#endif
 
         return Result(
             didNotify: true, agentID: agent.id, notificationTitle: title, notificationBody: message,

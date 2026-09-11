@@ -22,6 +22,7 @@ struct AddIMAPAccount: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colors) private var colors
+    @Injected(\.integrationHealthMonitor) private var healthMonitor
     @Injected(\.imapCredentialStore) private var credentialStore
 
     @State private var emailAddress = ""
@@ -189,7 +190,7 @@ struct AddIMAPAccount: View {
                     existing.accountLabel = settings.emailAddress
                     existing.updatedAt = .now
                     credentialStore.save(settings, for: existing.id)
-                    IntegrationHealthMonitor.shared.clearNeedsReconnect(existing.id)
+                    healthMonitor.clearNeedsReconnect(existing.id)
                 } else {
                     let integration = Integration(
                         typeID: BundledIntegrationType.imap.id,

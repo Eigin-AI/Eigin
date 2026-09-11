@@ -4,11 +4,11 @@ import Foundation
 ///
 /// Fetches the `.litertlm` model file through ``AssetDownloader`` (layout in
 /// ``GemmaModelStore``) and wraps ``GemmaRuntime`` (LiteRT-LM) for inference. Conforms to
-/// ``OnDemandAsset``
+/// ``GemmaModelManaging`` (which refines ``OnDemandAsset``)
 /// for the settings download flow.
 @MainActor
 @Observable
-final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
+final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
     static let shared = GemmaModelManager()
 
     let id = "litert-gemma"
@@ -32,10 +32,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     private var transient: Transient = .idle
 
     var state: AssetState {
-#if EIGIN_DEV
-        // Screenshot scenes report the model as installed without one on disk.
-        if let simulatedState { return simulatedState }
-#endif
         switch transient {
         case .queued: return .queued
         case .downloading(let info): return .downloading(info)
@@ -53,11 +49,6 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
     /// The loaded inference engine, available after ``load()``.
     private(set) var llm: GemmaRuntime?
 
-#if EIGIN_DEV
-    /// Forces the reported state without a model on disk. Set only by the
-    /// dev-only screenshot module.
-    var simulatedState: AssetState?
-#endif
     private(set) var isLoading = false
 
     private var downloadTask: Task<Void, Never>?
@@ -75,8 +66,18 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     private let deviceInfo: any DeviceInfoService
 
-    init(deviceInfo: any DeviceInfoService = DefaultDeviceInfoService()) {
+    /// Fetches the mirror-reported model size; injectable so tests and demo
+    /// harnesses don't reach the relay.
+    private let mirrorSizeFetcher: (String) async -> Int64?
+
+    init(
+        deviceInfo: any DeviceInfoService = DefaultDeviceInfoService(),
+        mirrorSizeFetcher: @escaping (String) async -> Int64? = {
+            await ModelAssetService.totalBytes(for: $0)
+        }
+    ) {
         self.deviceInfo = deviceInfo
+        self.mirrorSizeFetcher = mirrorSizeFetcher
         ModelStorage.excludeFromBackup()
         startMemoryPressureMonitor()
         resumeIfInProgress()
@@ -85,14 +86,12 @@ final class GemmaModelManager: OnDemandAsset, @unchecked Sendable {
 
     /// Fetch the mirror-reported size so the offer row states the real cost
     /// before the user commits. Falls back to the static estimate until/unless
-    /// this lands. Skipped under unit tests — they don't have a relay.
+    /// this lands.
     private func prewarmMirrorSize() {
-        guard mirrorSizeBytes == nil,
-              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
-        else { return }
+        guard mirrorSizeBytes == nil else { return }
         Task { [weak self] in
             guard let self else { return }
-            mirrorSizeBytes = await ModelAssetService.totalBytes(for: GemmaModelStore.assetID)
+            mirrorSizeBytes = await mirrorSizeFetcher(GemmaModelStore.assetID)
         }
     }
 

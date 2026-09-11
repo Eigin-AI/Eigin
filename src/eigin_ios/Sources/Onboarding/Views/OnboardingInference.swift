@@ -1,3 +1,4 @@
+import Factory
 import SwiftUI
 
 /// Connects the agent to inference. Eigin Cloud is the default: choosing it
@@ -14,7 +15,7 @@ struct OnboardingInference: View {
     let onConnectOwn: (Provider) -> Void
 
     @Environment(\.colors) private var colors
-    @Bindable private var gemmaManager = GemmaModelManager.shared
+    @Injected(\.gemmaModelManager) private var gemmaManager: any GemmaModelManaging
     @State private var creditsModel = EiginCreditsModel()
 
     @State private var showCredits = false

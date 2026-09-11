@@ -16,6 +16,7 @@ struct ChatView: View {
     @Injected(\.dictationService) private var dictationService
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.markdownRenderConfig) private var markdownRenderConfig
+    @Injected(\.markdownDocumentCache) private var markdownDocumentCache
     @Injected(\.languageManager) private var languageManager
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query private var agents: [Agent]
@@ -100,7 +101,7 @@ struct ChatView: View {
             .flatMap { ContentBlock.split($0, messageID: "") }
             .filter { $0.kind.usesMarkdownRenderer }
             .map(\.text)
-        await MarkdownDocumentCache.shared.prewarm(texts, config: markdownRenderConfig)
+        await markdownDocumentCache.prewarm(texts, config: markdownRenderConfig)
         withAnimation(.easeIn(duration: Animations.fast)) { isContentReady = true }
     }
 

@@ -1,3 +1,4 @@
+import Factory
 import SwiftUI
 
 /// The bottom navigation bar that overlays the root content.
@@ -7,7 +8,7 @@ import SwiftUI
 /// have requested it hidden). Switching tabs resets the depth.
 struct NavigationBarView: View {
     @Binding var selectedTab: RootTab
-    @StateObject private var tabBarVisibility = TabBarVisibility.shared
+    @Injected(\.tabBarVisibility) private var tabBarVisibility
 
     var body: some View {
         VStack {

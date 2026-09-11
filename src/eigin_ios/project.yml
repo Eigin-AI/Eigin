@@ -157,6 +157,9 @@ targets:
         # nothing to re-redeem.
         SKIncludeConsumableInAppPurchaseHistory: true
     settings:
+      configs:
+        Release:
+          ENABLE_PREVIEWS: NO
       base:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: true
@@ -308,11 +311,6 @@ targets:
       # Screenshot automation: the launch stub compiles into this target only.
       - path: Sources/App/Debug/Screenshots
       # Test doubles reused for screenshot scenes (also compiled into EiginTests).
-      - Tests/Fakes/FakeCalendarService.swift
-      - Tests/Fakes/FakeHealthService.swift
-      - Tests/Fakes/FakeRelayClient.swift
-      - Tests/Fakes/FakeReminderService.swift
-      - Tests/Fakes/FakeStoreKitPurchaseService.swift
       - Resources
     dependencies:
       - package: swift-markdown

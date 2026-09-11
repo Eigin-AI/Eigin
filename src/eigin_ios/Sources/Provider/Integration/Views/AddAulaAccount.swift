@@ -32,6 +32,7 @@ struct AddAulaAccount: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colors) private var colors
     @Environment(\.scenePhase) private var scenePhase
+    @Injected(\.integrationHealthMonitor) private var healthMonitor
     @Injected(\.aulaCredentialStore) private var credentialStore
 
     /// PKCE material for this login attempt, generated once and kept stable
@@ -206,7 +207,7 @@ struct AddAulaAccount: View {
             existing.accountLabel = accountLabel(for: verified)
             existing.updatedAt = .now
             credentialStore.save(verified, for: existing.id)
-            IntegrationHealthMonitor.shared.clearNeedsReconnect(existing.id)
+            healthMonitor.clearNeedsReconnect(existing.id)
         } else {
             let integration = Integration(
                 typeID: BundledIntegrationType.aula.id,

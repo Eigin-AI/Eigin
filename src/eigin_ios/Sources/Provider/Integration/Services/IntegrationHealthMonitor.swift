@@ -26,7 +26,7 @@ protocol IntegrationHealthReporter: Sendable {
 ///   re-flag on the next failed use.
 @MainActor
 @Observable
-final class IntegrationHealthMonitor: IntegrationHealthReporter {
+final class IntegrationHealthMonitor: IntegrationHealthReporter, IntegrationHealthMonitoring {
     static let shared = IntegrationHealthMonitor()
 
     /// Integration ids reported as needing a reconnect by their providers.

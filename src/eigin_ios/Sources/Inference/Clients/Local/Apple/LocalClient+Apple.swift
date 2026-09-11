@@ -35,7 +35,9 @@ extension LocalClient {
                     BridgedTool(from: $0, capture: capturedCalls)
                 }
                 let hasTools = !nativeTools.isEmpty
-                let session = FoundationModelSessionStore.shared.getOrCreate(
+                // Falls back to the production store; both resolve on MainActor.
+                let store = sessions ?? FoundationModelSessionStore.shared
+                let session = store.getOrCreate(
                     chatKey: inputs.chatKey,
                     instructions: inputs.instructions,
                     tools: nativeTools
@@ -61,7 +63,7 @@ extension LocalClient {
                     continuation.yield(.finished(.stop))
                     continuation.finish()
                 } catch is CancellationError {
-                    FoundationModelSessionStore.shared.reset(chatKey: inputs.chatKey)
+                    store.reset(chatKey: inputs.chatKey)
                     continuation.finish()
                 } catch {
                     let calls = capturedCalls.drain()
@@ -83,7 +85,7 @@ extension LocalClient {
                                 category: .chat
                             )
                         }
-                        FoundationModelSessionStore.shared.reset(chatKey: inputs.chatKey)
+                        store.reset(chatKey: inputs.chatKey)
                         continuation.finish(throwing: error)
                     }
                 }
