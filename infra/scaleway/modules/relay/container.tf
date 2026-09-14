@@ -21,7 +21,7 @@ resource "scaleway_container" "relay" {
   http_option = "redirected"
 
   environment_variables = {
-    SEARCH_API_URL                    = "https://api.mojeek.com"
+    SEARCH_API_URL                    = "https://api.staan.ai/v2"
     MONTHLY_POOL_SIZE                 = tostring(var.monthly_pool_size)
     APPLE_ENVIRONMENTS                = join(",", var.apple_environments)
     APPLE_APP_APPLE_ID                = var.apple_app_apple_id
@@ -55,7 +55,7 @@ resource "scaleway_container" "relay" {
   # otherwise to avoid an empty secret.
   secret_environment_variables = merge(
     {
-      MOJEEK_API_KEY               = var.mojeek_api_key
+      STAAN_API_KEY               = var.staan_api_key
       EIGIN_RELAY_PRIMARY_KEY      = random_password.eigin_relay_key.result
       TOKEN_ENCRYPTION_KEY_PRIMARY = random_bytes.token_encryption_key.base64
       DATABASE_URL                 = local.database_url

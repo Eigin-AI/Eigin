@@ -74,7 +74,7 @@ The Relay stores no names, emails, accounts, or device identifiers. A wallet is 
 | Impact assessment (Art. 35) | Not required | Screening: no systematic monitoring, no profiling, no large-scale special-category processing, no new technology applied to persons. Prompts are transient and unread. Revisit if the Relay starts to retain or analyse content |
 | Data protection officer (Art. 37) | Not required | No public authority, no large-scale monitoring or special-category processing as a core activity |
 | EU representative (Art. 27) | N/A | Established in Denmark |
-| International transfers (Art. 44 to 49) | Met | Hosting and inference providers are in the EU. The search provider is in the UK, covered by the adequacy decision. Apple acts as an independent controller for purchases |
+| International transfers (Art. 44 to 49) | Met | Hosting and inference providers are in the EU. The search provider is in the EU. Some queries may fall through to its fallback source — not covered by the provider's privacy policy or DPA; their FAQ states no retention there. Agent-supplied queries may carry personal data the user didn't intend, so this path is treated as needing vendor confirmation. Apple acts as an independent controller for purchases |
 | Children (Art. 8) | N/A | The App is for adults. The basis is contract, not consent |
 
 ## Annex A: Records of processing
@@ -84,7 +84,7 @@ Record kept under Art. 30(1). Controller: Eigin ApS, CVR 46428765, Denmark, hell
 | Activity | Categories of data subjects | Categories of data | Recipients | Transfers | Erasure | Security |
 |---|---|---|---|---|---|---|
 | Inference proxy | Relay users | Conversation content, IP address | Hosted inference providers (EU) | None | Immediate; not stored | [CASA](./casa.md) |
-| Web search proxy | Relay users | Search query, IP address | Search provider (UK, adequacy) | UK | Immediate; not stored | [CASA](./casa.md) |
+| Web search proxy | Relay users | Search query, IP address | Search provider (EU) | None | Immediate; not stored | [CASA](./casa.md) |
 | Credit wallets | Purchasers and grant recipients | Purchase or grant hash, token digest, balance | Hosting provider (EU) | None | Wallet on request; bookkeeping per Danish law | [CASA](./casa.md) |
 | Model asset mirror | App users downloading a local model | IP address | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
 | Service operations | Relay users | Wallet ID, error text, IP address in platform logs | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
@@ -96,6 +96,6 @@ Record kept under Art. 30(1). Controller: Eigin ApS, CVR 46428765, Denmark, hell
 | Scaleway | Hosting: containers, database, object storage, logs | EU | [DPA](https://www.scaleway.com/en/contracts/) |
 | TensorX | Hosted inference | Ireland, Finland | [DPA](https://tensorx.ai/dpa/), no retention, no training |
 | Mistral | Hosted inference | France | [DPA](https://legal.mistral.ai/terms/data-processing-addendum), zero data retention |
-| Mojeek | Web search | UK | [Privacy policy](https://www.mojeek.com/about/privacy/). No DPA; it records no IP addresses and sees only the query |
+| Staan | Web search | France | [Privacy policy](https://staan.ai/privacy-policy). Zero data retention enabled for API requests; DPO at dpo@qwant.com |
 
 Apple is not a processor. It sells the credit pack as an independent controller and sends the Relay only a signed transaction and refund notifications.

@@ -19,51 +19,24 @@ const SEARCH_QUOTA_KEY: &str = "search";
 pub struct SearchParams {
     /// The search query string.
     q: Option<String>,
-    /// ISO 3166-1 alpha-2 region code, used to boost regionally relevant results.
+    /// Legacy client parameter. Staan has no region boost, so it is accepted
+    /// but not forwarded upstream.
     region: Option<String>,
     /// A named site focus (e.g. "recipes"), mapped server-side to a curated domain list.
     focus: Option<String>,
 }
 
-/// A single reshaped search result.
-#[derive(Serialize)]
-struct SearchResultItem {
-    title: String,
-    url: String,
-    desc: String,
-}
-
-/// The structured response returned to clients, in place of the raw Mojeek payload.
+/// The structured response returned to clients.
 #[derive(Serialize)]
 struct SearchResponse {
-    results: Vec<SearchResultItem>,
-}
-
-/// The subset of Mojeek's JSON response shape needed to reshape results.
-#[derive(Deserialize)]
-struct MojeekResponse {
-    response: MojeekResponseBody,
-}
-
-#[derive(Deserialize)]
-struct MojeekResponseBody {
-    #[serde(default)]
-    results: Vec<MojeekResult>,
-}
-
-#[derive(Deserialize)]
-struct MojeekResult {
-    title: String,
-    url: String,
-    #[serde(default)]
-    desc: String,
+    results: Vec<super::client::SearchResultItem>,
 }
 
 /// Handles search requests.
 ///
 /// Validates the query and checks the shared search quota, then proxies the
-/// request to the upstream search API and reshapes the response into a
-/// small, stable shape rather than passing Mojeek's raw payload through.
+/// request to the upstream search API. The client reshapes the provider's raw
+/// payload, so this handler only serializes the small, stable result shape.
 /// Per-IP rate limiting is applied by the router layer, not here.
 pub async fn handle(
     State(state): State<Arc<AppState>>,
@@ -91,28 +64,12 @@ pub async fn handle(
         Err(crate::quota::QuotaError::Internal(msg)) => return Err(AppError::Internal(msg)),
     }
 
-    let body = state
+    let results = state
         .search_client
-        .search(&state.mojeek_api_key, &query, &options)
+        .search(&state.staan_api_key, &query, &options)
         .await?;
 
-    let parsed: MojeekResponse = serde_json::from_slice(&body)
-        .map_err(|e| AppError::Upstream(format!("invalid search response: {e}")))?;
-
-    let reshaped = SearchResponse {
-        results: parsed
-            .response
-            .results
-            .into_iter()
-            .map(|r| SearchResultItem {
-                title: r.title,
-                url: r.url,
-                desc: r.desc,
-            })
-            .collect(),
-    };
-
-    let out = serde_json::to_vec(&reshaped)
+    let out = serde_json::to_vec(&SearchResponse { results })
         .map_err(|e| AppError::Internal(format!("failed to encode search response: {e}")))?;
 
     Ok((

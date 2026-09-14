@@ -135,7 +135,7 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
 
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
+        staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         trusted_proxy_hops: 1,

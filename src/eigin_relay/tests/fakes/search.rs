@@ -12,7 +12,7 @@ impl SearchClient for NoopSearch {
         _api_key: &str,
         _query: &str,
         _options: &SearchOptions,
-    ) -> Result<Vec<u8>, AppError> {
-        Ok(b"{\"response\":{\"results\":[]}}".to_vec())
+    ) -> Result<Vec<eigin_relay::SearchResultItem>, AppError> {
+        Ok(Vec::new())
     }
 }

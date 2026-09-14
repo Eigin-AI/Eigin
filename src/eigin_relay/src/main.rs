@@ -25,7 +25,7 @@ use sqlx::PgPool;
 
 struct SearchConfig {
     client: Arc<dyn eigin_relay::search::SearchClient>,
-    mojeek_api_key: String,
+    staan_api_key: String,
     pool_max: u64,
     window: Duration,
     rate_limiter: RateLimiter,
@@ -90,7 +90,7 @@ async fn main() {
 
     let state = Arc::new(AppState {
         search_client: search.client,
-        mojeek_api_key: search.mojeek_api_key,
+        staan_api_key: search.staan_api_key,
         eigin_relay_keys,
         ip_rate_limiter: search.rate_limiter,
         trusted_proxy_hops,
@@ -149,9 +149,9 @@ fn configure_relay_keys() -> Vec<String> {
 }
 
 async fn configure_search() -> SearchConfig {
-    let mojeek_api_key = env::var("MOJEEK_API_KEY").expect("MOJEEK_API_KEY must be set");
+    let staan_api_key = env::var("STAAN_API_KEY").expect("STAAN_API_KEY must be set");
     let search_api_url =
-        env::var("SEARCH_API_URL").unwrap_or_else(|_| "https://api.mojeek.com".to_string());
+        env::var("SEARCH_API_URL").unwrap_or_else(|_| "https://api.staan.ai/v2".to_string());
     let rate_limit_requests: u32 = env::var("RATE_LIMIT_REQUESTS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -177,7 +177,7 @@ async fn configure_search() -> SearchConfig {
 
     SearchConfig {
         client,
-        mojeek_api_key,
+        staan_api_key,
         pool_max: pool_size,
         window: Duration::from_secs(window_days * 24 * 60 * 60),
         rate_limiter,

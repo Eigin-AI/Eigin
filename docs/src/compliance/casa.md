@@ -129,7 +129,7 @@ The Relay is a single container built from a pinned base and configured entirely
 
 ### Third-party APIs
 
-The third-party APIs the Relay calls are the hosted inference providers and the Mojeek search API. They are assessed against sections 1 to 3 only.
+The third-party APIs the Relay calls are the hosted inference providers and the Staan search API. They are assessed against sections 1 to 3 only.
 
 | Req | Verdict | Evidence |
 |---|---|---|
@@ -195,7 +195,7 @@ Those transfers are designed. Every other destination is reached through a tool 
 - **The prompt shows the arguments,** so the user reviews content rather than a tool name.
 - **A tool can be removed.** `never` hides it from the agent entirely.
 
-Web search reaches one provider, Mojeek. MCP servers are added by the user and gated by the same approval.
+Web search reaches one provider, Staan. MCP servers are added by the user and gated by the same approval.
 
 ## Annex B: Apple webhook
 

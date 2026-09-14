@@ -20,8 +20,8 @@ pub struct AppState {
     // --- Search ---
     /// Client for making upstream search requests.
     pub search_client: Arc<dyn SearchClient>,
-    /// API key for the upstream search service (e.g., Mojeek).
-    pub mojeek_api_key: String,
+    /// API key for the upstream search service (Staan).
+    pub staan_api_key: String,
     /// Authentication keys this relay accepts (shared client gate). Normally the
     /// generated primary key; during a key rotation it also holds the previous
     /// (secondary) key so in-flight app builds keep working. A request is admitted

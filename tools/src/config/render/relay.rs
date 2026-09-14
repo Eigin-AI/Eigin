@@ -16,8 +16,8 @@ pub fn render(r: &Resolved, env: Env, repo_root: &str) -> Result<Rendered> {
 
     export(
         &mut out,
-        "MOJEEK_API_KEY",
-        r.secrets.require_env("MOJEEK_API_KEY", env)?,
+        "STAAN_API_KEY",
+        r.secrets.require_env("STAAN_API_KEY", env)?,
     );
     export(
         &mut out,
@@ -70,7 +70,7 @@ mod tests {
 
     fn full_secrets() -> Vec<(&'static str, &'static str)> {
         vec![
-            ("MOJEEK_API_KEY_STAGING", "mojeek-stg"),
+            ("STAAN_API_KEY_STAGING", "staan-stg"),
             ("EIGIN_RELAY_PRIMARY_KEY_STAGING", "relay-stg"),
             ("PROVIDER_MISTRAL_API_KEY_STAGING", "mistral-stg"),
         ]
@@ -86,7 +86,7 @@ mod tests {
         )
         .unwrap()
         .exports;
-        assert!(out.contains("export MOJEEK_API_KEY='mojeek-stg'"));
+        assert!(out.contains("export STAAN_API_KEY='staan-stg'"));
         assert!(out.contains("export EIGIN_RELAY_PRIMARY_KEY='relay-stg'"));
         assert!(out.contains("export PROVIDER_MISTRAL_API_KEY='mistral-stg'"));
     }
@@ -126,6 +126,6 @@ mod tests {
         let err = render(&resolved(&[]), Env::Staging, dir.path().to_str().unwrap())
             .unwrap_err()
             .to_string();
-        assert!(err.contains("MOJEEK_API_KEY_STAGING"));
+        assert!(err.contains("STAAN_API_KEY_STAGING"));
     }
 }

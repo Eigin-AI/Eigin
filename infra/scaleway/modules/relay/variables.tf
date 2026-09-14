@@ -35,8 +35,8 @@ variable "max_scale" {
 
 # --- Search ---
 
-variable "mojeek_api_key" {
-  description = "Mojeek search API key"
+variable "staan_api_key" {
+  description = "Staan search API key"
   type        = string
   sensitive   = true
 }

@@ -10,7 +10,7 @@ module "relay" {
   scw_secret_key    = var.scw_secret_key
   scw_project_id    = scaleway_account_project.eigin.id
   scw_region        = var.scw_region
-  mojeek_api_key    = var.mojeek_api_key
+  staan_api_key    = var.staan_api_key
   monthly_pool_size = var.monthly_pool_size
   max_scale         = var.max_scale
 
