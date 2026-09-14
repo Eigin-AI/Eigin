@@ -25,17 +25,6 @@
   let deviceId = $state(devices[0].id);
   let configurationId = $state(devices[0].configurations[0].id);
 
-  const device = $derived(devices.find((entry) => entry.id === deviceId) ?? devices[0]);
-  /* A device may not offer the configuration the last one did. */
-  const configuration = $derived(
-    device.configurations.find((entry) => entry.id === configurationId) ?? device.configurations[0],
-  );
-
-  const deviceSegments = devices.map((entry) => ({ value: entry.id, label: entry.label }));
-  const configurationSegments = $derived(
-    device.configurations.map((entry) => ({ value: entry.id, label: entry.label })),
-  );
-
   const schemes = [
     { value: "light", label: "Light" },
     { value: "dark", label: "Dark" },
@@ -75,6 +64,31 @@
   });
 
   const screen = $derived(entry?.component);
+
+  /* A screen belongs to one form factor — the watch companion is not a small
+     iPhone — so the stage offers only the device that screen runs on. */
+  const availableDevices = $derived(
+    devices.filter((candidate) => candidate.id === (entry?.device ?? devices[0].id)),
+  );
+  const device = $derived(
+    availableDevices.find((candidate) => candidate.id === deviceId) ?? availableDevices[0],
+  );
+  /* A device may not offer the configuration the last one did. */
+  const configuration = $derived(
+    device.configurations.find((candidate) => candidate.id === configurationId) ??
+      device.configurations[0],
+  );
+
+  /* watchOS has no light mode, so the watch frame is always dark — a light
+     watch screen would mislead every decision made against it. */
+  const isWatch = $derived(configuration.shape === "watch");
+
+  const deviceSegments = $derived(
+    availableDevices.map((candidate) => ({ value: candidate.id, label: candidate.label })),
+  );
+  const configurationSegments = $derived(
+    device.configurations.map((candidate) => ({ value: candidate.id, label: candidate.label })),
+  );
 
   const controls = stageControls();
 
@@ -160,13 +174,14 @@
           </div>
 
           <DeviceFrame
-            {colorScheme}
+            colorScheme={isWatch ? "dark" : colorScheme}
             width={configuration.width}
             height={configuration.height}
             safeAreaTop={configuration.safeAreaTop}
             safeAreaBottom={configuration.safeAreaBottom}
             safeAreaLeft={configuration.safeAreaLeft}
             safeAreaRight={configuration.safeAreaRight}
+            shape={configuration.shape ?? "phone"}
             {grid}
           >
             {#if screen}

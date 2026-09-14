@@ -18,6 +18,7 @@ import RelayInfoScreen from "@gallery/screens/RelayInfoScreen.svelte";
 import ProviderConnectScreen from "@gallery/screens/ProviderConnectScreen.svelte";
 import ProviderSelectScreen from "@gallery/screens/ProviderSelectScreen.svelte";
 import SettingsScreen from "@gallery/screens/SettingsScreen.svelte";
+import WatchScreen from "@gallery/screens/WatchScreen.svelte";
 
 export interface ScreenEntry {
   id: string;
@@ -28,6 +29,12 @@ export interface ScreenEntry {
   component: Component;
   /** What this screen is for, in a sentence or two, shown under the phone. */
   about?: string;
+  /**
+   * The device this screen runs on. A screen belongs to one form factor —
+   * the watch companion is not a small iPhone — so the stage offers only
+   * that device rather than every frame the gallery can draw.
+   */
+  device?: string;
 }
 
 /**
@@ -41,6 +48,7 @@ export interface ScreenEntry {
 export const screenSections: { id: string; title: string }[] = [
   { id: "primary", title: "Main screens" },
   { id: "connections", title: "Connections" },
+  { id: "watch", title: "Watch" },
 ];
 
 /**
@@ -196,5 +204,15 @@ export const screenEntries: ScreenEntry[] = [
     component: ConnectIntegrationScreen,
     about:
       "Connect one integration, whichever way it lets you in: a sign-in, a key, mail settings, or a server that has to be asked what it needs.",
+  },
+
+  {
+    id: "watch-ask",
+    title: "Ask",
+    section: "watch",
+    component: WatchScreen,
+    device: "apple-watch",
+    about:
+      "A quick command from the wrist, with the phone pocketed and locked. The watch listens and the phone answers, so these four states are everything it ever shows: ready, listening, thinking, answered.",
   },
 ];

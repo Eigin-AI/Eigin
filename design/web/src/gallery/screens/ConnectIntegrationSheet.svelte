@@ -1,15 +1,5 @@
 <script lang="ts">
-  import {
-    Button,
-    ContentGroup,
-    Icon,
-    IdentityHeader,
-    Notice,
-    Row,
-    Sheet,
-    SubtleActionButton,
-    TextInput,
-  } from "@lib";
+  import { Button, Icon, IdentityHeader, Notice, Sheet, SubtleActionButton, TextInput } from "@lib";
   import type { IconName } from "@lib";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
   import { useStageControls } from "@gallery/screens/stageControls.svelte";
