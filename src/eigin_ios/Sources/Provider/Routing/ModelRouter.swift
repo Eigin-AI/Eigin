@@ -20,6 +20,35 @@ protocol ModelRouter: Sendable {
     /// Whether any healthy candidate could meet the request's requirements. For UI that
     /// decides before a turn exists, like whether to offer the attachment button.
     func canSatisfy(_ request: RouteRequest) async -> Bool
+
+    // MARK: Hedging
+
+    /// How long a model may stay silent before the turn opens a runner-up alongside it.
+    /// Implementations without hedging concepts can take the default.
+    func hedgeDelay(for model: String) async -> Duration
+
+    /// The runner-up worth racing against `model`, always on the request's own provider.
+    /// Nil means the turn cannot hedge and waits the model out as before.
+    func hedgeCandidate(after model: String, request: RouteRequest) async -> ResolvedRoute?
+
+    /// Records that `model` lost a hedge: its runner-up spoke first after it had been
+    /// silent for `silentFor`. A slow first token by definition; the standing
+    /// slow-sample pattern still decides any demotion, so one loss is noise.
+    func recordHedgeLoss(_ model: String, silentFor: Duration) async
+}
+
+extension ModelRouter {
+    /// Default: long enough that healthy models rarely see a hedge; mirrors
+    /// ``DefaultModelRouter.hedgeDelay`` so fakes drift with the knob.
+    func hedgeDelay(for _: String) async -> Duration {
+        DefaultModelRouter.hedgeDelay
+    }
+
+    func hedgeCandidate(after _: String, request _: RouteRequest) async -> ResolvedRoute? {
+        nil
+    }
+
+    func recordHedgeLoss(_: String, silentFor _: Duration) async {}
 }
 
 // MARK: - Inputs

@@ -73,6 +73,10 @@ struct ModelHealthStore {
         return now >= until
     }
 
+    func slowFirstTokenSamples(_ model: String) -> Int {
+        entries[model]?.recentSamples.count(where: \.wasSlowFirstToken) ?? 0
+    }
+
     func isRetired(_ model: String) -> Bool {
         entries[model]?.retiredForSession ?? false
     }

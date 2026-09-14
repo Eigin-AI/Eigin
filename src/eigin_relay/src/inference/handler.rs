@@ -198,8 +198,12 @@ fn prepare_body(
     Ok((model_config, forwarded_body, estimated_usage))
 }
 
-/// Relay an SSE stream to the client, scanning for usage chunks as they pass through.
-/// Spawns a task that relays chunks and reconciles the reservation when the stream completes.
+/// Relay an SSE stream to the client, scanning usage chunks on the way through.
+///
+/// No output shipped ⇒ refund in full (the hedge-loser case). Output shipped
+/// but cut before the usage chunk ⇒ charged the estimate — cancelling at the
+/// end must never buy the answer for free. See the comment inside for why the
+/// upstream read stops with the client.
 fn relay_stream(
     mut stream: BoxStream,
     state: &AppState,
@@ -215,19 +219,57 @@ fn relay_stream(
 
     tokio::spawn(async move {
         let mut found_usage: Option<UsageBlock> = None;
+        // Whether any output token was shipped — the refund rule's input.
+        let mut output_shipped = false;
+        // SSE lines split across chunks; hold the trailing fragment back so
+        // each line is scanned whole. Pure transport bytes — never logged.
+        let mut line_buffer: Vec<u8> = Vec::new();
+
+        fn scan_chunk(
+            line_buffer: &mut Vec<u8>,
+            chunk: &[u8],
+            output_shipped: &mut bool,
+            found_usage: &mut Option<UsageBlock>,
+        ) {
+            line_buffer.extend_from_slice(chunk);
+            let scan_to = line_buffer
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            if let Ok(text) = std::str::from_utf8(&line_buffer[..scan_to]) {
+                for line in text.lines() {
+                    if let Some(u) = usage::extract_from_sse_line(line) {
+                        *found_usage = Some(u);
+                    }
+                    if usage::carries_output(line) {
+                        *output_shipped = true;
+                    }
+                }
+            }
+            line_buffer.drain(..scan_to);
+        }
 
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(bytes) => {
-                    // Scan SSE lines for usage — never log content.
-                    if let Ok(text) = std::str::from_utf8(&bytes) {
-                        for line in text.lines() {
-                            if let Some(u) = usage::extract_from_sse_line(line) {
-                                found_usage = Some(u);
-                            }
-                        }
+                    // Send the clone; scan after the send succeeded, so only
+                    // chunks that actually reached the client count as served.
+                    // Never log content.
+                    let shipped = tx.send(Ok(bytes.clone())).await.is_ok();
+                    if !shipped {
+                        // The client left — e.g. it cancelled a hedged request
+                        // that lost the first-token race, or stopped the turn.
+                        // Stop reading upstream: nothing will ever consume the
+                        // rest, and the provider should not keep generating
+                        // into a dead channel.
+                        break;
                     }
-                    let _ = tx.send(Ok(bytes)).await;
+                    scan_chunk(
+                        &mut line_buffer,
+                        &bytes,
+                        &mut output_shipped,
+                        &mut found_usage,
+                    );
                 }
                 Err(e) => {
                     let _ = tx.send(Err(e)).await;
@@ -236,12 +278,31 @@ fn relay_stream(
             }
         }
 
-        // Reconcile the reservation against actual usage after the stream completes.
+        // The stream's final line may lack a trailing newline; scan whatever is
+        // held back. One trailing newline always finishes it — the buffer never
+        // contains one by construction.
+        if !line_buffer.is_empty() {
+            scan_chunk(
+                &mut line_buffer,
+                b"\n",
+                &mut output_shipped,
+                &mut found_usage,
+            );
+        }
+
+        // Reconcile the reservation against actual usage after the stream ends.
+        // No output ever reached the client ⇒ unserved ⇒ the hold refunds in
+        // full. Output was flowing but the stream was cut ⇒ the exact usage died
+        // with the stream, so the estimate stands in for the charge.
+        let settled_usage = if output_shipped {
+            found_usage.or(estimated_usage)
+        } else {
+            found_usage
+        };
         settle(
             ledger,
             wallet_id,
-            found_usage,
-            estimated_usage,
+            settled_usage,
             reserved_millicredits,
             &model_config,
         )
@@ -269,11 +330,14 @@ async fn relay_buffer(
     reserved_millicredits: i64,
 ) -> Result<Response, AppError> {
     let found_usage = usage::extract_from_response_body(&bytes);
+    // The full body was relayed — the response was served, whatever the models
+    // made of it. When usage extraction finds nothing, the estimate stands in
+    // for the charge rather than refunding. (A stream is different: no usage
+    // block means the reader left or the upstream cut out. See relay_stream.)
     settle(
         Arc::clone(&state.ledger),
         wallet.id,
-        found_usage,
-        estimated_usage,
+        found_usage.or(estimated_usage),
         reserved_millicredits,
         model_config,
     )
@@ -290,6 +354,11 @@ async fn relay_buffer(
 /// Reconcile the reservation to actual usage: applies the signed delta
 /// `actual - reserved` (charge overrun, refund surplus). No-op on zero delta.
 ///
+/// Refunds in full when nothing was observed — an unserved request never costs
+/// the user anything. Callers pass what they observed, merging the estimate
+/// in when the response was partly or fully served (see relay_stream,
+/// relay_buffer).
+///
 /// Crash exposure: a crash between reserve and settle leaves the hold on the
 /// balance unreconciled (it persists in the wallet row). Bounded to one estimate.
 /// Tracked in #234.
@@ -297,14 +366,12 @@ async fn settle(
     ledger: Arc<dyn CreditLedger>,
     wallet_id: uuid::Uuid,
     actual_usage: Option<UsageBlock>,
-    estimated_usage: Option<UsageBlock>,
     reserved_millicredits: i64,
     model: &ModelConfig,
 ) {
-    let actual_cost = match actual_usage.or(estimated_usage) {
-        Some(u) => rates::compute_cost(&u, model),
-        None => 0,
-    };
+    let actual_cost = actual_usage
+        .map(|u| rates::compute_cost(&u, model))
+        .unwrap_or(0);
     apply_delta(ledger, wallet_id, actual_cost - reserved_millicredits).await;
 }
 

@@ -178,7 +178,7 @@ struct OnboardingFlow: View {
                 // known served model is always on.
                 provider.enabledModels = KnownModelCatalog.knownModels(in: models)
             }
-            conversationModel = provider.enabledModels.first
+            conversationModel = KnownModelCatalog.bestModel(from: provider.enabledModels)
                 ?? provider.availableModels.first ?? ""
             advanceTo(.initiative)
         }
@@ -186,7 +186,8 @@ struct OnboardingFlow: View {
 
     private func startWithProvider(_ provider: Provider) {
         conversationProvider = provider
-        conversationModel = provider.enabledModels.first ?? provider.availableModels.first ?? ""
+        conversationModel = KnownModelCatalog.bestModel(from: provider.enabledModels)
+            ?? provider.availableModels.first ?? ""
         advanceTo(.initiative)
     }
 
@@ -218,7 +219,7 @@ struct OnboardingFlow: View {
             if conversationProvider == nil {
                 if let relay = providers.first(where: { ProviderPreset.isRelay($0.baseURL) }) {
                     conversationProvider = relay
-                    conversationModel = relay.enabledModels.first
+                    conversationModel = KnownModelCatalog.bestModel(from: relay.enabledModels)
                         ?? relay.availableModels.first ?? ""
                 } else {
                     stepRaw = OnboardingStep.inference.rawValue

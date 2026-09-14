@@ -14,6 +14,7 @@ struct OnboardingChat: View {
     @Environment(\.colors) private var colors
     @Environment(\.modelContext) private var modelContext
     @Injected(\.chatService) private var chatService
+    @Injected(\.modelRouter) private var modelRouter
     @Injected(\.languageManager) private var languageManager
     @Injected(\.knowledgeService) private var knowledgeService
     @Injected(\.intentService) private var intentService
@@ -142,10 +143,14 @@ struct OnboardingChat: View {
             userTurns += 1
         }
 
+        // Same contract as a normal chat: resolve per turn before spending anything.
+        let routing = routingContext(model)
+        let turnModel = await routedModel(for: routing, fallback: model)
+
         // Assess the conversation so far in parallel — drives the avatar and the
         // next turn's pacing hint. Never blocks the reply.
         if !displayedMessages.isEmpty {
-            assessInBackground()
+            assessInBackground(model: turnModel)
         }
 
         chatLoop.throttler.start()
@@ -183,13 +188,16 @@ struct OnboardingChat: View {
 
         let registry = ToolRegistry.onboarding(agentID: agent.id)
         do {
+            let routing = routingContext(turnModel)
             _ = try await chatLoop.run(
                 messages: apiMessages,
                 tools: registry.definitions,
                 agent: agent,
                 provider: provider,
                 chatService: chatService,
-                toolExecutor: registry
+                toolExecutor: registry,
+                model: turnModel,
+                routing: routing
             )
             let completed = chatLoop.completeRound()
             displayedMessages.append(contentsOf: completed)
@@ -203,7 +211,7 @@ struct OnboardingChat: View {
         }
     }
 
-    private func assessInBackground() {
+    private func assessInBackground(model: String) {
         let transcript = displayedMessages
         Task {
             let assessment = OnboardingAssessment(chatService: chatService)
@@ -216,6 +224,34 @@ struct OnboardingChat: View {
             lastAssessment = result
             withAnimation(Animations.gentle) { fillProgress = result.fillTarget }
         }
+    }
+
+    /// The turn's routing context: the agent has no store-backed context until
+    /// onboarding finishes, so it is handed to the loop directly.
+    private func routingContext(_ currentModel: String) -> RouteRequest {
+        RouteRequest(
+            currentProviderID: provider.id,
+            currentModel: currentModel,
+            isAuto: true,
+            requirements: RouteRequirements(),
+            providers: [
+                RoutingProvider(
+                    id: provider.id,
+                    name: provider.name,
+                    baseURL: provider.baseURL,
+                    availableModels: provider.availableModels,
+                    enabledModels: provider.enabledModels
+                ),
+            ]
+        )
+    }
+
+    /// Resolves the route for any model spend inside onboarding - the turn, the
+    /// background assessment, the hero text - so a model the router demoted
+    /// stops being used everywhere, not just where it's visible.
+    private func routedModel(for request: RouteRequest, fallback: String) async -> String {
+        let route = await modelRouter.resolve(request)
+        return route.staysOn(providerID: provider.id) ? route.model : fallback
     }
 
     /// Persists the onboarding conversation as the agent's first real chat, so it
@@ -326,6 +362,7 @@ struct OnboardingChat: View {
 
         await seedActorEntries()
 
+        let heroModel = await routedModel(for: routingContext(model), fallback: model)
         let heroCall = HeroTextGenerationCall(chatService: chatService)
         let heroText = try? await heroCall.run(
             identityCore: agent.identityCore,
@@ -334,7 +371,7 @@ struct OnboardingChat: View {
             language: languageManager.currentLanguage,
             baseURL: provider.baseURL,
             providerID: provider.id,
-            model: model
+            model: heroModel
         )
 
         revealDigest = heroText ?? Localized.Onboarding.Welcome.description
