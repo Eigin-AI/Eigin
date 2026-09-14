@@ -29,7 +29,9 @@ mod fakes;
 use fakes::apple::FakeVerifier;
 use fakes::grant::FakeGrantVerifier;
 use fakes::search::NoopSearch;
-use fakes::upstream::{BufferUpstream, CapturingUpstream, FakeUpstream};
+use fakes::upstream::{
+    BufferUpstream, CapturingUpstream, FakeUpstream, SlowCountingUpstream, SplitLineUpstream,
+};
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -509,6 +511,207 @@ async fn chat_debits_balance_after_stream() {
     let (_, bal) = balance(&app, &token).await;
     // 500,000 - 20 = 499,980 millicredits = 499 whole credits (floor division).
     assert_eq!(bal["credits"].as_i64().unwrap(), 499);
+}
+
+/// A hedge loser: a stream cut before its usage chunk never served its reader,
+/// so the reservation refunds in full instead of charging the estimate.
+#[tokio::test]
+async fn chat_stream_without_usage_refunds_fully() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-no-usage", "ai.eigin.credits.500");
+    let state = make_state(verifier, products, FakeUpstream::without_usage()).await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let status = chat(&app, &token, "test-model").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(
+        bal["credits"].as_i64().unwrap(),
+        500,
+        "a stream with no usage block must refund the whole reservation"
+    );
+}
+
+/// A hedge-loser-shaped cancel: the client left before a single byte was read,
+/// so nothing was served and the reservation refunds in full.
+#[tokio::test]
+async fn cancelled_unread_stream_refunds_and_stops_upstream() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-cancelled", "ai.eigin.credits.500");
+    // 20 chunks, 50ms apart, first after 300ms: the client drops before any
+    // output has crossed the relay.
+    let (upstream, produced) = SlowCountingUpstream::start_delayed(
+        20,
+        Duration::from_millis(50),
+        Some(Duration::from_millis(300)),
+    );
+    let state = make_state(verifier, products, upstream).await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": "test-model",
+        "stream": true,
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    // The client disconnects before reading: drop the response body untouched.
+    drop(resp);
+
+    // With the fix the relay breaks at the first dead send and no output has
+    // crossed the relay; without it, the drain would run the full ~1.2s of
+    // generation and the estimate would be charged instead of refunded.
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    let produced = produced.load(std::sync::atomic::Ordering::SeqCst);
+    assert!(
+        produced <= 1,
+        "upstream generation must stop, and stay behind, once the client is gone (got {produced})"
+    );
+
+    let (_, bal) = balance(&app, &token).await;
+    assert_eq!(
+        bal["credits"].as_i64().unwrap(),
+        500,
+        "a stream that never got read must refund the whole reservation"
+    );
+}
+
+/// An SSE line split across transport chunks must still register as output:
+/// the refund rule leans on output detection, so half a line scanning as
+/// nothing would refund a served response.
+#[tokio::test]
+async fn split_sse_line_charges_estimate() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-split-line", "ai.eigin.credits.500");
+    // First delta arrives as two chunks split mid-line; the client cancels
+    // before any usage chunk could arrive.
+    let (upstream, _produced) =
+        SplitLineUpstream::start(Duration::from_millis(40), 8, Duration::from_millis(40));
+    let state = make_state(verifier, products, upstream).await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": "test-model",
+        "stream": true,
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let mut resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Read the split token, then walk away.
+    use futures::StreamExt;
+    let mut frames = resp.into_body().into_data_stream();
+    let _ = frames.next().await;
+    let _ = frames.next().await;
+    drop(frames);
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let (_, bal) = balance(&app, &token).await;
+    assert!(
+        bal["credits"].as_i64().unwrap() < 500,
+        "output spanning chunk boundaries must still count as served"
+    );
+}
+
+/// A stream the client was reading and cancelled mid-generation has been served:
+/// it charges the estimate rather than refunding, so cancelling can't buy the
+/// answer for free. The upstream still stops.
+#[tokio::test]
+async fn cancelled_midread_stream_charges_estimate_and_stops_upstream() {
+    let mut products = HashMap::new();
+    products.insert("ai.eigin.credits.500".into(), 500_000i64);
+
+    let verifier = FakeVerifier::with_transaction("tx-cancel-midread", "ai.eigin.credits.500");
+    // 20 chunks, 50ms apart: ~1s of generation, no final usage chunk (the cut).
+    let (upstream, produced) = SlowCountingUpstream::start(20, Duration::from_millis(50));
+    let state = make_state(verifier, products, upstream).await;
+    let app = build_router(Arc::clone(&state));
+
+    let json = redeem(&app, "fake-jws").await;
+    let token = json["token"].as_str().unwrap().to_owned();
+
+    let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
+    let body = serde_json::json!({
+        "model": "test-model",
+        "stream": true,
+        "messages": [{"role": "user", "content": "hi"}]
+    });
+    let req = Request::builder()
+        .method("POST")
+        .uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key")
+        .header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(connect_info)
+        .body(axum::body::Body::from(body.to_string()))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Read a few tokens — the client was served a running stream.
+    use futures::StreamExt;
+    let mut frames = resp.into_body().into_data_stream();
+    let _ = frames.next().await;
+    let _ = frames.next().await;
+    let _ = frames.next().await;
+    drop(frames);
+
+    tokio::time::sleep(Duration::from_millis(350)).await;
+    let produced_early = produced.load(std::sync::atomic::Ordering::SeqCst);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let produced_final = produced.load(std::sync::atomic::Ordering::SeqCst);
+
+    assert!(
+        produced_early <= 6,
+        "upstream generation must stop soon after the client disconnects (got {produced_early})"
+    );
+    assert_eq!(
+        produced_final, produced_early,
+        "upstream generation must not continue after the disconnect was noticed"
+    );
+
+    let (_, bal) = balance(&app, &token).await;
+    assert!(
+        bal["credits"].as_i64().unwrap() < 500,
+        "a stream the client was reading must charge the estimate when cut, not refund"
+    );
 }
 
 #[tokio::test]

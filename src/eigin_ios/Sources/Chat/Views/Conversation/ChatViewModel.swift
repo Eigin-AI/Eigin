@@ -163,6 +163,7 @@ final class ChatViewModel {
         mcpServers: [MCPServer],
         integrations: [Integration] = []
     ) {
+        let sentAt = ContinuousClock.now
         let text = messageText.trimmingCharacters(in: .whitespaces)
         let pendingAttachments = stagedAttachments
         guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
@@ -322,7 +323,8 @@ final class ChatViewModel {
                     toolExecutor: registry,
                     cacheKey: chatID.uuidString,
                     model: routedModel,
-                    initialToolCalls: turn.initialToolCalls
+                    initialToolCalls: turn.initialToolCalls,
+                    sentAt: sentAt
                 )
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)

@@ -1,6 +1,7 @@
 import Factory
 import Foundation
 import os
+import SwiftData
 import SwiftUI
 
 /// Status of a tool event shown in the chat feed.
@@ -124,9 +125,9 @@ final class AgenticChatLoop {
 
     private(set) var roundsExecuted: Int = 0
 
-    private var chatPhase: ChatPhase = .idle
-    private var contentBuffer = ""
-    private var pendingToolCalls: [ToolCall] = []
+    var chatPhase: ChatPhase = .idle
+    var contentBuffer = ""
+    var pendingToolCalls: [ToolCall] = []
     private var produced: [ChatMessage] = []
     /// Index in `produced` after the last complete round (all tool results present).
     /// Used by `buildCheckpoint()` to avoid returning orphaned tool calls.
@@ -140,27 +141,22 @@ final class AgenticChatLoop {
 
     private var shouldStop = false
 
+    /// Internal: shared with the loop's stream-opening and reporting extensions.
     @ObservationIgnored
-    @Injected(\.modelRouter) private var modelRouter
+    @Injected(\.modelRouter) var modelRouter
 
     @ObservationIgnored
-    @Injected(\.providerModelRefresher) private var modelRefresher
+    @Injected(\.providerModelRefresher) var modelRefresher
 
     /// Guards the catalog refresh so a turn re-fetches at most once.
     private var didRefreshCatalog = false
 
     /// The model this turn is running on. Usually the agent's, but an offline turn runs
     /// on-device without disturbing the provider and model the user chose.
-    private var activeModel = ""
-
-    /// Model switches spent on this turn, capped by ``maxModelSwitches``.
-    private var modelSwitches = 0
-
-    /// Bounds how far one turn will chase a working model, in both cost and latency.
-    private let maxModelSwitches = 2
+    var activeModel = ""
 
     /// Message ID for the current streaming turn (used for block ID stability).
-    private var currentMessageID: String = ""
+    var currentMessageID: String = ""
 
     /// Feed item ID of the streaming message, matching the ID it carries once committed,
     /// so the feed can render the live turn as the row it becomes.
@@ -179,6 +175,10 @@ final class AgenticChatLoop {
 
     // MARK: - API
 
+    /// When the user sent the message, for perceived-latency reporting. Nil for
+    /// callers that don't have a user-visible send moment (tests, tools).
+    var turnSentAt: ContinuousClock.Instant?
+
     /// Runs a complete chat turn, handling tool calls recursively.
     /// Returns all messages produced during the turn (assistant + tool results + final assistant).
     func run(
@@ -190,9 +190,14 @@ final class AgenticChatLoop {
         toolExecutor: ToolExecutor,
         cacheKey: String? = nil,
         model: String? = nil,
-        initialToolCalls: [ToolCall] = []
+        initialToolCalls: [ToolCall] = [],
+        sentAt: ContinuousClock.Instant? = nil,
+        // Pre-flattened routing for surfaces whose agent has no store-backed context yet
+        // (onboarding).
+        routing: RouteRequest? = nil
     ) async throws -> [ChatMessage] {
         reset()
+        turnSentAt = sentAt
         activeModel = model ?? agent.model
         shouldStop = false
         currentMessageID = "msg-\(UUID().uuidString)"
@@ -251,20 +256,29 @@ final class AgenticChatLoop {
                 category: .chat
             )
 
-            let (stream, streamStart) = try await openStream(
+            let turn = try await openStream(
                 chatService: chatService,
                 provider: provider,
                 agent: agent,
                 messages: allMessages,
                 tools: currentTools,
                 cacheKey: cacheKey,
-                inlineToolRunner: inlineRunner
+                inlineToolRunner: inlineRunner,
+                routing: routing
             )
 
             contentBuffer = ""
             pendingToolCalls = []
             var finishReason: ChatStreamEvent.FinishReason = .stop
             var capturedProviderMetadata: [String: String]?
+
+            let stream = turn.stream
+            let streamStart = turn.dispatchedAt
+            let raceWinner = turn.raceWinner
+
+            // Adopted once, before any reporting: the race winner becomes the
+            // turn's model; see adoptTurnModel(_:).
+            var turnModelAdopted = false
 
             chatPhase = .streamingProse
 
@@ -277,6 +291,11 @@ final class AgenticChatLoop {
                 // prose — and replaces the streaming row in the same UI update.
                 for try await event in stream {
                     if shouldStop { return [] }
+
+                    if !turnModelAdopted {
+                        turnModelAdopted = true
+                        adoptTurnModel(turn, providerID: provider.id, agent: agent)
+                    }
 
                     switch event {
                     case .contentDelta(let delta):
@@ -324,11 +343,30 @@ final class AgenticChatLoop {
                 )
                 return []
             } catch {
-                await reportAttempt(
-                    provider: provider, start: streamStart,
-                    firstTokenAt: firstTokenAt,
+                logTurnTiming(
+                    prep: turnSentAt.map { $0.duration(to: streamStart) },
+                    modelTTFT: firstTokenAt.map { streamStart.duration(to: $0) },
                     result: .failed(RoutingFailure(from: error))
                 )
+                // The race's retry hook records everything it chases before
+                // resurfacing an error; skip only that case. A failure after a
+                // first token (mid-stream, the winner dying) is still unrecorded
+                // and must count - it blames the model that carried the turn.
+                if firstTokenAt == nil, turn.failureReported.withLock({ $0 }) {
+                    // The race's retry hook already recorded this failure; only
+                    // the timing is new information here.
+                    logTurnTiming(
+                        prep: turnSentAt.map { $0.duration(to: streamStart) },
+                        modelTTFT: nil,
+                        result: .failed(RoutingFailure(from: error))
+                    )
+                } else {
+                    await reportAttempt(
+                        provider: provider, start: streamStart,
+                        firstTokenAt: firstTokenAt,
+                        result: .failed(RoutingFailure(from: error))
+                    )
+                }
                 throw error
             }
 
@@ -542,7 +580,6 @@ final class AgenticChatLoop {
         pendingOptions = nil
         isAwaitingUserInteraction = false
         currentMessageID = ""
-        modelSwitches = 0
         didRefreshCatalog = false
     }
 
@@ -615,137 +652,6 @@ final class AgenticChatLoop {
     }
 
     // MARK: - Private
-
-    /// Opens a chat stream, asking ``ModelRouter`` for another model when one fails.
-    ///
-    /// A stream that never opens has produced nothing, so switching models here is
-    /// invisible to the user. The router decides whether a failure is worth chasing at
-    /// all: a bad key or an empty wallet surfaces instead of burning more attempts.
-    ///
-    /// `inlineToolRunner` is forwarded to local model clients so they can execute
-    /// tools mid-stream. Cloud clients ignore it via the default implementation
-    /// on `ChatService`.
-    ///
-    /// Returns the stream with its request-dispatch instant, the origin for time-to-first-token.
-    private func openStream(
-        chatService: ChatService,
-        provider: Provider,
-        agent: Agent,
-        messages: [ChatMessage],
-        tools: [ToolDefinition]?,
-        cacheKey: String?,
-        inlineToolRunner: InlineToolRunner? = nil
-    ) async throws
-        -> (
-            stream: AsyncThrowingStream<ChatStreamEvent, Error>,
-            dispatchedAt: ContinuousClock.Instant
-        )
-    {
-        while true {
-            let attemptStart = ContinuousClock.now
-            do {
-                let stream = try await chatService.chatCompletionEventStream(
-                    baseURL: provider.baseURL,
-                    providerID: provider.id,
-                    messages: messages,
-                    model: activeModel,
-                    tools: tools,
-                    cacheKey: cacheKey,
-                    inlineToolRunner: inlineToolRunner
-                )
-                // On-device prefill is legitimately slow, and there is nothing past it to
-                // fall back to.
-                guard !ProviderPreset.isLocal(provider.baseURL) else {
-                    return (stream, attemptStart)
-                }
-                return (withFirstEventDeadline(
-                    stream, deadline: DefaultModelRouter.firstTokenCeiling
-                ), attemptStart)
-            } catch {
-                if error is CancellationError || Task.isCancelled { throw error }
-                let failure = RoutingFailure(from: error)
-                await modelRouter.record(
-                    AttemptOutcome(
-                        providerID: provider.id,
-                        model: activeModel,
-                        timeToFirstToken: nil,
-                        tokensPerSecond: nil,
-                        duration: attemptStart.duration(to: .now),
-                        result: .failed(failure)
-                    )
-                )
-                // A retired model often means a stale catalog, and the cached list may not
-                // hold anything to move to. Re-fetch before asking for an alternative.
-                if failure == .modelNotFound, !didRefreshCatalog {
-                    didRefreshCatalog = true
-                    _ = try? await modelRefresher.refresh(provider, apiKeyOverride: nil)
-                }
-                guard modelSwitches < maxModelSwitches,
-                      let request = RouteRequest(
-                          agent: agent,
-                          provider: provider,
-                          model: activeModel,
-                          requirements: retryRequirements(messages: messages, tools: tools)
-                      ),
-                      let next = await modelRouter.retry(after: error, request: request),
-                      next.model != activeModel
-                else {
-                    throw error
-                }
-                modelSwitches += 1
-                activeModel = next.model
-                // Persist only while on the user's own provider, so an offline turn never
-                // overwrites the model they chose for their cloud provider.
-                if provider.id == agent.providerID { agent.model = next.model }
-            }
-        }
-    }
-
-    /// What a replacement model has to handle to take over mid-turn.
-    ///
-    /// The prompt's measured size, not the outgoing model's window: a million-token model
-    /// could otherwise never be replaced by anything, however short the conversation
-    /// actually is. The router adds each candidate's own output reservation on top.
-    private func retryRequirements(
-        messages: [ChatMessage], tools: [ToolDefinition]?
-    ) -> RouteRequirements {
-        RouteRequirements(
-            needsVision: messages.contains { $0.attachments?.isEmpty == false },
-            promptTokens: TokenEstimator.estimateRequest(
-                messages: messages, toolDefinitions: tools
-            )
-        )
-    }
-
-    /// Reports one stream's timings to the router.
-    ///
-    /// Throughput is estimated from the prose actually streamed, at the usual four
-    /// characters per token. Tool-call arguments are excluded, so a tool-heavy round
-    /// under-reports rather than inventing precision the stream cannot give us.
-    private func reportAttempt(
-        provider: Provider,
-        start: ContinuousClock.Instant,
-        firstTokenAt: ContinuousClock.Instant?,
-        result: AttemptOutcome.Result
-    ) async {
-        let duration = start.duration(to: .now)
-        let tokensPerSecond: Double? = {
-            guard let firstTokenAt, contentBuffer.count >= 40 else { return nil }
-            let generating = firstTokenAt.duration(to: .now).seconds
-            guard generating > 0 else { return nil }
-            return (Double(contentBuffer.count) / 4) / generating
-        }()
-        await modelRouter.record(
-            AttemptOutcome(
-                providerID: provider.id,
-                model: activeModel,
-                timeToFirstToken: firstTokenAt.map { start.duration(to: $0) },
-                tokensPerSecond: tokensPerSecond,
-                duration: duration,
-                result: result
-            )
-        )
-    }
 
     private func updateToolEvent(id: String, status: ToolEventStatus) {
         if let index = toolEvents.firstIndex(where: { $0.id == id }) {

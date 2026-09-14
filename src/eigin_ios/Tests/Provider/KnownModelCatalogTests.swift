@@ -373,3 +373,37 @@ struct KnownModelCatalogTests {
         )
     }
 }
+
+@Suite("Best-model selection")
+struct BestModelTests {
+    @Test("Ranking beats list position")
+    func rankingBeatsListPosition() {
+        // glm-5.3 outranks glm-5.2 in the preference ranking.
+        #expect(KnownModelCatalog
+            .bestModel(from: ["z-ai/glm-5.2", "z-ai/glm-5.3"]) == "z-ai/glm-5.3")
+        #expect(KnownModelCatalog
+            .bestModel(from: ["z-ai/glm-5.3", "z-ai/glm-5.2"]) == "z-ai/glm-5.3")
+    }
+
+    @Test("The catalog's top entry wins over anything else")
+    func catalogTopWins() {
+        #expect(
+            KnownModelCatalog.bestModel(from: ["z-ai/glm-5.3", "claude-sonnet-5", "gpt-5.6"])
+                == "claude-sonnet-5"
+        )
+    }
+
+    @Test("Unranked models sort last but still resolve")
+    func unknownRanksLast() {
+        let models = ["totally-unknown-model", "gpt-5.6"]
+        #expect(KnownModelCatalog.bestModel(from: models) == "gpt-5.6")
+        #expect(
+            KnownModelCatalog.bestModel(from: ["totally-unknown-model"]) == "totally-unknown-model"
+        )
+    }
+
+    @Test("Empty input is nil")
+    func emptyIsNil() {
+        #expect(KnownModelCatalog.bestModel(from: []) == nil)
+    }
+}

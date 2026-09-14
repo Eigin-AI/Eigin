@@ -70,6 +70,53 @@ fn parse_usage_json(json: &str) -> Option<UsageBlock> {
     })
 }
 
+#[derive(Deserialize)]
+struct RawOutputChunks {
+    choices: Option<Vec<RawDeltaChoice>>,
+}
+
+#[derive(Deserialize)]
+struct RawDeltaChoice {
+    delta: Option<serde_json::Value>,
+}
+
+/// Whether an SSE line carries model output — prose, reasoning, or tool-call
+/// arguments. Framing does not: empty deltas and role announcements pass false.
+///
+/// Reads the delta's *shape* only; the value itself is never logged or stored.
+pub fn carries_output(line: &str) -> bool {
+    let Some(json) = line.strip_prefix("data: ") else {
+        return false;
+    };
+    let trimmed = json.trim();
+    if trimmed == "[DONE]" {
+        return false;
+    }
+    let Ok(raw) = serde_json::from_str::<RawOutputChunks>(trimmed) else {
+        return false;
+    };
+    raw.choices.is_some_and(|choices| {
+        choices.iter().any(|choice| {
+            choice.delta.as_ref().is_some_and(|delta| {
+                has_text(delta, "content")
+                    || has_text(delta, "reasoning_content")
+                    || delta
+                        .get("tool_calls")
+                        .and_then(|t| t.as_array())
+                        .is_some_and(|calls| !calls.is_empty())
+            })
+        })
+    })
+}
+
+/// A string field on the delta that is present and non-empty.
+fn has_text(delta: &serde_json::Value, key: &str) -> bool {
+    delta
+        .get(key)
+        .and_then(|v| v.as_str())
+        .is_some_and(|s| !s.is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,6 +154,29 @@ mod tests {
         let u = extract_from_response_body(body).unwrap();
         assert_eq!(u.prompt_tokens, 300);
         assert_eq!(u.completion_tokens, 100);
+    }
+
+    #[test]
+    fn output_recognition() {
+        let prose = r#"data: {"id":"x","choices":[{"delta":{"content":"hi"}}]}"#;
+        let reasoning = r#"data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}"#;
+        let tool = r#"data: {"choices":[{"delta":{"tool_calls":[{"id":"t"}]}}]}"#;
+        let framing = r#"data: {"choices":[{"delta":{}}]}"#;
+        let roles = r#"data: {"choices":[{"delta":{"role":"assistant"}}]}"#;
+        let empty_prose = r#"data: {"choices":[{"delta":{"content":""}}]}"#;
+        let no_choices = r#"data: {"choices":[]}"#;
+        let done = "data: [DONE]";
+        let not_json = "data: oops";
+
+        assert!(carries_output(prose));
+        assert!(carries_output(reasoning));
+        assert!(carries_output(tool));
+        assert!(!carries_output(framing));
+        assert!(!carries_output(roles));
+        assert!(!carries_output(empty_prose));
+        assert!(!carries_output(no_choices));
+        assert!(!carries_output(done));
+        assert!(!carries_output(not_json));
     }
 
     #[test]
