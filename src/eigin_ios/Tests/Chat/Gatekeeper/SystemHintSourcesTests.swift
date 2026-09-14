@@ -86,16 +86,66 @@ struct SystemHintSourcesTests {
         #expect(await source.render(input(activeIntents: [])) == nil)
     }
 
-    @Test func activeIntentsRendersBulletedList() async {
+    @Test func activeIntentsRendersCompactSummary() async {
         let source = ActiveIntentsSource()
+        let intentID = UUID()
+        let openIntent = IntentSnapshot(
+            id: intentID,
+            content: "Launch Eigin's open source initiative — publish the repo under AGPL before the meetup.",
+            status: .active,
+            tasks: [IntentTask(content: "Finalize repo for public release")],
+            events: [],
+            schedules: [],
+            createdAt: .now,
+            updatedAt: .now
+        )
         let body = await source.render(input(activeIntents: [
+            openIntent,
             intent("Learn Rust"),
-            intent("Exercise daily"),
-        ]))
-        #expect(body != nil)
-        #expect(body?.contains("- [") == true)
-        #expect(body?.contains("\"Learn Rust\"") == true)
-        #expect(body?.contains("\"Exercise daily\"") == true)
+        ])) ?? ""
+        #expect(body.contains("- Launch Eigin's open source initiative"))
+        #expect(body.contains("Next: Finalize repo for public release"))
+        // UUID and task-list plumbing stay out of the hint.
+        #expect(!body.contains(intentID.uuidString))
+        #expect(!body.contains("•"))
+        // Footer cues the agent on where ids and detail live.
+        #expect(body.contains("list_intents"))
+    }
+
+    @Test func activeIntentsOmitsCueAndNextWhenNothingTimely() async {
+        let source = ActiveIntentsSource()
+        let body = await source.render(input(activeIntents: [intent("Learn Rust")])) ?? ""
+        #expect(body.contains("- Learn Rust"))
+        #expect(!body.contains("("))
+        #expect(!body.contains("Next:"))
+    }
+
+    @Test func activeIntentsOmitsNextWhenAllTasksComplete() async {
+        let source = ActiveIntentsSource()
+        let done = IntentSnapshot(
+            id: UUID(),
+            content: "Ship the alpha",
+            status: .active,
+            tasks: [IntentTask(content: "Finalize onboarding", completed: true)],
+            events: [],
+            schedules: [],
+            createdAt: .now,
+            updatedAt: .now
+        )
+        let body = await source.render(input(activeIntents: [done])) ?? ""
+        #expect(body.contains("- Ship the alpha"))
+        #expect(!body.contains("Next:"))
+        #expect(!body.contains("•"))
+    }
+
+    @Test func activeIntentsFooterOmittedInCompactMode() async {
+        let source = ActiveIntentsSource()
+        let body = await source.render(input(
+            activeIntents: [intent("Learn Rust")],
+            isSmallContext: true
+        )) ?? ""
+        #expect(body.contains("- Learn Rust"))
+        #expect(!body.contains("list_intents"))
     }
 
     @Test func activeIntentsTruncatesInCompactMode() async {
@@ -114,6 +164,58 @@ struct SystemHintSourcesTests {
         #expect(body.contains("…"))
         #expect(!body.contains("Fourth"))
         #expect(!body.contains("Fifth"))
+    }
+
+    @Test func activeIntentsSummaryKeepsFirstSentenceAndDropsRest() {
+        let content = "First sentence stays here. Second sentence with detail. Third one too."
+        #expect(ActiveIntentsSource.summary(content, limit: 90) == "First sentence stays here.")
+    }
+
+    @Test func activeIntentsSummaryFallsBackToHardTruncationWithoutTerminator() {
+        let content = String(repeating: "x", count: 120)
+        let summary = ActiveIntentsSource.summary(content, limit: 90)
+        #expect(summary.count == 90 + 1) // prefix plus ellipsis
+        #expect(summary.hasSuffix("…"))
+    }
+
+    @Test func activeIntentsSummaryEllipsizesLongFirstSentence() {
+        let content = String(repeating: "y", count: 120) + ". Second sentence."
+        let summary = ActiveIntentsSource.summary(content, limit: 90)
+        #expect(summary.count == 90 + 1)
+        #expect(summary.hasSuffix("…"))
+    }
+
+    @Test func activeIntentsNextActionTruncatesLongTask() async throws {
+        let source = ActiveIntentsSource()
+        let longTask = String(repeating: "z", count: 80)
+        let snapshot = IntentSnapshot(
+            id: UUID(),
+            content: "Goal",
+            status: .active,
+            tasks: [IntentTask(content: longTask)],
+            events: [],
+            schedules: [],
+            createdAt: .now,
+            updatedAt: .now
+        )
+        let body = await source.render(input(activeIntents: [snapshot])) ?? ""
+        let nextStart = try #require(body.range(of: "Next: ")).upperBound
+        let action = body[nextStart...].prefix(while: { !$0.isNewline })
+        // Truncated without exposing internal caps as magic numbers.
+        #expect(String(action).hasSuffix("…"))
+        #expect(action.count < longTask.count)
+    }
+
+    @Test func activeIntentsSummaryCutsLongSingleSentenceAtClauseDash() {
+        let content = "Launch the open source initiative — publish the repo under AGPL before the meetup in Copenhagen"
+        #expect(ActiveIntentsSource
+            .summary(content, limit: 40) == "Launch the open source initiative")
+    }
+
+    @Test func activeIntentsSummaryCollapsesNewlinesToOneLine() {
+        let content = "Ship the alpha\nwith onboarding done. Keep the rest quiet."
+        #expect(ActiveIntentsSource
+            .summary(content, limit: 90) == "Ship the alpha with onboarding done.")
     }
 
     // MARK: - ActiveSkillsSource

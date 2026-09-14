@@ -3,19 +3,21 @@ import Foundation
 /// Renders the agent's currently active intents (goals it's pursuing).
 ///
 /// Stateless. Intents arrive ordered by temporal relevance from
-/// ``IntentService``; this source formats them as a bulleted list and appends a
-/// short cue when something is timely ("due today", "in 3 days", "2 open
-/// tasks"), so the agent sees why an intent is rising. In compact mode the list
-/// is truncated to the top three intents and each intent renders as a single
-/// truncated line to fit the limited hydration budget of small-context models.
+/// ``IntentService``; this source formats each as a single compact line — a
+/// one-sentence summary, a timeliness cue, and the next open action — so the
+/// hint stays digest-sized. Full detail and ids stay behind `list_intents`,
+/// cued by a footer line in full-context mode. Small-context models get the
+/// same line format truncated to the top three intents.
 @MainActor
 final class ActiveIntentsSource: SystemHintSource {
     let title = "Active intents"
 
     /// Maximum number of intents rendered in compact mode.
     private let compactLimit = 3
-    /// Character cap applied to each intent's content in compact mode.
-    private let compactContentLimit = 80
+    /// Character cap applied to each intent's summary line.
+    private let summaryLimit = 90
+    /// Character cap applied to the next-action clause.
+    private let nextActionLimit = 50
 
     func render(_ input: SystemHintInput) async -> String? {
         guard !input.activeIntents.isEmpty else { return nil }
@@ -24,34 +26,69 @@ final class ActiveIntentsSource: SystemHintSource {
             ? Array(input.activeIntents.prefix(compactLimit))
             : input.activeIntents
 
-        let lines: [String] = intents.map { intent in
-            if input.isSmallContext {
-                // Small-context models get a minimal one-liner.
-                let content = intent.content.count > compactContentLimit
-                    ? String(intent.content.prefix(compactContentLimit)) + "…"
-                    : intent.content
-                return "- \"\(content)\""
-            }
-
-            // Full context: ID so the agent can act on the intent via tools,
-            // a timeliness cue, and any open tasks.
-            var line = "- [\(intent.id.uuidString)] \"\(intent.content)\""
-            if let cue = IntentDigest.summary(for: intent) {
-                line += " (\(cue))"
-            }
-            let pending = intent.tasks.filter { !$0.completed }
-            if !pending.isEmpty {
-                let taskLines = pending.map { task -> String in
-                    let label = task.content.count > 50
-                        ? task.content.prefix(50) + "…"
-                        : Substring(task.content)
-                    return "  • \(label)"
-                }
-                line += "\n" + taskLines.joined(separator: "\n")
-            }
-            return line
+        var lines = intents.map { line(for: $0) }
+        if !input.isSmallContext {
+            lines.append(Prompt.Hints.activeIntentsFooter
+                .trimmingCharacters(in: .whitespacesAndNewlines))
         }
-
         return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Line rendering
+
+    private func line(for intent: IntentSnapshot) -> String {
+        var line = "- \(Self.summary(intent.content, limit: summaryLimit))"
+        if let cue = IntentDigest.summary(for: intent) {
+            line += " (\(cue))"
+        }
+        if let next = nextAction(for: intent) {
+            line += ". Next: \(next)"
+        }
+        return line
+    }
+
+    /// First sentence of the intent's content, capped and ellipsized.
+    ///
+    /// A multi-sentence paragraph collapses to its first sentence even when the
+    /// whole content would fit; mid-sentence truncation is only a fallback.
+    /// Whitespace (including newlines) is collapsed so the summary stays one
+    /// hint line.
+    static func summary(_ content: String, limit: Int) -> String {
+        let trimmed = Self.collapsedWhitespace(in: content)
+
+        let terminators: Set<Character> = [".", "!", "?"]
+        if let firstTerminator = trimmed.firstIndex(where: { terminators.contains($0) }) {
+            let sentence = String(trimmed[...firstTerminator])
+            if sentence.count < trimmed.count, sentence.count <= limit {
+                return sentence
+            }
+        }
+        guard trimmed.count > limit else { return trimmed }
+
+        // Long single sentence: cut at the first clause dash before falling
+        // back to a hard prefix. The clause stands alone as a compact label.
+        if let dash = trimmed.firstIndex(of: "—") {
+            let clause = String(trimmed[..<dash]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clause.isEmpty, clause.count <= limit {
+                return clause
+            }
+        }
+        return String(trimmed.prefix(limit)) + "…"
+    }
+
+    /// The first pending task's content, or nil when nothing is left to do.
+    private func nextAction(for intent: IntentSnapshot) -> String? {
+        guard let task = intent.tasks.first(where: { !$0.completed }) else { return nil }
+        let content = Self.collapsedWhitespace(in: task.content)
+        guard content.count > nextActionLimit else { return content }
+        return String(content.prefix(nextActionLimit)) + "…"
+    }
+
+    /// Trims the ends and collapses internal whitespace runs to single spaces.
+    private static func collapsedWhitespace(in text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 }
