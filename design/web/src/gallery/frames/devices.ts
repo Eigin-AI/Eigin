@@ -10,6 +10,8 @@ export interface DeviceConfiguration {
   /** Points reserved by the island's edges when the phone is on its side. */
   safeAreaLeft: number;
   safeAreaRight: number;
+  /** What the hardware around the screen looks like. Phones unless stated. */
+  shape?: "phone" | "watch";
 }
 
 /** A device and the configurations it can be viewed in. */
@@ -50,6 +52,35 @@ export const devices: Device[] = [
         safeAreaBottom: 21,
         safeAreaLeft: 59,
         safeAreaRight: 59,
+      },
+    ],
+  },
+  {
+    id: "apple-watch",
+    label: "Apple Watch",
+    configurations: [
+      {
+        id: "44mm",
+        label: "44mm",
+        width: 184,
+        height: 224,
+        /* The time sits in the top inset; watchOS keeps content clear of it. */
+        safeAreaTop: 20,
+        safeAreaBottom: 8,
+        safeAreaLeft: 0,
+        safeAreaRight: 0,
+        shape: "watch",
+      },
+      {
+        id: "40mm",
+        label: "40mm",
+        width: 162,
+        height: 197,
+        safeAreaTop: 19,
+        safeAreaBottom: 8,
+        safeAreaLeft: 0,
+        safeAreaRight: 0,
+        shape: "watch",
       },
     ],
   },

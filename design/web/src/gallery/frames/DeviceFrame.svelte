@@ -12,6 +12,7 @@
     safeAreaLeft = 0,
     safeAreaRight = 0,
     chrome = true,
+    shape = "phone",
     grid = false,
     colorScheme = "system",
     children,
@@ -28,6 +29,8 @@
     safeAreaRight?: number;
     /** The phone's own status bar and home indicator. */
     chrome?: boolean;
+    /** Which hardware to draw around the screen. */
+    shape?: "phone" | "watch";
     /** Lays the active breakpoint's grid over the screen. */
     grid?: boolean;
     colorScheme?: "light" | "dark" | "system" | "inherit";
@@ -39,13 +42,22 @@
      keeps only the width, the safe-area declarations and the root. */
   const isDevice = $derived(height !== "content");
   const fullDevice = $derived(chrome && isDevice);
+  /* A watch has no island and no home indicator — only the time, which
+     watchOS draws in the top inset rather than across a status bar. */
+  const isWatch = $derived(shape === "watch");
 </script>
 
 <div class="device-fit" use:fitToWidth>
-  <div class="device-frame" class:bare={!isDevice} style:width="{isDevice ? width + 24 : width}px">
+  <div
+    class="device-frame"
+    class:bare={!isDevice}
+    class:watch={isWatch}
+    style:width="{isDevice ? width + (isWatch ? 16 : 24) : width}px"
+  >
     <div
       class="device-screen"
       class:fitted={height !== "content"}
+      class:watch={isWatch}
       style:width="{width}px"
       style:height={height === "content" ? undefined : `${height}px`}
       style:--eigin-safe-area-top="{safeAreaTop}px"
@@ -54,12 +66,16 @@
       style:--eigin-safe-area-right="{safeAreaRight}px"
     >
       <EiginRoot {colorScheme}>
-        {#if fullDevice && safeAreaTop > 0}
+        {#if fullDevice && safeAreaTop > 0 && !isWatch}
           <StatusBar />
         {/if}
 
+        {#if fullDevice && isWatch}
+          <span class="watch-time" aria-hidden="true">9:41</span>
+        {/if}
+
         <!-- The island is hardware: it turns with the phone. -->
-        {#if fullDevice}
+        {#if fullDevice && !isWatch}
           <span class="island" class:on-edge={safeAreaLeft > 0} aria-hidden="true"></span>
         {/if}
 
@@ -71,7 +87,7 @@
           {/if}
         </div>
 
-        {#if fullDevice}
+        {#if fullDevice && !isWatch}
           <span class="home-indicator" aria-hidden="true"></span>
         {/if}
       </EiginRoot>
@@ -113,6 +129,29 @@
   .device-frame.bare > .device-screen {
     border-radius: var(--radius-card);
     box-shadow: inset 0 0 0 1px var(--color-border-standard-base);
+  }
+
+  /* The watch is mostly bezel, and its corners are far rounder against a
+     much smaller screen, so the phone's fixed radii do not scale down. */
+  .device-frame.watch {
+    padding: 8px;
+    border-radius: 44px;
+  }
+
+  .device-frame.watch > .device-screen {
+    border-radius: 36px;
+  }
+
+  /* watchOS puts the time in the top inset instead of a status bar. */
+  .device-screen :global(.watch-time) {
+    position: absolute;
+    top: 3px;
+    right: 14px;
+    z-index: 2;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-standard-base);
+    pointer-events: none;
   }
 
   .device-screen {

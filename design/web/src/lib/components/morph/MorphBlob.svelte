@@ -10,6 +10,12 @@
     shownAt?: number;
     /** How much of the wobble is showing. */
     intensity?: MorphIntensity;
+    /**
+     * Breathing on its own, for a blob that is present and waiting rather than
+     * working. Ramps like `intensity`, so it eases into the wobble instead of
+     * cutting out when the agent starts thinking.
+     */
+    breath?: MorphIntensity;
     /** Time multiplier: below 1 makes big blobs dance less briskly. */
     tempo?: number;
     /** Seconds to hold invisible before the scale-in plays. */
@@ -21,6 +27,7 @@
   const {
     shownAt = performance.now() / 1000,
     intensity = MorphIntensity.full,
+    breath = MorphIntensity.none,
     tempo = 1,
     entryDelay = 0,
     color = "var(--color-button-spot-base)",
@@ -46,6 +53,7 @@
   $effect(() => {
     // Re-arm whenever the choreography's inputs change.
     void intensity;
+    void breath;
     void shownAt;
     void entryDelay;
     void reduceMotion.current;
@@ -55,7 +63,9 @@
       now = t;
       const lively =
         !reduceMotion.current &&
-        (t - shownAt < entryDelay + ENTRY_DURATION || intensity.value(t) > 0);
+        (t - shownAt < entryDelay + ENTRY_DURATION ||
+          intensity.value(t) > 0 ||
+          breath.value(t) > 0);
       if (lively) frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
@@ -68,14 +78,16 @@
     const wobble = still ? 0 : intensity.value(now);
     const figure = figureOf(pose, wobble);
 
-    // The entry overshoot plays on any appearance, after the delay; the breath
-    // rides along with the wobble, so a calm blob is still.
+    // The entry overshoot plays on any appearance, after the delay. The breath
+    // rides along with the wobble, and can also be asked for on its own — so a
+    // waiting blob breathes and a calm one is still.
     const entry = still ? 1 : timeline.entryScale(t - entryDelay);
-    const breath = still ? 1 : 1 + (timeline.breath(t) - 1) * wobble;
+    const breathing = still ? 0 : Math.max(wobble, breath.value(now));
+    const breathScale = still ? 1 : 1 + (timeline.breath(t) - 1) * breathing;
 
     const scale = (VIEW * FILL) / maxFormSize;
-    const halfWidth = (figure.width / 2) * scale * entry * breath;
-    const halfHeight = (figure.height / 2) * scale * entry * breath;
+    const halfWidth = (figure.width / 2) * scale * entry * breathScale;
+    const halfHeight = (figure.height / 2) * scale * entry * breathScale;
     if (halfWidth <= 0 || halfHeight <= 0) return "";
 
     const center = VIEW / 2;
