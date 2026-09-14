@@ -1,7 +1,7 @@
 # Eigin Relay
 Rust, Axum 0.8, Tower, Tokio.
 
-The relay provides connectivity services that can't be bundled into the app — primarily proxying search APIs (Mojeek) while managing a community pool of shared API quota. It also enforces per-IP rate limiting and authenticates requests from Eigin clients.
+The relay provides connectivity services that can't be bundled into the app — primarily proxying search APIs (Staan) while managing a community pool of shared API quota. It also enforces per-IP rate limiting and authenticates requests from Eigin clients.
 
 Going forward, this is the intended home for agent synchronisation and agent-to-agent discovery. Neither is implemented yet.
 
@@ -73,10 +73,10 @@ All configuration is via environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `MOJEEK_API_KEY` | required | Upstream search API key |
+| `STAAN_API_KEY` | required | Upstream search API key |
 | `EIGIN_RELAY_PRIMARY_KEY` | required | Shared auth key expected from Eigin clients (the key the app bakes in) |
 | `EIGIN_RELAY_SECONDARY_KEY` | — | Optional second accepted key. Holds the previous key during a rotation so already-shipped app builds keep working; clear it once they retire. |
-| `SEARCH_API_URL` | `https://api.mojeek.com` | Upstream search base URL |
+| `SEARCH_API_URL` | `https://api.staan.ai/v2` | Upstream search base URL |
 | `RATE_LIMIT_REQUESTS` | `10` | Max requests per window per IP |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window duration |
 | `MONTHLY_POOL_SIZE` | `5000` | Max searches the community pool allows per rolling window |
@@ -162,7 +162,7 @@ just infra deploy            # Deploy to staging
 just infra deploy production
 ```
 
-`ENV` defaults to `staging`. `eigin-tools config export tf-vars <env>` resolves the per-env relay key and Mojeek key from `.env`. See `infra/scaleway/` for the Terraform configuration.
+`ENV` defaults to `staging`. `eigin-tools config export tf-vars <env>` resolves the per-env relay key and Staan key from `.env`. See `infra/scaleway/` for the Terraform configuration.
 
 ### Custom domain (one-time setup)
 

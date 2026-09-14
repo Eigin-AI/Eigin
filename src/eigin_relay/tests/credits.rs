@@ -85,7 +85,7 @@ async fn make_state_with_ledger_and_upstream(
 
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
+        staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         trusted_proxy_hops: 1,
@@ -341,7 +341,7 @@ async fn make_grant_state(
 
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
+        staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         trusted_proxy_hops: 1,
@@ -1029,7 +1029,7 @@ async fn webhook_rate_limited_after_limit() {
     // Tight limit so the test can flood it deterministically.
     let state = Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
+        staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         trusted_proxy_hops: 1,
@@ -1269,7 +1269,7 @@ async fn make_sandbox_state(
 ) -> Arc<AppState> {
     Arc::new(AppState {
         search_client: Arc::new(NoopSearch),
-        mojeek_api_key: String::new(),
+        staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
         ip_rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
         trusted_proxy_hops: 1,

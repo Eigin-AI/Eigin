@@ -144,7 +144,7 @@ struct WebSearchToolBehaviorTests {
         )
     }
 
-    @Test @MainActor func returnsMojeekResultsOnSuccess() async throws {
+    @Test @MainActor func returnsSearchResultsOnSuccess() async throws {
         let (agent, container) = try makeAgent()
         _ = container
         relay.searchHandler = { _, _, _ in "1. Swift Testing — a modern test framework" }
@@ -152,7 +152,6 @@ struct WebSearchToolBehaviorTests {
         let result = await WebSearchTool().execute(makeCall(query: "swift testing"), agent: agent)
 
         #expect(!result.isError)
-        #expect(result.content.contains("Mojeek"))
         #expect(result.content.contains("Swift Testing"))
     }
 

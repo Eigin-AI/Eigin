@@ -87,7 +87,6 @@ struct WebSearchTool: Tool {
         let focus = args["focus"] as? String
         let region = Locale.current.region?.identifier
 
-        // Mojeek via the relay is the sole search path (background HTTP, no WebView).
         let json: String
         do {
             json = try await Container.shared.relayClient()
@@ -121,7 +120,6 @@ struct WebSearchTool: Tool {
         let result: [String: Any] = [
             "query": query,
             "content": content,
-            "source": "Mojeek",
         ]
         return ToolResult(
             toolCallID: id,

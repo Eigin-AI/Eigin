@@ -26,6 +26,8 @@ pub use health::handler as health;
 pub use quota::{Quota, QuotaError};
 pub use rate_limit::{RateLimiter, enforce_ip_rate_limit};
 pub use router::build_router;
-pub use search::{SearchClient, SearchFocus, SearchOptions, create_client};
+pub use search::{
+    SearchClient, SearchFocus, SearchOptions, SearchResult, SearchResultItem, create_client,
+};
 pub use security::security_headers;
 pub use state::AppState;

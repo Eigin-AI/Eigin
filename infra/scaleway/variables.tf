@@ -28,8 +28,8 @@ variable "relay_src_dir" {
   default     = "../../src/eigin_relay"
 }
 
-variable "mojeek_api_key" {
-  description = "Mojeek search API key"
+variable "staan_api_key" {
+  description = "Staan search API key"
   type        = string
   sensitive   = true
 }

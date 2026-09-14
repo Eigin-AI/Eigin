@@ -75,8 +75,8 @@ const FULL_ENV: &str = r#"
 export DEVELOPMENT_TEAM=TEAM123
 export EIGIN_RELAY_PRIMARY_KEY_STAGING=stg-relay
 export EIGIN_RELAY_PRIMARY_KEY_PRODUCTION=prod-relay
-export MOJEEK_API_KEY_STAGING=stg-mojeek
-export MOJEEK_API_KEY_PRODUCTION=prod-mojeek
+export STAAN_API_KEY_STAGING=stg-staan
+export STAAN_API_KEY_PRODUCTION=prod-staan
 export PROVIDER_MISTRAL_API_KEY_STAGING=stg-mistral
 export TFSTATE_ACCESS_KEY=scoped-access
 export TFSTATE_SECRET_KEY=scoped-secret
@@ -148,7 +148,7 @@ fn relay_strips_suffixes_and_reads_tfvars() {
     let r = resolve(root_of(&dir)).unwrap();
     let out = render::relay::render(&r, Env::Staging, root_of(&dir)).unwrap();
 
-    assert!(out.exports.contains("export MOJEEK_API_KEY='stg-mojeek'"));
+    assert!(out.exports.contains("export STAAN_API_KEY='stg-staan'"));
     assert!(
         out.exports
             .contains("export EIGIN_RELAY_PRIMARY_KEY='stg-relay'")
@@ -171,7 +171,7 @@ fn relay_fails_without_its_required_secrets() {
     let err = render::relay::render(&r, Env::Staging, root_of(&dir))
         .unwrap_err()
         .to_string();
-    assert!(err.contains("MOJEEK_API_KEY_STAGING"), "{err}");
+    assert!(err.contains("STAAN_API_KEY_STAGING"), "{err}");
 }
 
 // --- tf-vars ---
@@ -182,7 +182,7 @@ fn tf_vars_emits_terraform_and_aws_blocks() {
     let r = resolve(root_of(&dir)).unwrap();
     let out = render::tf_vars::render(&r, Env::Staging).unwrap().exports;
 
-    assert!(out.contains("export TF_VAR_mojeek_api_key='stg-mojeek'"));
+    assert!(out.contains("export TF_VAR_staan_api_key='stg-staan'"));
     assert!(out.contains("export TF_VAR_provider_api_keys='{\"mistral\":\"stg-mistral\"}'"));
     // Falls back to the config support address when no alerts inbox is set.
     assert!(out.contains("export TF_VAR_alerts_email='alerts@example'"));
@@ -247,7 +247,7 @@ fn tf_vars_warns_about_placeholder_provider_keys() {
 fn placeholder_values_are_treated_as_unset_everywhere() {
     // Seeding .env from the template must not look like a configured repo.
     let dir = repo(Some(
-        "export DEVELOPMENT_TEAM=YOUR_TEAM_ID\nexport MOJEEK_API_KEY_STAGING=YOUR_SECRET_KEY\n",
+        "export DEVELOPMENT_TEAM=YOUR_TEAM_ID\nexport STAAN_API_KEY_STAGING=YOUR_SECRET_KEY\n",
     ));
     let r = resolve(root_of(&dir)).unwrap();
 

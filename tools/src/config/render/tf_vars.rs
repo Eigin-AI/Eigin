@@ -32,8 +32,8 @@ pub fn render(r: &Resolved, env: Env) -> Result<Rendered> {
     export(&mut out, "TF_VAR_image_tag", &derived.image_tag);
     export(
         &mut out,
-        "TF_VAR_mojeek_api_key",
-        r.secrets.optional_env("MOJEEK_API_KEY", env),
+        "TF_VAR_staan_api_key",
+        r.secrets.optional_env("STAAN_API_KEY", env),
     );
     // Optional previous keys, accepted only during a rotation.
     export(
@@ -124,7 +124,7 @@ mod tests {
         let r = resolved(&[
             ("PROVIDER_TENSORX_API_KEY_STAGING", "stg"),
             ("PROVIDER_TENSORX_API_KEY_PRODUCTION", "prod"),
-            ("MOJEEK_API_KEY_STAGING", "mojeek"),
+            ("STAAN_API_KEY_STAGING", "staan"),
         ]);
         let keys = provider_api_keys(&r, Env::Staging);
         assert_eq!(keys.get("tensorx").map(String::as_str), Some("stg"));

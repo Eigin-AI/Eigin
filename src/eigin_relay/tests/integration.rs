@@ -11,10 +11,10 @@ mod mock_client {
     use std::sync::{Arc, Mutex};
 
     use async_trait::async_trait;
-    use eigin_relay::{SearchClient, SearchOptions};
+    use eigin_relay::{SearchClient, SearchOptions, SearchResult};
 
     pub struct MockClient {
-        response: Vec<u8>,
+        response: SearchResult,
         should_error: bool,
         error_message: String,
         /// Records the options passed to the most recent `search` call, so tests
@@ -23,7 +23,7 @@ mod mock_client {
     }
 
     impl MockClient {
-        pub fn new(response: Vec<u8>) -> Self {
+        pub fn new(response: SearchResult) -> Self {
             Self {
                 response,
                 should_error: false,
@@ -43,7 +43,7 @@ mod mock_client {
 
         /// Returns a handle that can be inspected for the options passed to the
         /// most recent `search` call, alongside the client itself.
-        pub fn spy(response: Vec<u8>) -> (Self, Arc<Mutex<Option<SearchOptions>>>) {
+        pub fn spy(response: SearchResult) -> (Self, Arc<Mutex<Option<SearchOptions>>>) {
             let captured_options = Arc::new(Mutex::new(None));
             let client = Self {
                 response,
@@ -62,7 +62,7 @@ mod mock_client {
             _api_key: &str,
             _query: &str,
             options: &SearchOptions,
-        ) -> Result<Vec<u8>, eigin_relay::AppError> {
+        ) -> Result<SearchResult, eigin_relay::AppError> {
             *self.captured_options.lock().unwrap() = Some(options.clone());
             if self.should_error {
                 return Err(eigin_relay::AppError::Upstream(self.error_message.clone()));
@@ -95,7 +95,7 @@ async fn test_state_with_keys(
 
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(client),
-        mojeek_api_key: "test-api-key".to_string(),
+        staan_api_key: "test-api-key".to_string(),
         eigin_relay_keys,
         ip_rate_limiter: eigin_relay::RateLimiter::new(10, Duration::from_secs(60)),
         trusted_proxy_hops: 1,
@@ -152,7 +152,7 @@ async fn call(app: &axum::Router, uri: &str, key: Option<&str>) -> axum::respons
 
 #[tokio::test]
 async fn health_returns_ok() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -165,7 +165,7 @@ async fn health_returns_ok() {
 
 #[tokio::test]
 async fn search_without_key_returns_401() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -180,7 +180,7 @@ async fn search_without_key_returns_401() {
 
 #[tokio::test]
 async fn search_with_wrong_key_returns_401() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -198,7 +198,7 @@ async fn search_accepts_either_configured_key_and_rejects_others() {
         router(
             test_state_with_keys(
                 1000,
-                MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec()),
+                MockClient::new(Vec::new()),
                 vec!["primary-key".to_string(), "secondary-key".to_string()],
             )
             .await,
@@ -227,7 +227,7 @@ async fn search_accepts_either_configured_key_and_rejects_others() {
 
 #[tokio::test]
 async fn search_without_query_returns_400() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -241,7 +241,7 @@ async fn search_without_query_returns_400() {
 
 #[tokio::test]
 async fn search_with_empty_query_returns_400() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -252,17 +252,22 @@ async fn search_with_empty_query_returns_400() {
 
 #[tokio::test]
 async fn search_proxies_upstream_response() {
-    let mock_response = serde_json::json!({
-        "response": {
-            "title": "Test Results",
-            "results": [
-                {"title": "Result 1", "url": "https://example.com/1", "desc": "About result 1"},
-                {"title": "Result 2", "url": "https://example.com/2", "desc": "About result 2"}
-            ]
-        }
-    });
+    let results = vec![
+        eigin_relay::SearchResultItem {
+            title: "Result 1".into(),
+            url: "https://example.com/1".into(),
+            desc: "About result 1".into(),
+            snippets: vec!["Best bit of result 1".into(), "Second bit".into()],
+        },
+        eigin_relay::SearchResultItem {
+            title: "Result 2".into(),
+            url: "https://example.com/2".into(),
+            desc: "About result 2".into(),
+            snippets: vec![],
+        },
+    ];
 
-    let mock = MockClient::new(mock_response.to_string().into_bytes());
+    let mock = MockClient::new(results);
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -271,18 +276,23 @@ async fn search_proxies_upstream_response() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = to_bytes(response.into_body(), 4096).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    // The raw Mojeek envelope (head, cats, etc.) is stripped — only a small,
-    // stable result shape is returned to clients.
+    // The provider envelope is reshaped away — only a small, stable result
+    // shape (typed by the client) is returned to clients.
     let results = json["results"].as_array().unwrap();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0]["title"], "Result 1");
     assert_eq!(results[0]["url"], "https://example.com/1");
     assert_eq!(results[0]["desc"], "About result 1");
+    // Content snippets pass through in relevance order.
+    assert_eq!(results[0]["snippets"].as_array().unwrap().len(), 2);
+    assert_eq!(results[0]["snippets"][0], "Best bit of result 1");
+    // Results without snippets carry an empty array, not null.
+    assert_eq!(results[1]["snippets"].as_array().unwrap().len(), 0);
 }
 
 #[tokio::test]
 async fn search_forwards_recognised_focus_and_region() {
-    let (mock, captured) = MockClient::spy(b"{\"response\":{\"results\":[]}}".to_vec());
+    let (mock, captured) = MockClient::spy(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -301,7 +311,7 @@ async fn search_forwards_recognised_focus_and_region() {
 
 #[tokio::test]
 async fn search_drops_unrecognised_focus_and_malformed_region() {
-    let (mock, captured) = MockClient::spy(b"{\"response\":{\"results\":[]}}".to_vec());
+    let (mock, captured) = MockClient::spy(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -350,7 +360,7 @@ async fn test_state_with_ip_limit(
 
     Arc::new(eigin_relay::AppState {
         search_client: Arc::new(client),
-        mojeek_api_key: "test-api-key".to_string(),
+        staan_api_key: "test-api-key".to_string(),
         eigin_relay_keys: vec!["test-relay-key".to_string()],
         ip_rate_limiter: eigin_relay::RateLimiter::new(ip_max, Duration::from_secs(60)),
         trusted_proxy_hops: 1,
@@ -406,7 +416,7 @@ async fn call_with_xff(
 // proving new routes are covered by default.
 #[tokio::test]
 async fn blanket_layer_caps_previously_uncapped_route() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state_with_ip_limit(3, mock).await;
     let app = router(state);
 
@@ -423,7 +433,7 @@ async fn blanket_layer_caps_previously_uncapped_route() {
 // win a fresh bucket (the trusted rightmost hop decides the key).
 #[tokio::test]
 async fn rate_limit_keys_on_forwarded_client_not_proxy() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state_with_ip_limit(2, mock).await;
     let app = router(state);
 
@@ -469,7 +479,7 @@ async fn rate_limit_keys_on_forwarded_client_not_proxy() {
 // `/health` is deliberately excluded from the blanket limiter (Scaleway probes it).
 #[tokio::test]
 async fn health_is_never_rate_limited() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state_with_ip_limit(2, mock).await;
     let app = router(state);
 
@@ -480,7 +490,7 @@ async fn health_is_never_rate_limited() {
 
 #[tokio::test]
 async fn search_rate_limited_after_10_requests() {
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(1000, mock).await;
     let app = router(state);
 
@@ -504,7 +514,7 @@ async fn search_rate_limited_after_10_requests() {
 #[tokio::test]
 async fn search_pool_exhausts_after_quota_reached() {
     // Pool of 2 searches; the IP limiter is high enough not to interfere.
-    let mock = MockClient::new(b"{\"response\":{\"results\":[]}}".to_vec());
+    let mock = MockClient::new(Vec::new());
     let state = test_state(2, mock).await;
     let app = router(state);
 
@@ -529,7 +539,7 @@ async fn asset_state(
     assets: Vec<eigin_relay::assets::catalog::AssetConfig>,
     store: eigin_relay::assets::store::InMemoryAssetStore,
 ) -> Arc<eigin_relay::AppState> {
-    let mut state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let mut state = test_state(1000, mock_client::MockClient::new(Vec::new())).await;
     let inner = Arc::get_mut(&mut state).expect("unique ref");
     inner.assets_config = assets.into_iter().map(|a| (a.id.clone(), a)).collect();
     inner.asset_store = Arc::new(store);
@@ -538,7 +548,7 @@ async fn asset_state(
 
 #[tokio::test]
 async fn assets_endpoints_require_key() {
-    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let state = test_state(1000, mock_client::MockClient::new(Vec::new())).await;
     let app = router(state);
 
     assert_eq!(
@@ -553,7 +563,7 @@ async fn assets_endpoints_require_key() {
 
 #[tokio::test]
 async fn assets_list_is_empty_when_not_configured() {
-    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let state = test_state(1000, mock_client::MockClient::new(Vec::new())).await;
     let app = router(state);
 
     let response = call(&app, "/v1/assets", Some("test-relay-key")).await;
@@ -565,7 +575,7 @@ async fn assets_list_is_empty_when_not_configured() {
 
 #[tokio::test]
 async fn assets_get_unknown_id_404s() {
-    let state = test_state(1000, mock_client::MockClient::new(b"{}".to_vec())).await;
+    let state = test_state(1000, mock_client::MockClient::new(Vec::new())).await;
     let app = router(state);
 
     let response = call(&app, "/v1/assets/unknown", Some("test-relay-key")).await;

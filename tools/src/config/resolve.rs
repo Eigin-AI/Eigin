@@ -236,8 +236,8 @@ mod tests {
 
     #[test]
     fn require_names_the_missing_key() {
-        let err = secrets(&[]).require("MOJEEK_API_KEY_STAGING").unwrap_err();
-        assert!(err.to_string().contains("MOJEEK_API_KEY_STAGING"));
+        let err = secrets(&[]).require("STAAN_API_KEY_STAGING").unwrap_err();
+        assert!(err.to_string().contains("STAAN_API_KEY_STAGING"));
     }
 
     #[test]
@@ -277,7 +277,7 @@ mod tests {
             ("PROVIDER_TENSORX_API_KEY_STAGING", "a"),
             ("PROVIDER_MISTRAL_API_KEY_STAGING", "b"),
             ("PROVIDER_TENSORX_API_KEY_PRODUCTION", "c"),
-            ("MOJEEK_API_KEY_STAGING", "d"),
+            ("STAAN_API_KEY_STAGING", "d"),
         ]);
         let found = s.matching("PROVIDER_", "_API_KEY_STAGING");
         assert_eq!(
