@@ -68,13 +68,14 @@ enum BundledSkill {
     static let awareness = Skill(
         id: "awareness",
         displayName: Localized.Settings.awareness,
-        description: "Know the current time and place, find places, and estimate trips.",
+        description: "Know the current time and place, find places, estimate trips, and check weather.",
         instruction: Prompt.Skills.Awareness.instruction,
         smallInstruction: Prompt.Skills.Awareness.small,
         requiredTools: [
             GetTimeAndPlaceTool.capability,
             SearchPlacesTool.capability,
             GetDirectionsTool.capability,
+            GetWeatherTool.capability,
         ],
         alwaysActive: true
     )

@@ -5,6 +5,7 @@ enum SystemToolKit: ToolKit {
         GetTimeAndPlaceTool.capability,
         SearchPlacesTool.capability,
         GetDirectionsTool.capability,
+        GetWeatherTool.capability,
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
@@ -12,6 +13,7 @@ enum SystemToolKit: ToolKit {
             GetTimeAndPlaceTool(canPromptUser: context.canPromptUser),
             SearchPlacesTool(),
             GetDirectionsTool(),
+            GetWeatherTool(canPromptUser: context.canPromptUser),
         ]
     }
 }
