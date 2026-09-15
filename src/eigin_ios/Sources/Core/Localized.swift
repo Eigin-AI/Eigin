@@ -5321,6 +5321,11 @@ enum Localized {
             static var timeAndPlace: String {
                 Localized.get("tools.system.timeAndPlace")
             }
+
+            /// Display name for the get-weather system tool
+            static var weather: String {
+                Localized.get("tools.system.weather")
+            }
         }
 
         enum Trigger {

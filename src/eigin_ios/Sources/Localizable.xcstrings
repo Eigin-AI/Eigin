@@ -15932,6 +15932,23 @@
         }
       }
     },
+    "tools.system.weather": {
+      "comment": "Display name for the get-weather system tool",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent vejr"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Weather"
+          }
+        }
+      }
+    },
     "tools.trigger.backgroundReview": {
       "comment": "A button label that triggers a background review.",
       "localizations": {
