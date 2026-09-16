@@ -110,6 +110,83 @@ struct IntentRelevanceTests {
         )
     }
 
+    // MARK: - Asymmetric bell shape
+
+    @Test func scheduleDecaysFastAfterFiring() {
+        let schedule = IntentSchedule(content: "log sleep", frequency: .daily, hour: 9)
+        // Equal 6h distance either side of the 09:00 slot.
+        let before = snapshot(schedules: [schedule], updatedAt: date(2026, 6, 10))
+        let after = snapshot(schedules: [schedule], updatedAt: date(2026, 6, 10))
+
+        #expect(
+            IntentRelevance.relevance(for: before, at: date(2026, 6, 11, 3))
+                > IntentRelevance.relevance(for: after, at: date(2026, 6, 10, 15))
+        )
+        // Total relevance 6h after the slot is under half of the same 6h
+        // distance before it — the trail decays much faster than the lead.
+        // (The symmetric falloff it replaces scores the same on both sides.)
+        #expect(
+            IntentRelevance.relevance(for: after, at: date(2026, 6, 10, 15))
+                < 0.5 * IntentRelevance.relevance(for: before, at: date(2026, 6, 11, 3))
+        )
+    }
+
+    @Test func eventHasTailAfterPassing() {
+        let now = date(2026, 6, 10)
+        let recent = snapshot(
+            events: [IntentEvent(content: "birthday", at: date(2026, 6, 9))],
+            updatedAt: now
+        )
+        let old = snapshot(
+            events: [IntentEvent(content: "birthday", at: date(2026, 6, 6))],
+            updatedAt: now
+        )
+
+        // Past events keep real pull for a while, then fade.
+        #expect(IntentRelevance.relevance(for: recent, at: now) > 0.5)
+        #expect(
+            IntentRelevance.relevance(for: recent, at: now)
+                > IntentRelevance.relevance(for: old, at: now)
+        )
+    }
+
+    @Test func bellIsAsymmetricApproachOutlastsRecede() {
+        // Same distance either side of the peak: the approaching side scores higher.
+        #expect(
+            IntentRelevance.timeBell(
+                offset: 3600, lead: IntentRelevance.scheduleLead,
+                trail: IntentRelevance.scheduleTrail
+            )
+                > IntentRelevance.timeBell(
+                    offset: -3600, lead: IntentRelevance.scheduleLead,
+                    trail: IntentRelevance.scheduleTrail
+                )
+        )
+        #expect(
+            IntentRelevance.timeBell(
+                offset: 86400, lead: IntentRelevance.eventLead, trail: IntentRelevance.eventTrail
+            )
+                > IntentRelevance.timeBell(
+                    offset: -86400, lead: IntentRelevance.eventLead,
+                    trail: IntentRelevance.eventTrail
+                )
+        )
+    }
+
+    @Test func eventPeakIsMaximum() {
+        let event = IntentEvent(content: "flight", at: date(2026, 6, 10, 12))
+        let intent = snapshot(events: [event], updatedAt: date(2026, 6, 10, 12))
+
+        #expect(
+            IntentRelevance.relevance(for: intent, at: date(2026, 6, 10, 12))
+                >= IntentRelevance.relevance(for: intent, at: date(2026, 6, 10, 11))
+        )
+        #expect(
+            IntentRelevance.relevance(for: intent, at: date(2026, 6, 10, 12))
+                >= IntentRelevance.relevance(for: intent, at: date(2026, 6, 10, 13))
+        )
+    }
+
     @Test func openTasksOutrankCompletedAllElseEqual() {
         let now = date(2026, 6, 10)
         let updatedAt = date(2026, 6, 9)
