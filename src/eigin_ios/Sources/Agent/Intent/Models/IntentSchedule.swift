@@ -3,9 +3,8 @@ import Foundation
 /// A recurring temporal trigger attached to an ``Intent``.
 ///
 /// Schedules express routines — "log sleep every morning", "garden on weekends",
-/// "pay rent on the 1st". As an occurrence approaches (and just after it passes),
-/// the intent's relevance rises (see ``IntentRelevance``) so the agent raises it
-/// at the right moment.
+/// "pay rent on the 1st". As an occurrence approaches, the intent's relevance
+/// rises so the agent raises the intent at the right moment (see ``IntentRelevance``).
 struct IntentSchedule: Codable, Identifiable, Hashable, Sendable {
     var id: UUID
     var content: String
