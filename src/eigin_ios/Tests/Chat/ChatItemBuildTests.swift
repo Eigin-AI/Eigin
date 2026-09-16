@@ -107,3 +107,138 @@ struct ChatItemBuildTests {
         #expect(groups.count == 2)
     }
 }
+
+@Suite("ChatItem.buildItems live tool status overlay")
+struct ChatItemStatusOverlayTests {
+    // MARK: - Helpers
+
+    private func toolCall(id: String, name: String = "test_tool") -> ToolCall {
+        ToolCall(id: id, type: "function", function: .init(name: name, arguments: "{}"))
+    }
+
+    /// Committed assistant message carrying a tool call, with no tool result
+    /// message yet — the cloud path's state while the tool runs.
+    private func committedCallMessages(id: String) -> [ChatMessage] {
+        [ChatMessage(role: "assistant", toolCalls: [toolCall(id: id)], localID: "1")]
+    }
+
+    private func firstTool(
+        from items: [ChatItem]
+    ) -> ToolCallInfo? {
+        for item in items {
+            if case .toolGroup(_, let tools) = item, let first = tools.first {
+                return first
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Tests
+
+    @Test("Committed tool call overlays live executing status")
+    func executingOverlay() {
+        let items = ChatItem.buildItems(
+            from: committedCallMessages(id: "a"),
+            toolEvents: [ToolEvent(
+                id: "a",
+                toolName: "test_tool",
+                status: .executing,
+                arguments: "{}"
+            )],
+            pendingOptions: nil,
+            chatError: nil
+        )
+        #expect(firstTool(from: items)?.status == .executing)
+    }
+
+    @Test("Committed tool call overlays live awaiting-permission status")
+    func awaitingPermissionOverlay() {
+        let items = ChatItem.buildItems(
+            from: committedCallMessages(id: "a"),
+            toolEvents: [ToolEvent(
+                id: "a",
+                toolName: "test_tool",
+                status: .awaitingPermission,
+                arguments: "{}"
+            )],
+            pendingOptions: nil,
+            chatError: nil
+        )
+        #expect(firstTool(from: items)?.status == .awaitingPermission)
+    }
+
+    @Test("Committed tool call without a live event stays completed")
+    func noEventDefaultsToCompleted() {
+        let items = ChatItem.buildItems(
+            from: committedCallMessages(id: "a"),
+            toolEvents: [],
+            pendingOptions: nil,
+            chatError: nil
+        )
+        #expect(firstTool(from: items)?.status == .completed)
+    }
+
+    @Test("Completed event with committed result shows completed with output")
+    func completedEventWithResult() {
+        let messages = committedCallMessages(id: "a") + [
+            ChatMessage(role: "tool", content: "search results", toolCallID: "a", localID: "r1"),
+        ]
+        let items = ChatItem.buildItems(
+            from: messages,
+            toolEvents: [ToolEvent(
+                id: "a",
+                toolName: "test_tool",
+                status: .completed,
+                arguments: "{}"
+            )],
+            pendingOptions: nil,
+            chatError: nil
+        )
+        let tool = firstTool(from: items)
+        #expect(tool?.status == .completed)
+        #expect(tool?.result == "search results")
+    }
+
+    @Test("Uncommitted tool event still renders from its live status (local path)")
+    func uncommittedEventKeepsLiveStatus() {
+        // Local path commits only after execution, so the call isn't in a
+        // committed assistant message while the event is live.
+        let messages: [ChatMessage] = []
+        let items = ChatItem.buildItems(
+            from: messages,
+            toolEvents: [ToolEvent(
+                id: "a",
+                toolName: "test_tool",
+                status: .awaitingPermission,
+                arguments: "{}"
+            )],
+            pendingOptions: nil,
+            chatError: nil
+        )
+        #expect(firstTool(from: items)?.status == .awaitingPermission)
+    }
+
+    @Test("Final statuses don't overlay; committed row matches persisted rendering")
+    func finalStatusesDoNotOverlay() {
+        let messages = committedCallMessages(id: "a") + [
+            ChatMessage(role: "tool", content: "denied", toolCallID: "a", localID: "r1"),
+        ]
+        let finalStatuses: [ToolEventStatus] = [.denied, .error("boom")]
+        for status in finalStatuses {
+            let items = ChatItem.buildItems(
+                from: messages,
+                toolEvents: [ToolEvent(
+                    id: "a",
+                    toolName: "test_tool",
+                    status: status,
+                    arguments: "{}"
+                )],
+                pendingOptions: nil,
+                chatError: nil
+            )
+            // Same rendering mid-turn as after settle() clears the events.
+            #expect(firstTool(from: items)?.status == .completed)
+            #expect(firstTool(from: items)?.result == "denied")
+        }
+    }
+}

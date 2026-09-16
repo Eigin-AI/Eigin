@@ -265,6 +265,118 @@ struct AgenticChatLoopTests {
         #expect(produced.count == 4)
     }
 
+    @Test @MainActor func executingEventIsLiveBeforeBeforeToolCallSuspends() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+        let fakeToolExecutor = FakeToolExecutor()
+
+        let call = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+
+        fakeChatService.enqueueEventStream([
+            .toolCall(call),
+            .finished(.toolCalls),
+        ])
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Done"),
+            .finished(.stop),
+        ])
+        fakeToolExecutor.setResult(for: "read_core", content: "{\"result\":\"ok\"}")
+
+        // The assistant message commits before tool execution, so a live
+        // `.executing` event must exist already when `beforeToolCall` (which
+        // can take seconds) suspends — otherwise the committed row reads as
+        // done with no output (issue #121).
+        var eventStatusAtSuspension: ToolEventStatus?
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.beforeToolCall = { [weak loop] _ in
+            eventStatusAtSuspension = loop?.toolEvents.first(where: { $0.id == "call_1" })?.status
+        }
+
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Read my identity")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: fakeToolExecutor
+        )
+
+        #expect(eventStatusAtSuspension == .executing)
+    }
+
+    /// Tool executor with an `onExecute` hook, to observe live loop state
+    /// mid-execution. `FakeToolExecutor` is final, so this is test-local.
+    private final class HookToolExecutor: ToolExecutor, @unchecked Sendable {
+        var onExecute: (@MainActor () -> Void)?
+
+        @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
+            onExecute?()
+            return ToolResult(
+                toolCallID: toolCall.id,
+                content: "{\"result\":\"OK\"}",
+                isError: false
+            )
+        }
+    }
+
+    @Test @MainActor func grantingPermissionResumesExecutingStatus() async throws {
+        let (agent, provider, _container) = try makeTestContext()
+        _ = _container
+        let fakeChatService = FakeChatService()
+
+        let call = ToolCall(
+            id: "call_1", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+
+        fakeChatService.enqueueEventStream([
+            .toolCall(call),
+            .finished(.toolCalls),
+        ])
+        fakeChatService.enqueueEventStream([
+            .contentDelta("Done"),
+            .finished(.stop),
+        ])
+
+        // read_core is `.ask` and prompting is allowed, so the event parks
+        // in `.awaitingPermission` until the user resolves the prompt.
+        let policy = AgentPermissionPolicy(
+            builtInGrants: ["read_core": .ask],
+            discoveredGrants: [:],
+            chatGrants: [],
+            canPromptUser: true
+        )
+        let executor = HookToolExecutor()
+        let loop = AgenticChatLoop(isBootstrap: false, permissionPolicy: policy)
+        var statusDuringExecution: ToolEventStatus?
+        executor.onExecute = { [weak loop] in
+            // Issue #121 follow-up: after the grant, the row must say
+            // ".executing" again, not stay parked on permission.
+            statusDuringExecution = loop?.toolEvents.first(where: { $0.id == "call_1" })?.status
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            loop.resolvePermission(.allowOnce)
+        }
+
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Read my identity")],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: fakeChatService,
+            toolExecutor: executor
+        )
+
+        #expect(statusDuringExecution == .executing)
+        #expect(produced.count == 3)
+    }
+
     /// A mid-round prose message's feed row ("msg-<localID>") must match the id the live
     /// streaming row used while that prose was still displaying (`streamingItemID`).
     /// If they diverge, the feed sees a new row identity when the round seals and
