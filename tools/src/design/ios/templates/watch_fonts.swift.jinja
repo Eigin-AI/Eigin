@@ -1,0 +1,24 @@
+{{ header }}import CoreText
+import Foundation
+
+/// Stages that bundle only the fonts they render (the watch) register the
+/// same way iOS does: names generated from the tokens, any file missing from
+/// the bundle skipped, and SwiftUI falling back to the system font.
+enum WatchFonts {
+{% if info %}
+    public static let fileNames: [String] = [
+{% for name in info.file_names %}
+        "{{ name }}",
+{% endfor %}
+    ]
+
+    static func register() {
+        for name in fileNames {
+            guard let url = Bundle.main.url(forResource: name, withExtension: nil) else { continue }
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
+{% else %}
+    static func register() {}
+{% endif %}
+}

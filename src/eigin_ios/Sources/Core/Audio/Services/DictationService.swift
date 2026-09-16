@@ -30,16 +30,6 @@ enum AppDictationState: Equatable {
     }
 }
 
-/// Both result types share `text` + `isFinal` but `text` is not on the
-/// protocol. This small conformance lets us iterate results generically.
-private protocol TranscriberResult {
-    var text: AttributedString { get }
-    var isFinal: Bool { get }
-}
-
-extension SpeechTranscriber.Result: TranscriberResult {}
-extension DictationTranscriber.Result: TranscriberResult {}
-
 /// Default implementation using SpeechAnalyzer with on-device recognition.
 /// Prefers ``SpeechTranscriber`` (Apple Intelligence model) on capable devices,
 /// falls back to ``DictationTranscriber`` on older hardware.
@@ -545,65 +535,6 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         @unknown default:
             break
         }
-    }
-}
-
-// MARK: - Buffer Converter
-
-/// Converts audio buffers between formats. Matches the pattern from
-/// Apple's SpeechAnalyzer sample code.
-private final class BufferConverter: @unchecked Sendable {
-    private var converter: AVAudioConverter?
-    private var currentInputFormat: AVAudioFormat?
-
-    func convert(_ buffer: AVAudioPCMBuffer, to outputFormat: AVAudioFormat) throws
-        -> AVAudioPCMBuffer
-    {
-        let inputFormat = buffer.format
-
-        // Recreate the converter if the input format changed (e.g. route change).
-        if converter == nil || currentInputFormat != inputFormat {
-            converter = AVAudioConverter(from: inputFormat, to: outputFormat)
-            currentInputFormat = inputFormat
-        }
-
-        guard let converter else {
-            throw NSError(
-                domain: "DictationService", code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Could not create audio converter"]
-            )
-        }
-
-        let ratio = outputFormat.sampleRate / inputFormat.sampleRate
-        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio)
-        guard capacity > 0,
-              let output = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: capacity)
-        else {
-            throw NSError(
-                domain: "DictationService", code: -2,
-                userInfo: [NSLocalizedDescriptionKey: "Could not create output buffer"]
-            )
-        }
-
-        // Reset converter state before each conversion — without this,
-        // the .endOfStream from a previous call permanently marks the
-        // converter as "done" and subsequent conversions return 0 frames.
-        converter.reset()
-
-        var error: NSError?
-        nonisolated(unsafe) var hasProvided = false
-        converter.convert(to: output, error: &error) { _, outStatus in
-            if hasProvided {
-                outStatus.pointee = .endOfStream
-                return nil
-            }
-            hasProvided = true
-            outStatus.pointee = .haveData
-            return buffer
-        }
-
-        if let error { throw error }
-        return output
     }
 }
 

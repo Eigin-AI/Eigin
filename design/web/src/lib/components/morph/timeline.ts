@@ -19,8 +19,8 @@ export interface Pose {
 
 export const INITIAL_HOLD = 0.6;
 export const ENTRY_DURATION = 0.4;
-const BREATH_PERIOD = 4.6;
-const BREATH_SCALE_AMPLITUDE = 0.022;
+export const BREATH_PERIOD = 4.6;
+export const BREATH_SCALE_AMPLITUDE = 0.022;
 
 /** Travel/hold recipes; mixed weights give bursts punctuated by settles. */
 const rhythms = [
@@ -39,8 +39,16 @@ export class MorphTimeline {
   private readonly sequence: number[];
   /** Travel duration per segment. */
   private readonly segments: number[];
+  /** How far the breath swells, and how long one cycle takes. */
+  private readonly breathScaleAmplitude: number;
+  private readonly breathPeriod: number;
 
-  constructor(seed = 0x5eeda11c) {
+  constructor(
+    seed = 0x5eeda11c,
+    options: { breathScaleAmplitude?: number; breathPeriod?: number } = {},
+  ) {
+    this.breathScaleAmplitude = options.breathScaleAmplitude ?? BREATH_SCALE_AMPLITUDE;
+    this.breathPeriod = options.breathPeriod ?? BREATH_PERIOD;
     /* xorshift on a 64-bit state. Kept in
        BigInt because the shifts overflow a double. */
     let state = (BigInt(Math.floor(seed)) + 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
@@ -110,9 +118,11 @@ export class MorphTimeline {
     return entryEasing.at(t / ENTRY_DURATION);
   }
 
-  /** The breath: a barely visible swell, scale only, never a drift. */
+  /** The breath: a bare swell, scale only, never a drift. */
   breath(t: number): number {
-    return 1 + BREATH_SCALE_AMPLITUDE * Math.sin((t / BREATH_PERIOD) * 2 * Math.PI + Math.PI / 2);
+    return (
+      1 + this.breathScaleAmplitude * Math.sin((t / this.breathPeriod) * 2 * Math.PI + Math.PI / 2)
+    );
   }
 }
 

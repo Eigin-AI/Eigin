@@ -22,6 +22,7 @@ Top-level folders are **domain verticals**. Each domain owns its models, service
 ## Prerequisites
 
 - Xcode (with `xcode-select -s /Applications/Xcode.app/Contents/Developer`)
+- The watchOS simulator platform (`xcodebuild -downloadPlatform watchOS`) for the embedded watch app
 - XcodeGen (`brew install xcodegen`)
 - SwiftFormat (`brew install swiftformat`)
 - Ruby 3.3.0 via [rbenv](https://github.com/rbenv/rbenv) (`brew install rbenv`),

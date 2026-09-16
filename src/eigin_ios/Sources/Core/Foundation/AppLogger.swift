@@ -127,6 +127,7 @@ enum AppLogger {
         case network
         case onboarding
         case routing
+        case watch
     }
 
     static func debug(_ message: LogMessage, category: Category = .general) {

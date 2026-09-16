@@ -35,6 +35,10 @@ const TEMPLATES: &[(&str, &str)] = &[
         include_str!("templates/font_registration.swift.jinja"),
     ),
     (
+        "watch_fonts",
+        include_str!("templates/watch_fonts.swift.jinja"),
+    ),
+    (
         "resolved_colors",
         include_str!("templates/resolved_colors.swift.jinja"),
     ),
@@ -130,6 +134,17 @@ pub fn generate(repo_root: &str, tokens: &Value, fonts: Option<&InstalledFonts>)
         minijinja::context!(header => GENERATED_HEADER, info => info),
         &output_dir,
         "FontRegistration.swift",
+    )?;
+
+    // The watch registers its fonts through the same generated-names-and-
+    // skip-missing pattern; it renders only the body face.
+    let watch_fonts = model::build_watch_fonts(fonts, &scale);
+    render_and_write(
+        &env,
+        "watch_fonts",
+        minijinja::context!(header => GENERATED_HEADER, info => watch_fonts),
+        &output_dir,
+        "WatchFonts.swift",
     )?;
 
     // ResolvedColors

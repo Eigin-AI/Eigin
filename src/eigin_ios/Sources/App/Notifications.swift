@@ -14,12 +14,23 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         self.modelContainer = modelContainer
     }
 
-    /// Called when user taps a notification — signal pending initiative to the app.
+    /// Called when user taps a notification — signal pending navigation to the app.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
+
+        // A watch reply routes to the watch chat it came from.
+        if let chatIDString = userInfo["chatID"] as? String,
+           let chatID = UUID(uuidString: chatIDString)
+        {
+            AppLogger.info(
+                "Notification tapped, chat: \(public: chatID)", category: .watch
+            )
+            PendingDestination.set(.chat(chatID))
+            return
+        }
 
         guard let requestIDString = userInfo["initiativeRequestID"] as? String,
               let requestID = UUID(uuidString: requestIDString)

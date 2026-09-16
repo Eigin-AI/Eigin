@@ -10,6 +10,7 @@ enum InteractionMode: String {
     case text
     case dictation
     case liveCall
+    case headless
 
     /// Full behavioural guidance for this mode — emitted on first turn of a
     /// session, or whenever the mode changes.
@@ -18,6 +19,7 @@ enum InteractionMode: String {
         case .liveCall: Prompt.Hints.InteractionMode.liveCall
         case .dictation: Prompt.Hints.InteractionMode.dictation
         case .text: Prompt.Hints.InteractionMode.text
+        case .headless: Prompt.Hints.InteractionMode.headless
         }
         return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -29,6 +31,7 @@ enum InteractionMode: String {
         case .liveCall: Prompt.Hints.InteractionMode.liveCallShort
         case .dictation: Prompt.Hints.InteractionMode.dictationShort
         case .text: Prompt.Hints.InteractionMode.textShort
+        case .headless: Prompt.Hints.InteractionMode.headlessShort
         }
         return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }

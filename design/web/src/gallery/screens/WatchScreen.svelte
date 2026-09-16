@@ -1,47 +1,43 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { Button, MorphBlob, MorphIntensity, StreamThrottler, driveFrames } from "@lib";
+  import { MorphBlob, MorphIntensity, driveFrames } from "@lib";
   import { useStageControls } from "@gallery/screens/stageControls.svelte";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
 
   /**
-   * What the wrist shows during a quick command. The phone does the thinking,
-   * so these four are everything the watch ever says.
+   * The watch companion. Push-to-talk: the wearer presses anywhere and
+   * holds, talks, and releasing sends. Fire-and-forget — the phone answers
+   * by notification, so these three states are everything the watch ever
+   * says. There is no reply screen: nothing on the wrist can hold the
+   * display through a turn (Return to Clock), so the notification carries
+   * the words and completion is a haptic.
    */
-  type Phase = "ready" | "listening" | "thinking" | "answered";
+  type Phase = "ready" | "listening" | "sending";
 
   let phase = $state<Phase>("ready");
-  let spoken = $state("");
-  let intensity = $state(MorphIntensity.none);
-  /* Breathing is the blob's own, so it eases into the wobble rather than
-     cutting out the moment the agent starts thinking. */
-  let breath = $state(MorphIntensity.none);
-  /* The answer arrives a word at a time; nothing to act on until it lands. */
-  let streaming = $state(false);
+  /* The blob holds a still circle and pulses — per-frame shape morphing
+     does not read at wrist size, but a scale pulse does. The pulse runs
+     only while listening; the model ramps it in and out, so it never
+     snaps on or off. */
+  let pulse = $state(MorphIntensity.none);
 
-  const reply = "Added milk to your personal shopping list.";
-
-  const throttler = new StreamThrottler();
-  let stopFrames: (() => void) | undefined;
   let timers: ReturnType<typeof setTimeout>[] = [];
+  let stopFrames: (() => void) | undefined;
   let rampUntil = 0;
 
   const labels: Record<Phase, string> = {
     ready: "Ready",
     listening: "Listening",
-    thinking: "Thinking",
-    answered: "Answered",
+    sending: "Sending",
   };
-  const options = ["Ready", "Listening", "Thinking", "Answered"] as const;
+  const options = ["Ready", "Listening", "Sending"] as const;
   let chosen = $state("Ready");
 
-  /* What the blob is doing, and what the wearer can do about it. Only the
-     answer has buttons; every other state is the blob and one line under it. */
+  /* What the blob is doing, and what the wearer should do about it. */
   const prompt: Record<Phase, string> = {
-    ready: "Tap to ask",
-    listening: "Tap to send",
-    thinking: "Thinking…",
-    answered: "",
+    ready: "Push to talk",
+    listening: "Release to send",
+    sending: "Sending…",
   };
 
   function after(ms: number, run: () => void) {
@@ -56,12 +52,8 @@
   function runFrames() {
     stopFrames?.();
     stopFrames = driveFrames(
-      (now) => {
-        throttler.tick(now);
-        spoken = throttler.displayedText;
-        streaming = throttler.isRunning;
-      },
-      () => performance.now() / 1000 < rampUntil || throttler.isRunning,
+      () => {},
+      () => performance.now() / 1000 < rampUntil,
     );
   }
 
@@ -69,49 +61,35 @@
     const now = performance.now() / 1000;
     phase = next;
     chosen = labels[next];
-    /* The blob wobbles only while the agent is working, and breathes while it
-       waits for you — both ramp, so one becomes the other. */
-    intensity = intensity.transitionedTo(next === "thinking", now);
-    breath = breath.transitionedTo(next === "listening", now);
-    rampUntil = now + 0.5;
+    /* The pulse only runs while listening, ramped — one blob, still or
+       breathing, never morphing. */
+    pulse = pulse.transitionedTo(next === "listening", now);
+    rampUntil = now + 0.6;
     runFrames();
   }
 
-  function showAnswer() {
-    setPhase("answered");
-    streaming = true;
-    throttler.start();
-    throttler.feed(reply);
-    throttler.finish();
-    runFrames();
-  }
-
-  /** Tapping the blob carries the command forward a step. */
-  function advance() {
-    clearTimers();
-    if (phase === "ready") {
-      setPhase("listening");
-    } else if (phase === "listening") {
-      setPhase("thinking");
-      after(1800, showAnswer);
-    }
-  }
-
-  function restart() {
-    clearTimers();
-    throttler.reset();
-    spoken = "";
-    streaming = false;
+  /** Finishing the turn: completion is silent, and the wrist is ready again. */
+  function settle() {
     setPhase("ready");
+  }
+
+  /** Pressing anywhere starts the recording. */
+  function pressBegan() {
+    if (phase !== "ready") return;
+    setPhase("listening");
+  }
+
+  /** Releasing sends. A press with nothing said discards quietly. */
+  function pressEnded() {
+    if (phase !== "listening") return;
+    setPhase("sending");
+    after(2000, settle);
   }
 
   function jump(next: Phase) {
     clearTimers();
-    throttler.reset();
-    spoken = "";
-    streaming = false;
     setPhase(next);
-    if (next === "answered") showAnswer();
+    if (next === "sending") after(2000, settle);
   }
 
   $effect(() => {
@@ -132,25 +110,32 @@
 {/snippet}
 
 <!--
-  The watch companion. Everything before the answer is the blob and a line
-  under it, tapped anywhere to carry on; the answer replaces the blob with the
-  words and the only two things worth doing with them.
+  The complication on the watch face is a plain launcher — it opens the app;
+  it cannot hold a press, so it never starts a recording.
 -->
 <div class="watch">
-  {#if phase === "answered"}
-    <p class="reply">{spoken}</p>
-    <div class="actions" class:pending={streaming}>
-      <Button label="Speak" variant="primary" size="extraSmall" onclick={() => {}} />
-      <Button label="Ask again" variant="secondary" size="extraSmall" onclick={restart} />
-    </div>
-  {:else}
-    <button class="stage" type="button" onclick={advance} aria-label={prompt[phase]}>
-      <span class="blob">
-        <MorphBlob {intensity} {breath} tempo={0.6} entryDelay={0.2} />
-      </span>
-      <span class="prompt t-body">{prompt[phase]}</span>
-    </button>
-  {/if}
+  <button
+    class="stage"
+    type="button"
+    onpointerdown={pressBegan}
+    onpointerup={pressEnded}
+    onpointerleave={pressEnded}
+    aria-label={prompt[phase]}
+  >
+    <!-- Everything stays mounted and animates in place — no layout shift.
+         The blob scales away while the question is in flight; the text
+         follows it: in right after the blob lands, out after it leaves. -->
+    <span class="blob" class:gone={phase === "sending"}>
+      <MorphBlob
+        intensity={MorphIntensity.none}
+        breath={pulse}
+        breathPulse={0.06}
+        breathPeriod={3}
+        entryDelay={0.2}
+      />
+    </span>
+    <span class="prompt t-body" class:gone={phase === "sending"}>{prompt[phase]}</span>
+  </button>
 </div>
 
 <style>
@@ -164,7 +149,7 @@
   }
 
   /* The blob is the screen: centred, with its one line beneath it. The whole
-     area is the target, so the wearer can tap without aiming. */
+     area is the target — hold anywhere, no aiming. */
   .stage {
     appearance: none;
     border: none;
@@ -179,6 +164,8 @@
     align-items: center;
     justify-content: center;
     gap: var(--spacing-n12);
+    user-select: none;
+    touch-action: none;
   }
 
   .blob {
@@ -187,38 +174,25 @@
     height: 88px;
     display: grid;
     place-items: center;
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s ease;
+  }
+
+  .blob.gone {
+    opacity: 0;
+    transform: scale(0.1);
   }
 
   .prompt {
     color: var(--color-text-standard-muted);
+    /* The text trails the blob: in after it lands, out after it leaves. */
+    opacity: 1;
+    transition: opacity 0.2s ease 0.35s;
   }
 
-  /* The answer is the content, so it takes the room the blob had. */
-  .reply {
-    flex: 1;
-    font-size: 15px;
-    line-height: 1.3;
-    color: var(--color-text-standard-base);
-    margin: 0;
-  }
-
-  .actions {
-    display: grid;
-    gap: var(--spacing-n8);
-    padding-bottom: var(--spacing-n4);
-    transition: opacity var(--duration-slow, 0.4s) ease;
-  }
-
-  /* Nothing to act on until the answer has finished arriving. */
-  .actions.pending {
+  .prompt.gone {
     opacity: 0;
-    pointer-events: none;
-  }
-
-  /* Button heights are phone-scaled — the smallest is the only one that
-     leaves the answer any room on a 224pt screen. Both span the width, so the
-     pair reads as one stack rather than two tabs. */
-  .actions :global(.eigin-btn) {
-    width: 100%;
+    transition: opacity 0.2s ease 0.3s;
   }
 </style>

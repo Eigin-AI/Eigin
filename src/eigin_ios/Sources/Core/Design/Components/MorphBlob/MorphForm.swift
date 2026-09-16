@@ -112,6 +112,71 @@ struct MorphForm: Equatable {
         ),
     ]
 
+    /// A deeper set for small stages: the same hand-drawn language with the
+    /// volume up — strong pulls, real dents and silhouette shifts, so the
+    /// morphing reads at a glance at wrist size instead of whispering. The
+    /// resting circle stays first: it is the pull target.
+    static let bold: [MorphForm] = [
+        // The resting circle.
+        MorphForm(path: FormPath.ellipse(), size: CGSize(width: 32, height: 32)),
+        // Pulled hard to the right.
+        MorphForm(
+            path: FormPath.blob([(lobes: 1, amount: 0.30, phase: .zero)]),
+            size: CGSize(width: 38, height: 38)
+        ),
+        // Pulled hard to the upper left.
+        MorphForm(
+            path: FormPath.blob([(lobes: 1, amount: 0.30, phase: .degrees(200))]),
+            size: CGSize(width: 38, height: 38)
+        ),
+        // A strong tilted oval.
+        MorphForm(
+            path: FormPath.blob([(lobes: 2, amount: 0.28, phase: .degrees(30))]),
+            size: CGSize(width: 37, height: 37)
+        ),
+        // A trefoil wobble.
+        MorphForm(
+            path: FormPath.blob([(lobes: 3, amount: 0.20, phase: .degrees(90))]),
+            size: CGSize(width: 34, height: 34)
+        ),
+        // Pulled lower-left with a dent opposite.
+        MorphForm(
+            path: FormPath.blob([
+                (lobes: 1, amount: 0.34, phase: .degrees(120)),
+                (lobes: 3, amount: 0.10, phase: .zero),
+            ]),
+            size: CGSize(width: 38, height: 38)
+        ),
+        // A rounded square — a real silhouette shift.
+        MorphForm(
+            path: FormPath.polygon(sides: 4, corner: 0.4, rotation: .degrees(20)),
+            size: CGSize(width: 36, height: 36)
+        ),
+        // A rounded triangle — the most severe shape change in the set.
+        MorphForm(
+            path: FormPath.polygon(sides: 3, radii: [1, 1.1, 1], corner: 0.35, rotation: .zero),
+            size: CGSize(width: 32, height: 32)
+        ),
+        // A capsule — long and thin against everything round.
+        MorphForm(
+            path: FormPath.stadium(width: 40, height: 24),
+            size: CGSize(width: 40, height: 24)
+        ),
+        // Stretchy and wobbly.
+        MorphForm(
+            path: FormPath.blob([
+                (lobes: 2, amount: 0.32, phase: .degrees(70)),
+                (lobes: 5, amount: 0.06, phase: .zero),
+            ]),
+            size: CGSize(width: 36, height: 36)
+        ),
+        // A caught breath — small, for scale contrast.
+        MorphForm(
+            path: FormPath.blob([(lobes: 1, amount: 0.22, phase: .degrees(300))]),
+            size: CGSize(width: 26, height: 26)
+        ),
+    ]
+
     /// Geometry helpers for the built-in forms.
     enum FormPath {
         /// A deformed circle: r(θ) = 1 + Σ amount·cos(lobes·θ + phase).
@@ -266,10 +331,12 @@ struct MorphForm: Equatable {
             for step in 1 ... curveSteps {
                 let t = Double(step) / Double(curveSteps)
                 let m = 1 - t
-                outline.append(CGPoint(
-                    x: m * m * p0.x + 2 * m * t * control.x + t * t * end.x,
-                    y: m * m * p0.y + 2 * m * t * control.y + t * t * end.y
-                ))
+                let mm = m * m
+                let mt = m * t
+                let tt = t * t
+                let x = mm * p0.x + 2 * mt * control.x + tt * end.x
+                let y = mm * p0.y + 2 * mt * control.y + tt * end.y
+                outline.append(CGPoint(x: x, y: y))
             }
             current = end
         }
@@ -279,12 +346,12 @@ struct MorphForm: Equatable {
             for step in 1 ... curveSteps {
                 let t = Double(step) / Double(curveSteps)
                 let m = 1 - t
-                outline.append(CGPoint(
-                    x: m * m * m * p0.x + 3 * m * m * t * c1.x + 3 * m * t * t * c2
-                        .x + t * t * t * end.x,
-                    y: m * m * m * p0.y + 3 * m * m * t * c1.y + 3 * m * t * t * c2
-                        .y + t * t * t * end.y
-                ))
+                let mm = m * m
+                let mt = m * t
+                let tt = t * t
+                let x = mm * m * p0.x + 3 * mm * t * c1.x + 3 * mt * t * c2.x + tt * t * end.x
+                let y = mm * m * p0.y + 3 * mm * t * c1.y + 3 * mt * t * c2.y + tt * t * end.y
+                outline.append(CGPoint(x: x, y: y))
             }
             current = end
         }

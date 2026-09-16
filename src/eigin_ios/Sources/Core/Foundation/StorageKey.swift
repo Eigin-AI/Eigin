@@ -20,4 +20,8 @@ enum StorageKey {
     static let assetDownloadsInProgress = "assetDownloadsInProgress"
     /// Whether the user has declined to download the local Gemma model.
     static let gemmaDeclined = "coreml-gemma-declined"
+    /// The chat watch-triggered questions continue, resolved by `WatchChat`.
+    /// Lives in `UserDefaults` rather than the SwiftData schema, so the watch
+    /// context carries across taps without a migration.
+    static let watchChat = "watchChat"
 }
