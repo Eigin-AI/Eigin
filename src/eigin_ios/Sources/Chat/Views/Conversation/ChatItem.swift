@@ -26,17 +26,42 @@ enum ChatItem: Identifiable {
 }
 
 extension ChatItem {
-    /// Builds the canonical list of chat items from committed messages,
-    /// in-progress tool events, streaming state, and an optional error.
+    /// Builds feed items from the live chat loop state.
     @MainActor
     static func buildItems(
         from messages: [ChatMessage],
         chatLoop: AgenticChatLoop,
         chatError: ConnectionError?
     ) -> [ChatItem] {
+        buildItems(
+            from: messages,
+            toolEvents: chatLoop.toolEvents,
+            pendingOptions: chatLoop.pendingOptions,
+            chatError: chatError
+        )
+    }
+
+    /// Pure mapping from committed messages + live tool state → feed items.
+    /// Reads no loop state.
+    static func buildItems(
+        from messages: [ChatMessage],
+        toolEvents: [ToolEvent],
+        pendingOptions: OptionSet?,
+        chatError: ConnectionError?
+    ) -> [ChatItem] {
         var items: [ChatItem] = []
         var pendingTools: [ToolCallInfo] = []
         var pendingGroupID: String?
+
+        // In-progress events overlay committed rows: the cloud path commits
+        // before executing, so a row would otherwise read as done. Final
+        // statuses are excluded so mid-turn rendering matches history.
+        let liveStatusByID = Dictionary(
+            toolEvents
+                .filter { $0.status == .executing || $0.status == .awaitingPermission }
+                .map { ($0.id, $0.status) },
+            uniquingKeysWith: { a, _ in a }
+        )
 
         // Build a lookup of tool results from role:"tool" messages.
         var toolResults: [String: String] = [:]
@@ -76,10 +101,11 @@ extension ChatItem {
                         pendingGroupID = "tools-\(toolCalls[0].id)"
                     }
                     for call in toolCalls {
+                        let status = liveStatusByID[call.id] ?? .completed
                         pendingTools.append(ToolCallInfo(
                             id: call.id,
                             name: call.function.name,
-                            status: .completed,
+                            status: status,
                             arguments: call.function.arguments,
                             result: toolResults[call.id]
                         ))
@@ -122,7 +148,7 @@ extension ChatItem {
 
         // In-progress tool events not yet committed to message history
         let committedIDs = Set(messages.compactMap(\.toolCalls).flatMap(\.self).map(\.id))
-        for event in chatLoop.toolEvents where !committedIDs.contains(event.id) {
+        for event in toolEvents where !committedIDs.contains(event.id) {
             if pendingGroupID == nil { pendingGroupID = "tools-\(event.id)" }
             pendingTools.append(ToolCallInfo(
                 id: event.id,
@@ -135,7 +161,7 @@ extension ChatItem {
         flushTools()
 
         // Append active option set at the end of the feed
-        if let optionSet = chatLoop.pendingOptions {
+        if let optionSet = pendingOptions {
             items.append(.options(id: optionSet.id, set: optionSet))
         }
 

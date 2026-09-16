@@ -421,6 +421,15 @@ final class AgenticChatLoop {
                 for call in pendingToolCalls {
                     if shouldStop { return [] }
 
+                    // Seed the live event before awaiting `beforeToolCall` —
+                    // the TTS handoff can take seconds, and without an event
+                    // the just-committed row would read as done.
+                    seedToolEvent(
+                        id: call.id,
+                        toolName: call.function.name,
+                        arguments: call.function.arguments
+                    )
+
                     await beforeToolCall?(call.function.name)
 
                     let result = await executeToolCall(
@@ -659,6 +668,18 @@ final class AgenticChatLoop {
         }
     }
 
+    /// Appends an `.executing` event, or resets an existing one (both callers
+    /// may seed before `executeToolCall`).
+    private func seedToolEvent(id: String, toolName: String, arguments: String?) {
+        if let index = toolEvents.firstIndex(where: { $0.id == id }) {
+            toolEvents[index].status = .executing
+        } else {
+            toolEvents.append(
+                ToolEvent(id: id, toolName: toolName, status: .executing, arguments: arguments)
+            )
+        }
+    }
+
     private func waitForThrottlerDrain() async {
         while throttler.phase == .streaming {
             // CADisplayLink stops in background — force-complete if stalled.
@@ -682,11 +703,10 @@ final class AgenticChatLoop {
         let permission = permissionPolicy.permissionLevel(for: call.function.name)
         let eventID = call.id
         let toolName = call.function.name
-        toolEvents.append(
-            ToolEvent(
-                id: eventID, toolName: toolName, status: .executing,
-                arguments: call.function.arguments
-            )
+        seedToolEvent(
+            id: eventID,
+            toolName: toolName,
+            arguments: call.function.arguments
         )
 
         let executionMode = executor.executionMode(for: call.function.name)
@@ -739,6 +759,12 @@ final class AgenticChatLoop {
 
                 switch response {
                 case .allowOnce:
+                    // Granted — resume the live executing state.
+                    seedToolEvent(
+                        id: eventID,
+                        toolName: toolName,
+                        arguments: call.function.arguments
+                    )
                     result = await executeWithTimeout(call, agent: agent, executor: executor)
                 case .allowForChat:
                     onChatGrant?(capabilities)
@@ -746,6 +772,11 @@ final class AgenticChatLoop {
                         agentPolicy.grantForChat(capabilities)
                         permissionPolicy = agentPolicy
                     }
+                    seedToolEvent(
+                        id: eventID,
+                        toolName: toolName,
+                        arguments: call.function.arguments
+                    )
                     result = await executeWithTimeout(call, agent: agent, executor: executor)
                 case .deny:
                     result = ToolResult(
