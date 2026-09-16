@@ -3,7 +3,7 @@
   import { maxFormSize } from "./forms";
   import { figureOf, splinePath } from "./figure";
   import { MorphIntensity } from "./intensity";
-  import { ENTRY_DURATION, MorphTimeline } from "./timeline";
+  import { ENTRY_DURATION, BREATH_PERIOD, BREATH_SCALE_AMPLITUDE, MorphTimeline } from "./timeline";
 
   interface Props {
     /** Anchors and seeds the choreography; a new value restarts the entry. */
@@ -20,6 +20,10 @@
     tempo?: number;
     /** Seconds to hold invisible before the scale-in plays. */
     entryDelay?: number;
+    /** How far the breath swells, as a fraction of the blob's size. */
+    breathPulse?: number;
+    /** How long one breath cycle takes. */
+    breathPeriod?: number;
     /** Fill colour; defaults to the spot button colour. */
     color?: string;
   }
@@ -30,6 +34,8 @@
     breath = MorphIntensity.none,
     tempo = 1,
     entryDelay = 0,
+    breathPulse = BREATH_SCALE_AMPLITUDE,
+    breathPeriod = BREATH_PERIOD,
     color = "var(--color-button-spot-base)",
   }: Props = $props();
 
@@ -41,7 +47,12 @@
 
   const reduceMotion = new MediaQuery("(prefers-reduced-motion: reduce)");
 
-  const timeline = $derived(new MorphTimeline(Math.round(shownAt * 1000)));
+  const timeline = $derived(
+    new MorphTimeline(Math.round(shownAt * 1000), {
+      breathScaleAmplitude: breathPulse,
+      breathPeriod,
+    }),
+  );
 
   let now = $state(performance.now() / 1000);
 

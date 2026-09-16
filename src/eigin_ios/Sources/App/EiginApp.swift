@@ -29,6 +29,10 @@ struct EiginApp: App {
         // registered with the telephony system before the first call.
         _ = CallManager.shared
 
+        // Activate WatchConnectivity so a wrist tap can wake the app and ask
+        // a question while the phone is pocketed.
+        Container.shared.watchBridge().activate()
+
         // Recover purchases interrupted before their credits were redeemed: StoreKit re-delivers
         // unfinished transactions, and this sweep redeems and finishes them for the app lifetime.
         Task {

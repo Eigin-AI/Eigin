@@ -14,9 +14,21 @@ struct MorphBlob: View {
     var shownAt: Date
     /// How much of the wobble is showing; ramps in and out over time.
     var intensity: MorphIntensity
+    /// Breathing on its own, for a blob that is present and waiting rather
+    /// than working. Ramps like `intensity`, so it eases into the wobble
+    /// instead of cutting out when the wobble starts.
+    var breath: MorphIntensity = .none
     /// Time multiplier on the morphing: below 1 makes the wobble slower, for
     /// big blobs that shouldn't dance as briskly as the chat-sized one.
     var tempo: Double = 1
+    /// The form library to wobble through. The default is the subtle set the
+    /// design system is tuned against; larger or very small stages can pass
+    /// a deeper one so the morphing reads.
+    var forms: [MorphForm] = MorphForm.all
+    /// How far the breath swells, as a fraction of the blob's size.
+    var breathPulse: Double = MorphTimeline.breathScaleAmplitude
+    /// How long one breath cycle takes.
+    var breathPeriod: TimeInterval = MorphTimeline.breathPeriod
     /// Seconds to hold invisible before the scale-in entry plays — for
     /// entries that would otherwise hide behind a transition.
     var entryDelay: TimeInterval = 0
@@ -28,19 +40,25 @@ struct MorphBlob: View {
     /// every evaluation rather than stored, so the blob never depends on an
     /// appearance callback that SwiftUI may skip when a view is rebuilt.
     private var timeline: MorphTimeline {
-        MorphTimeline(seed: UInt64(bitPattern: Int64(shownAt.timeIntervalSince1970 * 1000)))
+        MorphTimeline(
+            seed: UInt64(bitPattern: Int64(shownAt.timeIntervalSince1970 * 1000)),
+            formCount: forms.count,
+            breathScaleAmplitude: breathPulse,
+            breathPeriod: breathPeriod
+        )
     }
 
     /// The largest native form size; drawing scales figures off it.
-    private static let maxFormSize = MorphForm.all
-        .map { max($0.size.width, $0.size.height) }.max() ?? 1
+    private var maxFormSize: Double {
+        forms.map { max($0.size.width, $0.size.height) }.max() ?? 1
+    }
 
     /// Share of the frame the largest form occupies — margin left for the
     /// entry overshoot and breath.
     private static let fill = 0.875
 
     /// Scale forms into a frame of `slot` points.
-    private static func scale(in slot: Double) -> Double {
+    private static func scale(in slot: Double, maxFormSize: Double) -> Double {
         slot * fill / maxFormSize
     }
 
@@ -48,9 +66,13 @@ struct MorphBlob: View {
     /// the inner edge content on top of the blob must fit inside.
     static func minDiameter(in slot: Double) -> Double {
         let smallest = MorphForm.all
-            .map { min($0.size.width, $0.size.height) }.min() ?? maxFormSize
-        return smallest * scale(in: slot)
+            .map { min($0.size.width, $0.size.height) }.min() ?? 1
+        return smallest * Self.scale(in: slot, maxFormSize: Self.maxLibrarySize)
     }
+
+    /// The largest native form size in the default library.
+    private static let maxLibrarySize = MorphForm.all
+        .map { max($0.size.width, $0.size.height) }.max() ?? 1
 
     var body: some View {
         // An outer gate throttles the whole thing when nothing is moving —
@@ -71,12 +93,13 @@ struct MorphBlob: View {
     }
 
     /// Whether anything is moving right now: the entry is playing, or the
-    /// wobble is showing at any level.
+    /// wobble or breath is showing at any level.
     private func isLively(at date: Date) -> Bool {
         if date.timeIntervalSince(shownAt) < entryDelay + MorphTimeline.entryDuration {
             return true
         }
-        return reduceMotion ? false : intensity.value(at: date) > 0
+        return reduceMotion
+            ? false : intensity.value(at: date) > 0 || breath.value(at: date) > 0
     }
 
     private func path(in frame: CGSize, at date: Date) -> Path {
@@ -87,16 +110,19 @@ struct MorphBlob: View {
         let pose = reduceMotion ? MorphTimeline.Pose(from: 0, to: 0, progress: 0) : timeline
             .pose(at: t * tempo)
         let wobble = reduceMotion ? 0 : intensity.value(at: date)
-        let figure = MorphFigure.of(forms: MorphForm.all, pose: pose, intensity: wobble)
+        let figure = MorphFigure.of(forms: forms, pose: pose, intensity: wobble)
 
         // Entry overshoot plays on any appearance, after the delay; the
-        // breath rides along with the wobble so calm mode is still.
+        // breath rides on the stronger of the wobble and its own ramp, so a
+        // waiting blob breathes and a calm one is still.
         let entry = reduceMotion ? 1 : timeline.entryScale(at: t - entryDelay)
-        let breath = reduceMotion ? 1 : 1 + (timeline.breath(at: t) - 1) * wobble
+        let breathValue = reduceMotion ? 0 : breath.value(at: date)
+        let breathing = max(wobble, breathValue)
+        let breathScale = reduceMotion ? 1 : 1 + (timeline.breath(at: t) - 1) * breathing
 
-        let scale = Self.scale(in: min(size.width, size.height))
-        let halfWidth = figure.width / 2 * scale * entry * breath
-        let halfHeight = figure.height / 2 * scale * entry * breath
+        let scale = Self.scale(in: min(size.width, size.height), maxFormSize: maxFormSize)
+        let halfWidth = figure.width / 2 * scale * entry * breathScale
+        let halfHeight = figure.height / 2 * scale * entry * breathScale
         if halfWidth <= 0 || halfHeight <= 0 { return Path() }
 
         let center = CGPoint(x: size.width / 2, y: size.height / 2)

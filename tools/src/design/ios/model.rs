@@ -51,6 +51,11 @@ pub struct FontRegistrationInfo {
     pub inline_title_ps: String,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct WatchFontsInfo {
+    pub file_names: Vec<String>,
+}
+
 // ---------------------------------------------------------------------------
 // Parse into typed models
 // ---------------------------------------------------------------------------
@@ -257,6 +262,33 @@ pub fn build_font_registration(fonts: Option<&InstalledFonts>) -> Option<FontReg
             .unwrap_or("NorthEastCN-SemiBold")
             .to_string(),
     })
+}
+
+/// The fonts behind the watch's body style: small stages bundle only what
+/// they render, registering it exactly the way iOS does (generated names,
+/// missing files skipped, system-font fallback).
+pub fn build_watch_fonts(
+    fonts: Option<&InstalledFonts>,
+    typography: &TypographyScale,
+) -> Option<WatchFontsInfo> {
+    let installed = fonts?;
+
+    // The body style's custom font name, when it resolves to one.
+    let body = typography
+        .styles
+        .iter()
+        .find(|style| style.name == "body")?;
+    let inner = body.font_expr.strip_prefix(".custom(\"")?;
+    let font_name = inner.split('"').next()?;
+
+    let file_names: Vec<String> = installed
+        .file_names
+        .iter()
+        .filter(|file| file.contains(font_name))
+        .cloned()
+        .collect();
+
+    Some(WatchFontsInfo { file_names })
 }
 
 // ---------------------------------------------------------------------------

@@ -213,6 +213,6 @@ export const screenEntries: ScreenEntry[] = [
     component: WatchScreen,
     device: "apple-watch",
     about:
-      "A quick command from the wrist, with the phone pocketed and locked. The watch listens and the phone answers, so these four states are everything it ever shows: ready, listening, thinking, answered.",
+      "A quick command from the wrist, with the phone pocketed and locked. Push to talk, and the answer arrives by notification — so these three states are everything it ever shows: ready, listening, sending.",
   },
 ];

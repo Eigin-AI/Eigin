@@ -6000,6 +6000,60 @@ enum Localized {
         }
     }
 
+    enum Watch {
+        /// Complication and widget label that opens the watch companion
+        static var askEigin: String {
+            Localized.get("watch.ask-eigin")
+        }
+
+        /// Watch error when the iPhone did not respond
+        static var cantReachPhone: String {
+            Localized.get("watch.cant-reach-phone")
+        }
+
+        /// Watch error when recording failed or microphone access is off
+        static var cantRecord: String {
+            Localized.get("watch.cant-record")
+        }
+
+        static var chatTitle: String {
+            Localized.get("watch.chat-title")
+        }
+
+        /// Watch complication gallery description
+        static var complicationDescription: String {
+            Localized.get("watch.complication-description")
+        }
+
+        /// Watch reply when the recording had no speech
+        static var didntCatch: String {
+            Localized.get("watch.didnt-catch")
+        }
+
+        /// Watch reply when the turn produced no answer
+        static var noReply: String {
+            Localized.get("watch.no-reply")
+        }
+
+        static var pushToTalk: String {
+            Localized.get("watch.push-to-talk")
+        }
+
+        static var releaseToSend: String {
+            Localized.get("watch.release-to-send")
+        }
+
+        /// Prompt under the blob while the question sends and the phone answers
+        static var sending: String {
+            Localized.get("watch.sending")
+        }
+
+        /// Watch reply when transcription failed
+        static var transcribeFailed: String {
+            Localized.get("watch.transcribe-failed")
+        }
+    }
+
     enum Widgets {
         /// Placeholder text of the widget's faux input pill.
         static var chatPillTitle: String {

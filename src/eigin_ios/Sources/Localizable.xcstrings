@@ -5,16 +5,16 @@
       "comment": "Accessibility suffix for a completed task list item",
       "extractionState": "extracted_with_value",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "checked"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "markeret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "checked"
           }
         }
       }
@@ -23,16 +23,16 @@
       "comment": "Accessibility suffix for an incomplete task list item",
       "extractionState": "extracted_with_value",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unchecked"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "ikke markeret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unchecked"
           }
         }
       }
@@ -813,13 +813,13 @@
     "capability.aula": {
       "comment": "The Aula capability, e.g. a connected Aula account.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Aula"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Aula"
@@ -830,16 +830,16 @@
     "capability.email": {
       "comment": "The email capability, e.g. a connected Google or IMAP account.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "E-mail"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
           }
         }
       }
@@ -1340,13 +1340,13 @@
     "common.actions.ok": {
       "comment": "Generic confirmation button.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "OK"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "OK"
@@ -1680,13 +1680,13 @@
     "credits.count": {
       "comment": "A label showing the number of credits in a wallet.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ cr"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ cr"
@@ -1697,13 +1697,13 @@
     "credits.countAndProduct": {
       "comment": "A label displaying the credit count and product identifier for a store product.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ cr · %2$@"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ cr · %2$@"
@@ -1714,16 +1714,16 @@
     "credits.diagnose": {
       "comment": "A button label that triggers a diagnostic of the StoreKit framework.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diagnose StoreKit"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Diagnostikér StoreKit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnose StoreKit"
           }
         }
       }
@@ -1731,16 +1731,16 @@
     "credits.refreshBalances": {
       "comment": "A button label that refreshes the user's credit wallet balances.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh balances"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Opdatér beløb"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh balances"
           }
         }
       }
@@ -2054,16 +2054,16 @@
     "development.credits.title": {
       "comment": "Credits section title and its navigation row in the development menu.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Credits"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Kreditter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credits"
           }
         }
       }
@@ -3754,16 +3754,16 @@
     "integration.add.addressFootnote": {
       "comment": "Footnote under the connect-by-address row.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Give Eigin an address and it will work out what is there."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Giv Eigin en adresse, så finder den selv ud af, hvad der er der."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give Eigin an address and it will work out what is there."
           }
         }
       }
@@ -3771,16 +3771,16 @@
     "integration.add.browseLabel": {
       "comment": "Label over the category rows.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Browse"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Gennemse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse"
           }
         }
       }
@@ -3788,16 +3788,16 @@
     "integration.add.connectByAddress": {
       "comment": "Row connecting any service by MCP address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect by address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbind via adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect by address"
           }
         }
       }
@@ -3805,16 +3805,16 @@
     "integration.add.description": {
       "comment": "Description of the add-integration sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use your existing accounts and tools in Eigin."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Brug dine eksisterende konti og værktøjer i Eigin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use your existing accounts and tools in Eigin."
           }
         }
       }
@@ -3822,16 +3822,16 @@
     "integration.add.emptyCategoryBody": {
       "comment": "Info notice body for a category with no entries yet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "We have not added anything to this category yet. You can still connect a service by address."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vi har ikke tilføjet noget til denne kategori endnu. Du kan stadig forbinde en tjeneste via adresse."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We have not added anything to this category yet. You can still connect a service by address."
           }
         }
       }
@@ -3839,16 +3839,16 @@
     "integration.add.emptyCategoryTitle": {
       "comment": "Info notice title for a category with no entries yet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing here yet"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Intet her endnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing here yet"
           }
         }
       }
@@ -3856,16 +3856,16 @@
     "integration.add.matchesLabel": {
       "comment": "Label over the search results list.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Matches"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Træffere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches"
           }
         }
       }
@@ -3873,16 +3873,16 @@
     "integration.add.recommendedLabel": {
       "comment": "Label over the default catalogue list.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recommended"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Anbefalet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended"
           }
         }
       }
@@ -3890,16 +3890,16 @@
     "integration.add.searchPlaceholder": {
       "comment": "Search field placeholder in the add-integration sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search integrations"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Søg integrationer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search integrations"
           }
         }
       }
@@ -3907,16 +3907,16 @@
     "integration.add.title": {
       "comment": "Title of the add-integration catalogue sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add an integration"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tilføj en integration"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an integration"
           }
         }
       }
@@ -3924,16 +3924,16 @@
     "integration.add.unknownBody": {
       "comment": "Info notice body when a search finds nothing.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigin has a curated list of integrations, but you can try connecting any service by address."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin har en udvalgt liste af integrationer, men du kan prøve at forbinde enhver tjeneste via adresse."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin has a curated list of integrations, but you can try connecting any service by address."
           }
         }
       }
@@ -3941,16 +3941,16 @@
     "integration.add.unknownTitle": {
       "comment": "Info notice title when a search finds nothing.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "We don't know that one"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Den kender vi ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We don't know that one"
           }
         }
       }
@@ -3958,16 +3958,16 @@
     "integration.connect.addressDescription": {
       "comment": "Sheet description for the address route.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An MCP server, wherever it runs. The address is where we start."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "En MCP-server, hvor end den kører. Adressen er, hvor vi starter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An MCP server, wherever it runs. The address is where we start."
           }
         }
       }
@@ -3975,16 +3975,16 @@
     "integration.connect.addressField": {
       "comment": "Field: the MCP server address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
           }
         }
       }
@@ -3992,16 +3992,16 @@
     "integration.connect.addressTitle": {
       "comment": "Sheet title while connecting an MCP server by address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbind via adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect address"
           }
         }
       }
@@ -4009,16 +4009,16 @@
     "integration.connect.appPasswordField": {
       "comment": "Field: the IMAP app password.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App password"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "App-adgangskode"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App password"
           }
         }
       }
@@ -4026,16 +4026,16 @@
     "integration.connect.chooseAnother": {
       "comment": "Secondary button on a failure step, returning to the catalogue.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose another integration"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vælg en anden integration"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose another integration"
           }
         }
       }
@@ -4043,16 +4043,16 @@
     "integration.connect.connectedTitle": {
       "comment": "Sheet title on the connected step.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbundet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
           }
         }
       }
@@ -4060,16 +4060,16 @@
     "integration.connect.continueWith": {
       "comment": "Button that hands over to a service sign-in. The argument is the service name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue with %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Fortsæt med %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue with %@"
           }
         }
       }
@@ -4077,16 +4077,16 @@
     "integration.connect.credentials.body": {
       "comment": "Info notice body when an MCP server needs client credentials.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It gave us a client ID and secret to ask for. Your provider issues these."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Den gav os et klient-id og en hemmelighed at spørge med. Din udbyder udsteder dem."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It gave us a client ID and secret to ask for. Your provider issues these."
           }
         }
       }
@@ -4094,16 +4094,16 @@
     "integration.connect.credentials.title": {
       "comment": "Info notice title when an MCP server needs client credentials.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This server wants its own credentials"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Denne server kræver sine egne loginoplysninger"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This server wants its own credentials"
           }
         }
       }
@@ -4111,16 +4111,16 @@
     "integration.connect.description.browserSignIn": {
       "comment": "Sheet description for the browser sign-in route (Aula). The argument is the service name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in with %@ in your browser. Eigin never sees your password."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Log ind med %@ i din browser. Eigin ser aldrig din adgangskode."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with %@ in your browser. Eigin never sees your password."
           }
         }
       }
@@ -4128,16 +4128,16 @@
     "integration.connect.description.mailAccount": {
       "comment": "Sheet description for the mail-account route.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your provider has these settings on their help pages. Most want an app password, not your own."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Din udbyder har disse indstillinger på deres hjælpesider. De fleste vil have en app-adgangskode, ikke din egen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your provider has these settings on their help pages. Most want an app password, not your own."
           }
         }
       }
@@ -4145,16 +4145,16 @@
     "integration.connect.description.signIn": {
       "comment": "Sheet description for the OAuth route. The argument is the service name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in with %@ in your browser. Eigin never sees your password."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Log ind med %@ i din browser. Eigin ser aldrig din adgangskode."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with %@ in your browser. Eigin never sees your password."
           }
         }
       }
@@ -4162,16 +4162,16 @@
     "integration.connect.emailField": {
       "comment": "Field: the IMAP account address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "E-mailadresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email address"
           }
         }
       }
@@ -4179,16 +4179,16 @@
     "integration.connect.failed.addressBody": {
       "comment": "Error notice body for a failed MCP address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check that the address is right. If it needs credentials, it will ask for them next."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tjek at adressen er rigtig. Hvis den skal have loginoplysninger, spørger den om dem bagefter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that the address is right. If it needs credentials, it will ask for them next."
           }
         }
       }
@@ -4196,16 +4196,16 @@
     "integration.connect.failed.addressTitle": {
       "comment": "Error notice title for a failed MCP address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That address did not connect"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbindelsen til den adresse lykkedes ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That address did not connect"
           }
         }
       }
@@ -4213,16 +4213,16 @@
     "integration.connect.failed.mailBody": {
       "comment": "Error notice body for a failed mail account.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The server refused the sign-in. Check the address, and whether this account needs an app password."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Serveren afviste loginet. Tjek adressen, og om kontoen kræver en app-adgangskode."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server refused the sign-in. Check the address, and whether this account needs an app password."
           }
         }
       }
@@ -4230,16 +4230,16 @@
     "integration.connect.failed.mailTitle": {
       "comment": "Error notice title for a failed mail account.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Those details did not work"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "De oplysninger virkede ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Those details did not work"
           }
         }
       }
@@ -4247,16 +4247,16 @@
     "integration.connect.failed.signInBody": {
       "comment": "Error notice body for a failed sign-in. The argument is the service name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Something went wrong while connecting %@. You can try again, or choose another integration."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Noget gik galt under forbindelsen til %@. Du kan prøve igen eller vælge en anden integration."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong while connecting %@. You can try again, or choose another integration."
           }
         }
       }
@@ -4264,16 +4264,16 @@
     "integration.connect.failed.signInTitle": {
       "comment": "Error notice title for a failed sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The sign-in did not finish"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Loginet blev ikke fuldført"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sign-in did not finish"
           }
         }
       }
@@ -4281,16 +4281,16 @@
     "integration.connect.imapField": {
       "comment": "Field: the incoming mail host.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IMAP server"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "IMAP-server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IMAP server"
           }
         }
       }
@@ -4298,16 +4298,16 @@
     "integration.connect.invalidAddress": {
       "comment": "Failure text when an address cannot be parsed.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That address is not a valid URL."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Denne adresse er ikke en gyldig URL."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That address is not a valid URL."
           }
         }
       }
@@ -4315,13 +4315,13 @@
     "integration.connect.kindLabel": {
       "comment": "Identity header kind line on the connected step.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Integration"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Integration"
@@ -4332,16 +4332,16 @@
     "integration.connect.nameField": {
       "comment": "Field on the connected step: the inferred display name, editable.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Navn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
           }
         }
       }
@@ -4349,16 +4349,16 @@
     "integration.connect.smtpField": {
       "comment": "Field: the outgoing mail host.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SMTP server"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "SMTP-server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SMTP server"
           }
         }
       }
@@ -4366,16 +4366,16 @@
     "integration.connect.status.connectedLabel": {
       "comment": "Status line on the connected step.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbundet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
           }
         }
       }
@@ -4383,16 +4383,16 @@
     "integration.connect.working.checkingBody": {
       "comment": "Info notice body while a connection is verified.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This can take a moment."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Det kan tage et øjeblik."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This can take a moment."
           }
         }
       }
@@ -4400,16 +4400,16 @@
     "integration.connect.working.checkingTitle": {
       "comment": "Info notice title while a connection is verified.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking the connection"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tjekker forbindelsen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the connection"
           }
         }
       }
@@ -4417,16 +4417,16 @@
     "integration.connect.working.waitingBody": {
       "comment": "Info notice body during sign-in. The argument is the service name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finish signing in with %@ in your browser and this will continue by itself."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Gør loginet med %@ færdigt i din browser, så fortsætter det af sig selv."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish signing in with %@ in your browser and this will continue by itself."
           }
         }
       }
@@ -4434,16 +4434,16 @@
     "integration.connect.working.waitingTitle": {
       "comment": "Info notice title while a browser sign-in is in flight.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waiting for you"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Venter på dig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for you"
           }
         }
       }
@@ -4451,16 +4451,16 @@
     "integration.offers.footnote": {
       "comment": "Footnote under the offers list.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigin picks the ones a chat needs."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin udvælger dem, en chat har brug for."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin picks the ones a chat needs."
           }
         }
       }
@@ -4468,16 +4468,16 @@
     "integration.offers.noMatches": {
       "comment": "Empty state when the offers search finds nothing. The argument is the query.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing matches “%@”."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Intet matcher “%@”."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing matches “%@”."
           }
         }
       }
@@ -4485,16 +4485,16 @@
     "integration.offers.searchPlaceholder": {
       "comment": "Search field placeholder. First argument is the item count, second the noun.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search %@ %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Søg i %@ %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search %@ %@"
           }
         }
       }
@@ -4502,16 +4502,16 @@
     "integration.offers.title": {
       "comment": "Title of the read-only offers list.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offers"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tilbud"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offers"
           }
         }
       }
@@ -4519,16 +4519,16 @@
     "integration.partialGrant": {
       "comment": "Alert title after a partial OAuth consent. First argument is the account, second the capability names.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ is connected, but you didn’t grant: %@."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ er forbundet, men du gav ikke adgang til: %@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is connected, but you didn’t grant: %@."
           }
         }
       }
@@ -4536,16 +4536,16 @@
     "integration.partialGrantBody": {
       "comment": "Alert body after a partial OAuth consent.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The agent won’t be able to use those until you reconnect and approve them."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Agenten kan ikke bruge dem, før du forbinder igen og godkender dem."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The agent won’t be able to use those until you reconnect and approve them."
           }
         }
       }
@@ -4553,16 +4553,16 @@
     "integration.screen.activeForRow": {
       "comment": "Row title of the active-provider switch. The argument is the capability name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active for %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Aktiv for %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active for %@"
           }
         }
       }
@@ -4570,16 +4570,16 @@
     "integration.screen.activeLabel": {
       "comment": "Section label over the per-capability active-provider switches.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active provider"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Aktiv udbyder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active provider"
           }
         }
       }
@@ -4587,16 +4587,16 @@
     "integration.screen.facts.address": {
       "comment": "Fact row: the MCP server address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
           }
         }
       }
@@ -4604,16 +4604,16 @@
     "integration.screen.facts.connectsVia": {
       "comment": "Fact row: the mechanism behind the integration.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connects via"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbindes via"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connects via"
           }
         }
       }
@@ -4638,16 +4638,16 @@
     "integration.screen.notice.expiredBody": {
       "comment": "Warning notice body for an expired sign-in. The argument is the integration name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigin cannot reach %@ until you sign in again."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin kan ikke nå %@, før du logger ind igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin cannot reach %@ until you sign in again."
           }
         }
       }
@@ -4655,16 +4655,16 @@
     "integration.screen.notice.expiredTitle": {
       "comment": "Warning notice title for an expired sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The sign-in expired"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Loginet udløb"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sign-in expired"
           }
         }
       }
@@ -4672,16 +4672,16 @@
     "integration.screen.notice.serverTitle": {
       "comment": "Error notice title for an MCP server error.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The server did not connect"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Serveren kunne ikke forbindes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server did not connect"
           }
         }
       }
@@ -4689,16 +4689,16 @@
     "integration.screen.offersLabel": {
       "comment": "Section label over a built-in account’s capabilities.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What it can do"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Hvad den kan"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What it can do"
           }
         }
       }
@@ -4706,16 +4706,16 @@
     "integration.screen.partialFootnote": {
       "comment": "Footnote when some capabilities were skipped at sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not granted: reconnect this integration to approve the permissions you skipped."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ikke godkendt: Forbind integrationen igen, og godkend de rettigheder, du sprang over."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not granted: reconnect this integration to approve the permissions you skipped."
           }
         }
       }
@@ -4723,16 +4723,16 @@
     "integration.screen.remove": {
       "comment": "Destructive row that removes the integration. The argument is the integration name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Fjern %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
           }
         }
       }
@@ -4740,16 +4740,16 @@
     "integration.screen.removeTitle": {
       "comment": "Removal confirmation alert title. The argument is the integration name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Fjern %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
           }
         }
       }
@@ -4757,16 +4757,16 @@
     "integration.screen.removeWarning": {
       "comment": "Removal confirmation message for a built-in integration.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This account and everything Eigin can reach through it will be removed. You can add it again at any time."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Denne konto og alt, hvad Eigin kan nå igennem den, fjernes. Du kan tilføje den igen, når du vil."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account and everything Eigin can reach through it will be removed. You can add it again at any time."
           }
         }
       }
@@ -4774,16 +4774,16 @@
     "integration.screen.showAllTools": {
       "comment": "Muted row that opens the full tools list. The argument is the tool count.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show all %@ tools"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vis alle %@ værktøjer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all %@ tools"
           }
         }
       }
@@ -4791,16 +4791,16 @@
     "integration.screen.status.connected": {
       "comment": "Status line when the integration works.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbundet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
           }
         }
       }
@@ -4808,16 +4808,16 @@
     "integration.screen.status.reconnectNeeded": {
       "comment": "Status line when the integration needs a fresh sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reconnect needed"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Genforbindelse nødvendig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnect needed"
           }
         }
       }
@@ -4825,16 +4825,16 @@
     "integration.screen.toolsFootnote": {
       "comment": "Footnote when the tools list is capped. The argument is the total tool count.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ in total, and Eigin picks the ones a chat needs."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ i alt, og Eigin udvælger dem, en chat har brug for."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ in total, and Eigin picks the ones a chat needs."
           }
         }
       }
@@ -4842,16 +4842,16 @@
     "integration.screen.viaBuiltin": {
       "comment": "Fact value: the integration is a built-in account.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Built in"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Indbygget"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built in"
           }
         }
       }
@@ -4859,16 +4859,16 @@
     "integration.screen.viaServer": {
       "comment": "Fact value: the integration is an MCP server. The only place the word MCP appears.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MCP server"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "MCP-server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP server"
           }
         }
       }
@@ -5829,16 +5829,16 @@
       "comment": "Accessibility label describing a list item's position, the list length, and the item's text",
       "extractionState": "extracted_with_value",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "List with %1$d items, item %2$d: %3$@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Liste med %1$d punkter, punkt %2$d: %3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List with %1$d items, item %2$d: %3$@"
           }
         }
       }
@@ -6338,32 +6338,32 @@
     },
     "model.facts.goodFor": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Good for"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "God til"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good for"
           }
         }
       }
     },
     "model.facts.goodForValue": {
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quick chats, web search"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Hurtige chats, websøgning"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick chats, web search"
           }
         }
       }
@@ -9343,16 +9343,16 @@
     "provider.ai-screen.checkingConnection": {
       "comment": "Inline label while validating a key or sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking the connection"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tjekker forbindelsen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the connection"
           }
         }
       }
@@ -9360,16 +9360,16 @@
     "provider.ai-screen.facts.connectsVia": {
       "comment": "Fact row: the mechanism (API key or sign-in).",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connects via"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbindes via"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connects via"
           }
         }
       }
@@ -9377,16 +9377,16 @@
     "provider.ai-screen.facts.key": {
       "comment": "Fact row: the stored API key, masked.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Key"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Nøgle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key"
           }
         }
       }
@@ -9394,16 +9394,16 @@
     "provider.ai-screen.kindLabel": {
       "comment": "Identity header kind line for a connected AI provider.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI provider"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "AI-udbyder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI provider"
           }
         }
       }
@@ -9411,16 +9411,16 @@
     "provider.ai-screen.modelsFootnote": {
       "comment": "Footnote under the models group. First argument is enabled count, second is total.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ of %@ appear in your agent tab."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ af %@ vises i din agentfane."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ of %@ appear in your agent tab."
           }
         }
       }
@@ -9428,16 +9428,16 @@
     "provider.ai-screen.modelsFootnoteNone": {
       "comment": "Footnote when no models are enabled. The argument is the provider name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "With none turned on, %@ will not appear in your agent tab."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Er ingen slået til, vises %@ ikke i din agentfane."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With none turned on, %@ will not appear in your agent tab."
           }
         }
       }
@@ -9445,16 +9445,16 @@
     "provider.ai-screen.modelsLabel": {
       "comment": "Section label above the provider models group.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
           }
         }
       }
@@ -9462,16 +9462,16 @@
     "provider.ai-screen.remove": {
       "comment": "Destructive row that removes the provider. The argument is the provider name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Fjern %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
           }
         }
       }
@@ -9479,16 +9479,16 @@
     "provider.ai-screen.removeTitle": {
       "comment": "Removal confirmation alert title. The argument is the provider name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove %@"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Fjern %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
           }
         }
       }
@@ -9496,16 +9496,16 @@
     "provider.ai-screen.saveKey": {
       "comment": "Button that applies a replaced API key.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save key"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Gem nøgle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save key"
           }
         }
       }
@@ -9513,16 +9513,16 @@
     "provider.ai-screen.showAllModels": {
       "comment": "Muted row that opens the searchable models screen. The argument is the model count.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show all %@ models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vis alle %@ modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all %@ models"
           }
         }
       }
@@ -9530,16 +9530,16 @@
     "provider.ai-screen.status.connected": {
       "comment": "Status line when the provider works.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbundet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
           }
         }
       }
@@ -9547,16 +9547,16 @@
     "provider.ai-screen.status.notWorking": {
       "comment": "Status line when the provider fails its last check.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not working"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Virker ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not working"
           }
         }
       }
@@ -9632,16 +9632,16 @@
     "provider.connect.addressField": {
       "comment": "Field: the base URL of a custom provider or MCP server.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
           }
         }
       }
@@ -9649,16 +9649,16 @@
     "provider.connect.addressTitle": {
       "comment": "Sheet title while connecting by address, before the address has answered.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbind via adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect address"
           }
         }
       }
@@ -9666,16 +9666,16 @@
     "provider.connect.chooseAnother": {
       "comment": "Secondary button on a failure step, returning to the provider list.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose another provider"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vælg en anden udbyder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose another provider"
           }
         }
       }
@@ -9683,16 +9683,16 @@
     "provider.connect.doneFootnote": {
       "comment": "Footnote on the connected step.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You can change which models appear in your agent tab on the provider’s own screen."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Du kan ændre, hvilke modeller der vises i din agentfane, på udbyderens egen skærm."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change which models appear in your agent tab on the provider’s own screen."
           }
         }
       }
@@ -9700,16 +9700,16 @@
     "provider.connect.getApiKey": {
       "comment": "Link that opens the provider key console.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Get an API key"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Få en API-nøgle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get an API key"
           }
         }
       }
@@ -9717,16 +9717,16 @@
     "provider.connect.modelsAvailable": {
       "comment": "Row value on the connected step: model count.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ available"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ tilgængelige"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ available"
           }
         }
       }
@@ -9734,16 +9734,16 @@
     "provider.connect.modelsRowTitle": {
       "comment": "Row title on the connected step: models seen at the address.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
           }
         }
       }
@@ -9751,16 +9751,16 @@
     "provider.connect.nameField": {
       "comment": "Field on the connected step: the inferred display name, editable.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Navn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
           }
         }
       }
@@ -9768,16 +9768,16 @@
     "provider.connect.viaApiKey": {
       "comment": "Fact value: provider connects through a pasted API key.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API key"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "API-nøgle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
           }
         }
       }
@@ -9785,16 +9785,16 @@
     "provider.connect.viaSignIn": {
       "comment": "Fact value: provider connects through account sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign-in"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Log ind"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in"
           }
         }
       }
@@ -9802,16 +9802,16 @@
     "provider.connect.working.checkingBody": {
       "comment": "Info notice body while credentials are validated.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This can take a moment."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Det kan tage et øjeblik."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This can take a moment."
           }
         }
       }
@@ -9819,16 +9819,16 @@
     "provider.connect.working.checkingTitle": {
       "comment": "Info notice title while credentials are validated.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking the connection"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Tjekker forbindelsen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the connection"
           }
         }
       }
@@ -9836,16 +9836,16 @@
     "provider.connect.working.waitingBody": {
       "comment": "Info notice body during sign-in. The argument is the provider name.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finish signing in with %@ in your browser and this will continue by itself."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Gør loginet med %@ færdigt i din browser, så fortsætter det af sig selv."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish signing in with %@ in your browser and this will continue by itself."
           }
         }
       }
@@ -9853,16 +9853,16 @@
     "provider.connect.working.waitingTitle": {
       "comment": "Info notice title while a browser sign-in is in flight.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waiting for you"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Venter på dig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for you"
           }
         }
       }
@@ -9938,13 +9938,13 @@
     "provider.description.models.one": {
       "comment": "Hub row description for a provider with one model.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ model"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ model"
@@ -9955,16 +9955,16 @@
     "provider.description.models.other": {
       "comment": "Hub row description for a provider with several models.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ models"
           }
         }
       }
@@ -10550,13 +10550,13 @@
     "provider.eigin.title": {
       "comment": "Title of the Eigin Relay provider screen and hub row.",
       "localizations": {
-        "en": {
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin Relay"
           }
         },
-        "da": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin Relay"
@@ -10584,16 +10584,16 @@
     "provider.local.cancelDownload": {
       "comment": "Secondary button that cancels an active download.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Annullér"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         }
       }
@@ -10601,16 +10601,16 @@
     "provider.local.deleteModel": {
       "comment": "Destructive row that deletes the downloaded model.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete model"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Slet model"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete model"
           }
         }
       }
@@ -10618,16 +10618,16 @@
     "provider.local.info.chosenBody": {
       "comment": "Info row body: deliberate choice.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick it for conversations that should stay on your device only."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Vælg den til samtaler, der skal forblive på din enhed."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick it for conversations that should stay on your device only."
           }
         }
       }
@@ -10635,16 +10635,16 @@
     "provider.local.info.chosenTitle": {
       "comment": "Info row: picking the local model deliberately.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Or chosen on purpose"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eller bevidst valgt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Or chosen on purpose"
           }
         }
       }
@@ -10652,16 +10652,16 @@
     "provider.local.info.offlineBody": {
       "comment": "Info row body: offline use.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "With automatic routing, Eigin can use it when cloud AI is unavailable."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Med automatisk routing kan Eigin bruge den, når cloud AI er utilgængelig."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With automatic routing, Eigin can use it when cloud AI is unavailable."
           }
         }
       }
@@ -10669,16 +10669,16 @@
     "provider.local.info.offlineTitle": {
       "comment": "Info row: when the local model is reached for automatically.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used when you are offline"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Bruges, når du er offline"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used when you are offline"
           }
         }
       }
@@ -10686,16 +10686,16 @@
     "provider.local.info.smallerBody": {
       "comment": "Info row body: trade-offs.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Good for quick questions, weaker for complex tasks and tool use."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "God til hurtige spørgsmål, svagere til komplekse opgaver og værktøjsbrug."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Good for quick questions, weaker for complex tasks and tool use."
           }
         }
       }
@@ -10703,16 +10703,16 @@
     "provider.local.info.smallerTitle": {
       "comment": "Info row: trade-offs of the local model.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Smaller than a cloud model"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Mindre end en cloud-model"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smaller than a cloud model"
           }
         }
       }
@@ -10720,16 +10720,16 @@
     "provider.local.infoDescription": {
       "comment": "Description of the local model info sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A small language model that runs on this device."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "En lille sprogmodel, der kører på denne enhed."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A small language model that runs on this device."
           }
         }
       }
@@ -10737,16 +10737,16 @@
     "provider.local.infoTitle": {
       "comment": "Title of the local model info sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Local model"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Lokal model"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local model"
           }
         }
       }
@@ -10754,16 +10754,16 @@
     "provider.local.kindLabel": {
       "comment": "Identity header kind line for the local model, and its hub row description.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On this phone"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "På denne telefon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this phone"
           }
         }
       }
@@ -10771,16 +10771,16 @@
     "provider.local.status.downloadFailed": {
       "comment": "Status line when the download failed.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download failed"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Downloaden fejlede"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download failed"
           }
         }
       }
@@ -10788,16 +10788,16 @@
     "provider.local.status.gettingReady": {
       "comment": "Status line while downloading or preparing.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Getting ready"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Klargøres"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting ready"
           }
         }
       }
@@ -10805,16 +10805,16 @@
     "provider.local.status.notInstalled": {
       "comment": "Status line before the model is downloaded.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not installed"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ikke installeret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not installed"
           }
         }
       }
@@ -10822,16 +10822,16 @@
     "provider.local.status.notSupported": {
       "comment": "Status line when the device cannot run the model.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not supported"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Understøttes ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not supported"
           }
         }
       }
@@ -10839,16 +10839,16 @@
     "provider.local.status.ready": {
       "comment": "Status line when the local model is installed.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ready to use"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Klar til brug"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to use"
           }
         }
       }
@@ -10856,16 +10856,16 @@
     "provider.local.title": {
       "comment": "Title of the local model screen and hub row.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Local model"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Lokal model"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local model"
           }
         }
       }
@@ -10907,16 +10907,16 @@
     "provider.models.noMatches": {
       "comment": "Empty state when the model search finds nothing. The argument is the query.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No model matches “%@”."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ingen model matcher “%@”."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No model matches “%@”."
           }
         }
       }
@@ -10941,16 +10941,16 @@
     "provider.models.other": {
       "comment": "Group label: recognised models below the ranking cut.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Andre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
           }
         }
       }
@@ -10958,16 +10958,16 @@
     "provider.models.recommended": {
       "comment": "Group label: the top of the catalogue ranking.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recommended"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Anbefalet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended"
           }
         }
       }
@@ -10975,16 +10975,16 @@
     "provider.models.searchPrompt": {
       "comment": "Search field placeholder. The argument is the model count.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search %@ models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Søg %@ modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search %@ models"
           }
         }
       }
@@ -10992,16 +10992,16 @@
     "provider.models.title": {
       "comment": "Title of the searchable provider models screen.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Models"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Modeller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
           }
         }
       }
@@ -11009,16 +11009,16 @@
     "provider.models.unknown": {
       "comment": "Group label: model IDs the catalogue has never seen.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unknown"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ukendte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
           }
         }
       }
@@ -11026,16 +11026,16 @@
     "provider.models.unknownFootnote": {
       "comment": "Footnote under the Unknown group.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Models we don't recognise. They may work, they may not. Turning one on is your call."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Modeller, vi ikke kender. De virker måske, og måske ikke. Om du slår en til, er dit valg."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models we don't recognise. They may work, they may not. Turning one on is your call."
           }
         }
       }
@@ -11094,16 +11094,16 @@
     "provider.picker.addressFootnote": {
       "comment": "Footnote under the connect-by-address row.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anything with an OpenAI-compatible API."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Alt med en OpenAI-kompatibel API."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything with an OpenAI-compatible API."
           }
         }
       }
@@ -11111,16 +11111,16 @@
     "provider.picker.connectByAddress": {
       "comment": "Row that connects any OpenAI-compatible provider by URL.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect by address"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Forbind via adresse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect by address"
           }
         }
       }
@@ -11162,16 +11162,16 @@
     "provider.picker.group.apiKey": {
       "comment": "Group label: providers connected by pasting a key.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste an API key"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Indsæt en API-nøgle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste an API key"
           }
         }
       }
@@ -11179,16 +11179,16 @@
     "provider.picker.group.signIn": {
       "comment": "Group label: providers connected through account sign-in.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Log ind"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in"
           }
         }
       }
@@ -11230,16 +11230,16 @@
     "provider.picker.unknownNoticeBody": {
       "comment": "Info notice body when a search finds no preset.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigin has a curated list of provider presets, but you can connect any AI provider with an OpenAI-compatible API by address."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin har en udvalgt liste af udbydere, men du kan forbinde enhver AI-udbyder med en OpenAI-kompatibel API via adresse."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin has a curated list of provider presets, but you can connect any AI provider with an OpenAI-compatible API by address."
           }
         }
       }
@@ -11247,16 +11247,16 @@
     "provider.picker.unknownNoticeTitle": {
       "comment": "Info notice when a search finds no preset.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "We don't know that one"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Den kender vi ikke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We don't know that one"
           }
         }
       }
@@ -11281,16 +11281,16 @@
     "provider.relay.facts.conversationsStored": {
       "comment": "Fact row label: whether chats are kept.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conversations stored"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Gemte samtaler"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations stored"
           }
         }
       }
@@ -11298,16 +11298,16 @@
     "provider.relay.facts.conversationsStoredValue": {
       "comment": "Fact row value: whether chats are kept.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Never"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Aldrig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
           }
         }
       }
@@ -11315,16 +11315,16 @@
     "provider.relay.facts.credits": {
       "comment": "Fact row: the current credit balance.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat credits"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Chat-credits"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat credits"
           }
         }
       }
@@ -11332,16 +11332,16 @@
     "provider.relay.facts.hostedIn": {
       "comment": "Fact row label: where the relay runs.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hosted in"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Hostes i"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hosted in"
           }
         }
       }
@@ -11349,16 +11349,16 @@
     "provider.relay.facts.hostedInValue": {
       "comment": "Fact row value: where the relay runs.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Europe"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Europa"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Europe"
           }
         }
       }
@@ -11366,16 +11366,16 @@
     "provider.relay.facts.howItWorks": {
       "comment": "Muted row that opens the relay info sheet.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "How it works"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Sådan virker det"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How it works"
           }
         }
       }
@@ -11383,16 +11383,16 @@
     "provider.relay.factsFootnote": {
       "comment": "Footnote under the relay facts card.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One credit is about one eurocent of AI usage."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "En credit svarer til cirka én eurocent i AI-forbrug."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One credit is about one eurocent of AI usage."
           }
         }
       }
@@ -11400,16 +11400,16 @@
     "provider.relay.notice.pausedBody": {
       "comment": "Warning notice body for an empty balance.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chats using Eigin Relay will not send until the account has credits again. Your other providers still work."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Chats, der bruger Eigin Relay, sendes ikke, før kontoen har credits igen. Dine andre udbydere virker stadig."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats using Eigin Relay will not send until the account has credits again. Your other providers still work."
           }
         }
       }
@@ -11417,16 +11417,16 @@
     "provider.relay.notice.pausedTitle": {
       "comment": "Warning notice title for an empty balance.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eigin Relay is paused"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Eigin Relay er sat på pause"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin Relay is paused"
           }
         }
       }
@@ -11434,16 +11434,16 @@
     "provider.relay.notice.runningLowBody": {
       "comment": "Info notice body when credits are close to running out.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You are close to running out. Top up now to avoid an interrupted chat."
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Du er tæt på at løbe tør. Fyld op nu for at undgå en afbrudt chat."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are close to running out. Top up now to avoid an interrupted chat."
           }
         }
       }
@@ -11451,16 +11451,16 @@
     "provider.relay.notice.runningLowTitle": {
       "comment": "Info notice title when credits are close to running out.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Running low"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Løber tør"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running low"
           }
         }
       }
@@ -11468,16 +11468,16 @@
     "provider.relay.status.outOfCredits": {
       "comment": "Status line when the balance is zero.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Out of credits"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ingen credits tilbage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Out of credits"
           }
         }
       }
@@ -11485,16 +11485,16 @@
     "provider.relay.status.ready": {
       "comment": "Status line when the relay is usable.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ready to use"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Klar til brug"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready to use"
           }
         }
       }
@@ -14014,16 +14014,16 @@
     "store.noProducts": {
       "comment": "A message displayed when there are no products to show.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No products — tap Refresh products"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ingen produkter — tryk på Opdatér produkter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No products — tap Refresh products"
           }
         }
       }
@@ -14031,16 +14031,16 @@
     "store.refreshProducts": {
       "comment": "A button label that refreshes the list of available in-app purchases.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh products"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Opdatér produkter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh products"
           }
         }
       }
@@ -16156,16 +16156,16 @@
     "ui.aiProviders": {
       "comment": "Hub section label above the AI providers group.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI providers"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "AI-udbydere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI providers"
           }
         }
       }
@@ -18094,16 +18094,16 @@
     "wallet.deleteAll": {
       "comment": "A button label that deletes all wallets.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete all wallets"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Slet alle tegnebøger"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all wallets"
           }
         }
       }
@@ -18111,16 +18111,16 @@
     "wallet.empty": {
       "comment": "A message displayed when there are no wallets to display.",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No wallets"
-          }
-        },
         "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ingen tegnebøger"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No wallets"
           }
         }
       }
@@ -18128,16 +18128,211 @@
     "wallet.evictEmpty": {
       "comment": "A button label that evicts empty wallets.",
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd tomme tegnebøger"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Evict empty wallets"
           }
-        },
+        }
+      }
+    },
+    "watch.ask-eigin": {
+      "comment": "Complication and widget label that opens the watch companion",
+      "extractionState": "extracted_with_value",
+      "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ryd tomme tegnebøger"
+            "value": "Spørg Eigin"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask Eigin"
+          }
+        }
+      }
+    },
+    "watch.cant-reach-phone": {
+      "comment": "Watch error when the iPhone did not respond",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke nå iPhone"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach iPhone"
+          }
+        }
+      }
+    },
+    "watch.cant-record": {
+      "comment": "Watch error when recording failed or microphone access is off",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke optage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't record"
+          }
+        }
+      }
+    },
+    "watch.chat-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fra uret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From watch"
+          }
+        }
+      }
+    },
+    "watch.complication-description": {
+      "comment": "Watch complication gallery description",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn Eigin, og tryk og hold for at tale."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Eigin, then push and hold to talk."
+          }
+        }
+      }
+    },
+    "watch.didnt-catch": {
+      "comment": "Watch reply when the recording had no speech",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det fik jeg ikke med"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Didn't catch that"
+          }
+        }
+      }
+    },
+    "watch.no-reply": {
+      "comment": "Watch reply when the turn produced no answer",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet svar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reply"
+          }
+        }
+      }
+    },
+    "watch.push-to-talk": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk og tal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push to talk"
+          }
+        }
+      }
+    },
+    "watch.release-to-send": {
+      "extractionState": "manual",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slip for at sende"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release to send"
+          }
+        }
+      }
+    },
+    "watch.sending": {
+      "comment": "Prompt under the blob while the question sends and the phone answers",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sender…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sending…"
+          }
+        }
+      }
+    },
+    "watch.transcribe-failed": {
+      "comment": "Watch reply when transcription failed",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke transskribere det"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't transcribe that"
           }
         }
       }

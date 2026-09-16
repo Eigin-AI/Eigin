@@ -21,8 +21,13 @@ struct MorphTimeline: Equatable {
     // settles into a metronome.
     static let initialHold: TimeInterval = 0.6
     static let entryDuration: TimeInterval = 0.4
-    static let breathPeriod: TimeInterval = 4.6
+    /// Default breath: a barely visible swell, scale only, never a drift.
+    /// Callers on other stages can pass their own pulse.
     static let breathScaleAmplitude = 0.022
+    static let breathPeriod: TimeInterval = 4.6
+
+    private(set) var breathScaleAmplitude: Double
+    private(set) var breathPeriod: TimeInterval
 
     /// Travel/hold recipe for one segment. Mixed weights give bursts of quick
     /// changes punctuated by longer settles — fast, fast, slow rather than
@@ -67,8 +72,17 @@ struct MorphTimeline: Equatable {
     }
 
     /// Seeded so the same turn always produces the same choreography.
-    init(seed: UInt64 = 0x5EED_A11C) {
+    /// `formCount` fixes the library the cycle runs through — callers
+    /// drawing a different form set must pass its count.
+    init(
+        seed: UInt64 = 0x5EED_A11C,
+        formCount: Int = MorphForm.all.count,
+        breathScaleAmplitude: Double = MorphTimeline.breathScaleAmplitude,
+        breathPeriod: TimeInterval = MorphTimeline.breathPeriod
+    ) {
         self.seed = seed
+        self.breathScaleAmplitude = breathScaleAmplitude
+        self.breathPeriod = breathPeriod
         var state = seed &+ 0x9E37_79B9_7F4A_7C15
         func randomUnit() -> Double {
             state ^= state << 13
@@ -77,7 +91,7 @@ struct MorphTimeline: Equatable {
             return Double(state >> 11) / Double(1 << 53)
         }
 
-        let count = MorphForm.all.count
+        let count = formCount
         var generator = SeededGenerator(state: state)
         sequence = [0] + (1 ..< count).shuffled(using: &generator) + [0]
 
@@ -141,8 +155,8 @@ struct MorphTimeline: Equatable {
 
     /// The breath: a barely visible swell, scale only, never a drift.
     func breath(at t: TimeInterval) -> Double {
-        let phase = t / Self.breathPeriod * 2 * .pi + .pi / 2
-        return 1 + Self.breathScaleAmplitude * sin(phase)
+        let phase = t / breathPeriod * 2 * .pi + .pi / 2
+        return 1 + breathScaleAmplitude * sin(phase)
     }
 }
 
