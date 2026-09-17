@@ -10429,7 +10429,7 @@
       }
     },
     "provider.eigin.nothingToRestore": {
-      "comment": "Shown when restoring finds no previous credit purchases on the Apple ID",
+      "comment": "Shown when recovery finds no previous credit purchases on the Apple ID",
       "localizations": {
         "da": {
           "stringUnit": {
@@ -10440,7 +10440,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No purchases to restore."
+            "value": "No purchases to recover."
           }
         }
       }
@@ -10525,7 +10525,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restore credits"
+            "value": "Recover credits"
           }
         }
       }

@@ -1,20 +1,29 @@
 Eigin is a personal AI assistant. There is no account and no sign-in. Our self-assessment against the App Store Review Guidelines is at https://docs.eigin.ai/compliance/app-store.html
 
-A short walkthrough video of the steps below: https://youtu.be/21q-JgungI8
+Eigin is conversational. Not all features have a dedicated screen. Some you simply ask for. The empty chat shows suggestion cards for the main areas.
+
+A short walkthrough video: https://youtu.be/21q-JgungI8
 
 GETTING STARTED
 
 1. Open the app. Onboarding asks for your name and what you want help with.
-2. On the connect step, tap "Use Eigin". A credits sheet opens.
-3. Tap Buy on "500 Credits" (consumable in-app purchase). Sandbox purchases are supported by our server, so the purchase grants credits right away and you will see "You're good to go".
-4. Onboarding ends with a short conversation. You can ask the assistant to wrap it up whenever you like.
+2. On the connect step, tap "Use Eigin", then Buy on "500 Credits" (consumable in-app purchase). Sandbox purchases grant credits right away.
+3. Onboarding ends with a short conversation. Ask the assistant to wrap it up whenever you like.
 
-After that you are in a normal chat. You can ask about the app, tell it things to remember, ask it to search the web, or ask it to add a calendar event or reminder. It asks for confirmation before it creates or changes anything.
+Onboarding always uses cloud AI, so either credits or your own provider is required to finish it. An on-device model is available afterwards under Settings > Connections; it needs an iPhone 15 or newer.
 
-Onboarding always uses cloud AI, so either an Eigin credits purchase or your own provider (via "Connect your own provider") is required to complete it. The app discloses that cloud requests are processed by a third-party AI provider. An on-device model is available afterwards under Settings > Connections; it needs an iPhone 15 or newer.
+THINGS TO TRY
+
+- Live call: tap the call button in the chat toolbar. A hands-free voice conversation on the native iOS call screen. Put the phone away and it keeps going on headphones, backgrounded or with the screen locked.
+- Apple Health: use the "Health" suggestion group, or say "Log a banana and 200 g of skyr for breakfast", then "What have I eaten today?". Log something first. If there is no data in Apple Health, a read returns nothing.
+- Calendar, reminders, web search, and memory: just ask. Eigin confirms before it creates or changes anything.
+
+CREDITS
+
+Credits are consumable in-app purchases. "Recover credits" re-applies purchases made on this Apple Account, so a balance survives a reinstall.
 
 PERMISSIONS
 
-Calendar, reminders, location, health, microphone, speech recognition, camera, photos, and local network (for email) are all optional and requested only when the related feature is first used.
+Calendar, reminders, location, health, microphone, speech recognition, camera, photos, and local network (for email) are all optional, and requested only when the related feature is first used.
 
 If anything blocks you, email us at support@eigin.ai.
