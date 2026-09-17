@@ -3510,7 +3510,7 @@ enum Localized {
                 Localized.get("provider.eigin.noProducts")
             }
 
-            /// Shown when restoring finds no previous credit purchases on the Apple ID
+            /// Shown when recovery finds no previous credit purchases on the Apple ID
             static var nothingToRestore: String {
                 Localized.get("provider.eigin.nothingToRestore")
             }
