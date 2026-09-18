@@ -98,7 +98,7 @@ struct ChatView: View {
         let texts = viewModel.window.messages
             .filter { $0.role != "user" }
             .compactMap(\.content)
-            .flatMap { ContentBlock.split($0, messageID: "") }
+            .flatMap { ContentBlock.split($0, messageID: "", isStreaming: false) }
             .filter { $0.kind.usesMarkdownRenderer }
             .map(\.text)
         await markdownDocumentCache.prewarm(texts, config: markdownRenderConfig)

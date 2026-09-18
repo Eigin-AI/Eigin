@@ -1,6 +1,10 @@
 <script lang="ts">
   import { CodeBlock, Markdown } from "@lib";
   import DeviceFrame from "@gallery/frames/DeviceFrame.svelte";
+  import { scene } from "@gallery/catalog/sampleScene";
+
+  const ridge = scene(1600, 900);
+  const cairn = scene(900, 1600);
 
   const swift = `// A long comment that runs past the card edge to demonstrate horizontal scrolling.
 struct Sightseeing: Activity {
@@ -23,6 +27,16 @@ struct Sightseeing: Activity {
 | Haiku | Fastest | $ | Short, cheap turns |
 
 Sonnet is the sensible default.`;
+
+  const illustrated = `Here is the ridge we crossed on the second day:
+
+![The valley at the end of the long walk](${ridge})
+
+The trail drops away just past the treeline, which is why the last hour felt
+longer than it was. This one is from the summit register, and it links back to
+where I found it:
+
+[![The cairn at the top, with the register box](${cairn})](https://en.wikipedia.org/wiki/Cairn)`;
 
   const document = `# Display heading
 
@@ -67,6 +81,20 @@ Closing paragraph after a thematic break.`;
     <DeviceFrame height="content" colorScheme="inherit">
       <div class="stack">
         <Markdown text={document} />
+      </div>
+    </DeviceFrame>
+  </div>
+
+  <h2 class="t-titleM">Image</h2>
+  <p class="lede t-description">
+    An image on its own line becomes an <a href="#/components/images">image card</a>, the way a
+    fence becomes a code block. Same block spacing as the prose, and the same height whatever the
+    image is. A linked image wears its host. Loading and tapping are on the images page.
+  </p>
+  <div class="canvas" data-demo="image">
+    <DeviceFrame height="content" colorScheme="inherit">
+      <div class="stack">
+        <Markdown text={illustrated} />
       </div>
     </DeviceFrame>
   </div>

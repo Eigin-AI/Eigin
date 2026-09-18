@@ -76,7 +76,9 @@ struct ChatMessageView: View, Equatable {
     private var blocks: [ContentBlock] {
         guard !content.isEmpty else { return [] }
         return ContentBlock.split(
-            content, messageID: messageID.isEmpty ? "msg-\(UUID().uuidString)" : messageID
+            content,
+            messageID: messageID.isEmpty ? "msg-\(UUID().uuidString)" : messageID,
+            isStreaming: isActivelyStreaming
         )
     }
 

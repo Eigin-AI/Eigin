@@ -134,6 +134,10 @@ extension Container {
         }.singleton
     }
 
+    var imageCache: Factory<ImageCache> {
+        self { ImageCache() }.singleton
+    }
+
     var chatAttachmentStore: Factory<any ChatAttachmentStoring> {
         self {
             let appSupport = FileManager.default.urls(
