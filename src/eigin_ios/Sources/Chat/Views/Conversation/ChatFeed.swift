@@ -187,12 +187,14 @@ struct ChatFeed: View {
     /// user message first). `ChatFeed` applies the same `minHeight` +
     /// `.topLeading` frame as the pinned-turn block, and the scroll anchor
     /// uses `.top` so a long opening summary shows from its top.
+    /// A windowed feed starts mid-conversation — its first item's role says
+    /// nothing about how the conversation opened — so it never counts.
     private var isAgentOpened: Bool {
+        if pagination.hasOlderMessages { return false }
         if case .message(_, let role, _, _) = items.first {
-            role != "user"
-        } else {
-            true
+            return role != "user"
         }
+        return true
     }
 
     /// The flat item list used when no user turn has been pinned yet.
@@ -288,6 +290,13 @@ struct ChatFeed: View {
             }
             .opacity(isContentReady ? 1 : 0)
             .defaultScrollAnchor(scroll.defaultAnchor(isAgentOpened: isAgentOpened))
+            // One-time reveal at the bottom anchor; invisible mid-fade.
+            .onChange(of: isContentReady) { _, isReady in
+                guard isReady,
+                      scroll.shouldRevealAtBottom(isAgentOpened: isAgentOpened)
+                else { return }
+                proxy.scrollTo("bottom-anchor", anchor: .bottom)
+            }
             .scrollDismissesKeyboard(.interactively)
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.visibleRect.maxY >= geometry.contentSize.height - 120

@@ -18,6 +18,8 @@ final class FeedScrollCoordinator {
     /// Item IDs present when the current streaming turn started; anything new
     /// animates in.
     private(set) var preStreamItemIDs: Set<String> = []
+    /// False until the feed's one-time reveal at the bottom has run.
+    private var hasRevealed = false
 
     /// Item to anchor a "load newer" batch against, so the batch doesn't pin.
     private var appendAnchorID: String?
@@ -71,6 +73,18 @@ final class FeedScrollCoordinator {
     func snapToBottom(proxy: ScrollViewProxy) {
         pinnedUserMessageID = nil
         proxy.scrollTo("bottom-anchor", anchor: .bottom)
+    }
+
+    // MARK: - Initial reveal
+
+    /// Whether the feed's one-time reveal rest at the bottom: a normal
+    /// conversation opens on its latest message. Skipped for agent-opened
+    /// feeds (their `.top` anchor) and an active pin (a send during prewarm
+    /// outranks the reveal).
+    func shouldRevealAtBottom(isAgentOpened: Bool) -> Bool {
+        guard !hasRevealed else { return false }
+        hasRevealed = true
+        return !isAgentOpened && pinnedUserMessageID == nil
     }
 
     // MARK: - Item changes

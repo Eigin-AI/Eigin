@@ -98,6 +98,34 @@ struct FeedScrollCoordinatorTests {
         #expect(coordinator.preStreamItemIDs.isEmpty)
     }
 
+    // MARK: - Reveal
+
+    @Test("A normal conversation's first reveal rests at the bottom")
+    func revealRestsAtBottomOnce() {
+        let coordinator = FeedScrollCoordinator()
+
+        #expect(coordinator.shouldRevealAtBottom(isAgentOpened: false))
+        #expect(!coordinator.shouldRevealAtBottom(isAgentOpened: false))
+    }
+
+    @Test("An agent-opened conversation skips the bottom reveal and consumes the one shot")
+    func agentOpenSkipsBottomReveal() {
+        let coordinator = FeedScrollCoordinator()
+
+        #expect(!coordinator.shouldRevealAtBottom(isAgentOpened: true))
+        #expect(!coordinator.shouldRevealAtBottom(isAgentOpened: false))
+    }
+
+    @Test("An active pin outranks the bottom reveal")
+    func pinnedOutranksBottomReveal() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.declareSending()
+        _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
+
+        #expect(coordinator.pinnedUserMessageID == "u1")
+        #expect(!coordinator.shouldRevealAtBottom(isAgentOpened: false))
+    }
+
     // MARK: - Default anchor
 
     @Test("A normal conversation rests at the bottom")
