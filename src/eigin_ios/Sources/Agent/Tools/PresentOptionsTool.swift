@@ -4,6 +4,7 @@ struct PresentOptionsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "present_options",
         displayName: Localized.Tools.Present.options,
+        description: Localized.Tools.Description.presentOptions,
         defaultPermissionLevel: .always, category: .agent
     )
 

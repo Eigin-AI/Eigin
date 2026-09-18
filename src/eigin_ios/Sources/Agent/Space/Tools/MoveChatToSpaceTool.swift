@@ -5,6 +5,7 @@ struct MoveChatToSpaceTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "move_chat_to_space",
         displayName: Localized.Tools.Space.moveChat,
+        description: Localized.Tools.Description.moveChatToSpace,
         defaultPermissionLevel: .ask, category: .chats
     )
 

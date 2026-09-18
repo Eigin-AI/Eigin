@@ -8,6 +8,7 @@ struct UpdateKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "update_knowledge",
         displayName: Localized.Tools.Update.knowledge,
+        description: Localized.Tools.Description.updateKnowledge,
         defaultPermissionLevel: .always, category: .knowledge
     )
 

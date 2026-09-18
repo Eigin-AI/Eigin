@@ -4,6 +4,7 @@ struct ListEmailsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_list",
         displayName: Localized.Tools.Email.list,
+        description: Localized.Tools.Description.emailList,
         defaultPermissionLevel: .ask, category: .email
     )
 

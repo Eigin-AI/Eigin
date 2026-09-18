@@ -13,6 +13,7 @@ struct ToolCapability {
     let kind: GrantKind
     let key: String
     let displayName: String
+    let description: String?
     let defaultPermissionLevel: ToolPermissionLevel
     let category: Category
     /// Whether the user can grant or deny this in the permissions UI.
@@ -24,6 +25,7 @@ struct ToolCapability {
         kind: GrantKind,
         key: String,
         displayName: String,
+        description: String? = nil,
         defaultPermissionLevel: ToolPermissionLevel,
         category: Category,
         isUserConfigurable: Bool = true
@@ -31,6 +33,7 @@ struct ToolCapability {
         self.kind = kind
         self.key = key
         self.displayName = displayName
+        self.description = description
         self.defaultPermissionLevel = defaultPermissionLevel
         self.category = category
         self.isUserConfigurable = isUserConfigurable
@@ -131,11 +134,13 @@ extension ToolCapability: Codable {
         key = try container.decode(String.self, forKey: .key)
         if let known = ToolRegistry.capability(forKey: key) {
             displayName = known.displayName
+            description = known.description
             defaultPermissionLevel = known.defaultPermissionLevel
             category = known.category
             isUserConfigurable = known.isUserConfigurable
         } else {
             displayName = key
+            description = nil
             defaultPermissionLevel = .ask
             category = .extensions
             isUserConfigurable = true

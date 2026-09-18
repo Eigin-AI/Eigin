@@ -5,6 +5,7 @@ struct SearchPlacesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "search_places",
         displayName: Localized.Tools.System.searchPlaces,
+        description: Localized.Tools.Description.searchPlaces,
         defaultPermissionLevel: .always, category: .timeAndPlace
     )
 

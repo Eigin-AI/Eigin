@@ -11,17 +11,18 @@
   <h2 class="t-titleM">Status line</h2>
   <p class="lede t-description">
     One vocabulary for "is this thing working": a dot and a word. Filled green is up, filled amber
-    wants something from you, red is down through no fault of yours, and hollow is not in use. It is
-    the only colour a connection screen carries, so the dot is always the first thing read — which
-    only holds while everything that is fine stays silent. Amber and red divide by who can act:
-    amber is a job, and the screen carries a button for it; red is an outage, so nothing appears
-    beneath it.
+    wants something from you, red is down through no fault of yours, hollow is not in use, and
+    hollow pulsing is on its way. It is the only colour a connection screen carries, so the dot is
+    always the first thing read — which only holds while everything that is fine stays silent. Amber
+    and red divide by who can act: amber is a job, and the screen carries a button for it; red is an
+    outage, so nothing appears beneath it.
   </p>
   <div class="canvas">
     <DeviceFrame height="content" colorScheme="inherit">
       <div class="page">
         <div class="lines">
           <StatusLine state="connected" label="Connected" />
+          <StatusLine state="connecting" label="Connecting" />
           <StatusLine state="attention" label="Reconnect needed" />
           <StatusLine state="unavailable" label="Unavailable" />
           <StatusLine state="off" label="Connects when used" />
@@ -140,7 +141,7 @@
     align-items: center;
   }
 
-  /* The four states read as a set, so they sit at the grouping gap. */
+  /* The states read as a set, so they sit at the grouping gap. */
   .lines {
     display: flex;
     flex-direction: column;

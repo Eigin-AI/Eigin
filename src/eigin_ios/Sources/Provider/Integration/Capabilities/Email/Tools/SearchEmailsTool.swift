@@ -4,6 +4,7 @@ struct SearchEmailsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_search",
         displayName: Localized.Tools.Email.search,
+        description: Localized.Tools.Description.emailSearch,
         defaultPermissionLevel: .ask, category: .email
     )
 

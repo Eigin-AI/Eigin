@@ -57,6 +57,8 @@ export { timeLeftText } from "./components/asset/types";
 export type { AssetState } from "./components/asset/types";
 export { default as Row } from "./components/row/Row.svelte";
 export { default as ContentGroup } from "./components/row/ContentGroup.svelte";
+export { default as DataCard } from "./components/data/DataCard.svelte";
+export type { Json } from "./components/data/types";
 export { default as StatusLine } from "./components/status/StatusLine.svelte";
 export { default as Mark } from "./components/status/Mark.svelte";
 export { default as IdentityHeader } from "./components/status/IdentityHeader.svelte";

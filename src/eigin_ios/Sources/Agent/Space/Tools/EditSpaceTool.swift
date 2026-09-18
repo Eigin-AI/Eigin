@@ -5,6 +5,7 @@ struct EditSpaceTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "edit_space",
         displayName: Localized.Tools.Space.edit,
+        description: Localized.Tools.Description.editSpace,
         defaultPermissionLevel: .ask, category: .chats
     )
 

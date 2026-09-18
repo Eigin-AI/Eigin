@@ -4,6 +4,7 @@ struct SendEmailTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_send",
         displayName: Localized.Tools.Email.send,
+        description: Localized.Tools.Description.emailSend,
         defaultPermissionLevel: .ask, category: .email
     )
 

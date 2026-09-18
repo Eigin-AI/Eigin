@@ -5,6 +5,7 @@ struct GetAulaCalendarTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_calendar",
         displayName: Localized.Tools.Aula.calendar,
+        description: Localized.Tools.Description.aulaCalendar,
         defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 

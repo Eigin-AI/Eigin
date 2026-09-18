@@ -5,6 +5,7 @@ struct GetChatTranscriptTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_chat_transcript",
         displayName: Localized.Tools.Get.Chat.transcript,
+        description: Localized.Tools.Description.getChatTranscript,
         defaultPermissionLevel: .always, category: .chats
     )
 

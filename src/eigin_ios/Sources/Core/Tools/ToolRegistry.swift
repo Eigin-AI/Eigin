@@ -84,6 +84,12 @@ struct ToolRegistry: ToolExecutor {
         return []
     }
 
+    /// One-sentence description of what a tool does, for the sheet a person
+    /// reviews a call in. MCP tools discovered at runtime have none.
+    static func description(for toolName: String) -> String? {
+        allToolMetadata[toolName]?.description
+    }
+
     /// Derives a display name from an MCP tool ID: "mcp__server_name__tool" → "Server Name: Tool"
     private static func deriveMCPDisplayName(_ toolName: String) -> String? {
         guard toolName.hasPrefix("mcp__") else { return nil }
@@ -120,13 +126,17 @@ struct ToolRegistry: ToolExecutor {
     static let allToolMetadata: [String: ToolMetadata] = {
         var map = [String: ToolMetadata]()
         for cap in allKitCapabilities {
-            map[cap.key] = ToolMetadata(displayName: cap.displayName, capabilities: [cap])
+            map[cap.key] = ToolMetadata(
+                displayName: cap.displayName, description: cap.description,
+                capabilities: [cap]
+            )
         }
         return map
     }()
 
     struct ToolMetadata {
         let displayName: String
+        let description: String?
         let capabilities: [ToolCapability]
     }
 }

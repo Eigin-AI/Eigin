@@ -6,6 +6,7 @@ struct ActivateSkillTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "activate_skill",
         displayName: Localized.Tools.Agent.activateSkill,
+        description: Localized.Tools.Description.activateSkill,
         defaultPermissionLevel: .always, category: .skills, isUserConfigurable: false
     )
 

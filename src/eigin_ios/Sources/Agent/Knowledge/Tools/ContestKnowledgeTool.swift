@@ -7,6 +7,7 @@ struct ContestKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "contest_knowledge",
         displayName: Localized.Tools.Contest.knowledge,
+        description: Localized.Tools.Description.contestKnowledge,
         defaultPermissionLevel: .always, category: .knowledge
     )
 

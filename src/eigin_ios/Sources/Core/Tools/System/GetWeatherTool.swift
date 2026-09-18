@@ -5,6 +5,7 @@ struct GetWeatherTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_weather",
         displayName: Localized.Tools.System.weather,
+        description: Localized.Tools.Description.getWeather,
         defaultPermissionLevel: .always, category: .timeAndPlace
     )
 

@@ -11,6 +11,7 @@ struct StartFlowTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "start_flow",
         displayName: Localized.Tools.Agent.startFlow,
+        description: Localized.Tools.Description.startFlow,
         defaultPermissionLevel: .always, category: .skills, isUserConfigurable: false
     )
 

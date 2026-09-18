@@ -7,6 +7,7 @@ struct GetAulaUpdatesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_updates",
         displayName: Localized.Tools.Aula.updates,
+        description: Localized.Tools.Description.aulaUpdates,
         defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 

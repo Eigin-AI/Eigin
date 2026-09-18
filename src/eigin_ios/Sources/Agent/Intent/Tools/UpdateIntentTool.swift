@@ -7,6 +7,7 @@ struct UpdateIntentTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "update_intent",
         displayName: Localized.Tools.Agent.updateIntent,
+        description: Localized.Tools.Description.updateIntent,
         defaultPermissionLevel: .always, category: .agent
     )
 

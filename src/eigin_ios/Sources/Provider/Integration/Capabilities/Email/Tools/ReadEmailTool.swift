@@ -4,6 +4,7 @@ struct ReadEmailTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "email_read",
         displayName: Localized.Tools.Email.read,
+        description: Localized.Tools.Description.emailRead,
         defaultPermissionLevel: .ask, category: .email
     )
 

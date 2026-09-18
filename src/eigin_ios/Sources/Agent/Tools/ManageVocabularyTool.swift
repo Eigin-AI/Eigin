@@ -4,6 +4,7 @@ struct ManageVocabularyTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "manage_vocabulary",
         displayName: Localized.Tools.Manage.vocabulary,
+        description: Localized.Tools.Description.manageVocabulary,
         defaultPermissionLevel: .always, category: .agent
     )
 
