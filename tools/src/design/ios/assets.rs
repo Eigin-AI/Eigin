@@ -182,7 +182,7 @@ pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
         let x = ((canvas - glyph.width()) / 2) as i64;
         let y = ((canvas - glyph.height()) / 2) as i64;
         imageops::overlay(&mut rendition, &glyph, x, y);
-        save_rgb(&rendition, &format!("{complication_dir}/{filename}"))
+        save_rgba(&rendition, &format!("{complication_dir}/{filename}"))
             .context("saving complication mark")?;
     }
     fs::write(
@@ -194,8 +194,18 @@ pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Saves opaque artwork, dropping the alpha channel. App Store validation
+/// rejects an app icon that carries one, even when fully opaque.
 fn save_rgb(img: &image::RgbaImage, path: &str) -> Result<()> {
-    // Keep RGBA — the complication glyph depends on its alpha channel.
+    image::DynamicImage::ImageRgba8(img.clone())
+        .into_rgb8()
+        .save(path)
+        .with_context(|| format!("saving {path}"))
+}
+
+/// Saves artwork that needs its alpha channel — template-rendered glyphs.
+/// Never use for an app icon.
+fn save_rgba(img: &image::RgbaImage, path: &str) -> Result<()> {
     image::DynamicImage::ImageRgba8(img.clone())
         .save(path)
         .with_context(|| format!("saving {path}"))
@@ -276,4 +286,26 @@ fn parse_hex_rgb(hex: &str) -> Option<[u8; 3]> {
         u8::from_str_radix(&h[2..4], 16).ok()?,
         u8::from_str_radix(&h[4..6], 16).ok()?,
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// App Store validation rejects an app icon carrying an alpha channel,
+    /// even a fully opaque one. The complication glyph needs its alpha.
+    #[test]
+    fn app_icons_are_opaque_and_glyphs_keep_alpha() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+        let img = image::RgbaImage::from_pixel(8, 8, image::Rgba([1, 2, 3, 255]));
+
+        let opaque = dir.join("opaque.png");
+        save_rgb(&img, opaque.to_str().unwrap()).unwrap();
+        assert!(!image::open(&opaque).unwrap().color().has_alpha());
+
+        let glyph = dir.join("glyph.png");
+        save_rgba(&img, glyph.to_str().unwrap()).unwrap();
+        assert!(image::open(&glyph).unwrap().color().has_alpha());
+    }
 }
