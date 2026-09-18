@@ -4,6 +4,7 @@ struct ReadCoreTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "read_core",
         displayName: Localized.Tools.Read.core,
+        description: Localized.Tools.Description.readCore,
         defaultPermissionLevel: .always, category: .agent
     )
 

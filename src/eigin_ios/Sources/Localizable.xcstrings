@@ -1745,6 +1745,193 @@
         }
       }
     },
+    "dataCard.collapseHint": {
+      "comment": "Accessibility hint that a data card branch collapses",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sammenfolder %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapses %@"
+          }
+        }
+      }
+    },
+    "dataCard.empty": {
+      "comment": "Word a data card shows for an empty string value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tom"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        }
+      }
+    },
+    "dataCard.expandHint": {
+      "comment": "Accessibility hint that a data card branch expands",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udfolder %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expands %@"
+          }
+        }
+      }
+    },
+    "dataCard.itemLabel": {
+      "comment": "Fallback name for an unnamed item of an array in a data card",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Element %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item %@"
+          }
+        }
+      }
+    },
+    "dataCard.itemsCount": {
+      "comment": "Summary of a collapsed list in a data card",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ elementer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ items"
+          }
+        }
+      }
+    },
+    "dataCard.no": {
+      "comment": "Word a data card shows for a false value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nej"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "dataCard.none": {
+      "comment": "Word a data card shows for a JSON null value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "dataCard.showAll": {
+      "comment": "Button to reveal the rest of a long list in a data card",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis alle %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all %@"
+          }
+        }
+      }
+    },
+    "dataCard.showMore": {
+      "comment": "Button to reveal the rest of a long value in a data card",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis mere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show more"
+          }
+        }
+      }
+    },
+    "dataCard.valuesCount": {
+      "comment": "Summary of a collapsed object in a data card",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ værdier"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ values"
+          }
+        }
+      }
+    },
+    "dataCard.yes": {
+      "comment": "Word a data card shows for a true value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
     "debug.deleteAllListed": {
       "comment": "Button to delete all listed items",
       "localizations": {
@@ -9439,23 +9626,6 @@
         }
       }
     },
-    "permission.waitingForUser": {
-      "comment": "A message displayed when a tool's execution is awaiting user permission.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Venter på brugertilladelse..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waiting for user permission..."
-          }
-        }
-      }
-    },
     "permission.wantsToFormat": {
       "comment": "Permission sheet sentence with a tool-supplied action phrase. First argument is the agent name, second is the action phrase.",
       "localizations": {
@@ -14229,23 +14399,6 @@
         }
       }
     },
-    "status.executingProgress": {
-      "comment": "A placeholder text indicating that a task is currently in progress.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Udfører..."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Executing..."
-          }
-        }
-      }
-    },
     "status.failedFormat": {
       "comment": "A tool call that failed, displayed in red text.",
       "localizations": {
@@ -14637,6 +14790,91 @@
         }
       }
     },
+    "toolDetail.completedNoOutput": {
+      "comment": "Status label for a tool call that finished returning nothing",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuldført uden output"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed with no output"
+          }
+        }
+      }
+    },
+    "toolDetail.deniedByUser": {
+      "comment": "Status label for a tool call the user denied",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afvist af brugeren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denied by the user"
+          }
+        }
+      }
+    },
+    "toolDetail.failed": {
+      "comment": "Status label for a tool call that failed",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mislykkedes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed"
+          }
+        }
+      }
+    },
+    "toolDetail.input": {
+      "comment": "Section heading above a tool call's input arguments in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Input"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Input"
+          }
+        }
+      }
+    },
+    "toolDetail.output": {
+      "comment": "Section heading above a tool call's result in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Output"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Output"
+          }
+        }
+      }
+    },
     "tools.add.fact": {
       "comment": "Display name for the add-fact tool",
       "localizations": {
@@ -14990,6 +15228,992 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete Space"
+          }
+        }
+      }
+    },
+    "tools.description.activateSkill": {
+      "comment": "One-sentence description of the activate_skill tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiverer en færdighed – et sæt instrukser, agenten derefter følger."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activates a skill for your agent to follow."
+          }
+        }
+      }
+    },
+    "tools.description.addIntent": {
+      "comment": "One-sentence description of the add_intent tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sætter et mål for agenten at arbejde hen imod."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sets a goal for your agent to pursue."
+          }
+        }
+      }
+    },
+    "tools.description.addKnowledge": {
+      "comment": "One-sentence description of the add_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføjer et nyt indslag i vidensbasen – en person, ting, faktum, dokument eller note."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a person, thing, fact, document, or note to the knowledge base."
+          }
+        }
+      }
+    },
+    "tools.description.advanceFlow": {
+      "comment": "One-sentence description of the advance_flow tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flytter det aktive flow til dets næste trin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves the running flow to its next stage."
+          }
+        }
+      }
+    },
+    "tools.description.aulaCalendar": {
+      "comment": "One-sentence description of the aula_calendar tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister skolebegivenheder for dine børn fra Aula mellem to datoer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists school events for your children between two dates."
+          }
+        }
+      }
+    },
+    "tools.description.aulaChildren": {
+      "comment": "One-sentence description of the aula_children tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister dine børn på Aula og deres skole eller børnehave."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists your children on Aula and where they go to school."
+          }
+        }
+      }
+    },
+    "tools.description.aulaMessageRead": {
+      "comment": "One-sentence description of the aula_message_read tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser en hel beskedtråd i Aula."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads a full Aula message thread."
+          }
+        }
+      }
+    },
+    "tools.description.aulaMessagesList": {
+      "comment": "One-sentence description of the aula_messages_list tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister de seneste beskedtråde i Aula."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists your recent Aula message threads."
+          }
+        }
+      }
+    },
+    "tools.description.aulaUpdates": {
+      "comment": "One-sentence description of the aula_updates tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opsummerer ny og kommende aktivitet i Aula for dine børn."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarises recent and upcoming Aula activity for your children."
+          }
+        }
+      }
+    },
+    "tools.description.backgroundNotify": {
+      "comment": "One-sentence description of the background_notify tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sender dig en underretning."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends you a notification."
+          }
+        }
+      }
+    },
+    "tools.description.contestKnowledge": {
+      "comment": "One-sentence description of the contest_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markerer modstridende vidensindslag, så du kan afgøre, hvad der gælder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flags conflicting knowledge entries and asks you to decide."
+          }
+        }
+      }
+    },
+    "tools.description.createCalendarEvent": {
+      "comment": "One-sentence description of the create_calendar_event tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opretter en kalenderbegivenhed."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creates an event on your calendar."
+          }
+        }
+      }
+    },
+    "tools.description.createSpace": {
+      "comment": "One-sentence description of the create_space tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opretter et rum – en gruppering af chats med egne instrukser."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creates a space, a grouping of chats with its own instructions."
+          }
+        }
+      }
+    },
+    "tools.description.deleteKnowledge": {
+      "comment": "One-sentence description of the delete_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sletter permanent et vidensindslag, som agenten eller du har oprettet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deletes a knowledge entry permanently."
+          }
+        }
+      }
+    },
+    "tools.description.done": {
+      "comment": "One-sentence description of the done tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markerer agentens aktuelle opgave som fuldført."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marks the current task as complete."
+          }
+        }
+      }
+    },
+    "tools.description.editCore": {
+      "comment": "One-sentence description of the edit_core tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redigerer en af agentens kerntekster – dens faste noter om dig."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edits one of your agent's core texts."
+          }
+        }
+      }
+    },
+    "tools.description.editSpace": {
+      "comment": "One-sentence description of the edit_space tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redigerer et rums navn, emoji eller instrukser."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edits a space's name, emoji, or instructions."
+          }
+        }
+      }
+    },
+    "tools.description.emailList": {
+      "comment": "One-sentence description of the email_list tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister de seneste e-mails fra den tilknyttede indbakke."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists recent emails from your inbox."
+          }
+        }
+      }
+    },
+    "tools.description.emailRead": {
+      "comment": "One-sentence description of the email_read tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser hele indholdet af en e-mail."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads the full content of an email."
+          }
+        }
+      }
+    },
+    "tools.description.emailReply": {
+      "comment": "One-sentence description of the email_reply tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besvarer en e-mail og sender den i samme tråd."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replies to an email in the same thread."
+          }
+        }
+      }
+    },
+    "tools.description.emailSearch": {
+      "comment": "One-sentence description of the email_search tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger i den tilknyttede indbakke efter afsender, emne eller indhold."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches your inbox by sender, subject, or content."
+          }
+        }
+      }
+    },
+    "tools.description.emailSend": {
+      "comment": "One-sentence description of the email_send tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sender en e-mail direkte via den tilkoblede konto."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends an email from your connected account."
+          }
+        }
+      }
+    },
+    "tools.description.forgetKnowledge": {
+      "comment": "One-sentence description of the forget_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pensionerer et forældet vidensindslag uden at slette det."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retires an outdated knowledge entry without deleting it."
+          }
+        }
+      }
+    },
+    "tools.description.getCalendarEvents": {
+      "comment": "One-sentence description of the get_calendar_events tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser kalenderbegivenheder for et datointerval."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads your calendar events for a date range."
+          }
+        }
+      }
+    },
+    "tools.description.getChatTranscript": {
+      "comment": "One-sentence description of the get_chat_transcript tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser de seneste beskeder i en chat."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads the recent messages of a chat."
+          }
+        }
+      }
+    },
+    "tools.description.getDirections": {
+      "comment": "One-sentence description of the get_directions tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimerer rejsetid, afstand og en kort rutenote mellem to steder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimates travel time, distance, and a route note between two places."
+          }
+        }
+      }
+    },
+    "tools.description.getFoodDetails": {
+      "comment": "One-sentence description of the get_food_details tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder detaljeret ernæringsinformation for et produkt via stregkode."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks up the nutrition of a product by barcode."
+          }
+        }
+      }
+    },
+    "tools.description.getHealthLog": {
+      "comment": "One-sentence description of the get_health_log tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser sundhedsdata fra Apple Health – kost, aktivitet, søvn, livstegn eller kropsmål."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads your health data from Apple Health, like sleep, activity, or body metrics."
+          }
+        }
+      }
+    },
+    "tools.description.getKnowledge": {
+      "comment": "One-sentence description of the get_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henter ét vidensindslag helt udfoldet, inklusive dets relationer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetches one knowledge entry in full, including what it relates to."
+          }
+        }
+      }
+    },
+    "tools.description.getPresentation": {
+      "comment": "One-sentence description of the get_presentation tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder agentens aktuelle navn, emoji og stemme."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks up your agent's current name, emoji, and voice."
+          }
+        }
+      }
+    },
+    "tools.description.getReminders": {
+      "comment": "One-sentence description of the get_reminders tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser påmindelser, filtreret efter liste, fuldførelsesstatus eller dato."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads your reminders, filtered by list, completion status, or date."
+          }
+        }
+      }
+    },
+    "tools.description.getTimeAndPlace": {
+      "comment": "One-sentence description of the get_time_and_place tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slår den aktuelle tid, tidszone og placering op."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks up the current time, timezone, and location."
+          }
+        }
+      }
+    },
+    "tools.description.getWeather": {
+      "comment": "One-sentence description of the get_weather tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henter vejret: aktuelle forhold, i dag time for time og en kort prognose."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gets the weather: current conditions, today by the hour, and a short forecast."
+          }
+        }
+      }
+    },
+    "tools.description.listChats": {
+      "comment": "One-sentence description of the list_chats tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister nylige chats."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists recent chats."
+          }
+        }
+      }
+    },
+    "tools.description.listIntents": {
+      "comment": "One-sentence description of the list_intents tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister agentens aktive mål."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists your agent's active goals."
+          }
+        }
+      }
+    },
+    "tools.description.listSpaces": {
+      "comment": "One-sentence description of the list_spaces tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lister de rum, agenten kan flytte chats mellem."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists the spaces your agent can move chats between."
+          }
+        }
+      }
+    },
+    "tools.description.logBodyMeasurement": {
+      "comment": "One-sentence description of the log_body_measurement tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrerer en kropsmåling, fx vægt, i Apple Health."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs a body measurement, like weight, to Apple Health."
+          }
+        }
+      }
+    },
+    "tools.description.logFood": {
+      "comment": "One-sentence description of the log_food tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrerer spist mad i Apple Health."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs what you ate to Apple Health."
+          }
+        }
+      }
+    },
+    "tools.description.logSleep": {
+      "comment": "One-sentence description of the log_sleep tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrerer en nattesøvn i Apple Health."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs a night of sleep to Apple Health."
+          }
+        }
+      }
+    },
+    "tools.description.manageCalendarEvent": {
+      "comment": "One-sentence description of the manage_calendar_event tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdaterer eller sletter en kalenderbegivenhed."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates or deletes a calendar event."
+          }
+        }
+      }
+    },
+    "tools.description.manageReminder": {
+      "comment": "One-sentence description of the manage_reminder tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opretter, opdaterer, fuldfører eller sletter en påmindelse."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creates, updates, completes, or deletes a reminder."
+          }
+        }
+      }
+    },
+    "tools.description.manageVocabulary": {
+      "comment": "One-sentence description of the manage_vocabulary tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser, tilføjer eller fjerner ord, der forbedrer nøjagtigheden af dikteringen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lists, adds, or removes words that improve dictation accuracy."
+          }
+        }
+      }
+    },
+    "tools.description.mergeKnowledge": {
+      "comment": "One-sentence description of the merge_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sammenfletter dublerede vidensindslag til ét overlevende indslag."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folds duplicate knowledge entries into one."
+          }
+        }
+      }
+    },
+    "tools.description.moveChatToSpace": {
+      "comment": "One-sentence description of the move_chat_to_space tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flytter denne chat ind i et rum eller ud af et."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves this chat into a space, or back out of one."
+          }
+        }
+      }
+    },
+    "tools.description.presentOptions": {
+      "comment": "One-sentence description of the present_options tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser en række valgmuligheder i chatten, som du kan vælge imellem."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows you a set of choices to pick from in the chat."
+          }
+        }
+      }
+    },
+    "tools.description.readCore": {
+      "comment": "One-sentence description of the read_core tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Læser en af agentens kerntekster – de faste noter, den gemmer om dig."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads one of your agent's core texts, the standing notes it keeps about you."
+          }
+        }
+      }
+    },
+    "tools.description.resolveIntent": {
+      "comment": "One-sentence description of the resolve_intent tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markerer et mål som opfyldt eller ikke længere relevant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marks a goal as done or no longer relevant."
+          }
+        }
+      }
+    },
+    "tools.description.searchFood": {
+      "comment": "One-sentence description of the search_food tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger efter fødevarer og returnerer deres ernæringsindhold."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches food products and returns their nutrition."
+          }
+        }
+      }
+    },
+    "tools.description.searchKnowledge": {
+      "comment": "One-sentence description of the search_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger i agentens vidensbase eller giver et overblik over dens indhold."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches your agent's knowledge base, or gives an overview of what it holds."
+          }
+        }
+      }
+    },
+    "tools.description.searchPlaces": {
+      "comment": "One-sentence description of the search_places tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger efter steder efter navn eller kategori, med adresse og koordinater."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finds places by name or category, with addresses and coordinates."
+          }
+        }
+      }
+    },
+    "tools.description.setPresentation": {
+      "comment": "One-sentence description of the set_presentation tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ændrer agentens navn, emoji eller stemme."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes your agent's name, emoji, or voice."
+          }
+        }
+      }
+    },
+    "tools.description.setProactivity": {
+      "comment": "One-sentence description of the set_proactivity tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ændrer, hvor tilbøjelig agenten er til at henvende sig af sig selv."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes how willing your agent is to reach out on its own."
+          }
+        }
+      }
+    },
+    "tools.description.startFlow": {
+      "comment": "One-sentence description of the start_flow tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starter et trinopdelt flow og returnerer dets første trins instrukser."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts a staged flow and returns its first stage."
+          }
+        }
+      }
+    },
+    "tools.description.supersedeKnowledge": {
+      "comment": "One-sentence description of the supersede_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstatter et forældet vidensindslag med et nyere."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replaces an outdated knowledge entry with a newer one."
+          }
+        }
+      }
+    },
+    "tools.description.updateIntent": {
+      "comment": "One-sentence description of the update_intent tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdaterer et af agentens mål."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates one of your agent's goals."
+          }
+        }
+      }
+    },
+    "tools.description.updateKnowledge": {
+      "comment": "One-sentence description of the update_knowledge tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdaterer felterne i et eksisterende vidensindslag."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates an existing knowledge entry."
+          }
+        }
+      }
+    },
+    "tools.description.webFetch": {
+      "comment": "One-sentence description of the web_fetch tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henter en internetside og returnerer dens tekst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetches a page from the web and returns its text."
+          }
+        }
+      }
+    },
+    "tools.description.webSearch": {
+      "comment": "One-sentence description of the web_search tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger på nettet efter en forespørgsel."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches the web for a query."
           }
         }
       }
@@ -16609,6 +17833,40 @@
         }
       }
     },
+    "ui.copied": {
+      "comment": "Button label after copying the raw error response",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        }
+      }
+    },
+    "ui.copyRawError": {
+      "comment": "Button to copy the raw error response in the error detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiér rå fejl"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy raw error"
+          }
+        }
+      }
+    },
     "ui.core": {
       "comment": "Label for the agent's core identity section",
       "localizations": {
@@ -16945,23 +18203,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Health"
-          }
-        }
-      }
-    },
-    "ui.hideRawError": {
-      "comment": "Button label to collapse the raw error response in the error detail sheet",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skjul rå fejl"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide raw error"
           }
         }
       }
@@ -17778,23 +19019,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show All (%@)"
-          }
-        }
-      }
-    },
-    "ui.showRawError": {
-      "comment": "Button label to expand the raw error response in the error detail sheet",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vis rå fejl"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show raw error"
           }
         }
       }

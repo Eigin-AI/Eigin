@@ -6,6 +6,7 @@ struct AddIntentTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "add_intent",
         displayName: Localized.Tools.Agent.addIntent,
+        description: Localized.Tools.Description.addIntent,
         defaultPermissionLevel: .always, category: .agent
     )
 

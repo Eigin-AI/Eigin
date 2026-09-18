@@ -4,6 +4,7 @@ struct GetFoodDetailsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_food_details",
         displayName: Localized.Tools.Get.Food.details,
+        description: Localized.Tools.Description.getFoodDetails,
         defaultPermissionLevel: .ask, category: .health
     )
 

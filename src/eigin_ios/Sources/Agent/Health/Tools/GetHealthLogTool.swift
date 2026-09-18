@@ -4,6 +4,7 @@ struct GetHealthLogTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_health_log",
         displayName: Localized.Tools.Get.Health.log,
+        description: Localized.Tools.Description.getHealthLog,
         defaultPermissionLevel: .ask, category: .health
     )
 

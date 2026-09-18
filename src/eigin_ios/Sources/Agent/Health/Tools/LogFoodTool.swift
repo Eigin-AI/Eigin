@@ -4,6 +4,7 @@ struct LogFoodTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "log_food",
         displayName: Localized.Tools.Log.food,
+        description: Localized.Tools.Description.logFood,
         defaultPermissionLevel: .ask, category: .health
     )
 

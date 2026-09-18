@@ -5,6 +5,7 @@ struct SetProactivityTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "set_proactivity",
         displayName: Localized.Tools.Set.proactivity,
+        description: Localized.Tools.Description.setProactivity,
         defaultPermissionLevel: .ask, category: .agent
     )
 

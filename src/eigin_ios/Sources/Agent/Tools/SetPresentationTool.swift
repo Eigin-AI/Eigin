@@ -4,6 +4,7 @@ struct SetPresentationTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "set_presentation",
         displayName: Localized.Tools.Set.presentation,
+        description: Localized.Tools.Description.setPresentation,
         defaultPermissionLevel: .ask, category: .agent
     )
 

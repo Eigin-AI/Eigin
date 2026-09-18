@@ -6,6 +6,7 @@ import Chat from "@gallery/catalog/components/Chat.svelte";
 import Colors from "@gallery/catalog/fundamentals/Colors.svelte";
 import Content from "@gallery/catalog/components/Content.svelte";
 import Controls from "@gallery/catalog/components/Controls.svelte";
+import Data from "@gallery/catalog/components/Data.svelte";
 import Disclosures from "@gallery/catalog/components/Disclosures.svelte";
 import Images from "@gallery/catalog/components/Images.svelte";
 import Icons from "@gallery/catalog/fundamentals/Icons.svelte";
@@ -48,4 +49,5 @@ export const catalogEntries: CatalogEntry[] = [
   { id: "assets", title: "Assets", section: "components", component: Assets },
   { id: "sheets", title: "Sheets", section: "components", component: Sheets },
   { id: "status", title: "Status", section: "components", component: Status },
+  { id: "data", title: "Data", section: "components", component: Data },
 ];

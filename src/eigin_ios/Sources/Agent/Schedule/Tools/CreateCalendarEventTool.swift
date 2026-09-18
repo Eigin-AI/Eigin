@@ -4,6 +4,7 @@ struct CreateCalendarEventTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "create_calendar_event",
         displayName: Localized.Tools.Schedule.createEvent,
+        description: Localized.Tools.Description.createCalendarEvent,
         defaultPermissionLevel: .ask, category: .calendar
     )
 

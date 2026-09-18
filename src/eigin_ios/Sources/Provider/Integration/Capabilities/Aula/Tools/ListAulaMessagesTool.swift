@@ -6,6 +6,7 @@ struct ListAulaMessagesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_messages_list",
         displayName: Localized.Tools.Aula.listMessages,
+        description: Localized.Tools.Description.aulaMessagesList,
         defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 

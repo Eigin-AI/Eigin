@@ -4,106 +4,65 @@ import SwiftUI
 ///
 /// Present with the `.appSheet` modifier; the sheet header should carry the
 /// error title and suggestion via the `title:` and `description:` parameters.
-/// This view provides the scrollable body: a structured field breakdown when
-/// the raw response is parsable JSON, followed by the raw response itself.
+/// The body is the provider's own response, read out in full by a
+/// ``DataCard``. There is no raw view to reveal because nothing is hidden —
+/// what the payload said is on screen, and copying it is for taking elsewhere.
 struct ErrorDetailSheet: View {
     let error: ConnectionError
 
-    @State private var showsRawError = false
+    @State private var copied = false
+    @State private var copiedReset: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.n24) {
-            if let raw = error.rawDescription {
-                if let fields = jsonFields(raw), !fields.isEmpty {
-                    ErrorFieldsCard(fields: fields)
-                }
-                VStack(alignment: .leading, spacing: Spacing.n16) {
-                    AppSubtleActionButton(
-                        showsRawError ? Localized.Ui.hideRawError : Localized.Ui.showRawError,
-                        icon: Image(systemName: showsRawError ? "minus" : "plus"),
-                        size: .small
-                    ) {
-                        withAnimation(Animations.smooth) { showsRawError.toggle() }
-                    }
-
-                    if showsRawError {
-                        EiginCodeBlock(code: jsonCode(raw), language: jsonLanguage(raw))
-                    }
+        Group {
+            // No response to read out leaves the header to carry the error on
+            // its own; rendering an empty card alongside a copy control with
+            // nothing to copy would promise what is not there.
+            if error.rawDescription?.isEmpty == false {
+                DataCard(value: payload) {
+                    copyControl
                 }
             }
         }
-        .padding()
+        .padding(.horizontal, Spacing.n16)
     }
-}
 
-// MARK: - JSON field extraction
-
-private func jsonFields(_ raw: String) -> [(label: String, value: String)]? {
-    guard let data = raw.data(using: .utf8),
-          let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    else { return nil }
-
-    var fields: [(label: String, value: String)] = []
-    for key in root.keys.sorted() {
-        switch root[key] {
-        case let dict as [String: Any]:
-            for subKey in dict.keys.sorted() {
-                if let value = dict[subKey], !(value is [Any]), !(value is [String: Any]) {
-                    fields.append((label: "\(key).\(subKey)", value: "\(value)"))
-                }
-            }
-        case let value?:
-            if !(value is [Any]) {
-                fields.append((label: key, value: "\(value)"))
-            }
-        default:
-            break
+    /// A provider that answers in prose has no document to read out; its whole
+    /// response is the one fact there is.
+    private var payload: DataValue {
+        guard let raw = error.rawDescription, !raw.isEmpty else { return .object([]) }
+        if let parsed = DataValue.parse(raw) {
+            return parsed.isScalarArray || parsed.isLeaf
+                ? .object([.init(key: "response", value: parsed)])
+                : parsed
         }
+        return .object([.init(key: "response", value: .string(raw))])
     }
-    return fields.isEmpty ? nil : fields
-}
 
-private func formatLabel(_ raw: String) -> String {
-    // Replace dots and underscores with spaces, insert spaces before camelCase capitals
-    var result = raw
-        .replacingOccurrences(of: ".", with: " ")
-        .replacingOccurrences(of: "_", with: " ")
-    result = result.reduce(into: "") { acc, char in
-        if char.isUppercase, let last = acc.last, last != " " {
-            acc += " "
-        }
-        acc.append(char)
-    }
-    // Sentence case: lowercase all, capitalise first character
-    result = result.lowercased()
-    return result.prefix(1).uppercased() + result.dropFirst()
-}
-
-// MARK: - Fields card
-
-private struct ErrorFieldsCard: View {
-    let fields: [(label: String, value: String)]
-
-    @Environment(\.colors) private var colors
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.n12) {
-            ForEach(Array(fields.enumerated()), id: \.offset) { _, field in
-                HStack(alignment: .firstTextBaseline, spacing: Spacing.n16) {
-                    Text(formatLabel(field.label))
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.base)
-                        .frame(width: 100, alignment: .leading)
-                    Text(field.value)
-                        .typography(Typography.description)
-                        .foregroundStyle(colors.text.standard.base)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+    /// Quiet as the small print it stands beside, but set in the display
+    /// face: it is a thing to press, not a sentence to read. No button chrome;
+    /// the muted colour comes from the card's own footer.
+    private var copyControl: some View {
+        Button {
+            UIPasteboard.general.string = error.rawDescription
+            copiedReset?.cancel()
+            copied = true
+            copiedReset = Task {
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run { copied = false }
+            }
+        } label: {
+            HStack(spacing: Spacing.n8) {
+                (copied ? Iconography.Functional.check : Iconography.Functional.copy)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 12, height: 12)
+                Text(copied ? Localized.Ui.copied : Localized.Ui.copyRawError)
+                    .typography(Typography.tag)
             }
         }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n24)
-        .background(colors.surface.standard.elevated, in: RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
     }
 }
 
@@ -121,6 +80,15 @@ private struct ErrorFieldsCard: View {
         title: "Request failed",
         suggestion: "Your provider returned an error. Tap for details.",
         rawDescription: "invalid json"
+    ))
+    .previewEnvironment()
+}
+
+#Preview("Primitive error") {
+    ErrorDetailSheet(error: ConnectionError(
+        title: "Bad response",
+        suggestion: "Your provider returned a response that doesn't read as JSON. It is shown below, as it arrived.",
+        rawDescription: "42"
     ))
     .previewEnvironment()
 }

@@ -5,6 +5,7 @@ struct ListSpacesTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "list_spaces",
         displayName: Localized.Tools.Space.list,
+        description: Localized.Tools.Description.listSpaces,
         defaultPermissionLevel: .always, category: .chats
     )
 

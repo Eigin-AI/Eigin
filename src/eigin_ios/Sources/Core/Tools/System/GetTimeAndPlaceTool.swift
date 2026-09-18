@@ -6,6 +6,7 @@ struct GetTimeAndPlaceTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_time_and_place",
         displayName: Localized.Tools.System.timeAndPlace,
+        description: Localized.Tools.Description.getTimeAndPlace,
         defaultPermissionLevel: .always, category: .timeAndPlace
     )
 

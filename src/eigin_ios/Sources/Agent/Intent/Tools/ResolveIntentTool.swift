@@ -4,6 +4,7 @@ struct ResolveIntentTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "resolve_intent",
         displayName: Localized.Tools.Agent.resolveIntent,
+        description: Localized.Tools.Description.resolveIntent,
         defaultPermissionLevel: .always, category: .agent
     )
 

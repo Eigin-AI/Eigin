@@ -4,6 +4,7 @@ struct EditCoreTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "edit_core",
         displayName: Localized.Tools.Edit.core,
+        description: Localized.Tools.Description.editCore,
         defaultPermissionLevel: .ask, category: .agent
     )
 

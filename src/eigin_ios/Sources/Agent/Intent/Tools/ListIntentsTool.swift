@@ -4,6 +4,7 @@ struct ListIntentsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "list_intents",
         displayName: Localized.Tools.Agent.listIntents,
+        description: Localized.Tools.Description.listIntents,
         defaultPermissionLevel: .always, category: .agent
     )
 

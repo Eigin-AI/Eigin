@@ -5,6 +5,7 @@ struct WebSearchTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "web_search",
         displayName: Localized.Tools.Web.search,
+        description: Localized.Tools.Description.webSearch,
         defaultPermissionLevel: .ask, category: .web
     )
 

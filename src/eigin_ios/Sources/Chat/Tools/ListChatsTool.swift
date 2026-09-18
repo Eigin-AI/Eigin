@@ -5,6 +5,7 @@ struct ListChatsTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "list_chats",
         displayName: Localized.Tools.List.chats,
+        description: Localized.Tools.Description.listChats,
         defaultPermissionLevel: .always, category: .chats
     )
 

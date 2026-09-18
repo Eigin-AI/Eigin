@@ -6,6 +6,7 @@ struct MergeKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "merge_knowledge",
         displayName: Localized.Tools.Merge.knowledge,
+        description: Localized.Tools.Description.mergeKnowledge,
         defaultPermissionLevel: .always, category: .knowledge
     )
 

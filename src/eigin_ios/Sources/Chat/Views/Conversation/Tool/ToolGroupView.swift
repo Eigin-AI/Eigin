@@ -85,8 +85,19 @@ struct ToolGroupView: View {
                 .alignmentGuide(.toolText) { $0[.leading] }
             }
         }
-        .sheet(item: $selectedTool) { tool in
-            ToolDetailSheet(tool: tool)
+        .appSheet(
+            isPresented: Binding(
+                get: { selectedTool != nil },
+                set: { if !$0 { selectedTool = nil } }
+            ),
+            title: ToolRegistry.displayName(for: selectedTool?.name ?? ""),
+            description: selectedTool.flatMap { ToolRegistry.description(for: $0.name) },
+            detents: [.medium, .large],
+            fitsContent: true
+        ) {
+            if let tool = selectedTool {
+                ToolDetailSheet(tool: tool)
+            }
         }
     }
 }

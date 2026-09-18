@@ -6,6 +6,7 @@ struct GetAulaChildrenTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "aula_children",
         displayName: Localized.Tools.Aula.children,
+        description: Localized.Tools.Description.aulaChildren,
         defaultPermissionLevel: .ask, category: .familyAndSchool
     )
 

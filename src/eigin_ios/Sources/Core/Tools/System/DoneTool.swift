@@ -4,6 +4,7 @@ struct DoneTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "done",
         displayName: Localized.Tools.System.done,
+        description: Localized.Tools.Description.done,
         defaultPermissionLevel: .always, category: .agent, isUserConfigurable: false
     )
 

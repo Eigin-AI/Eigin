@@ -5,6 +5,7 @@ struct GetKnowledgeTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_knowledge",
         displayName: Localized.Tools.Knowledge.get,
+        description: Localized.Tools.Description.getKnowledge,
         defaultPermissionLevel: .always, category: .knowledge
     )
 

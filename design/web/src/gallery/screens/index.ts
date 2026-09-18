@@ -9,6 +9,7 @@ import ChatListScreen from "@gallery/screens/ChatListScreen.svelte";
 import ChatScreen from "@gallery/screens/ChatScreen.svelte";
 import ConnectionsScreen from "@gallery/screens/ConnectionsScreen.svelte";
 import EiginProviderScreen from "@gallery/screens/EiginProviderScreen.svelte";
+import ErrorDetailScreen from "@gallery/screens/ErrorDetailScreen.svelte";
 import GetCreditsScreen from "@gallery/screens/GetCreditsScreen.svelte";
 import IntegrationScreen from "@gallery/screens/IntegrationScreen.svelte";
 import OffersScreen from "@gallery/screens/OffersScreen.svelte";
@@ -18,6 +19,7 @@ import RelayInfoScreen from "@gallery/screens/RelayInfoScreen.svelte";
 import ProviderConnectScreen from "@gallery/screens/ProviderConnectScreen.svelte";
 import ProviderSelectScreen from "@gallery/screens/ProviderSelectScreen.svelte";
 import SettingsScreen from "@gallery/screens/SettingsScreen.svelte";
+import ToolDetailScreen from "@gallery/screens/ToolDetailScreen.svelte";
 import WatchScreen from "@gallery/screens/WatchScreen.svelte";
 
 export interface ScreenEntry {
@@ -48,6 +50,7 @@ export interface ScreenEntry {
 export const screenSections: { id: string; title: string }[] = [
   { id: "primary", title: "Main screens" },
   { id: "connections", title: "Connections" },
+  { id: "sheets", title: "Sheets" },
   { id: "watch", title: "Watch" },
 ];
 
@@ -204,6 +207,24 @@ export const screenEntries: ScreenEntry[] = [
     component: ConnectIntegrationScreen,
     about:
       "Connect one integration, whichever way it lets you in: a sign-in, a key, mail settings, or a server that has to be asked what it needs.",
+  },
+
+  {
+    id: "tool-detail",
+    title: "Tool detail",
+    section: "sheets",
+    component: ToolDetailScreen,
+    about:
+      "One tool call, opened from the feed that ran it: the state it is in, what it was asked, and what came back. Every state answers for itself, including a call that finished with nothing to show.",
+  },
+
+  {
+    id: "error-detail",
+    title: "Error detail",
+    section: "sheets",
+    component: ErrorDetailScreen,
+    about:
+      "What a provider said when a turn failed. The header carries the plain reading and what to do about it; the response itself is read out as facts. Nothing is held back, so there is no raw view to open — only a way to copy it.",
   },
 
   {

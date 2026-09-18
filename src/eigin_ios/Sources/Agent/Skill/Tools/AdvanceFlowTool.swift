@@ -6,6 +6,7 @@ struct AdvanceFlowTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "advance_flow",
         displayName: Localized.Tools.Agent.advanceFlow,
+        description: Localized.Tools.Description.advanceFlow,
         defaultPermissionLevel: .always, category: .skills, isUserConfigurable: false
     )
 

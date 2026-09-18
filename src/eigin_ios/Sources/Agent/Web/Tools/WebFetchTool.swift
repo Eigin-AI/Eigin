@@ -4,6 +4,7 @@ struct WebFetchTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "web_fetch",
         displayName: Localized.Tools.Web.fetch,
+        description: Localized.Tools.Description.webFetch,
         defaultPermissionLevel: .ask, category: .web
     )
 

@@ -4,6 +4,7 @@ struct LogSleepTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "log_sleep",
         displayName: Localized.Tools.Log.sleep,
+        description: Localized.Tools.Description.logSleep,
         defaultPermissionLevel: .ask, category: .health
     )
 

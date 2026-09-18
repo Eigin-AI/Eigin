@@ -4,6 +4,7 @@ struct GetRemindersTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "get_reminders",
         displayName: Localized.Tools.Schedule.getReminders,
+        description: Localized.Tools.Description.getReminders,
         defaultPermissionLevel: .always, category: .reminders
     )
 

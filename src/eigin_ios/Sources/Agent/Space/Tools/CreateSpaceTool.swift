@@ -5,6 +5,7 @@ struct CreateSpaceTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "create_space",
         displayName: Localized.Tools.Space.create,
+        description: Localized.Tools.Description.createSpace,
         defaultPermissionLevel: .ask, category: .chats
     )
 

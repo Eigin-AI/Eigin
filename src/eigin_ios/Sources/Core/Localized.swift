@@ -570,6 +570,63 @@ enum Localized {
         }
     }
 
+    enum DataCard {
+        /// Accessibility hint that a data card branch collapses
+        static func collapseHint(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.collapseHint"), p1)
+        }
+
+        /// Word a data card shows for an empty string value
+        static var empty: String {
+            Localized.get("dataCard.empty")
+        }
+
+        /// Accessibility hint that a data card branch expands
+        static func expandHint(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.expandHint"), p1)
+        }
+
+        /// Fallback name for an unnamed item of an array in a data card
+        static func itemLabel(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.itemLabel"), p1)
+        }
+
+        /// Summary of a collapsed list in a data card
+        static func itemsCount(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.itemsCount"), p1)
+        }
+
+        /// Word a data card shows for a false value
+        static var no: String {
+            Localized.get("dataCard.no")
+        }
+
+        /// Word a data card shows for a JSON null value
+        static var none: String {
+            Localized.get("dataCard.none")
+        }
+
+        /// Button to reveal the rest of a long list in a data card
+        static func showAll(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.showAll"), p1)
+        }
+
+        /// Button to reveal the rest of a long value in a data card
+        static var showMore: String {
+            Localized.get("dataCard.showMore")
+        }
+
+        /// Summary of a collapsed object in a data card
+        static func valuesCount(_ p1: String) -> String {
+            String(format: Localized.get("dataCard.valuesCount"), p1)
+        }
+
+        /// Word a data card shows for a true value
+        static var yes: String {
+            Localized.get("dataCard.yes")
+        }
+    }
+
     enum Debug {
         /// Button to delete all listed items
         static var deleteAllListed: String {
@@ -3017,11 +3074,6 @@ enum Localized {
             Localized.get("permission.toolDeniedByPolicy")
         }
 
-        /// A message displayed when a tool's execution is awaiting user permission.
-        static var waitingForUser: String {
-            Localized.get("permission.waitingForUser")
-        }
-
         /// Permission sheet sentence with a tool-supplied action phrase. First argument is the
         /// agent name, second is the action phrase.
         static func wantsToFormat(_ p1: String, _ p2: String) -> String {
@@ -4712,11 +4764,6 @@ enum Localized {
             Localized.get("status.executing")
         }
 
-        /// A placeholder text indicating that a task is currently in progress.
-        static var executingProgress: String {
-            Localized.get("status.executingProgress")
-        }
-
         /// A tool call that failed, displayed in red text.
         static func failedFormat(_ p1: String) -> String {
             String(format: Localized.get("status.failedFormat"), p1)
@@ -4840,6 +4887,33 @@ enum Localized {
         /// Tool category label for web tools
         static var web: String {
             Localized.get("toolCategory.web")
+        }
+    }
+
+    enum ToolDetail {
+        /// Status label for a tool call that finished returning nothing
+        static var completedNoOutput: String {
+            Localized.get("toolDetail.completedNoOutput")
+        }
+
+        /// Status label for a tool call the user denied
+        static var deniedByUser: String {
+            Localized.get("toolDetail.deniedByUser")
+        }
+
+        /// Status label for a tool call that failed
+        static var failed: String {
+            Localized.get("toolDetail.failed")
+        }
+
+        /// Section heading above a tool call's input arguments in the tool detail sheet
+        static var input: String {
+            Localized.get("toolDetail.input")
+        }
+
+        /// Section heading above a tool call's result in the tool detail sheet
+        static var output: String {
+            Localized.get("toolDetail.output")
         }
     }
 
@@ -4967,6 +5041,318 @@ enum Localized {
             /// Display name for the delete-space tool
             static var space: String {
                 Localized.get("tools.delete.space")
+            }
+        }
+
+        enum Description {
+            /// One-sentence description of the activate_skill tool, shown in the tool detail sheet
+            static var activateSkill: String {
+                Localized.get("tools.description.activateSkill")
+            }
+
+            /// One-sentence description of the add_intent tool, shown in the tool detail sheet
+            static var addIntent: String {
+                Localized.get("tools.description.addIntent")
+            }
+
+            /// One-sentence description of the add_knowledge tool, shown in the tool detail sheet
+            static var addKnowledge: String {
+                Localized.get("tools.description.addKnowledge")
+            }
+
+            /// One-sentence description of the advance_flow tool, shown in the tool detail sheet
+            static var advanceFlow: String {
+                Localized.get("tools.description.advanceFlow")
+            }
+
+            /// One-sentence description of the aula_calendar tool, shown in the tool detail sheet
+            static var aulaCalendar: String {
+                Localized.get("tools.description.aulaCalendar")
+            }
+
+            /// One-sentence description of the aula_children tool, shown in the tool detail sheet
+            static var aulaChildren: String {
+                Localized.get("tools.description.aulaChildren")
+            }
+
+            /// One-sentence description of the aula_message_read tool, shown in the tool detail
+            /// sheet
+            static var aulaMessageRead: String {
+                Localized.get("tools.description.aulaMessageRead")
+            }
+
+            /// One-sentence description of the aula_messages_list tool, shown in the tool detail
+            /// sheet
+            static var aulaMessagesList: String {
+                Localized.get("tools.description.aulaMessagesList")
+            }
+
+            /// One-sentence description of the aula_updates tool, shown in the tool detail sheet
+            static var aulaUpdates: String {
+                Localized.get("tools.description.aulaUpdates")
+            }
+
+            /// One-sentence description of the background_notify tool, shown in the tool detail
+            /// sheet
+            static var backgroundNotify: String {
+                Localized.get("tools.description.backgroundNotify")
+            }
+
+            /// One-sentence description of the contest_knowledge tool, shown in the tool detail
+            /// sheet
+            static var contestKnowledge: String {
+                Localized.get("tools.description.contestKnowledge")
+            }
+
+            /// One-sentence description of the create_calendar_event tool, shown in the tool detail
+            /// sheet
+            static var createCalendarEvent: String {
+                Localized.get("tools.description.createCalendarEvent")
+            }
+
+            /// One-sentence description of the create_space tool, shown in the tool detail sheet
+            static var createSpace: String {
+                Localized.get("tools.description.createSpace")
+            }
+
+            /// One-sentence description of the delete_knowledge tool, shown in the tool detail
+            /// sheet
+            static var deleteKnowledge: String {
+                Localized.get("tools.description.deleteKnowledge")
+            }
+
+            /// One-sentence description of the done tool, shown in the tool detail sheet
+            static var done: String {
+                Localized.get("tools.description.done")
+            }
+
+            /// One-sentence description of the edit_core tool, shown in the tool detail sheet
+            static var editCore: String {
+                Localized.get("tools.description.editCore")
+            }
+
+            /// One-sentence description of the edit_space tool, shown in the tool detail sheet
+            static var editSpace: String {
+                Localized.get("tools.description.editSpace")
+            }
+
+            /// One-sentence description of the email_list tool, shown in the tool detail sheet
+            static var emailList: String {
+                Localized.get("tools.description.emailList")
+            }
+
+            /// One-sentence description of the email_read tool, shown in the tool detail sheet
+            static var emailRead: String {
+                Localized.get("tools.description.emailRead")
+            }
+
+            /// One-sentence description of the email_reply tool, shown in the tool detail sheet
+            static var emailReply: String {
+                Localized.get("tools.description.emailReply")
+            }
+
+            /// One-sentence description of the email_search tool, shown in the tool detail sheet
+            static var emailSearch: String {
+                Localized.get("tools.description.emailSearch")
+            }
+
+            /// One-sentence description of the email_send tool, shown in the tool detail sheet
+            static var emailSend: String {
+                Localized.get("tools.description.emailSend")
+            }
+
+            /// One-sentence description of the forget_knowledge tool, shown in the tool detail
+            /// sheet
+            static var forgetKnowledge: String {
+                Localized.get("tools.description.forgetKnowledge")
+            }
+
+            /// One-sentence description of the get_calendar_events tool, shown in the tool detail
+            /// sheet
+            static var getCalendarEvents: String {
+                Localized.get("tools.description.getCalendarEvents")
+            }
+
+            /// One-sentence description of the get_chat_transcript tool, shown in the tool detail
+            /// sheet
+            static var getChatTranscript: String {
+                Localized.get("tools.description.getChatTranscript")
+            }
+
+            /// One-sentence description of the get_directions tool, shown in the tool detail sheet
+            static var getDirections: String {
+                Localized.get("tools.description.getDirections")
+            }
+
+            /// One-sentence description of the get_food_details tool, shown in the tool detail
+            /// sheet
+            static var getFoodDetails: String {
+                Localized.get("tools.description.getFoodDetails")
+            }
+
+            /// One-sentence description of the get_health_log tool, shown in the tool detail sheet
+            static var getHealthLog: String {
+                Localized.get("tools.description.getHealthLog")
+            }
+
+            /// One-sentence description of the get_knowledge tool, shown in the tool detail sheet
+            static var getKnowledge: String {
+                Localized.get("tools.description.getKnowledge")
+            }
+
+            /// One-sentence description of the get_presentation tool, shown in the tool detail
+            /// sheet
+            static var getPresentation: String {
+                Localized.get("tools.description.getPresentation")
+            }
+
+            /// One-sentence description of the get_reminders tool, shown in the tool detail sheet
+            static var getReminders: String {
+                Localized.get("tools.description.getReminders")
+            }
+
+            /// One-sentence description of the get_time_and_place tool, shown in the tool detail
+            /// sheet
+            static var getTimeAndPlace: String {
+                Localized.get("tools.description.getTimeAndPlace")
+            }
+
+            /// One-sentence description of the get_weather tool, shown in the tool detail sheet
+            static var getWeather: String {
+                Localized.get("tools.description.getWeather")
+            }
+
+            /// One-sentence description of the list_chats tool, shown in the tool detail sheet
+            static var listChats: String {
+                Localized.get("tools.description.listChats")
+            }
+
+            /// One-sentence description of the list_intents tool, shown in the tool detail sheet
+            static var listIntents: String {
+                Localized.get("tools.description.listIntents")
+            }
+
+            /// One-sentence description of the list_spaces tool, shown in the tool detail sheet
+            static var listSpaces: String {
+                Localized.get("tools.description.listSpaces")
+            }
+
+            /// One-sentence description of the log_body_measurement tool, shown in the tool detail
+            /// sheet
+            static var logBodyMeasurement: String {
+                Localized.get("tools.description.logBodyMeasurement")
+            }
+
+            /// One-sentence description of the log_food tool, shown in the tool detail sheet
+            static var logFood: String {
+                Localized.get("tools.description.logFood")
+            }
+
+            /// One-sentence description of the log_sleep tool, shown in the tool detail sheet
+            static var logSleep: String {
+                Localized.get("tools.description.logSleep")
+            }
+
+            /// One-sentence description of the manage_calendar_event tool, shown in the tool detail
+            /// sheet
+            static var manageCalendarEvent: String {
+                Localized.get("tools.description.manageCalendarEvent")
+            }
+
+            /// One-sentence description of the manage_reminder tool, shown in the tool detail sheet
+            static var manageReminder: String {
+                Localized.get("tools.description.manageReminder")
+            }
+
+            /// One-sentence description of the manage_vocabulary tool, shown in the tool detail
+            /// sheet
+            static var manageVocabulary: String {
+                Localized.get("tools.description.manageVocabulary")
+            }
+
+            /// One-sentence description of the merge_knowledge tool, shown in the tool detail sheet
+            static var mergeKnowledge: String {
+                Localized.get("tools.description.mergeKnowledge")
+            }
+
+            /// One-sentence description of the move_chat_to_space tool, shown in the tool detail
+            /// sheet
+            static var moveChatToSpace: String {
+                Localized.get("tools.description.moveChatToSpace")
+            }
+
+            /// One-sentence description of the present_options tool, shown in the tool detail sheet
+            static var presentOptions: String {
+                Localized.get("tools.description.presentOptions")
+            }
+
+            /// One-sentence description of the read_core tool, shown in the tool detail sheet
+            static var readCore: String {
+                Localized.get("tools.description.readCore")
+            }
+
+            /// One-sentence description of the resolve_intent tool, shown in the tool detail sheet
+            static var resolveIntent: String {
+                Localized.get("tools.description.resolveIntent")
+            }
+
+            /// One-sentence description of the search_food tool, shown in the tool detail sheet
+            static var searchFood: String {
+                Localized.get("tools.description.searchFood")
+            }
+
+            /// One-sentence description of the search_knowledge tool, shown in the tool detail
+            /// sheet
+            static var searchKnowledge: String {
+                Localized.get("tools.description.searchKnowledge")
+            }
+
+            /// One-sentence description of the search_places tool, shown in the tool detail sheet
+            static var searchPlaces: String {
+                Localized.get("tools.description.searchPlaces")
+            }
+
+            /// One-sentence description of the set_presentation tool, shown in the tool detail
+            /// sheet
+            static var setPresentation: String {
+                Localized.get("tools.description.setPresentation")
+            }
+
+            /// One-sentence description of the set_proactivity tool, shown in the tool detail sheet
+            static var setProactivity: String {
+                Localized.get("tools.description.setProactivity")
+            }
+
+            /// One-sentence description of the start_flow tool, shown in the tool detail sheet
+            static var startFlow: String {
+                Localized.get("tools.description.startFlow")
+            }
+
+            /// One-sentence description of the supersede_knowledge tool, shown in the tool detail
+            /// sheet
+            static var supersedeKnowledge: String {
+                Localized.get("tools.description.supersedeKnowledge")
+            }
+
+            /// One-sentence description of the update_intent tool, shown in the tool detail sheet
+            static var updateIntent: String {
+                Localized.get("tools.description.updateIntent")
+            }
+
+            /// One-sentence description of the update_knowledge tool, shown in the tool detail
+            /// sheet
+            static var updateKnowledge: String {
+                Localized.get("tools.description.updateKnowledge")
+            }
+
+            /// One-sentence description of the web_fetch tool, shown in the tool detail sheet
+            static var webFetch: String {
+                Localized.get("tools.description.webFetch")
+            }
+
+            /// One-sentence description of the web_search tool, shown in the tool detail sheet
+            static var webSearch: String {
+                Localized.get("tools.description.webSearch")
             }
         }
 
@@ -5536,6 +5922,16 @@ enum Localized {
             Localized.get("ui.cooking")
         }
 
+        /// Button label after copying the raw error response
+        static var copied: String {
+            Localized.get("ui.copied")
+        }
+
+        /// Button to copy the raw error response in the error detail sheet
+        static var copyRawError: String {
+            Localized.get("ui.copyRawError")
+        }
+
         /// Label for the agent's core identity section
         static var core: String {
             Localized.get("ui.core")
@@ -5636,11 +6032,6 @@ enum Localized {
         /// Tab or section label for the health tracking feature
         static var health: String {
             Localized.get("ui.health")
-        }
-
-        /// Button label to collapse the raw error response in the error detail sheet
-        static var hideRawError: String {
-            Localized.get("ui.hideRawError")
         }
 
         /// Success message shown after a data import completes
@@ -5884,11 +6275,6 @@ enum Localized {
         /// parentheses is replaced with the actual number of facts of that type.
         static func showAll(_ p1: String) -> String {
             String(format: Localized.get("ui.showAll"), p1)
-        }
-
-        /// Button label to expand the raw error response in the error detail sheet
-        static var showRawError: String {
-            Localized.get("ui.showRawError")
         }
 
         /// Speed tier label — slow but powerful model option
