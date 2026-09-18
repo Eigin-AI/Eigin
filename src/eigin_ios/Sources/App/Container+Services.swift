@@ -258,7 +258,7 @@ extension Container {
 
     // MARK: - Watch
 
-    var watchBridge: Factory<WatchBridge> {
-        self { WatchBridge() }.singleton
+    var watchLink: Factory<WatchLink> {
+        self { WatchLink() }.singleton
     }
 }

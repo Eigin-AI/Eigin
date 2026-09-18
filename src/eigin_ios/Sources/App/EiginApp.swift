@@ -31,7 +31,7 @@ struct EiginApp: App {
 
         // Activate WatchConnectivity so a wrist tap can wake the app and ask
         // a question while the phone is pocketed.
-        Container.shared.watchBridge().activate()
+        Container.shared.watchLink().activate()
 
         // Recover purchases interrupted before their credits were redeemed: StoreKit re-delivers
         // unfinished transactions, and this sweep redeems and finishes them for the app lifetime.
