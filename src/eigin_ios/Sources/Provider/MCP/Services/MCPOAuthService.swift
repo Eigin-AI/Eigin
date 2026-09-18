@@ -21,7 +21,9 @@ protocol MCPOAuthService: Sendable {
 final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
     private let keychainService: any KeychainService
     private let urlSession: URLSession
-    private static let redirectURI = "eigin://oauth/callback"
+    /// RFC 8252 §7.1 — authorization servers may require reverse-DNS-shaped
+    /// (dotted) custom schemes.
+    static let redirectURI = "ai.eigin://oauth/callback"
 
     init(keychainService: any KeychainService, urlSession: URLSession = .shared) {
         self.keychainService = keychainService
@@ -63,7 +65,7 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         }
 
         // Fetch Protected Resource Metadata
-        let (resourceData, _) = try await urlSession.data(from: resourceMetadataURL)
+        let (resourceData, resourceResponse) = try await urlSession.data(from: resourceMetadataURL)
         let resourceMeta: ProtectedResourceMetadata
         do {
             resourceMeta = try JSONDecoder().decode(
@@ -71,7 +73,14 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
                 from: resourceData
             )
         } catch {
-            throw MCPOAuthError.metadataDiscoveryFailed("Invalid protected resource metadata")
+            let status = (resourceResponse as? HTTPURLResponse)?.statusCode ?? 0
+            throw MCPOAuthError.metadataDiscoveryFailed(
+                describeFailure(
+                    status: status,
+                    body: resourceData,
+                    context: "protected resource metadata"
+                )
+            )
         }
 
         guard let authServers = resourceMeta.authorizationServers, !authServers.isEmpty else {
@@ -83,7 +92,16 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         }
 
         // Fetch Authorization Server Metadata (RFC 8414), fallback to OpenID Configuration
-        let authServerMeta = try await fetchAuthServerMetadata(issuer: authServerBase)
+        let authServerMeta: AuthorizationServerMetadata
+        do {
+            authServerMeta = try await fetchAuthServerMetadata(issuer: authServerBase)
+        } catch let error as MCPOAuthError {
+            throw error
+        } catch {
+            throw MCPOAuthError.metadataDiscoveryFailed(
+                "Authorization server metadata fetch failed: \(error.localizedDescription)"
+            )
+        }
 
         guard let authEndpoint = URL(string: authServerMeta.authorizationEndpoint),
               let tokenEndpoint = URL(string: authServerMeta.tokenEndpoint)
@@ -91,14 +109,19 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             throw MCPOAuthError.metadataDiscoveryFailed("Invalid authorization/token endpoint URLs")
         }
 
-        // Dynamic Client Registration if supported
+        // Dynamic Client Registration if supported. Register with the same
+        // scopes the authorization step will request, so the server can't
+        // shrink them at registration time.
         var clientID: String?
         var clientSecret: String?
 
         if let registrationEndpoint = authServerMeta.registrationEndpoint,
            let registrationURL = URL(string: registrationEndpoint)
         {
-            let registration = try await registerClient(at: registrationURL, serverURL: serverURL)
+            let registration = try await registerClient(
+                at: registrationURL,
+                scopes: authServerMeta.scopesSupported
+            )
             clientID = registration.clientId
             clientSecret = registration.clientSecret
         }
@@ -121,9 +144,8 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         }
 
         // Delegates the PKCE mechanics (browser, callback, code exchange) to the
-        // shared flow. MCP keeps its direct `eigin://` redirect (already
-        // registered with dynamically-registered clients) and its `resource`
-        // indicator param, expressed here as flow config rather than special-cased code.
+        // shared flow. The callback scheme is derived from the redirect URI so
+        // it can't drift; the `resource` indicator rides along as a flow param.
         let flowConfig = PKCEOAuthConfig(
             authorizationEndpoint: config.authorizationEndpoint,
             tokenEndpoint: config.tokenEndpoint,
@@ -139,7 +161,6 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         do {
             tokenResponse = try await PKCEOAuthFlow.authorize(
                 config: flowConfig,
-                callbackScheme: "eigin",
                 urlSession: urlSession
             )
         } catch PKCEOAuthFlow.FlowError.userCancelled {
@@ -241,49 +262,68 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             httpsIssuer = components.url ?? issuer
         }
 
-        // Try RFC 8414 first
-        let rfc8414URL = authServerMetadataURL(for: httpsIssuer)
-        if let meta = try? await fetchAndDecode(
-            AuthorizationServerMetadata.self,
-            from: rfc8414URL
-        ) {
-            return meta.upgradingHTTP()
+        // Try RFC 8414 first, then OpenID Configuration (per MCP spec)
+        var lastFailure: String?
+        for url in [
+            authServerMetadataURL(for: httpsIssuer),
+            httpsIssuer.appendingPathComponent(".well-known/openid-configuration"),
+        ] {
+            do {
+                let meta = try await fetchAndDecode(AuthorizationServerMetadata.self, from: url)
+                return meta.upgradingHTTP()
+            } catch {
+                lastFailure = error.localizedDescription
+            }
         }
 
-        // Fallback: OpenID Configuration (per MCP spec)
-        let openIDURL = httpsIssuer.appendingPathComponent(".well-known/openid-configuration")
-        if let meta = try? await fetchAndDecode(AuthorizationServerMetadata.self, from: openIDURL) {
-            return meta.upgradingHTTP()
-        }
-
-        throw MCPOAuthError.metadataDiscoveryFailed("Could not fetch authorization server metadata")
+        throw MCPOAuthError.metadataDiscoveryFailed(
+            "Could not fetch authorization server metadata: \(lastFailure ?? "unknown error")"
+        )
     }
 
     private func registerClient(
         at endpoint: URL,
-        serverURL: URL
+        scopes: [String]?
     ) async throws -> ClientRegistrationResponse {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "client_name": "Eigin",
             "redirect_uris": [Self.redirectURI],
             "grant_types": ["authorization_code", "refresh_token"],
             "token_endpoint_auth_method": "none",
-            "scope": "mcp",
         ]
+        if let scopes, !scopes.isEmpty {
+            body["scope"] = scopes.joined(separator: " ")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse,
               (200 ... 299).contains(httpResponse.statusCode)
         else {
-            throw MCPOAuthError.registrationFailed("Server returned error")
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw MCPOAuthError.registrationFailed(
+                describeFailure(status: status, body: data, context: "client registration")
+            )
         }
 
         return try JSONDecoder().decode(ClientRegistrationResponse.self, from: data)
+    }
+
+    /// Human-readable failure detail from a metadata/registration response.
+    /// These bodies contain no secrets (no tokens are involved), so they are
+    /// safe to show and log.
+    private func describeFailure(status: Int, body: Data, context: String) -> String {
+        let bodyText = String(data: body, encoding: .utf8) ?? ""
+        let trimmed = bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let capped = trimmed.count > 300 ? "\(trimmed.prefix(300))…" : trimmed
+        if capped.isEmpty {
+            return "HTTP \(status) during \(context)"
+        }
+        return "HTTP \(status) during \(context): \(capped)"
     }
 
     private func storeTokens(
@@ -342,7 +382,16 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
     // MARK: - Network Helpers
 
     private func fetchAndDecode<T: Decodable>(_ type: T.Type, from url: URL) async throws -> T {
-        let (data, _) = try await urlSession.data(from: url)
+        let (data, response) = try await urlSession.data(from: url)
+        if let http = response as? HTTPURLResponse, !(200 ... 299).contains(http.statusCode) {
+            throw MCPOAuthError.metadataDiscoveryFailed(
+                describeFailure(
+                    status: http.statusCode,
+                    body: data,
+                    context: "metadata at \(url.absoluteString)"
+                )
+            )
+        }
         return try JSONDecoder().decode(type, from: data)
     }
 }

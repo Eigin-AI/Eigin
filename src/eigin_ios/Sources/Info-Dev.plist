@@ -29,6 +29,7 @@
 			<array>
 				<string>eigin</string>
 				<string>eigindev</string>
+				<string>ai.eigin</string>
 			</array>
 		</dict>
 	</array>

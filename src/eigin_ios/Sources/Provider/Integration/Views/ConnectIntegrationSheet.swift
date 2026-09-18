@@ -561,6 +561,10 @@ struct ConnectIntegrationSheet: View {
                 step = .start
             } catch {
                 guard isCurrent() else { return }
+                AppLogger.error(
+                    "Connect by address failed for \(public: endpoint.diagnosticsAddress): \(public: error.localizedDescription)",
+                    category: .mcp
+                )
                 failure = error.localizedDescription
                 Haptics.error()
                 step = .failed
@@ -593,6 +597,10 @@ struct ConnectIntegrationSheet: View {
             } catch MCPOAuthError.userCancelled {
                 step = .credentials
             } catch {
+                AppLogger.error(
+                    "Client-credentials connect failed for \(public: endpoint.diagnosticsAddress): \(public: error.localizedDescription)",
+                    category: .mcp
+                )
                 failure = error.localizedDescription
                 Haptics.error()
                 step = .failed
@@ -625,11 +633,10 @@ struct ConnectIntegrationSheet: View {
     /// Marks the model with everything learned, and migrates keychain tokens
     /// from the temporary id to the real one.
     private func saveServer() {
+        let normalized = Self.normalizedAddress(address)
         let server = MCPServer(
-            name: chosenName.isEmpty
-                ? Self.suggestedName(from: trimmed(address))
-                : chosenName,
-            url: trimmed(address),
+            name: chosenName.isEmpty ? Self.suggestedName(from: normalized) : chosenName,
+            url: normalized,
             authType: detectedAuthType
         )
         server.cachedToolNames = discoveredToolNames

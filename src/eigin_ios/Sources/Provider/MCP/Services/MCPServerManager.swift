@@ -94,7 +94,7 @@ final class MCPServerManager: @unchecked Sendable {
 
         if let connectError {
             AppLogger.error(
-                "Failed to connect MCP server \(public: server.name): \(private: connectError)",
+                "Failed to connect MCP server \(public: server.name): \(public: connectError)",
                 category: .mcp
             )
             connectionErrors[server.id] = connectError

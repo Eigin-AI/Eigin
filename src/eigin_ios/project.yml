@@ -174,7 +174,7 @@ targets:
           - INSendMessageIntent
         CFBundleURLTypes:
           - CFBundleURLName: ai.eigin.app
-            CFBundleURLSchemes: [eigin]
+            CFBundleURLSchemes: [eigin, ai.eigin]
         EiginPrivacyURL: $(EIGIN_PRIVACY_URL)
         EiginTermsURL: $(EIGIN_TERMS_URL)
         ITSAppUsesNonExemptEncryption: false
@@ -389,7 +389,7 @@ targets:
           - INSendMessageIntent
         CFBundleURLTypes:
           - CFBundleURLName: ai.eigin.app.dev
-            CFBundleURLSchemes: [eigin, eigindev]
+            CFBundleURLSchemes: [eigin, eigindev, ai.eigin]
         EiginPrivacyURL: $(EIGIN_PRIVACY_URL)
         EiginTermsURL: $(EIGIN_TERMS_URL)
         ITSAppUsesNonExemptEncryption: false
