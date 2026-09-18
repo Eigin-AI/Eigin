@@ -4,8 +4,8 @@
  * Currently home to the workflow/stage state machine. A *workflow* is a
  * named, ordered subset of the shared stage vocabulary, tuned to a kind of
  * task (see workflow/workflows.ts):
- *   🧰 Feature   — context → plan → build → iterate → merge
- *   🐞 Bug       — context → plan → build → test → merge (plan skippable)
+ *   🧰 Feature   — context → plan → build → merge
+ *   🐞 Bug       — context → plan → build → merge (plan skippable)
  *   🧬 Prototype — context → iterate → merge
  *
  * - Tracks the current workflow + stage and shows both in the footer.
@@ -41,8 +41,8 @@
  * - Offers to compact context at Plan→Build (only past
  *   COMPACTION_THRESHOLD_PERCENT), then kicks off Build with the plan inlined
  *   (see offerBuildHandoff below and workflow/build-handoff.ts).
- * - Offers a fresh-eyes review on the way into Merge, so the MR opens on
- *   feedback that's already addressed (see offerMergeHandoff below and
+ * - Runs a fresh-eyes review on the way into Merge, so the MR opens on
+ *   feedback that's already addressed (see startMergeReview below and
  *   workflow/review-handoff.ts). Also available anytime via /eigin:review.
  *
  * Commands / shortcuts (namespaced under `eigin:` to avoid colliding with
@@ -119,8 +119,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ringBell } from "./observability/bell.ts";
 import { withHerdrBlocked } from "./observability/herdr.ts";
+import { gatePromptLog, recordGatePrompts } from "./observability/gate-log.ts";
 import { emptyAfk, isAfk, setAfk, toggleAfk, type AfkState } from "./workflow/afk-mode.ts";
 import { afkBlockedCommand } from "./workflow/afk-block.ts";
+import { firstOutsidePath, loadAllowedRoots, pathIsOutside } from "./workflow/afk-outside-paths.ts";
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
 import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
@@ -150,6 +152,7 @@ import { registerRoleCommand } from "./tools/role-command.ts";
 import { registerPlanCommand } from "./tools/plan-command.ts";
 import { registerReviewCommand } from "./tools/review-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
+import { registerCompactRendering } from "./tool-rendering.ts";
 import { ADD_TASKS_TOOL, CLEAR_TASKS_TOOL, RESOLVE_TASKS_TOOL, registerTaskTools } from "./tools/tasks.ts";
 import {
   addTasks,
@@ -494,26 +497,16 @@ export default function stageExtension(pi: ExtensionAPI): void {
   }
 
   /**
-   * Offers a fresh-eyes review on the way into Merge — the point where the
+   * Runs a fresh-eyes review on the way into Merge — the point where the
    * work stops changing and starts being read (see workflow/review-handoff.ts).
-   * Writes the diff, then auto-sends a kickoff telling the agent to run the
-   * reviewer sub-agent before opening the MR.
+   * Always on: writes the diff, then auto-sends a kickoff telling the agent to
+   * run the two-round reviewer protocol before opening the MR.
    *
    * Returns whether a kickoff was scheduled, so propose_stage knows whether to
    * end the turn quietly (a kickoff starts a fresh one) or give the normal
    * stage-guidance continuation.
    */
-  async function offerMergeHandoff(ctx: ExtensionContext): Promise<boolean> {
-    const ok = isAfk(afkState)
-      ? true
-      : await withHerdrBlocked(pi, "Review the changes before Merge?", () =>
-          ctx.ui.confirm(
-            "Review the changes before Merge?",
-            `Run the reviewer over this branch's diff against ${REVIEW_GUIDE} first, so the MR opens on feedback that's already addressed.`,
-          ),
-        );
-    if (!ok) return false;
-
+  async function startMergeReview(ctx: ExtensionContext): Promise<boolean> {
     let diffPath: string | null;
     try {
       diffPath = await writeBranchDiff(sessionCwd);
@@ -564,9 +557,9 @@ export default function stageExtension(pi: ExtensionAPI): void {
       return { handoffPending: await offerBuildHandoff(ctx) };
     }
 
-    // Entering Merge: offer a fresh-eyes review before the MR is opened.
+    // Entering Merge: run a fresh-eyes review before the MR is opened.
     if (id === "merge" && ctx.hasUI) {
-      return { handoffPending: await offerMergeHandoff(ctx) };
+      return { handoffPending: await startMergeReview(ctx) };
     }
 
     return { handoffPending: false };
@@ -691,9 +684,32 @@ export default function stageExtension(pi: ExtensionAPI): void {
 
   // --- AFK mode ---------------------------------------------------------
 
+  // Keep a log of what guardrails' gates ask about (see observability/gate-log.ts),
+  // so recurring prompts can be turned into allowedPaths grants.
+  recordGatePrompts(pi);
+
+  pi.registerCommand("eigin:gates", {
+    description: "Show what guardrails' interactive gates have asked about this session",
+    handler: (_args, ctx) => {
+      const log = gatePromptLog();
+      if (log.length === 0) {
+        ctx.ui.notify("No guardrails prompts this session.", "info");
+        return;
+      }
+      const lines = log
+        .slice(-10)
+        .map((e) => {
+          const t = e.time.slice(11, 16);
+          return `- ${t} ${e.feature} (${e.tool}): ${e.detail}`;
+        })
+        .join("\n");
+      ctx.ui.notify(`Recent guardrails prompts\n${lines}`, "info");
+    },
+  });
+
   pi.registerCommand("eigin:afk", {
     description:
-      "Toggle AFK mode. On: auto-approve this extension's own dialogs (stage transitions, model switch, compaction, pre-merge review, ask_questions, wait_for_user) and block dangerous commands (rm -rf, sudo, …) that guardrails would otherwise prompt on and hang. Guardrails' auto-deny patterns (force-push, terraform apply, git merge/rebase/reset) still hard-block as normal. Persisted, so resumed sessions stay AFK.",
+      "Toggle AFK mode. On: auto-approve this extension's own dialogs (stage transitions, model switch, compaction, ask_questions, wait_for_user), block dangerous commands (rm -rf, sudo, …) that guardrails would otherwise prompt on and hang, and hard-deny path access outside the workspace (guardrails' path gate can't prompt unattended). Guardrails' auto-deny patterns (force-push, terraform apply, git merge/rebase/reset) still hard-block as normal. Persisted, so resumed sessions stay AFK.",
     handler: async (args, ctx) => {
       // `/eigin:afk on` / `off` set it explicitly; bare toggle flips state.
       const arg = args.trim().toLowerCase();
@@ -730,6 +746,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     sessionCwd: () => sessionCwd,
   });
   registerSubagentTool(pi);
+  registerCompactRendering(pi); // one-line collapsed tool results (see tool-rendering.ts)
   registerTaskTools(pi, {
     add(texts, ctx) {
       const result = addTasks(taskListState, texts);
@@ -798,20 +815,39 @@ export default function stageExtension(pi: ExtensionAPI): void {
 
   // --- Stage write scope ---------------------------------------------
 
+  /** Tools whose single `path` argument guardrails' path gate extracts and prompts on. */
+  const PATH_GATED_TOOLS = new Set(["read", "grep", "find", "ls", "write", "edit"]);
+
   pi.on("tool_call", async (event) => {
-    // AFK pre-empt for the guardrails permission gate: guardrails' confirm
-    // dialog would hang while AFK (UI is present, so its non-interactive
-    // hard-block path doesn't trigger). We load before guardrails, so block a
-    // risky bash command here — reusing guardrails' own detection — before its
-    // dialog opens. The agent sees `blocked` and routes around it.
-    if (isAfk(afkState) && event.toolName === "bash") {
-      const command = (event.input as { command?: string }).command ?? "";
-      const blocked = command ? await afkBlockedCommand(command, sessionCwd) : null;
-      if (blocked) {
+    // AFK pre-empts for guardrails' interactive gates: both would show dialogs
+    // that hang while AFK (UI is present, so the no-UI hard-deny fallback
+    // doesn't trigger). We load before guardrails, so block here — before its
+    // prompt opens — and route the agent around it.
+    if (isAfk(afkState)) {
+      // Workspace grants re-read each call, so a guardrails.json edit takes
+      // effect without a restart (ahead of guardrails' own load-once config).
+      const allowed = await loadAllowedRoots(resolve(sessionCwd, ".pi/extensions/guardrails.json"));
+      const denyPath =
+        event.toolName === "bash"
+          ? firstOutsidePath((event.input as { command?: string }).command ?? "", sessionCwd, allowed)
+          : PATH_GATED_TOOLS.has(event.toolName)
+            ? pathIsOutside((event.input as { path?: string }).path ?? "", sessionCwd, allowed)
+            : null;
+      if (denyPath) {
         return {
           block: true,
-          reason: `AFK: blocked a dangerous command (${blocked.reason}) that guardrails would otherwise prompt on and hang. Re-run attended, or allow it via /eigin:afk off.`,
+          reason: `AFK: ${denyPath.display} is outside the workspace and can't be confirmed unattended. Re-run attended, or allow it in .pi/extensions/guardrails.json / via /eigin:afk off.`,
         };
+      }
+      if (event.toolName === "bash") {
+        const command = (event.input as { command?: string }).command ?? "";
+        const blocked = command ? await afkBlockedCommand(command, sessionCwd) : null;
+        if (blocked) {
+          return {
+            block: true,
+            reason: `AFK: blocked a dangerous command (${blocked.reason}) that guardrails would otherwise prompt on and hang. Re-run attended, or allow it via /eigin:afk off.`,
+          };
+        }
       }
     }
 

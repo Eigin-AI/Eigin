@@ -41,6 +41,23 @@ test("kickoff omits the plan line when there is no plan", () => {
 	assert(text.includes(base.diffPath), "should still name the diff path");
 });
 
+test("kickoff runs two capped rounds", () => {
+	const text = reviewKickoff(base);
+	const rounds = [text.indexOf("Round 1"), text.indexOf("Round 2")];
+	assert(rounds.every((r) => r >= 0), "should have both round headings");
+	assert(rounds[0] < rounds[1], "round 1 must come before round 2");
+	assert(/(exactly once|no third round)/.test(text), "the follow-up should be capped");
+	assert(text.includes("git diff main"), "round 2 should refresh the diff");
+});
+
+test("round 2 sends the report and the response back to the reviewer", () => {
+	const text = reviewKickoff(base);
+	const round2 = text.slice(text.indexOf("Round 2"));
+	assert(round2.includes("report"), "the round-1 report should go back");
+	assert(round2.includes("response"), "the builder's response should go back");
+	assert(round2.includes("pushback"), "pushback should return to the reviewer");
+});
+
 test("kickoff asks for the review before the MR", () => {
 	const text = reviewKickoff(base);
 	assert(text.indexOf("review") < text.indexOf("open the MR"), "review should come before opening the MR");

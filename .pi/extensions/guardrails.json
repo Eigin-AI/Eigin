@@ -11,8 +11,36 @@
     "mode": "ask",
     "allowedPaths": [
       {
-        "kind": "directory",
-        "path": "/dev"
+        "kind": "file",
+        "path": "/dev/null"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/zero"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/random"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/urandom"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/stdin"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/stdout"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/stderr"
+      },
+      {
+        "kind": "file",
+        "path": "/dev/tty"
       },
       {
         "kind": "directory",
@@ -29,6 +57,10 @@
       {
         "kind": "directory",
         "path": "~/Repositories"
+      },
+      {
+        "kind": "directory",
+        "path": "~/Library/Caches"
       }
     ]
   },

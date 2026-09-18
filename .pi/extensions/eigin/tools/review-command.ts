@@ -1,10 +1,9 @@
 /**
  * `/eigin:review` — run the reviewer over the current branch on demand.
  *
- * The same review the Merge handoff offers (see workflow/review-handoff.ts),
+ * The same review the Merge handoff runs (see workflow/review-handoff.ts),
  * available at any point: mid-build to check direction, or again after
- * addressing findings. Typing the command is the confirmation, so unlike the
- * handoff it doesn't ask first.
+ * addressing findings.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";

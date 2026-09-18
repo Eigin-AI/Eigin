@@ -8,10 +8,14 @@
  * meaning lives in `.pi/guidance/<workflow>/<stage>.md` (see guidance.ts), not
  * here — this file is only the sequences.
  *
- *   Feature   — context → plan → build → iterate → merge
- *   Bug       — context → plan → build → test → merge (plan is skippable)
+ *   Feature   — context → plan → build → merge
+ *   Bug       — context → plan → build → merge (plan is skippable)
  *   Prototype — context → iterate → merge
  *   Release   — context → plan → build → test → merge
+ *
+ * Verification before Merge lives in Build's done-criteria (tests pass, it
+ * compiles); Release keeps a dedicated Test stage because a release bump is
+ * the one change worth verifying as its own step.
  *
  * Plan review is collaborative (co-edit a markdown file, no separate UI); code
  * review happens on the GitLab MR during the Merge stage. There is no distinct
@@ -40,8 +44,8 @@ const FEATURE: WorkflowDef = {
 	id: "feature",
 	label: "Feature",
 	icon: "🧰",
-	summary: "Careful planning, implementation, iteration, and MR review.",
-	stages: sequence("context", "plan", "build", "iterate", "merge"),
+	summary: "Careful planning, implementation, and MR review.",
+	stages: sequence("context", "plan", "build", "merge"),
 };
 
 const BUG: WorkflowDef = {
@@ -49,7 +53,7 @@ const BUG: WorkflowDef = {
 	label: "Bug",
 	icon: "🐞",
 	summary: "Quick context, implementation, and testing.",
-	stages: sequence("context", "plan", "build", "test", "merge"),
+	stages: sequence("context", "plan", "build", "merge"),
 };
 
 const PROTOTYPE: WorkflowDef = {
