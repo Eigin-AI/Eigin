@@ -381,3 +381,255 @@ struct ContentBlockTests {
         #expect(blocks.allSatisfy { $0.kind != .table })
     }
 }
+
+// MARK: - Standalone images
+
+@Suite("ContentBlock.split images")
+struct ContentBlockImageTests {
+    private func split(_ text: String) -> [ContentBlock] {
+        ContentBlock.split(text, messageID: "test")
+    }
+
+    @Test func loneImageBecomesAnImageBlock() {
+        let blocks = split("![A sunset over the bay](https://example.com/sunset.jpg)")
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .image(
+            src: "https://example.com/sunset.jpg",
+            alt: "A sunset over the bay",
+            href: nil
+        ))
+    }
+
+    @Test func imageWithoutAltParsesNilAlt() {
+        // An empty alt is no caption: nil, not an empty string.
+        let blocks = split("![](https://example.com/photo.png)")
+        #expect(blocks.count == 1)
+        if case .image(let src, let alt, let href) = blocks[0].kind {
+            #expect(src == "https://example.com/photo.png")
+            #expect(alt == nil)
+            #expect(href == nil)
+        } else {
+            Issue.record("expected an image block")
+        }
+    }
+
+    @Test func linkedImageCarriesItsHref() {
+        let blocks =
+            split(
+                "[![Chart of latency](https://example.com/chart.png)](https://example.com/report)"
+            )
+        #expect(blocks.count == 1)
+        if case .image(let src, let alt, let href) = blocks[0].kind {
+            #expect(src == "https://example.com/chart.png")
+            #expect(alt == "Chart of latency")
+            #expect(href == "https://example.com/report")
+        } else {
+            Issue.record("expected an image block")
+        }
+    }
+
+    @Test func imageInsideASentenceStaysInline() {
+        let blocks = split("Here is a photo ![sunset](https://example.com/s.jpg) from the trip.")
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .paragraph)
+        #expect(blocks[0].text.contains("![sunset](https://example.com/s.jpg)"))
+    }
+
+    @Test func imageBetweenParagraphsSplitsAllThree() {
+        let blocks = split("""
+        Look at this:
+
+        ![sunset](https://example.com/s.jpg)
+
+        And that was that.
+        """)
+        #expect(blocks.count == 3)
+        #expect(blocks[0].kind == .paragraph)
+        #expect(blocks[1].kind == .image(
+            src: "https://example.com/s.jpg",
+            alt: "sunset",
+            href: nil
+        ))
+        #expect(blocks[2].kind == .paragraph)
+    }
+
+    @Test func imageDirectlyAfterTextEndsTheParagraph() {
+        let blocks = split("First line\n![sunset](https://example.com/s.jpg)")
+        #expect(blocks.count == 2)
+        #expect(blocks[0].kind == .paragraph)
+        #expect(blocks[1].kind == .image(
+            src: "https://example.com/s.jpg",
+            alt: "sunset",
+            href: nil
+        ))
+    }
+
+    @Test func imageInAFencedCodeBlockStaysCode() {
+        let blocks = split("""
+        Like this:
+
+        ```
+        ![not an image](https://example.com/s.jpg)
+        ```
+        """)
+        #expect(blocks.count == 2)
+        #expect(blocks[1].kind == .code)
+        #expect(blocks.allSatisfy { if case .image = $0.kind { false } else { true } })
+    }
+
+    @Test func indentedImageIsNotAStandaloneBlock() {
+        // A list-indented image belongs to the list's text, not the feed.
+        let blocks = split("""
+        - item one
+          ![sunset](https://example.com/s.jpg)
+        """)
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .list)
+    }
+}
+
+// MARK: - Streaming image holdback
+
+@Suite("ContentBlock.split streaming holdback")
+struct ContentBlockStreamingTests {
+    private func split(_ text: String, streaming: Bool) -> [ContentBlock] {
+        ContentBlock.split(text, messageID: "test", isStreaming: streaming)
+    }
+
+    @Test func partialImageIsWithheldWhileStreaming() {
+        let blocks = split("Here's a photo:\n\n![sunset](https://example.com/sun", streaming: true)
+        // The prose survives; the half-formed image line is nowhere.
+        #expect(blocks.allSatisfy { $0.kind == .paragraph })
+        // Interrupted paragraphs trail the blank line's newline; the prose itself is intact.
+        #expect(blocks[0].text.trimmingCharacters(in: .whitespacesAndNewlines) == "Here's a photo:")
+        #expect(blocks.count == 1)
+        #expect(blocks.allSatisfy { !$0.text.contains("![sunset]") })
+    }
+
+    @Test func imageThatClosedOnALaterChunkRendersWhileStreaming() {
+        let blocks = split("![sunset](https://example.com/sun.jpg)", streaming: true)
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .image(
+            src: "https://example.com/sun.jpg",
+            alt: "sunset",
+            href: nil
+        ))
+    }
+
+    @Test func withheldCandidateHasProvenanceWhenComplete() {
+        let streaming = split("![sunset](https://example.com/s", streaming: true)
+        let complete = split("![sunset](https://example.com/s.jpg)", streaming: true)
+        #expect(streaming.count == 0)
+        #expect(complete.count == 1)
+        #expect(complete[0].kind == .image(
+            src: "https://example.com/s.jpg",
+            alt: "sunset",
+            href: nil
+        ))
+    }
+
+    @Test func malformedImageShowsAsRawTextOnceTheTurnEnds() {
+        let blocks = split("![sunset](https://example.com/s", streaming: false)
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .paragraph)
+        #expect(blocks[0].text == "![sunset](https://example.com/s")
+    }
+
+    @Test func candidateThatClosesOnTheNextLineBecomesAnImage() {
+        // Chunk boundary split the line: first call holds, later call closes.
+        let held = split("![sunset](https://example.com/sun", streaming: true)
+        let closed = split(
+            "![sunset](https://example.com/sun.jpg)\n\nWhat a view.",
+            streaming: true
+        )
+        #expect(held.count == 0)
+        #expect(closed.count == 2)
+        #expect(closed[0].kind == .image(
+            src: "https://example.com/sun.jpg",
+            alt: "sunset",
+            href: nil
+        ))
+        #expect(closed[1].kind == .paragraph)
+    }
+
+    @Test func neverClosingCandidateShowsRawMarkdownOnceTheNextLineArrives() {
+        // Multiline images aren't supported: a second line proves it wasn't one.
+        let blocks = split(
+            "![sunset is a nice pic\nof the bay](https://example.com/x.jpg)",
+            streaming: true
+        )
+        #expect(blocks.allSatisfy { $0.kind == .paragraph })
+        #expect(blocks[0].text.contains("![sunset is a nice pic"))
+    }
+
+    @Test func referenceStyleImageFallsBackToProse() {
+        let held = split("![alt][ref]", streaming: true)
+        let done = split("![alt][ref]", streaming: false)
+        #expect(held.count == 0)
+        #expect(done.count == 1)
+        #expect(done[0].text == "![alt][ref]")
+    }
+
+    @Test func twoImagesBackToBackBothRender() {
+        let blocks = split(
+            "![a](https://example.com/a.jpg)\n![b](https://example.com/b.jpg)",
+            streaming: true
+        )
+        let images = blocks.filter {
+            if case .image = $0.kind { true } else { false }
+        }
+        #expect(images.count == 2)
+    }
+
+    @Test func linkedImageStreamingHoldsThenRenders() {
+        let held = split("[![alt](https://example.com/a.jpg)](htt", streaming: true)
+        let closed = split(
+            "[![alt](https://example.com/a.jpg)](https://example.com)",
+            streaming: true
+        )
+        #expect(held.count == 0)
+        if case .image(let src, let alt, let href) = closed[0].kind {
+            #expect(src == "https://example.com/a.jpg")
+            #expect(alt == "alt")
+            #expect(href == "https://example.com")
+        } else {
+            Issue.record("expected an image block")
+        }
+    }
+}
+
+// MARK: - URL shapes in image markdown
+
+@Suite("ContentBlock.split image URL shapes")
+struct ContentBlockImageURLTests {
+    private func split(_ text: String, streaming: Bool = false) -> [ContentBlock] {
+        ContentBlock.split(text, messageID: "test", isStreaming: streaming)
+    }
+
+    @Test func balancedParensInURLStayWhole() {
+        let url = "https://en.wikipedia.org/wiki/Cat_(disambiguation)"
+        let blocks = split("![A cat](\(url))")
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .image(src: url, alt: "A cat", href: nil))
+    }
+
+    @Test func balancedParensInLinkedURLs() {
+        let src = "https://en.wikipedia.org/wiki/Cat_(disambiguation)"
+        let href = "https://en.wikipedia.org/wiki/Cat_(disambiguation)#Gallery"
+        let blocks = split("[![A cat](\(src))](\(href))")
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .image(src: src, alt: "A cat", href: href))
+    }
+
+    @Test func trailingTextAfterTheParenIsNotAnImage() {
+        let blocks = split("![a](https://example.com/x.jpg) and more text", streaming: false)
+        #expect(blocks.count == 1)
+        #expect(blocks[0].kind == .paragraph)
+    }
+
+    @Test func streamingHoldAdmitsUrlsWithParens() {
+        let url = "https://en.wikipedia.org/wiki/Cat_(disambiguation)"
+        #expect(split("![a](" + url, streaming: true).count == 0)
+        #expect(split("![a](" + url + ")", streaming: true).count == 1)
+    }
+}

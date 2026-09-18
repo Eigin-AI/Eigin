@@ -2,6 +2,7 @@
   import katex from "katex";
   import "katex/dist/katex.min.css";
   import CodeBlock from "../code/CodeBlock.svelte";
+  import ImageCard from "../image/ImageCard.svelte";
   import MarkdownTable from "./MarkdownTable.svelte";
   import { headingTypography, toBlocks } from "./blocks";
   import "./markdown.css";
@@ -10,9 +11,13 @@
     text: string;
     /** Streaming blocks render code unhighlighted. */
     streaming?: boolean;
+    /** Tap on an image that is not a link. The screen presents the viewer. */
+    onOpenImage?: (src: string, alt?: string) => void;
+    /** Tap on an image that is a link, and on a link in prose. */
+    onFollowLink?: (href: string) => void;
   }
 
-  const { text, streaming = false }: Props = $props();
+  const { text, streaming = false, onOpenImage, onFollowLink }: Props = $props();
 
   const blocks = $derived(toBlocks(text));
 
@@ -31,6 +36,14 @@
       <CodeBlock code={block.code} language={block.language} {streaming} />
     {:else if block.kind === "table"}
       <MarkdownTable table={block.table} />
+    {:else if block.kind === "image"}
+      <ImageCard
+        src={block.src}
+        alt={block.alt}
+        href={block.href}
+        onOpen={onOpenImage && (() => onOpenImage(block.src, block.alt))}
+        {onFollowLink}
+      />
     {:else if block.kind === "math"}
       <div class="math">
         <!-- eslint-disable-next-line svelte/no-at-html-tags — KaTeX output -->

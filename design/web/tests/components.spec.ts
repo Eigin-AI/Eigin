@@ -454,3 +454,91 @@ test.describe("rows and content groups", () => {
     expect(dividers[1].left).toBe("24px");
   });
 });
+
+test.describe("images", () => {
+  test("every shape keeps the same height, and only the width moves", async ({ page }) => {
+    await page.goto("/#/components/images");
+    // landscape, panorama, square, portrait, in that order.
+    const cards = page.locator(".canvas >> nth=1").locator(".plate");
+    await expect(cards).toHaveCount(4);
+
+    // Layout size, not the painted box: the card scales as it grows in, and it
+    // is the room it takes that must not vary.
+    const measure = () =>
+      cards.evaluateAll((elements) =>
+        elements.map((el) => ({
+          width: (el as HTMLElement).offsetWidth,
+          height: (el as HTMLElement).offsetHeight,
+        })),
+      );
+
+    // Each card starts square and settles into its own shape, so poll until the
+    // shapes have arrived — the height is the part that must never vary.
+    await expect
+      .poll(async () => {
+        const boxes = await measure();
+        return {
+          heights: new Set(boxes.map((box) => box.height)).size,
+          tallestIsNarrowest: boxes[3].width < boxes[0].width,
+        };
+      })
+      .toEqual({ heights: 1, tallestIsNarrowest: true });
+  });
+
+  test("a broken image keeps its place rather than leaving a hole", async ({ page }) => {
+    await page.goto("/#/components/images");
+    const card = page.locator(".canvas").first().locator(".plate");
+    const height = (locator: typeof card) =>
+      locator.evaluate((el) => (el as HTMLElement).offsetHeight);
+    const loaded = await height(card);
+
+    await page.getByRole("radio", { name: "broken", exact: true }).click();
+    await expect(card.getByText("This image didn't load")).toBeVisible();
+    expect(await height(card)).toBe(loaded);
+  });
+
+  test("the placeholder is square, and the entrance never plays twice", async ({ page }) => {
+    await page.goto("/#/components/images");
+    const card = page.locator(".canvas").first().locator(".plate");
+    await page.getByRole("radio", { name: "loading", exact: true }).click();
+
+    // The width eases back to the placeholder shape, so settle before measuring.
+    await expect
+      .poll(async () =>
+        card.evaluate((el) => ({
+          width: (el as HTMLElement).offsetWidth,
+          height: (el as HTMLElement).offsetHeight,
+        })),
+      )
+      .toEqual({ width: 182, height: 182 });
+
+    // Switching state is a crossfade in place: the card is the same element,
+    // and the entrance it already played stays played.
+    await page.getByRole("radio", { name: "broken", exact: true }).click();
+    await expect(card.getByText("This image didn't load")).toBeVisible();
+    await expect
+      .poll(async () =>
+        page
+          .locator(".canvas")
+          .first()
+          .locator(".image-card")
+          .evaluate((el) => el.getAnimations().map((animation) => animation.playState)),
+      )
+      .toEqual(["finished"]);
+  });
+
+  test("a linked image asks before it leaves, an unlinked one opens", async ({ page }) => {
+    await page.goto("/#/components/images");
+
+    await page.getByRole("button", { name: "Open full screen" }).click();
+    const viewer = page.getByRole("dialog", { name: /valley/ });
+    await expect(viewer).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+
+    await page.getByRole("button", { name: "Follow a linked image" }).click();
+    const warning = page.getByRole("dialog");
+    await expect(warning).toContainText("en.wikipedia.org");
+    await expect(warning.getByRole("button", { name: "Open link" })).toBeVisible();
+  });
+});

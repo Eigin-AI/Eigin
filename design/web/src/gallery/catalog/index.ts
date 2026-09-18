@@ -7,6 +7,7 @@ import Colors from "@gallery/catalog/fundamentals/Colors.svelte";
 import Content from "@gallery/catalog/components/Content.svelte";
 import Controls from "@gallery/catalog/components/Controls.svelte";
 import Disclosures from "@gallery/catalog/components/Disclosures.svelte";
+import Images from "@gallery/catalog/components/Images.svelte";
 import Icons from "@gallery/catalog/fundamentals/Icons.svelte";
 import Inputs from "@gallery/catalog/components/Inputs.svelte";
 import Morph from "@gallery/catalog/components/Morph.svelte";
@@ -42,6 +43,7 @@ export const catalogEntries: CatalogEntry[] = [
   { id: "chat", title: "Chat messages", section: "components", component: Chat },
   { id: "morph", title: "Morph blob", section: "components", component: Morph },
   { id: "content", title: "Formatting", section: "components", component: Content },
+  { id: "images", title: "Images", section: "components", component: Images },
   { id: "rows", title: "Content groups", section: "components", component: Rows },
   { id: "assets", title: "Assets", section: "components", component: Assets },
   { id: "sheets", title: "Sheets", section: "components", component: Sheets },

@@ -3751,6 +3751,258 @@
         }
       }
     },
+    "imageCard.a11yOpenHost": {
+      "comment": "Accessibility label for tapping a linked image card: follows the link in the browser.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@"
+          }
+        }
+      }
+    },
+    "imageCard.a11yShowImage": {
+      "comment": "Accessibility label for tapping a withheld image card, when its host is unknown.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis billede"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show image"
+          }
+        }
+      }
+    },
+    "imageCard.a11yShowImageFrom": {
+      "comment": "Accessibility label for tapping a withheld image card. The argument is the image's host.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis billede fra %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show image from %@"
+          }
+        }
+      }
+    },
+    "imageCard.a11yViewImage": {
+      "comment": "Accessibility label for tapping a loaded, unlinked image card: opens the full-screen viewer. The argument is the image's alt text.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis billede: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View image: %@"
+          }
+        }
+      }
+    },
+    "imageCard.failedHeadline": {
+      "comment": "Headline on the cover of an image card whose load failed.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Billedet blev ikke indlæst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This image didn't load"
+          }
+        }
+      }
+    },
+    "imageCard.fromAnotherSite": {
+      "comment": "Headline on the cover of a withheld image card, when its host is unknown.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Billede fra et andet websted"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image from another site"
+          }
+        }
+      }
+    },
+    "imageCard.fromHost": {
+      "comment": "Headline on the cover of a withheld image card, naming its host.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Billede fra %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image from %@"
+          }
+        }
+      }
+    },
+    "imageCard.leaveDescription": {
+      "comment": "Body of the sheet shown before following a link the model chose. The argument is the link's host, or the whole link where there is none.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dette åbner %@ i din browser."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This opens %@ in your browser."
+          }
+        }
+      }
+    },
+    "imageCard.leaveTitle": {
+      "comment": "Title of the sheet shown before following a link the model chose: the check before a link leaves Eigin.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forlad Eigin?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave Eigin?"
+          }
+        }
+      }
+    },
+    "imageCard.loading": {
+      "comment": "Accessibility label for an image card whose load is under way.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indlæser billede"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading image"
+          }
+        }
+      }
+    },
+    "imageCard.openLink": {
+      "comment": "Button on the sheet that confirms following the link in the browser.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn link"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open link"
+          }
+        }
+      }
+    },
+    "imageCard.stayHere": {
+      "comment": "Button on the sheet that declines following the link.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bliv her"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay here"
+          }
+        }
+      }
+    },
+    "imageCard.tapToLoad": {
+      "comment": "Detail under the withheld headline, telling the user tapping will load the image.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk for at indlæse det"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to load it"
+          }
+        }
+      }
+    },
+    "imageCard.viewImage": {
+      "comment": "Accessibility label for tapping a loaded, unlinked image card, when it has no alt text: opens the full-screen viewer.",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis billede"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View image"
+          }
+        }
+      }
+    },
     "integration.add.addressFootnote": {
       "comment": "Footnote under the connect-by-address row.",
       "localizations": {

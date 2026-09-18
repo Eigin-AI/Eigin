@@ -46,6 +46,9 @@ struct ContentBlockView: View, Equatable {
         case .math:
             // The block already holds pure LaTeX; render it directly.
             MathBlockView(latex: block.text)
+        case .image(let src, let alt, let href):
+            ImageCardView(src: src, alt: alt, href: href)
+                .padding(.vertical, cardSpacing)
         default:
             MarkdownBlockView(text: block.text)
         }
@@ -73,6 +76,18 @@ struct ContentBlockView: View, Equatable {
 
         ContentBlockView(
             block: ContentBlock(id: "4", kind: .table, text: "| A | B |\n|---|---|\n| 1 | 2 |")
+        )
+
+        ContentBlockView(
+            block: ContentBlock(
+                id: "5",
+                kind: .image(
+                    src: "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg",
+                    alt: "A tabby cat against a red background",
+                    href: nil
+                ),
+                text: ""
+            )
         )
     }
     .padding()

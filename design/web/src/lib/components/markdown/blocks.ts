@@ -12,6 +12,7 @@ export type MarkdownBlock =
   | { kind: "table"; table: MarkdownTableData }
   | { kind: "code"; code: string; language?: string }
   | { kind: "math"; latex: string }
+  | { kind: "image"; src: string; alt?: string; href?: string }
   | { kind: "heading"; level: number; html: string }
   | { kind: "html"; html: string };
 
@@ -63,6 +64,12 @@ export function toBlocks(markdown: string): MarkdownBlock[] {
       continue;
     }
 
+    const image = standaloneImage(token);
+    if (image !== null) {
+      blocks.push(image);
+      continue;
+    }
+
     if (token.type === "code") {
       const code = token as Tokens.Code;
       blocks.push({ kind: "code", code: code.text, language: code.lang || undefined });
@@ -88,6 +95,35 @@ export function toBlocks(markdown: string): MarkdownBlock[] {
   }
 
   return blocks;
+}
+
+/**
+ * An image alone on its line, optionally wrapped in a link, as its own block.
+ * Null for anything else, images inside a sentence included: those stay inline
+ * prose, where a card would break the paragraph in half.
+ */
+function standaloneImage(token: Token): MarkdownBlock | null {
+  if (token.type !== "paragraph") return null;
+  const children = (token as Tokens.Paragraph).tokens.filter(
+    (child) => child.type !== "text" || child.raw.trim() !== "",
+  );
+  if (children.length !== 1) return null;
+
+  const only = children[0];
+  if (only.type === "image") {
+    const image = only as Tokens.Image;
+    return { kind: "image", src: image.href, alt: image.text || undefined };
+  }
+
+  if (only.type === "link") {
+    const link = only as Tokens.Link;
+    const inner = link.tokens.filter((child) => child.type !== "text" || child.raw.trim() !== "");
+    if (inner.length !== 1 || inner[0].type !== "image") return null;
+    const image = inner[0] as Tokens.Image;
+    return { kind: "image", src: image.href, alt: image.text || undefined, href: link.href };
+  }
+
+  return null;
 }
 
 /** Pulls a table into plain data, with each cell's inline markdown rendered. */

@@ -1235,6 +1235,82 @@ enum Localized {
         }
     }
 
+    enum ImageCard {
+        /// Accessibility label for tapping a linked image card: follows the link in the browser.
+        static func a11yOpenHost(_ p1: String) -> String {
+            String(format: Localized.get("imageCard.a11yOpenHost"), p1)
+        }
+
+        /// Accessibility label for tapping a withheld image card, when its host is unknown.
+        static var a11yShowImage: String {
+            Localized.get("imageCard.a11yShowImage")
+        }
+
+        /// Accessibility label for tapping a withheld image card. The argument is the image's host.
+        static func a11yShowImageFrom(_ p1: String) -> String {
+            String(format: Localized.get("imageCard.a11yShowImageFrom"), p1)
+        }
+
+        /// Accessibility label for tapping a loaded, unlinked image card: opens the full-screen
+        /// viewer. The argument is the image's alt text.
+        static func a11yViewImage(_ p1: String) -> String {
+            String(format: Localized.get("imageCard.a11yViewImage"), p1)
+        }
+
+        /// Headline on the cover of an image card whose load failed.
+        static var failedHeadline: String {
+            Localized.get("imageCard.failedHeadline")
+        }
+
+        /// Headline on the cover of a withheld image card, when its host is unknown.
+        static var fromAnotherSite: String {
+            Localized.get("imageCard.fromAnotherSite")
+        }
+
+        /// Headline on the cover of a withheld image card, naming its host.
+        static func fromHost(_ p1: String) -> String {
+            String(format: Localized.get("imageCard.fromHost"), p1)
+        }
+
+        /// Body of the sheet shown before following a link the model chose. The argument is the
+        /// link's host, or the whole link where there is none.
+        static func leaveDescription(_ p1: String) -> String {
+            String(format: Localized.get("imageCard.leaveDescription"), p1)
+        }
+
+        /// Title of the sheet shown before following a link the model chose: the check before a
+        /// link leaves Eigin.
+        static var leaveTitle: String {
+            Localized.get("imageCard.leaveTitle")
+        }
+
+        /// Accessibility label for an image card whose load is under way.
+        static var loading: String {
+            Localized.get("imageCard.loading")
+        }
+
+        /// Button on the sheet that confirms following the link in the browser.
+        static var openLink: String {
+            Localized.get("imageCard.openLink")
+        }
+
+        /// Button on the sheet that declines following the link.
+        static var stayHere: String {
+            Localized.get("imageCard.stayHere")
+        }
+
+        /// Detail under the withheld headline, telling the user tapping will load the image.
+        static var tapToLoad: String {
+            Localized.get("imageCard.tapToLoad")
+        }
+
+        /// Accessibility label for tapping a loaded, unlinked image card, when it has no alt text:
+        /// opens the full-screen viewer.
+        static var viewImage: String {
+            Localized.get("imageCard.viewImage")
+        }
+    }
+
     enum Integration {
         /// Alert title after a partial OAuth consent. First argument is the account, second the
         /// capability names.
