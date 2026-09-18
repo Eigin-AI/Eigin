@@ -72,7 +72,10 @@ Scan added lines for `print(`, `NSLog`, `plog`, `dump(`.
 It's worth doing it right. If something needs to change later, there should be a gitlab issue tracking it.
 
 ### Prompt text should live in `design/prompts/`.
-Not inline in the code.
+Not inline in the code. This applies to app prompts — the jinja templates
+compiled into Swift. Kickoff and guidance text for the pi extension is its own
+kind of prompt: compositions live in `workflow/*-handoff.ts`, guidance in
+`.pi/guidance/`.
 
 ## Tests
 

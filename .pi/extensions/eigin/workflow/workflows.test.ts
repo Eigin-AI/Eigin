@@ -52,16 +52,16 @@ test("every workflow's stages exist in STAGE_META", () => {
 	}
 });
 
-test("feature workflow is the full pipeline (no separate review stage)", () => {
+test("feature workflow is context → plan → build → merge (no review stage; iterate was dropped)", () => {
 	assertEqual(
 		getWorkflow("feature").stages.map((s) => s.id),
-		["context", "plan", "build", "iterate", "merge"],
+		["context", "plan", "build", "merge"],
 	);
 });
 
-test("bug workflow includes the test stage", () => {
+test("bug workflow drops the test stage", () => {
 	const stages = getWorkflow("bug").stages.map((s) => s.id);
-	assertEqual(stages, ["context", "plan", "build", "test", "merge"]);
+	assertEqual(stages, ["context", "plan", "build", "merge"]);
 });
 
 test("no workflow has a review stage (code review is on the MR in merge)", () => {
@@ -77,7 +77,7 @@ test("prototype workflow skips plan", () => {
 	);
 });
 
-test("release workflow has no iterate stage", () => {
+test("release has the only test stage (a release bump is verified as its own step)", () => {
 	assertEqual(
 		getWorkflow("release").stages.map((s) => s.id),
 		["context", "plan", "build", "test", "merge"],
@@ -97,7 +97,7 @@ test("firstStage returns each workflow's entry stage", () => {
 });
 
 test("hasStage reflects workflow membership", () => {
-	assert(hasStage(getWorkflow("bug"), "test"), "bug workflow should include test");
+	assert(!hasStage(getWorkflow("bug"), "test"), "bug workflow should not include test");
 	assert(!hasStage(getWorkflow("feature"), "test"), "feature workflow should not include test");
 	assert(!hasStage(getWorkflow("feature"), "review"), "feature workflow should not include review");
 });
@@ -115,8 +115,8 @@ test("getStageInWorkflow returns the stage, throws for one outside the workflow"
 });
 
 test("stageIndexIn finds position within a workflow's sequence", () => {
-	assertEqual(stageIndexIn(getWorkflow("bug"), "test"), 3);
-	assertEqual(stageIndexIn(getWorkflow("bug"), "merge"), 4);
+	assertEqual(stageIndexIn(getWorkflow("release"), "test"), 3);
+	assertEqual(stageIndexIn(getWorkflow("bug"), "merge"), 3);
 });
 
 test("relativeStageIn steps forward/back and clamps at the bounds", () => {

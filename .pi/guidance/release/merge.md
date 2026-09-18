@@ -1,14 +1,41 @@
-You are in the Merge stage: prep everything, then hand the user the exact commands — you never run git.
-Goal: get this release committed, tagged, merged, and published as a GitLab release.
-- Confirm the version bump and changelog are in place (Build) and verified (Test).
-- Draft a short MR description per `.gitlab/merge_request_templates/Default.md` and save it to `.pi/mr/release-<version>.md`. Title in Conventional Commits form, e.g. `chore: release <version>`.
-- Create the MR yourself with `glab mr create --title "chore: release <version>" --description "$(cat <path>)" --source-branch <branch>` (project: dev/eigin on code.eigin.ai) — the release branch already exists, so this just opens the MR. Then open it in the browser with `glab mr view --web`.
-- You never commit, tag, or push. Give the user this exact checklist to run themselves:
+# Merge stage
+
+Open the GitLab MR, then hand off the git commands and publish the release.
+
+The merge action itself is always manual, performed by the user.
+Per `.pi/guidance/git-policy.md`, you commit and push the worktree branch yourself; history-rewriting and remote mutations stay with the user.
+
+Signpost briefly what you expect the user to do — keep the flow tight and self-evident.
+
+## Open the MR
+
+0. Commit, tag, and push the release — the tag must be on the remote before
+   the GitLab release can be cut:
     1. `git add -A && git commit -m "chore: release <version>"`
     2. `git tag <version>`
     3. `git push && git push --tags`
-  (they'll have pushed before you can create the MR above — call this out up front, before step 3 of the checklist, so the ordering is clear)
-- Then call wait_for_user (prompt "Review the MR and merge when ready"; confirmLabel "Continue to the GitLab release") — you never merge.
-- Once merged, draft the GitLab release: pull the plan's "What's new" / "Breaking changes" sections into release notes. Check `glab release list` or the GitLab UI for prior releases to match tone/format.
-- Give the user the command to create it, e.g. `glab release create <version> --tag <version> --notes "$(cat <notes-path>)"`, or point them to the GitLab UI if that's easier — you don't run it.
-- Note explicitly: App Store submission is a separate, manual, human step — out of scope here.
+1. Confirm the version bump and changelog are in place (Build) and verified (Test).
+2. Draft the MR description — follow `.gitlab/merge_request_templates/Default.md`,
+   matched to the length and tone of this example `.pi/guidance/mr-example.md`.
+    - Keep it short and concise.
+    - Focus on what the release contains;
+      leave specifics to the changelog.
+    - No design history, no decision log.
+    - Avoid referencing gitignored artifacts such as in `.pi/plans/` and `.pi/mr/`.
+3. Save to `.pi/mr/release-<version>.md`.
+4. Create the MR (project: dev/eigin on code.eigin.ai) — the release branch already
+   exists, so this just opens it:
+   `glab mr create --title "chore: release <version>" --description "$(cat <path>)" --source-branch <branch>`
+    - Title is exactly `chore: release <version>`.
+5. Open it for the user: `glab mr view --web`.
+
+## Publish the release
+
+Once merged:
+
+1. Draft the release notes: pull the plan's "What's new" / "Breaking changes" sections.
+2. Check `glab release list` or the GitLab UI for prior releases to match tone/format.
+3. Give the user the command to create it, e.g.
+   `glab release create <version> --tag <version> --notes "$(cat <notes-path>)"` —
+   or point them to the GitLab UI if that's easier. You don't run it.
+4. Note explicitly: App Store submission is a separate, manual, human step.

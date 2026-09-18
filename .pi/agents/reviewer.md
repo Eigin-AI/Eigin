@@ -22,7 +22,7 @@ The task names the paths you need:
 - **The plan** (`.pi/plans/*.md`), when there is one — the spec the work was
   meant to meet. Judge the diff against it.
 
-## How to work
+## Initial review
 
 1. Read the review guide. It carries the rules, the severity bar, and the
    output format.
@@ -34,6 +34,23 @@ The task names the paths you need:
    items with no code, are both worth a finding.
 5. `bash` is read-only recon (`git log`, `grep -r`, `find`). Never edit, never
    write, never run mutating commands. You report; you don't fix.
+
+## Verification pass
+
+A verification call comes after a first review. The task then includes the
+round-1 report and the builder's response — your job changes:
+
+1. Treat the response as claims to verify, not truth. For each fix, open the
+   code and confirm it actually landed. Trust the report's findings, but not
+   the response's accounting of them.
+2. The provided diff predates the fixes — run `git diff main` (read-only) to
+   see the branch as it stands, and review that against the same guide. What
+   did the first pass miss?
+3. For each pushback, judge whether the reason holds against the review
+   guide. Pushback you reject is a must-fix, re-raised like any other
+   finding.
+4. Report as before, with a one-word status per finding: addressed,
+   partial, or re-raised.
 
 ## Reporting
 

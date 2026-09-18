@@ -1,6 +1,7 @@
 /**
  * Stage vocabulary shared across workflows: context, plan, build, iterate,
- * test, merge.
+ * test, merge. Not every workflow uses every stage — Feature and Bug sit out
+ * iterate and test; Release keeps the only Test stage.
  *
  * (There is no `review` stage: code review happens on the GitLab MR during
  * the Merge stage — see workflow/workflows.ts.)
