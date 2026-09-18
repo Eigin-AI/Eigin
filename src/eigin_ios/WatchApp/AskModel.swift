@@ -26,10 +26,10 @@ final class AskModel {
     private(set) var pulse = MorphIntensity.none
 
     private let recorder = VoiceRecorder()
-    private let session = PhoneSession()
+    private let link = PhoneLink()
 
     init() {
-        session.onAnswer = { [weak self] _, errorMessage in
+        link.onAnswer = { [weak self] _, errorMessage in
             self?.turnFinished(errorMessage: errorMessage)
         }
     }
@@ -76,7 +76,7 @@ final class AskModel {
 
     private func sendRecording(_ url: URL) {
         phase = .sending
-        session.send(url: url) { [weak self] message in
+        link.send(url: url) { [weak self] message in
             self?.fail(message)
         }
         // The reply itself arrives as a wrist notification.

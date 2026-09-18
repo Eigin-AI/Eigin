@@ -4,13 +4,14 @@ import UIKit
 import UserNotifications
 import WatchConnectivity
 
-/// Receives questions from the watch companion.
+/// The phone's link to the watch: receives questions from the watch
+/// companion.
 ///
 /// `WCSession` launches the app in the background when the watch sends a
 /// message, which is what lets a wrist tap ask a question with the phone
 /// locked in a pocket. It only works if the app has been launched at least
 /// once since install and the user has not force-quit it.
-final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
+final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
     override init() {
         super.init()
     }
@@ -53,7 +54,7 @@ final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
                     Self.send([
                         WatchMessage.actionKey: WatchMessage.answer,
                         WatchMessage.errorKey: Localized.Watch.didntCatch,
-                    ])
+                    ], announcing: Localized.Watch.didntCatch)
                     return
                 }
                 await Self.answer(question: question)
@@ -65,7 +66,7 @@ final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
                 Self.send([
                     WatchMessage.actionKey: WatchMessage.answer,
                     WatchMessage.errorKey: Localized.Watch.transcribeFailed,
-                ])
+                ], announcing: Localized.Watch.transcribeFailed)
             }
         }
     }
@@ -120,8 +121,7 @@ final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
             send([
                 WatchMessage.actionKey: WatchMessage.answer,
                 WatchMessage.replyKey: reply,
-            ])
-            notify(reply)
+            ], announcing: reply)
         } catch {
             AppLogger.error(
                 "Watch turn failed: \(private: error.localizedDescription)", category: .watch
@@ -129,18 +129,17 @@ final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
             send([
                 WatchMessage.actionKey: WatchMessage.answer,
                 WatchMessage.errorKey: Localized.Watch.noReply,
-            ])
+            ], announcing: Localized.Watch.noReply)
         }
     }
 
-    /// Delivers the reply as a notification, so it reaches the wrist even
-    /// though the watch app is no longer running. A phone notification mirrors
-    /// to the wrist, which the suspended watch app cannot do for itself.
-    private static func notify(_ reply: String) {
-        guard !reply.isEmpty else { return }
+    /// Announces an answer from the phone for queued deliveries: a phone
+    /// notification mirrors to the wrist. See `WatchReplyRouter`.
+    private static func notify(_ body: String) {
+        guard !body.isEmpty else { return }
         let content = UNMutableNotificationContent()
         content.title = "Eigin"
-        content.body = reply
+        content.body = body
         content.sound = .default
         // Tapping on the phone opens the watch chat, so the conversation is
         // there to continue.
@@ -154,21 +153,25 @@ final class WatchBridge: NSObject, WCSessionDelegate, @unchecked Sendable {
         )
     }
 
-    /// Pushes a payload to the watch, falling back to a queued transfer when
-    /// the watch app is no longer in the foreground.
-    private static func send(_ payload: [String: Any]) {
+    /// Pushes the answer to the watch — live while the watch app is reachable,
+    /// else a queued transfer — and announces `body` from the phone only when
+    /// the answer goes out queued. See `WatchReplyRouter`.
+    private static func send(_ answer: [String: Any], announcing body: String) {
         let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        if session.isReachable {
-            session.sendMessage(payload, replyHandler: nil) { error in
+        if session.activationState == .activated, session.isReachable {
+            session.sendMessage(answer, replyHandler: nil) { error in
                 AppLogger.warning(
                     "Direct send failed, queueing: \(private: error.localizedDescription)",
                     category: .watch
                 )
-                session.transferUserInfo(payload)
+                session.transferUserInfo(answer)
+                notify(body)
             }
         } else {
-            session.transferUserInfo(payload)
+            // A queued transfer lands once the session activates, even when the
+            // phone app is not running at send time.
+            session.transferUserInfo(answer)
+            notify(body)
         }
     }
 

@@ -447,9 +447,10 @@ targets:
       - path: WatchApp
         excludes:
           - "Info*.plist"
-      # Shared wire vocabulary and the silence gate, compiled into both targets
-      # rather than shared through a module.
+      # Shared wire vocabulary and the reply announcer contract, compiled
+      # into both targets rather than shared through a module.
       - path: Sources/Watch/WatchMessage.swift
+      - path: Sources/Watch/WatchReplyRouter.swift
       # The design tokens, shared verbatim with the app, plus the hand-written
       # types they resolve against. Extensions compile their own copy; there is
       # no module boundary to import across.
@@ -509,6 +510,7 @@ targets:
         excludes:
           - "Info*.plist"
       - path: Sources/Watch/WatchMessage.swift
+      - path: Sources/Watch/WatchReplyRouter.swift
       - path: Sources/Core/Design/Generated
         excludes:
           - "FontRegistration.swift"
