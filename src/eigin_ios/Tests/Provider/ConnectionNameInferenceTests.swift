@@ -36,4 +36,17 @@ struct ConnectionNameInferenceTests {
         #expect(ProviderConnectSheetContent
             .suggestedName(from: "https://api.eurouter.ai/api/v1") == "Eurouter")
     }
+
+    @Test func schemelessAddressInfersHTTPS() {
+        // What the connect flow probes must be what gets saved (#249):
+        // a scheme-less input breaks URL validation once stored.
+        #expect(
+            ConnectIntegrationSheet.normalizedAddress("cloud.comfy.org/mcp")
+                == "https://cloud.comfy.org/mcp"
+        )
+        #expect(
+            ConnectIntegrationSheet.normalizedAddress(" http://127.0.0.1:9000/mcp ")
+                == "http://127.0.0.1:9000/mcp"
+        )
+    }
 }

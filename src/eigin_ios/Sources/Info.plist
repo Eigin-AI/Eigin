@@ -28,6 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>eigin</string>
+				<string>ai.eigin</string>
 			</array>
 		</dict>
 	</array>
