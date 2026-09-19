@@ -42,12 +42,17 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
         lock.withLock { _responseQueues[url, default: []].append((data, response)) }
     }
 
-    static func stubResponse(for url: String, data: Data, statusCode: Int) {
+    static func stubResponse(
+        for url: String,
+        data: Data,
+        statusCode: Int,
+        headers: [String: String] = [:]
+    ) {
         let response = HTTPURLResponse(
             url: URL(string: url)!,
             statusCode: statusCode,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: headers
         )!
         lock.withLock { _responseMap[url] = (data, response) }
     }

@@ -32,6 +32,23 @@ struct WebFetchTool: Tool {
 
     let onBrowse: BrowseHandler?
 
+    /// File extensions identifying binary or media content, which web_fetch cannot
+    /// return as text. MIME checks in the headless path cover extension-less URLs.
+    private static let binaryExtensions: Set<String> = [
+        // Images
+        "png", "jpg", "jpeg", "gif", "webp", "avif", "heic", "svg", "bmp", "tiff", "ico",
+        // Video
+        "mp4", "webm", "mov", "avi", "mkv",
+        // Audio
+        "mp3", "wav", "ogg", "m4a", "flac", "aac",
+        // Documents
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        // Archives
+        "zip", "gz", "tar", "rar", "7z",
+        // Fonts
+        "woff", "woff2", "ttf", "otf",
+    ]
+
     init(onBrowse: BrowseHandler? = nil) {
         self.onBrowse = onBrowse
     }
@@ -89,6 +106,18 @@ struct WebFetchTool: Tool {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: ["Only http and https URLs are supported"]),
+                isError: true
+            )
+        }
+
+        // Binary or media URLs can't be extracted as text and never open the browsing sheet.
+        if Self.binaryExtensions.contains(url.pathExtension.lowercased()) {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: [
+                    "This URL points to binary or media content (.\(url.pathExtension)) and "
+                        + "cannot be fetched as text.",
+                ]),
                 isError: true
             )
         }
