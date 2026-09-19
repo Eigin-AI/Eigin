@@ -192,7 +192,8 @@ const STATE_TYPE = "stage-mode";
 const TASK_STATE_TYPE = "task-list";
 const ACTIVE_PLAN_STATE_TYPE = "active-plan";
 const AFK_STATE_TYPE = "afk-mode";
-const DEFAULT_WORKFLOW: WorkflowId = "feature";
+/** Also the fallback when the fresh-session workflow picker is dismissed. */
+const DEFAULT_WORKFLOW: WorkflowId = "ops";
 
 // Offer plan->build compaction only once context has built up enough to matter.
 const COMPACTION_THRESHOLD_PERCENT = 20;
@@ -979,7 +980,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     if (lastAfk?.data) afkState = setAfk(!!lastAfk.data.enabled);
 
     // Brand-new session (nothing persisted yet): let the user pick a workflow
-    // up front instead of silently defaulting to Feature. Skip the picker
+    // up front instead of silently taking the default. Skip the picker
     // when AFK is already on (a resumed AFK session) so it doesn't stall.
     if (isFreshSession && ctx.hasUI && !isAfk(afkState)) {
       const labels = WORKFLOWS.map((w) => workflowOption(w, false, ctx.ui.theme));

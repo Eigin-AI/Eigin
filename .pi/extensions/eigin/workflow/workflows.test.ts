@@ -37,11 +37,16 @@ function assert(condition: boolean, message: string): void {
 	if (!condition) throw new Error(message);
 }
 
-test("WORKFLOWS has exactly feature, bug, prototype, release", () => {
+test("WORKFLOWS has exactly ops, feature, bug, prototype, release", () => {
 	assertEqual(
 		WORKFLOWS.map((w) => w.id),
-		["feature", "bug", "prototype", "release"],
+		["ops", "feature", "bug", "prototype", "release"],
 	);
+});
+
+test("ops is first in WORKFLOWS and is a single stage", () => {
+	assertEqual(WORKFLOWS[0].id, "ops");
+	assertEqual(getWorkflow("ops").stages.map((s) => s.id), ["ops"]);
 });
 
 test("every workflow's stages exist in STAGE_META", () => {
@@ -90,6 +95,7 @@ test("isWorkflowId recognizes valid/invalid ids", () => {
 });
 
 test("firstStage returns each workflow's entry stage", () => {
+	assertEqual(firstStage(getWorkflow("ops")), "ops");
 	assertEqual(firstStage(getWorkflow("feature")), "context");
 	assertEqual(firstStage(getWorkflow("bug")), "context");
 	assertEqual(firstStage(getWorkflow("prototype")), "context");
@@ -124,6 +130,9 @@ test("relativeStageIn steps forward/back and clamps at the bounds", () => {
 	assertEqual(relativeStageIn(bug, "context", 1).id, "plan");
 	assertEqual(relativeStageIn(bug, "merge", 1).id, "merge"); // Clamped at the end.
 	assertEqual(relativeStageIn(bug, "context", -1).id, "context"); // Clamped at the start.
+	const ops = getWorkflow("ops");
+	assertEqual(relativeStageIn(ops, "ops", 1).id, "ops"); // Clamped in both directions: single stage.
+	assertEqual(relativeStageIn(ops, "ops", -1).id, "ops");
 });
 
 test("getWorkflow throws for an unknown id", () => {

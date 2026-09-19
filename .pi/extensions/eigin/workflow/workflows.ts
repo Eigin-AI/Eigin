@@ -12,6 +12,8 @@
  *   Bug       — context → plan → build → merge (plan is skippable)
  *   Prototype — context → iterate → merge
  *   Release   — context → plan → build → test → merge
+ *   Ops       — ops (the default: single stage, no sequence; its behavior
+ *               lives in .pi/guidance/ops/ops.md)
  *
  * Verification before Merge lives in Build's done-criteria (tests pass, it
  * compiles); Release keeps a dedicated Test stage because a release bump is
@@ -24,7 +26,7 @@
 
 import { STAGE_META, type StageId, type StageMeta } from "./stages.ts";
 
-export type WorkflowId = "feature" | "bug" | "prototype" | "release";
+export type WorkflowId = "ops" | "feature" | "bug" | "prototype" | "release";
 
 export interface WorkflowDef {
 	id: WorkflowId;
@@ -72,7 +74,16 @@ const RELEASE: WorkflowDef = {
 	stages: sequence("context", "plan", "build", "test", "merge"),
 };
 
-export const WORKFLOWS: WorkflowDef[] = [FEATURE, BUG, PROTOTYPE, RELEASE];
+const OPS: WorkflowDef = {
+	id: "ops",
+	label: "Ops",
+	icon: "⚙️",
+	summary: "Free-form: issues, chores, orchestration. Work directly, no stages.",
+	stages: sequence("ops"),
+};
+
+// Ops first: it's the default and the picker's top choice.
+export const WORKFLOWS: WorkflowDef[] = [OPS, FEATURE, BUG, PROTOTYPE, RELEASE];
 
 export function getWorkflow(id: WorkflowId): WorkflowDef {
 	const workflow = WORKFLOWS.find((w) => w.id === id);

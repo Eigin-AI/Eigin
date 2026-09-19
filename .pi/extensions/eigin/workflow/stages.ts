@@ -1,7 +1,8 @@
 /**
  * Stage vocabulary shared across workflows: context, plan, build, iterate,
- * test, merge. Not every workflow uses every stage — Feature and Bug sit out
- * iterate and test; Release keeps the only Test stage.
+ * test, merge, ops. Not every workflow uses every stage — Feature and Bug sit
+ * out iterate and test; Release keeps the only Test stage; Ops is a single
+ * stage: no sequence at all, just direct work.
  *
  * (There is no `review` stage: code review happens on the GitLab MR during
  * the Merge stage — see workflow/workflows.ts.)
@@ -22,7 +23,8 @@ export type StageId =
   | "build"
   | "iterate"
   | "test"
-  | "merge";
+  | "merge"
+  | "ops";
 
 /** Metadata for a stage that never varies by workflow. */
 export interface StageMeta {
@@ -46,6 +48,7 @@ export const STAGE_META: Record<StageId, StageMeta> = {
   iterate: { id: "iterate", label: "Iterate", allowsEdits: true, role: "builder" },
   test: { id: "test", label: "Test", allowsEdits: true, role: "builder" },
   merge: { id: "merge", label: "Merge", allowsEdits: true, role: "builder" },
+  ops: { id: "ops", label: "Ops", allowsEdits: true, role: "builder" },
 };
 
 export function isStageId(value: string): value is StageId {
