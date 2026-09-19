@@ -96,11 +96,13 @@ struct ChatFeedSheets: ViewModifier {
                     )
                 }
             ) {
-                WebBrowsingSheetContent(
-                    request: state.browsingRequest!,
-                    onComplete: dismissBrowsing,
-                    onPageReadyChanged: { ready in state.browsingPageReady = ready }
-                )
+                if let request = state.browsingRequest {
+                    WebBrowsingSheetContent(
+                        request: request,
+                        onComplete: dismissBrowsing,
+                        onPageReadyChanged: { ready in state.browsingPageReady = ready }
+                    )
+                }
             }
             .appSheet(
                 isPresented: $state.showActionSheet,

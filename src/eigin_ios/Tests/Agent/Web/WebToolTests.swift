@@ -112,6 +112,97 @@ struct WebToolTests {
         #expect(tool.category == .web)
         #expect(tool.defaultPermissionLevel == .ask)
     }
+
+    // MARK: - Binary URL handling
+
+    /// Binary/media URLs must fail fast and never reach the browsing sheet or headless fetch.
+    @Test @MainActor func binaryURLErrorWithoutBrowsingOrFetch() async {
+        var browsed: [BrowsingRequest] = []
+        let tool = WebFetchTool(onBrowse: { request in
+            browsed.append(request)
+            return .error("should not be called")
+        })
+
+        let extensions = [
+            "png", "jpg", "jpeg", "gif", "webp", "avif", "heic", "svg", "ico",
+            "mp4", "webm", "mov", "mp3", "wav", "m4a",
+            "pdf", "docx", "xlsx",
+            "zip", "gz",
+            "woff2",
+        ]
+        for ext in extensions {
+            let call = ToolCall(
+                id: "call_bin_\(ext)",
+                type: "function",
+                function: .init(
+                    name: "web_fetch",
+                    arguments: "{\"url\":\"https://example.com/file.\(ext)?w=100\"}"
+                )
+            )
+            let result = await tool.execute(
+                call,
+                agent: Agent(name: "T", providerID: UUID(), model: "m")
+            )
+            #expect(result.isError, "expected error for .\(ext)")
+        }
+        // Case-insensitive
+        let upperCall = ToolCall(
+            id: "call_bin_upper",
+            type: "function",
+            function: .init(
+                name: "web_fetch",
+                arguments: "{\"url\":\"https://example.com/photo.PNG\"}"
+            )
+        )
+        let upperResult = await tool.execute(
+            upperCall,
+            agent: Agent(name: "T", providerID: UUID(), model: "m")
+        )
+        #expect(upperResult.isError)
+        #expect(upperResult.content.contains("binary or media"))
+
+        #expect(browsed.isEmpty)
+    }
+
+    /// Extension-less binary URLs are caught by the content-type check in the headless path.
+    @Test func fetchRejectsBinaryContentType() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "https://example.com/blob",
+            data: Data([0x89, 0x50, 0x4E, 0x47]),
+            statusCode: 200,
+            headers: ["Content-Type": "image/png"]
+        )
+
+        do {
+            _ = try await HTMLSanitizer.fetchAndSanitize(
+                url: #require(URL(string: "https://example.com/blob")), session: session
+            )
+            Issue.record("Expected unsupportedContentType error")
+        } catch let error as WebToolError {
+            guard case .unsupportedContentType = error else {
+                Issue.record("Unexpected error: \(error)")
+                return
+            }
+        }
+    }
+
+    /// Textual content types still pass the check and get sanitized.
+    @Test func fetchAcceptsTextualContentType() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        try FakeURLProtocol.stubResponse(
+            for: "https://example.com/page",
+            data: #require("<p>Hello</p>".data(using: .utf8)),
+            statusCode: 200,
+            headers: ["Content-Type": "text/html; charset=utf-8"]
+        )
+
+        let (text, warnings) = try await HTMLSanitizer.fetchAndSanitize(
+            url: #require(URL(string: "https://example.com/page")), session: session
+        )
+        #expect(text == "Hello")
+        #expect(warnings.isEmpty)
+    }
 }
 
 @Suite("Web Search Tool", .serialized)

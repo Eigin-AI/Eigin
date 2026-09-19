@@ -9,6 +9,7 @@ enum WebToolError: Error, LocalizedError {
     case httpError(Int)
     case decodingFailed
     case emptyContent
+    case unsupportedContentType(String)
 
     var errorDescription: String? {
         switch self {
@@ -19,6 +20,8 @@ enum WebToolError: Error, LocalizedError {
         case .httpError(let code): "HTTP error \(code)."
         case .decodingFailed: "Failed to decode the response body."
         case .emptyContent: "The page returned no usable text content."
+        case .unsupportedContentType(let mimeType):
+            "The URL points to binary content (\(mimeType)) that cannot be fetched as text."
         }
     }
 }
@@ -32,12 +35,16 @@ enum HTMLSanitizer {
     // MARK: - Fetch + Sanitize
 
     /// Fetch a URL and return sanitised plain text.
-    static func fetchAndSanitize(url: URL) async throws -> (text: String, warnings: [String]) {
+    /// - Parameter session: Injectable for tests; defaults to the shared session.
+    static func fetchAndSanitize(
+        url: URL,
+        session: URLSession = .shared
+    ) async throws -> (text: String, warnings: [String]) {
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = requestTimeout
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw WebToolError.invalidResponse
@@ -48,6 +55,11 @@ enum HTMLSanitizer {
         case 403: throw WebToolError.blocked
         case 429: throw WebToolError.rateLimited
         default: throw WebToolError.httpError(httpResponse.statusCode)
+        }
+
+        // Reject binary content — decoding it as text yields garbage.
+        if let mimeType = httpResponse.mimeType, !Self.isTextual(mimeType) {
+            throw WebToolError.unsupportedContentType(mimeType)
         }
 
         // Attempt UTF-8, fall back to ISO Latin-1
@@ -68,6 +80,15 @@ enum HTMLSanitizer {
     }
 
     // MARK: - Sanitize
+
+    /// Whether a MIME type identifies textual content this sanitizer can process.
+    private static func isTextual(_ mimeType: String) -> Bool {
+        mimeType.hasPrefix("text/")
+            || mimeType.contains("html")
+            || mimeType.contains("xml")
+            || mimeType.contains("json")
+            || mimeType.contains("javascript")
+    }
 
     /// Convert raw HTML to plain text.
     static func sanitize(_ html: String) -> (text: String, warnings: [String]) {
