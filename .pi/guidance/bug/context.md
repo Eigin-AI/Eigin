@@ -6,4 +6,4 @@ Goal: understand the bug well enough to reason about a fix.
 - Do NOT write code yet. This is diagnosis, not implementation.
 - Ask clarifying questions when the repro or symptoms are unclear — prefer the ask_questions tool for concrete either/or decisions.
 - Delegate tracing the suspected code path (and finding related tests) to the explore sub-agent rather than digging through files inline.
-- Look up the originating GitLab issue with `glab issue view <number> --output json` (project: dev/eigin on code.eigin.ai) and ground the discussion in what's already reported there. If no issue exists, suggest creating one.
+- Look up the originating GitLab issue with `glab issue view <number> --output json` (project: dev/eigin on code.eigin.ai) and ground the discussion in what's already reported there. If no issue exists, suggest creating one, written to house style: `.pi/guidance/gitlab-issues.md`, calibrated against `.pi/guidance/issue-example.md`.
