@@ -3663,6 +3663,39 @@ enum Localized {
                 Localized.get("provider.eigin.privacyTitle")
             }
 
+            /// Shown when the app could not reach Eigin Relay during a purchase or restore
+            static var purchaseNetwork: String {
+                Localized.get("provider.eigin.purchaseNetwork")
+            }
+
+            /// Shown when Eigin Relay responded that it is temporarily unavailable during a
+            /// purchase or restore
+            static var purchaseOutage: String {
+                Localized.get("provider.eigin.purchaseOutage")
+            }
+
+            /// Shown when a purchase or restore could not be finished; StoreKit retries it
+            /// automatically at the next launch
+            static var purchasePendingRecovery: String {
+                Localized.get("provider.eigin.purchasePendingRecovery")
+            }
+
+            /// Neutral failure copy for catalog load and restore, where no new purchase is in
+            /// flight
+            static var purchaseRetry: String {
+                Localized.get("provider.eigin.purchaseRetry")
+            }
+
+            /// Shown when purchases could not be loaded because a StoreKit product was not found
+            static var purchaseUnavailable: String {
+                Localized.get("provider.eigin.purchaseUnavailable")
+            }
+
+            /// Shown when a purchase's proof failed StoreKit or relay verification
+            static var purchaseVerification: String {
+                Localized.get("provider.eigin.purchaseVerification")
+            }
+
             /// Button that re-redeems past purchases so credits survive a reinstall
             static var restoreCredits: String {
                 Localized.get("provider.eigin.restoreCredits")

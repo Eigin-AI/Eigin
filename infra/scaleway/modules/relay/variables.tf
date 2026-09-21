@@ -33,6 +33,12 @@ variable "max_scale" {
   default     = 3
 }
 
+variable "min_scale" {
+  description = "Always-on container instances. Production keeps 1 so a request never waits on a cold start."
+  type        = number
+  default     = 0
+}
+
 # --- Search ---
 
 variable "staan_api_key" {

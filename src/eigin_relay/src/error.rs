@@ -11,6 +11,7 @@ use serde_json::json;
 enum Severity {
     Error,
     Warn,
+    Info,
     Debug,
 }
 
@@ -30,8 +31,9 @@ struct ErrorLog {
 /// Logs the error detail of any response carrying an [`ErrorLog`] extension.
 ///
 /// Runs at the return boundary so every `AppError` is logged exactly once, where
-/// the response is actually handed back — server faults visibly, client errors at
-/// debug. The detail lives in a response extension, never the body.
+/// the response is actually handed back, at the severity its variant sets
+/// (client input at Debug, Info, or Warn, server faults at Warn or Error). The detail
+/// lives in a response extension, never the body.
 pub async fn log_errors(request: Request, next: Next) -> Response {
     let response = next.run(request).await;
     if let Some(log) = response.extensions().get::<ErrorLog>() {
@@ -42,6 +44,9 @@ pub async fn log_errors(request: Request, next: Next) -> Response {
             }
             Severity::Warn => {
                 tracing::warn!(%status, error_type = log.error_type, detail = %log.detail, "request error")
+            }
+            Severity::Info => {
+                tracing::info!(%status, error_type = log.error_type, detail = %log.detail, "request error")
             }
             Severity::Debug => {
                 tracing::debug!(%status, error_type = log.error_type, detail = %log.detail, "request error")
@@ -104,10 +109,12 @@ impl std::error::Error for AppError {}
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         // Each variant yields its status, the client-facing message, and an ErrorLog.
-        // Most client errors (4xx) echo their own input as both message and log detail
-        // (logged at debug). UnprocessableEntity and all server faults (5xx) instead send
-        // a fixed message while keeping the internal detail for logs only (CASA 6.2.1):
-        // its detail carries verification-library internals that must not reach the client.
+        // Client errors send their message and log detail at Debug or Warn — Debug for
+        // expected traffic (auth failures, rate limits), Warn for the classes whose
+        // production presence is the signal (redeem route: unknown product ID, sandbox
+        // budget). UnprocessableEntity and all server faults (5xx) instead send a fixed
+        // message while keeping the internal detail for logs only (CASA 6.2.1): its
+        // detail carries verification-library internals that must not reach the client.
         let (status, message, log) = match self {
             Self::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
@@ -122,7 +129,7 @@ impl IntoResponse for AppError {
                 StatusCode::BAD_REQUEST,
                 msg.clone(),
                 ErrorLog {
-                    severity: Severity::Debug,
+                    severity: Severity::Info,
                     error_type: "invalid_request_error",
                     detail: msg,
                 },
@@ -176,9 +183,9 @@ impl IntoResponse for AppError {
             ),
             Self::SandboxBudgetExhausted => (
                 StatusCode::TOO_MANY_REQUESTS,
-                "sandbox credit budget exhausted — try again later".to_string(),
+                "sandbox credit budget exhausted, try again later".to_string(),
                 ErrorLog {
-                    severity: Severity::Debug,
+                    severity: Severity::Warn,
                     error_type: "sandbox_budget_exhausted",
                     detail: "sandbox budget exhausted".into(),
                 },

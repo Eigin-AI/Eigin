@@ -143,15 +143,16 @@ pub async fn handle(
         .copied()
         .ok_or_else(|| AppError::BadRequest(format!("unknown productId: {product_id}")))?;
 
-    // 3. Check quota for Apple Sandbox purchases.
-    if origin == WalletOrigin::AppleAppStoreSandbox
-        && state
-            .ledger
-            .find_by_fingerprint(&origin, &fingerprint)
-            .await
-            .map_err(|e| AppError::Internal(format!("ledger error: {e}")))?
-            .is_none()
-    {
+    // 3. Check quota for Apple Sandbox purchases. Only new mints consume the budget; the
+    // fingerprint lookup doubles as the mint-vs-restore outcome for the log below
+    // (the fingerprint itself never leaves the ledger).
+    let fingerprint_exists = state
+        .ledger
+        .find_by_fingerprint(&origin, &fingerprint)
+        .await
+        .map_err(|e| AppError::Internal(format!("ledger error: {e}")))?
+        .is_some();
+    if origin == WalletOrigin::AppleAppStoreSandbox && !fingerprint_exists {
         let credits = (millicredits / 1000).max(0) as u64;
         match state
             .quota
@@ -172,6 +173,13 @@ pub async fn handle(
     // 4. Mint or restore.
     let (resolved_token, wallet) =
         mint_or_restore(&state, &origin, &fingerprint, &product_id, millicredits).await?;
+
+    tracing::info!(
+        origin = origin.as_str(),
+        product_id = %product_id,
+        outcome = if fingerprint_exists { "restored" } else { "minted" },
+        "credits redeemed"
+    );
 
     Ok(Json(RedeemResponse {
         token: resolved_token,

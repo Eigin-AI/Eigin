@@ -10949,6 +10949,108 @@
         }
       }
     },
+    "provider.eigin.purchaseNetwork" : {
+      "comment" : "Shown when the app could not reach Eigin Relay during a purchase or restore",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi kunne ikke nå vores servere. Tjek din forbindelse, og prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't reach our servers. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "provider.eigin.purchaseOutage" : {
+      "comment" : "Shown when Eigin Relay responded that it is temporarily unavailable during a purchase or restore",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigins servere er kortvarigt utilgængelige. Prøv igen om et minut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin's servers are briefly unavailable. Try again in a minute."
+          }
+        }
+      }
+    },
+    "provider.eigin.purchasePendingRecovery" : {
+      "comment" : "Shown when a purchase or restore could not be finished; StoreKit retries it automatically at the next launch",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit køb er gennemført, men afventer stadig. Det fuldføres automatisk, næste gang du åbner appen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your purchase went through but is still pending. It will finish automatically next time you open the app."
+          }
+        }
+      }
+    },
+    "provider.eigin.purchaseRetry" : {
+      "comment" : "Neutral failure copy for catalog load and restore, where no new purchase is in flight",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi kunne ikke gennemføre dette. Prøv igen om lidt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't complete this. Try again in a moment."
+          }
+        }
+      }
+    },
+    "provider.eigin.purchaseUnavailable" : {
+      "comment" : "Shown when purchases could not be loaded because a StoreKit product was not found",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Køb er ikke tilgængelige lige nu. Prøv igen senere."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchases are unavailable right now. Try again later."
+          }
+        }
+      }
+    },
+    "provider.eigin.purchaseVerification" : {
+      "comment" : "Shown when a purchase's proof failed StoreKit or relay verification",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi kunne ikke bekræfte dette køb. Prøv igen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't verify this purchase. Try again."
+          }
+        }
+      }
+    },
     "provider.eigin.rowSubtitle" : {
       "comment" : "Subtitle on the Eigin provider row in the connections list",
       "localizations" : {

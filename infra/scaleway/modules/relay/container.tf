@@ -12,7 +12,7 @@ resource "scaleway_container" "relay" {
   registry_image = local.image_ref
   deploy         = true
   port           = 8080
-  min_scale      = 0
+  min_scale      = var.min_scale
   max_scale      = var.max_scale
   memory_limit   = 560
   cpu_limit      = 560
@@ -55,7 +55,7 @@ resource "scaleway_container" "relay" {
   # otherwise to avoid an empty secret.
   secret_environment_variables = merge(
     {
-      STAAN_API_KEY               = var.staan_api_key
+      STAAN_API_KEY                = var.staan_api_key
       EIGIN_RELAY_PRIMARY_KEY      = random_password.eigin_relay_key.result
       TOKEN_ENCRYPTION_KEY_PRIMARY = random_bytes.token_encryption_key.base64
       DATABASE_URL                 = local.database_url
