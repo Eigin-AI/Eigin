@@ -86,8 +86,13 @@ struct OnboardingSpeech: View {
             try? await Task.sleep(for: .milliseconds(16))
         }
         // A beat after the line lands before the screen's content appears.
+        // The reveal animates here, at its source: keeping the animation out of
+        // the scaffold means a screen change never inherits it — the swap, reflow
+        // and hide all stay instant, and only this fade eases in.
         try? await Task.sleep(for: .milliseconds(900))
-        finished.wrappedValue = text
+        withAnimation(.easeOut(duration: Animations.normal)) {
+            finished.wrappedValue = text
+        }
     }
 
     /// Splits text into word-sized chunks (each carrying its leading space) to

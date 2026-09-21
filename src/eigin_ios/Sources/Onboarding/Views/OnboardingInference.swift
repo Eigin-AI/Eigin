@@ -23,6 +23,9 @@ struct OnboardingInference: View {
     @State private var showProviderSelect = false
     @State private var showProviderConnect = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
+    /// Cleared chrome: the connect sheet's setup copy reads as a leftover
+    /// once the connection is up (see `ProviderConnectSheetContent.Step`).
+    @State private var connectReachedDone = false
 
     private var offlineAvailable: Bool {
         gemmaManager.isSupported && gemmaManager.state == .notDownloaded
@@ -104,6 +107,7 @@ struct OnboardingInference: View {
         ) {
             ProviderSelectSheetContent { selection in
                 showProviderSelect = false
+                connectReachedDone = false
                 switch selection {
                 case .preset(let preset, let method):
                     selectedMode = .preset(preset, method: method)
@@ -115,7 +119,7 @@ struct OnboardingInference: View {
         .appSheet(
             isPresented: $showProviderConnect,
             title: connectSheetTitle,
-            description: connectSheetDescription,
+            description: connectReachedDone ? nil : connectSheetDescription,
             detents: [.large],
             fitsContent: true
         ) {
@@ -125,13 +129,16 @@ struct OnboardingInference: View {
                     onComplete: { provider in
                         showProviderConnect = false
                         selectedMode = nil
+                        connectReachedDone = false
                         onConnectOwn(provider)
                     },
                     onBack: {
                         showProviderConnect = false
                         selectedMode = nil
+                        connectReachedDone = false
                         showProviderSelect = true
-                    }
+                    },
+                    onStepChange: { connectReachedDone = $0 == .done }
                 )
             }
         }

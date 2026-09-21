@@ -75,17 +75,35 @@ struct OnboardingScaffold<Content: View>: View {
                 )
                 .transition(.opacity)
 
-                // Standardized entrance: the screen's content appears only once
-                // the agent has finished speaking *this* line. Comparing against
-                // the current text hides content the instant the line changes,
-                // with no lag.
-                content()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The content area scrolls when a screen is taller than the
+                // space left under the speech — the avatar and line stay put.
+                // Short content still fills the viewport, keeping the
+                // Spacer-centered layouts of screens that fit.
+                // Overlay, not stack: during a screen change the outgoing and
+                // incoming content coexist for one fade — overlapping them
+                // keeps the layout above from jumping while they cross.
+                ZStack {
+                    GeometryReader { viewport in
+                        ScrollView {
+                            content()
+                                // The scroll area itself runs edge to edge so
+                                // wide content (the priority carousel's peeking
+                                // cards) isn't clipped at the padding line.
+                                .padding(.horizontal, Spacing.n24)
+                                .frame(maxWidth: .infinity, minHeight: viewport.size.height)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .scrollIndicators(.hidden)
+                    }
                     .opacity(revealed ? 1 : 0)
                     .offset(y: revealed ? 0 : 8)
                     .allowsHitTesting(revealed)
-                    .animation(.easeOut(duration: Animations.normal), value: revealed)
                     .transition(.opacity)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The scroll view escapes the scaffold's horizontal padding;
+                // its content pads itself instead.
+                .padding(.horizontal, -Spacing.n24)
             }
         }
         .padding(.horizontal, Spacing.n24)
