@@ -37,6 +37,9 @@ const REVIEW_RESULT_CHANNEL = "plannotator:review-result";
 /** The start request must answer quickly — it's an in-process handler, not a human. */
 const START_TIMEOUT_MS = 15_000;
 
+/** Backup decision source while waiting: Plannotator persists decisions to disk. */
+const STATUS_POLL_MS = 4_000;
+
 /** Read/write access to the extension's stage + plan state, owned by index.ts. */
 export interface PlanReviewController {
 	/** The current stage id — plan_review only runs in "plan". */
@@ -55,21 +58,40 @@ interface PlannotatorStartResponse {
 	error?: string;
 }
 
-/** Emits the plan-review request; resolves when Plannotator starts (or fails to start) the browser session. */
+/**
+ * Emits the plan-review request and resolves with the response that actually
+ * started a browser session. Plannotator can be loaded more than once (user +
+ * project package copies each instantiate), and the instance whose session
+ * context wasn't set answers an immediate `unavailable` while the healthy one
+ * takes a moment to spin up the browser and answer `handled`. So: wait for a
+ * `handled` response within the window and only fall back to the error text if
+ * none arrives (Plannotator genuinely not loaded).
+ */
 function requestPlanReview(
 	pi: ExtensionAPI,
 	planFilePath: string,
 	planContent: string,
 ): Promise<PlannotatorStartResponse> {
 	return new Promise((resolvePromise) => {
-		// If the package isn't loaded, nothing answers — the timeout is the
-		// only signal, so the agent can fall back instead of blocking forever.
+		let settled = false;
+		let lastError: PlannotatorStartResponse | undefined;
+		const finish = (response: PlannotatorStartResponse) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			resolvePromise(response);
+		};
+		// If no listener handles the request in this window, Plannotator isn't
+		// loaded (or can't start a review) — the agent falls back instead of
+		// blocking forever.
 		const timer = setTimeout(
 			() =>
-				resolvePromise({
-					status: "unavailable",
-					error: "no Plannotator listener answered the plan-review request",
-				}),
+				finish(
+					lastError ?? {
+						status: "unavailable",
+						error: "no Plannotator listener answered the plan-review request",
+					},
+				),
 			START_TIMEOUT_MS,
 		);
 		pi.events.emit(REQUEST_CHANNEL, {
@@ -77,8 +99,11 @@ function requestPlanReview(
 			action: "plan-review",
 			payload: { planContent, planFilePath },
 			respond: (response: PlannotatorStartResponse) => {
-				clearTimeout(timer);
-				resolvePromise(response);
+				if (response.status === "handled" && response.result?.reviewId) {
+					finish(response);
+					return;
+				}
+				lastError = response;
 			},
 		});
 	});
@@ -90,17 +115,24 @@ interface DecisionEvent {
 }
 
 /**
- * Waits for the human's decision on the review. `signal` aborts the wait
- * (session teardown) with the review still open in the browser.
+ * Waits for the human's decision on the review. Primary source is the
+ * `plannotator:review-result` event; a `review-status` poll runs as backup —
+ * that action is context-independent, so it works even when duplicate
+ * Plannotator instances or a session restart drop the event. `signal` aborts
+ * the wait (session teardown) with the review still open in the browser.
  */
 function waitForReviewDecision(
 	pi: ExtensionAPI,
 	reviewId: string,
 	signal?: AbortSignal,
 ): Promise<{ decision?: DecisionEvent; interrupted?: boolean }> {
+	let settled = false;
 	return new Promise((resolvePromise) => {
 		const done = (result: { decision?: DecisionEvent; interrupted?: boolean }) => {
+			if (settled) return;
+			settled = true;
 			unsubscribe();
+			clearInterval(poll);
 			signal?.removeEventListener("abort", onAbort);
 			resolvePromise(result);
 		};
@@ -109,6 +141,29 @@ function waitForReviewDecision(
 			if (event?.reviewId !== reviewId || typeof event.approved !== "boolean") return;
 			done({ decision: { approved: event.approved, feedback: event.feedback } });
 		});
+		const poll = setInterval(() => {
+			pi.events.emit(REQUEST_CHANNEL, {
+				requestId: randomUUID(),
+				action: "review-status",
+				payload: { reviewId },
+				respond: (response: PlannotatorStartResponse) => {
+					const status = response.status === "handled" ? response.result : undefined;
+					if (
+						status &&
+						typeof status === "object" &&
+						"status" in status &&
+						status.status === "completed"
+					) {
+						const completed = status as { approved?: boolean; feedback?: string };
+						if (typeof completed.approved === "boolean") {
+							done({
+								decision: { approved: completed.approved, feedback: completed.feedback },
+							});
+						}
+					}
+				},
+			});
+		}, STATUS_POLL_MS);
 		const onAbort = () => done({ interrupted: true });
 		signal?.addEventListener("abort", onAbort);
 	});
