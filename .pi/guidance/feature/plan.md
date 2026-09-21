@@ -45,7 +45,9 @@ Goal: a *tactical* implementation plan you both shape — not a doc you present.
 
     Wiring: build one `SearchClient` at startup, share via app state.
 - Keep prose SHORT — short lines, generous whitespace. No walls of text.
-- It's collaborative: the file is re-read every turn, so you'll see the user's direct edits and free-typed notes as a diff — respond to them. Push back when you disagree.
-- After a round of edits, don't explain at length: call wait_for_user (confirmLabel "Review my plan edits") to hand off for the next pass. Its prompt is about reviewing/editing THIS pass only — never mention advancing or moving to Build in it.
-- When the user signals: strip their inline comments, address them, APPEND a Decision log entry, then hand back with wait_for_user again.
-- Advancing is a SEPARATE step: only when the plan is fully formed and no comments are open, call propose_stage(build) on its own. Never bundle "move to build" into a wait_for_user prompt/label — that dialog is the approval. Don't ask too early; expect several rounds, and never advance on your own.
+- Review rounds go through `plan_review`: it opens the plan in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn:
+    - **Approved** (with or without notes): append a Decision log entry; notes are Build guidance, not a rework list. Then the approve gate below.
+    - **Changes requested**: address the feedback in the plan file, append a Decision log entry, and call `plan_review` again — the next review diffs against the previous version.
+- It's still collaborative from the terminal side too: if the user types comments in chat or edits the file directly, respond to those first, then run a `plan_review` round to confirm.
+- If `plan_review` reports Plannotator unavailable or the reviewer closes without deciding, fall back to the co-editing loop: call wait_for_user (confirmLabel "Review my plan edits") instead of explaining at length.
+- Advancing is a SEPARATE step: only when the plan is approved in review and no comments are open, call propose_stage(build) on its own. Never bundle "move to build" into a wait_for_user prompt/label — that dialog is the approval. Don't ask too early; expect several rounds, and never advance on your own.

@@ -28,7 +28,11 @@
  *   rings the terminal bell on agent_end (see observability/).
  * - Collaborative plan review: the Plan stage co-edits a markdown file under
  *   .pi/plans/, re-injected with a diff of the user's edits each turn (see
- *   workflow/active-plan.ts). wait_for_user hands control back for a signal.
+ *   workflow/active-plan.ts). wait_for_user hands control back for a signal;
+ *   plan_review opens the plan in the Plannotator browser review UI instead
+ *   and returns the human's approve/feedback decision (see tools/plan-review.ts) —
+ *   the agent calls that per review round, falling back to wait_for_user when
+ *   Plannotator is unavailable.
  * - Persists workflow + stage across session resume (old sessions without a
  *   persisted workflow default to Feature).
  * - Maintains an agent-managed task list (add_tasks / resolve_tasks / clear_tasks),
@@ -126,6 +130,7 @@ import { firstOutsidePath, loadAllowedRoots, pathIsOutside } from "./workflow/af
 import { generateSessionName } from "./observability/generate-session-name.ts";
 import { extractLastUserText } from "./observability/session-name.ts";
 import { WAIT_FOR_USER_TOOL, registerWaitForUserTool } from "./tools/wait-for-user.ts";
+import { PLAN_REVIEW_TOOL, registerPlanReviewTool } from "./tools/plan-review.ts";
 import { confirmWithNote } from "./tools/confirm-dialog.ts";
 import {
   diffSinceSeen,
@@ -179,6 +184,7 @@ const EDIT_TOOLS = ["edit", "write"];
 const ALWAYS_ON_TOOLS = [
   PROPOSE_TOOL,
   WAIT_FOR_USER_TOOL,
+  PLAN_REVIEW_TOOL,
   ASK_QUESTIONS_TOOL,
   ADD_TASKS_TOOL,
   RESOLVE_TASKS_TOOL,
@@ -775,6 +781,16 @@ export default function stageExtension(pi: ExtensionAPI): void {
     stage: () => currentStage,
     planInjection: () => buildPlanInjection(),
     isAfk: () => isAfk(afkState),
+  });
+
+  registerPlanReviewTool(pi, {
+    currentStage: () => currentStage,
+    isAfk: () => isAfk(afkState),
+    activePlanPath: () => activePlanState.path ?? undefined,
+    sessionCwd: () => sessionCwd,
+    markPlanSeen(content) {
+      activePlanState = markSeen(activePlanState, content);
+    },
   });
 
   // --- Session naming / bell events ---------------------------------------

@@ -1,6 +1,7 @@
 {
   "packages": [
     "npm:pi-web-access",
-    "npm:@aliou/pi-guardrails"
+    "npm:@aliou/pi-guardrails",
+    "npm:@plannotator/pi-extension"
   ]
 }

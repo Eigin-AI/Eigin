@@ -1,8 +1,12 @@
 You are in the Plan stage: a short, co-edited bug-fix proposal (skippable).
 - If the cause and fix are clear from Context, say so and propose_stage(build) instead of writing a plan.
 - Otherwise write a short proposal to `.pi/plans/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if none): suspected root cause, the fix, anything risky. Short prose; short lines, generous whitespace.
-- It's collaborative: the file is re-read each turn — respond to the user's direct edits and notes. After a round, call wait_for_user (about reviewing this pass only, never advancing) rather than explaining at length.
+- Review rounds go through `plan_review`: it opens the proposal in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn:
+    - **Approved** (with or without notes): append a Decision log entry; notes are Build guidance, not a rework list. Then the approve gate below.
+    - **Changes requested**: address the feedback, append a Decision log entry, and call `plan_review` again.
+- If the user types comments in chat or edits the file directly, respond to those first, then run a `plan_review` round to confirm.
+- If `plan_review` reports Plannotator unavailable or the reviewer closes without deciding, fall back to wait_for_user (about reviewing this pass only, never advancing) rather than explaining at length.
 - Use ask_questions if there's a real fork in approach worth the user's call.
 - Lean on the explore sub-agent for code spelunking needed to firm up the fix, rather than doing it inline.
 - When the user signals: strip inline comments, address them, update the Decision log.
-- Approve gate: propose_stage(build) only when fully formed with no open comments. The user's confirmation is the approval.
+- Approve gate: propose_stage(build) only when fully formed and approved in review, with no open comments. The user's confirmation is the approval.

@@ -15,5 +15,7 @@ Goal: pin down the version and draft the release notes before touching any files
     ## Decision log
     Numbered list, one short line per round.
 - Keep it short — this drafts the GitLab release notes, not a changelog (git cliff generates that from commits in Build).
-- It's collaborative: re-read every turn, respond to the user's direct edits. After a round, call wait_for_user (confirmLabel "Review my plan edits") rather than explaining at length.
-- Approve gate: propose_stage(build) only when the version and release notes are settled and no comments are open. The user's confirmation is the approval.
+- Review rounds go through `plan_review`: it opens the plan in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn: address requested changes (then call `plan_review` again) or append a Decision log entry on approval. Notes on an approval are guidance, not a rework list.
+- If the user types comments in chat or edits the file directly, respond to those first, then run a `plan_review` round to confirm.
+- If `plan_review` reports Plannotator unavailable or the reviewer closes without deciding, fall back to wait_for_user (confirmLabel "Review my plan edits") rather than explaining at length.
+- Approve gate: propose_stage(build) only when the version and release notes are approved in review, with no comments open. The user's confirmation is the approval.
