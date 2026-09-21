@@ -28,6 +28,10 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
 
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
+    /// The safe areas a fitted detent has to span. Measured on a background
+    /// that ignores the safe area, since in-flow views only ever see what's
+    /// left after it.
+    @State private var sheetInsets = EdgeInsets()
 
     private var hasSecondary: Bool {
         Secondary.self != EmptyView.self
@@ -62,12 +66,28 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
         }
         .padding(.top, Sizing.PageLayout.pyTop)
         .frame(maxWidth: .infinity, alignment: .top)
+        .background {
+            GeometryReader { _ in
+                Color.clear
+                    .ignoresSafeArea(edges: [.top, .bottom])
+                    .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: {
+                        if sheetInsets != $0 {
+                            sheetInsets = $0
+                            reportIntrinsicHeight()
+                        }
+                    }
+            }
+        }
     }
 
     private func reportIntrinsicHeight() {
         guard let intrinsicHeight else { return }
-        // Outer top padding + header + the VStack's header/content spacing + content.
-        let total = Sizing.PageLayout.pyTop + headerHeight + Sizing.PageLayout.pyTop + contentHeight
+        // Outer top padding + header + the VStack's header/content spacing + content,
+        // plus the safe areas the presentation leaves outside the scroll view: a
+        // detent's height spans them too, so a fitted sheet that leaves them out
+        // undershoots and clips its last row into the bottom edge.
+        let total = sheetInsets.top + sheetInsets.bottom
+            + Sizing.PageLayout.pyTop + headerHeight + Sizing.PageLayout.pyTop + contentHeight
         if abs(intrinsicHeight.wrappedValue - total) > 0.5 {
             intrinsicHeight.wrappedValue = total
         }

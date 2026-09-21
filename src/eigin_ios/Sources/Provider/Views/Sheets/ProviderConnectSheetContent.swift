@@ -28,7 +28,11 @@ struct ProviderConnectSheetContent: View {
     }
 
     /// How far you have got. The steps are shared: only the start differs.
-    private enum Step {
+    /// Exposed so presenters can adjust sheet chrome per step: the setup copy
+    /// in the header (how to get a key, where to add credits) stops being true
+    /// once the connection is up, and its height crowds the connected UI on
+    /// short screens — so presenters drop it via `onStepChange` at `.done`.
+    enum Step {
         case start
         case working
         case failed
@@ -44,11 +48,13 @@ struct ProviderConnectSheetContent: View {
     let method: ProviderPreset.AuthMethod
     let onComplete: (Provider) -> Void
     let onBack: () -> Void
+    let onStepChange: ((Step) -> Void)?
 
     init(
         mode: Mode,
         onComplete: @escaping (Provider) -> Void,
-        onBack: @escaping () -> Void
+        onBack: @escaping () -> Void,
+        onStepChange: ((Step) -> Void)? = nil
     ) {
         self.mode = mode
         method =
@@ -58,6 +64,7 @@ struct ProviderConnectSheetContent: View {
             }
         self.onComplete = onComplete
         self.onBack = onBack
+        self.onStepChange = onStepChange
         oauthService =
             if case .preset(let preset, _) = mode, method == .oAuthPKCE {
                 DefaultOAuthPKCEService(preset: preset)
@@ -76,7 +83,10 @@ struct ProviderConnectSheetContent: View {
         return .address
     }
 
-    @State private var step: Step = .start
+    @State private var step: Step = .start {
+        didSet { onStepChange?(step) }
+    }
+
     @State private var connectionError: ConnectionError?
     @State private var showCreditsURL = false
     /// Bumped whenever the user backs out of an attempt; in-flight tasks
@@ -267,7 +277,8 @@ struct ProviderConnectSheetContent: View {
             AppButton(Localized.Common.Actions.done) {
                 finish()
             }
-            .padding(.bottom, Spacing.n32)
+            // AppSheet pads the content's bottom; extra padding only pushes
+            // this button out of a short sheet.
         }
         .padding(.horizontal, Spacing.n24)
     }

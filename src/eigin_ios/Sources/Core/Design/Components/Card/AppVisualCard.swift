@@ -20,6 +20,10 @@ struct AppVisualCard: View {
     let explainer: String
     let symbol: Image
     let variant: AppVisualCardVariant
+    /// Design size. Under a shorter container (iPhone SE, iPad compatibility
+    /// mode) the card goes compact: smaller symbol, title only, tightened text.
+    var width: CGFloat = 300
+    var height: CGFloat = 360
     let action: (() -> Void)?
 
     @Environment(\.colors) private var colors
@@ -29,22 +33,78 @@ struct AppVisualCard: View {
         explainer: String,
         symbol: Image,
         variant: AppVisualCardVariant = .brand,
+        width: CGFloat = 300,
+        height: CGFloat = 360,
         action: (() -> Void)? = nil
     ) {
         self.headline = headline
         self.explainer = explainer
         self.symbol = symbol
         self.variant = variant
+        self.width = width
+        self.height = height
         self.action = action
     }
 
     var body: some View {
         if let action {
-            Button(action: action) { card }
+            Button(action: action) { current }
                 .buttonStyle(.plain)
         } else {
-            card
+            current
         }
+    }
+
+    @ViewBuilder
+    private var current: some View {
+        if isCompact { compactCard } else { card }
+    }
+
+    private var isCompact: Bool {
+        height < 360
+    }
+
+    /// Squeezed card: the symbol scales down with the height, and the title
+    /// and explainer tuck underneath at smaller styles. ViewThatFits drops
+    /// the explainer only if nothing else fits.
+    private var compactCard: some View {
+        let symbolSize = height * 0.26
+
+        return VStack(alignment: .leading, spacing: 0) {
+            symbol
+                .resizable()
+                .renderingMode(.template)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: symbolSize, height: symbolSize)
+                .foregroundStyle(foregroundColor)
+
+            Spacer(minLength: Spacing.n12)
+
+            ViewThatFits(in: .vertical) {
+                compactText
+                Text(headline)
+                    .typography(Typography.titleXS)
+                    .foregroundStyle(foregroundColor)
+                    .lineLimit(3)
+            }
+        }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n24)
+        .frame(width: width, height: height, alignment: .topLeading)
+        .background(backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+    }
+
+    private var compactText: some View {
+        VStack(alignment: .leading, spacing: Spacing.n8) {
+            Text(headline)
+                .typography(Typography.titleXS)
+                .foregroundStyle(foregroundColor)
+            Text(explainer)
+                .typography(Typography.description)
+                .foregroundStyle(foregroundColor)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var card: some View {
@@ -60,6 +120,7 @@ struct AppVisualCard: View {
 
             ViewThatFits(in: .vertical) {
                 textContent
+                headlineOnly
                 ScrollView(showsIndicators: false) {
                     textContent
                         .padding(.bottom, Spacing.n16)
@@ -69,7 +130,7 @@ struct AppVisualCard: View {
         }
         .padding(.horizontal, Spacing.n24)
         .padding(.vertical, Spacing.n40)
-        .frame(width: 300, height: 360, alignment: .topLeading)
+        .frame(width: width, height: height, alignment: .topLeading)
         .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
     }
@@ -86,6 +147,14 @@ struct AppVisualCard: View {
                 .lineLimit(nil)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var headlineOnly: some View {
+        Text(headline)
+            .typography(Typography.titleL)
+            .foregroundStyle(foregroundColor)
+            .lineLimit(nil)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var scrollFadeMask: some View {
