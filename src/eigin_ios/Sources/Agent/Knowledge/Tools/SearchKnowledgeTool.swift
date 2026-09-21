@@ -207,15 +207,12 @@ struct SearchKnowledgeTool: Tool {
         )
 
         // Surfacing by search is an indirect use signal for each result shown.
-        for result in scored {
-            await knowledgeService.recordAccess(
-                type: result.entity.entityType,
-                id: result.qualifiedID,
-                kind: .indirect,
-                spaceID: spaceID,
-                agentID: agentID
-            )
-        }
+        await knowledgeService.recordAccess(
+            scored.map { (type: $0.entity.entityType, id: $0.qualifiedID) },
+            kind: .indirect,
+            spaceID: spaceID,
+            agentID: agentID
+        )
 
         let entries: [[String: Any]] = scored.map { result in
             var entry: [String: Any] = [

@@ -1,4 +1,5 @@
 #if DEBUG
+import Factory
 import SwiftData
 import SwiftUI
 import UIKit
@@ -322,6 +323,14 @@ struct DevelopmentMenu: View {
                 guard let url = pendingImportURL else { return }
                 do {
                     try DataExportService.importData(from: url, context: modelContext)
+                    // The import replaces FirmSource rows behind the knowledge
+                    // service's back; its cached snapshot would serve deleted
+                    // rows otherwise.
+                    if let knowledge = Container.shared.knowledgeService()
+                        as? DefaultKnowledgeService
+                    {
+                        knowledge.invalidateVisibleSourcesCache()
+                    }
                     importSuccess = true
                 } catch {
                     importExportError = "Import failed: \(error.localizedDescription)"
