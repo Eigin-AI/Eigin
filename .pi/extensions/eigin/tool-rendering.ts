@@ -32,6 +32,7 @@ import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { collapseMultiline, toRenderLines } from "./render-lines.ts";
 
 type Args = Record<string, unknown>;
 
@@ -75,7 +76,7 @@ function linesComponent(lines: string[]): {
 	invalidate: () => void;
 } {
 	return {
-		render: (width: number) => lines.map((l) => truncateToWidth(l, width)),
+		render: (width: number) => lines.flatMap(toRenderLines).map((l) => truncateToWidth(l, width)),
 		invalidate: () => {},
 	};
 }
@@ -137,11 +138,22 @@ export function registerCompactRendering(pi: ExtensionAPI) {
 			const details = (result.details ?? {}) as BashToolDetails & { durationMs?: number };
 			return { ...result, details: { ...details, durationMs: Date.now() - t0 } };
 		},
-		renderCall(args, theme) {
+		renderCall(args, theme, context) {
 			const command = str(args as Args, "command");
 			const timeout = (args as Args).timeout;
 			const suffix = timeout ? theme.fg("muted", ` (timeout ${timeout}s)`) : "";
-			return linesComponent([theme.fg("toolTitle", theme.bold(`$ `)) + theme.fg("accent", command) + suffix]);
+			const lines = toRenderLines(command);
+			const first = lines[0] ?? "";
+			if (context.expanded && lines.length > 1) {
+				return linesComponent([
+					theme.fg("toolTitle", theme.bold(`$ `)) + theme.fg("accent", first),
+					...lines.slice(1).map((l) => theme.fg("accent", l)),
+				]);
+			}
+			const multi = lines.length > 1 ? theme.fg("muted", ` (+${lines.length - 1} lines)`) : "";
+			return linesComponent([
+				theme.fg("toolTitle", theme.bold(`$ `)) + theme.fg("accent", first) + multi + suffix,
+			]);
 		},
 		renderResult(result, { expanded, isPartial }, theme, context) {
 			if (isPartial) return linesComponent([theme.fg("warning", "…running")]);
@@ -214,11 +226,13 @@ export function registerCompactRendering(pi: ExtensionAPI) {
 			return originalGrep.execute(toolCallId, params, signal, onUpdate);
 		},
 		renderCall(args, theme) {
-			const pattern = str(args as Args, "pattern");
+			const pattern = collapseMultiline(str(args as Args, "pattern"));
 			const path = str(args as Args, "path");
+			const more = pattern.rest > 0 ? theme.fg("muted", ` (+${pattern.rest} lines)`) : "";
 			return linesComponent([
 				theme.fg("toolTitle", theme.bold("grep ")) +
-					theme.fg("accent", pattern) +
+					theme.fg("accent", pattern.first) +
+					more +
 					(path ? theme.fg("muted", ` in ${path}`) : ""),
 			]);
 		},
