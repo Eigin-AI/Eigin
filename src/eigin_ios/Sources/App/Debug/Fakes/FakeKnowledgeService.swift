@@ -178,6 +178,13 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
         agentID: UUID?
     ) async {}
 
+    func recordAccess(
+        _ entities: [(type: String, id: String)],
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {}
+
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
         record(spaceID: spaceID, agentID: agentID)
         return sources

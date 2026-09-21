@@ -1,4 +1,5 @@
 import Foundation
+import os.lock
 import SwiftData
 
 /// How deliberate a knowledge retrieval was. Direct recall (fetch by ID) is a
@@ -70,6 +71,14 @@ protocol KnowledgeService: Sendable {
         spaceID: UUID?,
         agentID: UUID?
     ) async
+    /// Batch variant of ``recordAccess(type:id:kind:spaceID:agentID:)``.
+    /// Records several accesses of the same kind in one write transaction.
+    func recordAccess(
+        _ entities: [(type: String, id: String)],
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource]
     func unexpiredEntities(type: String, spaceID: UUID?, agentID: UUID?) async throws
         -> [FirmEntity]
@@ -85,10 +94,30 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     private var activeAccessPolicy: SpaceAccessPolicy?
     private let modelContainer: ModelContainer
 
-    /// Recently recorded accesses, keyed by scope + entity. Used to debounce
-    /// repeat retrievals of the same entry within a single turn so one turn
-    /// can't inflate an entry's frequency (see ``recordAccess``).
-    private var recentAccess: [String: (weight: Double, at: Date)] = [:]
+    /// Hot-path mutable state: the debounce table and the visible-source
+    /// snapshot. Lock-guarded because tools, hydrator, and background passes
+    /// hit this class concurrently from different tasks.
+    ///
+    /// `@unchecked` because it stores `PersistentModel` references, which
+    /// SwiftData excludes from Sendable; access is serialised by the lock and
+    /// the models are only read for fields, as elsewhere in this class.
+    private struct SharedState: @unchecked Sendable {
+        var recentAccess: [String: (weight: Double, at: Date)] = [:]
+        /// Cached visible-source snapshot for the active scope. One fetch
+        /// serves every read in an operation (a search runs six scope
+        /// scans). Cleared on any source save — including recordAccess, since
+        /// scoring reads `accessCount`/`lastAccessedAt` off the snapshot.
+        var visibleSourcesCache: [FirmSource]?
+    }
+
+    private let sharedState = OSAllocatedUnfairLock(initialState: SharedState())
+
+    /// Clears the visible-source snapshot. Called after bulk replaces of
+    /// FirmSource rows that bypass this service (such as the debug data
+    /// import), and internally after every source save.
+    func invalidateVisibleSourcesCache() {
+        sharedState.withLock { $0.visibleSourcesCache = nil }
+    }
 
     /// Window within which repeat accesses to the same entry are coalesced.
     /// Sized to span a single agent turn (surface then fetch), not real elapsed
@@ -195,6 +224,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     ) async throws {
         session = FirmSession()
         isBuilt = false
+        invalidateVisibleSourcesCache()
 
         let spaceLabel = spaceID.map { String($0.uuidString.prefix(8)) } ?? "nil"
         let agentLabel = agentID.map { String($0.uuidString.prefix(8)) } ?? "nil"
@@ -391,7 +421,8 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
         )
 
-        // Validate by building a trial session before persisting.
+        // Validate by building a trial session before persisting. If any
+        // load/build throws, addEntity throws and nothing is adopted below.
         let trial = FirmSession()
         for source in BundledKnowledge.allSources {
             try trial.loadSource(content: source.content, path: source.path)
@@ -441,6 +472,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         try context.save()
 
         session = trial
+        invalidateVisibleSourcesCache()
         isBuilt = true
     }
 
@@ -522,6 +554,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         source.expired = expired
         source.updatedAt = .now
         try context.save()
+        invalidateVisibleSourcesCache()
     }
 
     /// Mark or clear the `contested` flag on a memory. Used by consolidation to
@@ -554,6 +587,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         source.contested = contested
         source.updatedAt = .now
         try context.save()
+        invalidateVisibleSourcesCache()
     }
 
     func setImportance(
@@ -583,6 +617,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         source.importance = min(1, max(0, importance))
         source.updatedAt = .now
         try context.save()
+        invalidateVisibleSourcesCache()
     }
 
     func markReviewed(_ qualifiedIDs: [String], spaceID: UUID?, agentID: UUID?) async throws {
@@ -603,6 +638,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             source.lastReviewedAt = now
         }
         try context.save()
+        invalidateVisibleSourcesCache()
     }
 
     // MARK: - Source access
@@ -667,65 +703,117 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         spaceID: UUID?,
         agentID: UUID?
     ) async {
+        await recordAccess([(type: type, id: id)], kind: kind, spaceID: spaceID, agentID: agentID)
+    }
+
+    /// Record retrievals of memories, bumping their use signals in a single
+    /// write transaction.
+    ///
+    /// Resolves the shadow-winner ``FirmSource`` for each `(type, id)` in the
+    /// active scope (from the cached snapshot when warm), then applies every
+    /// access bump in one background-context save.
+    ///
+    /// Debounced per turn: repeat accesses to the same memory within
+    /// ``accessDebounceWindow`` are coalesced, keeping the strongest kind
+    /// (direct beats indirect). Failures are swallowed — access tracking must
+    /// never break a retrieval.
+    func recordAccess(
+        _ entities: [(type: String, id: String)],
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {
         do {
             try await ensureBuilt(spaceID: spaceID, agentID: agentID)
         } catch {
             return
         }
 
-        let shortID = id.hasPrefix("\(type).") ? String(id.dropFirst(type.count + 1)) : id
-        let targetKey = "\(type).\(shortID)"
-
         // Per-turn debounce, keeping the strongest kind. If we already counted
         // this memory this turn at an equal-or-stronger weight, skip; if this
         // access is stronger (indirect → direct), apply only the upgrade delta.
         let spaceLabel = spaceID?.uuidString ?? "nil"
         let agentLabel = agentID?.uuidString ?? "nil"
-        let debounceKey = "\(spaceLabel)|\(agentLabel)|\(targetKey)"
         let now = Date()
-        var deltaWeight = kind.weight
-        if let prior = recentAccess[debounceKey],
-           now.timeIntervalSince(prior.at) < accessDebounceWindow
-        {
-            if kind.weight <= prior.weight { return }
-            deltaWeight = kind.weight - prior.weight
+        let deltas = sharedState.withLock { state -> [String: Double] in
+            var deltas: [String: Double] = [:]
+            for entity in entities {
+                let shortID = entity.id.hasPrefix("\(entity.type).")
+                    ? String(entity.id.dropFirst(entity.type.count + 1)) : entity.id
+                let targetKey = "\(entity.type).\(shortID)"
+                let debounceKey = "\(spaceLabel)|\(agentLabel)|\(targetKey)"
+                var deltaWeight = kind.weight
+                if let prior = state.recentAccess[debounceKey],
+                   now.timeIntervalSince(prior.at) < accessDebounceWindow
+                {
+                    if kind.weight <= prior.weight { continue }
+                    deltaWeight = kind.weight - prior.weight
+                }
+                deltas[targetKey] = deltaWeight
+            }
+            return deltas
         }
+        guard !deltas.isEmpty else { return }
+
+        // Resolve shadow winners from the visible snapshot (cache-warm right
+        // after a search), so the write path never needs a full-table fetch.
+        guard
+            let visible = try? await allVisibleSources(spaceID: spaceID, agentID: agentID)
+        else { return }
+        var winnerIDs: [PersistentIdentifier] = []
+        for source in visible where deltas[entityKey(for: source.path)] != nil {
+            winnerIDs.append(source.persistentModelID)
+        }
+        guard !winnerIDs.isEmpty else { return }
 
         let context = ModelContext(modelContainer)
-        guard let allSources = try? context.fetch(
-            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
-        ) else { return }
+        let rows = winnerIDs.compactMap { context.model(for: $0) as? FirmSource }
+        if rows.count != winnerIDs.count {
+            // Another writer deleted a row between snapshot and write; record
+            // what landed rather than failing the whole retrieval.
+            AppLogger.warning(
+                "KnowledgeService.recordAccess row lookup miss: \(public: winnerIDs.count - rows.count)/\(public: winnerIDs.count)",
+                category: .general
+            )
+        }
 
-        let visible = visibleSources(
-            from: allSources,
-            spaceID: spaceID,
-            agentID: agentID,
-            accessPolicy: activeAccessPolicy
-        )
-        guard let winner = visible.first(where: { entityKey(for: $0.path) == targetKey })
-        else { return }
-
-        winner.accessCount += deltaWeight
-        winner.lastAccessedAt = now
+        for row in rows {
+            guard let delta = deltas[entityKey(for: row.path)] else { continue }
+            row.accessCount += delta
+            row.lastAccessedAt = now
+        }
         try? context.save()
+        // Access bookkeeping feeds scoring inputs, so the snapshot is stale now.
+        invalidateVisibleSourcesCache()
 
-        recentAccess[debounceKey] = (weight: kind.weight, at: now)
+        sharedState.withLock { state in
+            for targetKey in deltas.keys {
+                state.recentAccess["\(spaceLabel)|\(agentLabel)|\(targetKey)"] = (
+                    weight: kind.weight,
+                    at: now
+                )
+            }
+        }
     }
 
     /// Returns all visible FirmSource records for the current scope.
     /// Used by search to compute embedding scores across all knowledge.
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource] {
         try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+        // withLockUnchecked: PersistentModel is not Sendable; the lock serialises access.
+        if let cached = sharedState.withLockUnchecked({ $0.visibleSourcesCache }) { return cached }
         let context = ModelContext(modelContainer)
         let allSources = try context.fetch(
             FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
         )
-        return visibleSources(
+        let visible = visibleSources(
             from: allSources,
             spaceID: spaceID,
             agentID: agentID,
             accessPolicy: activeAccessPolicy
         )
+        sharedState.withLockUnchecked { $0.visibleSourcesCache = visible }
+        return visible
     }
 
     /// Entities of `type` visible in the scope, excluding soft-hidden
@@ -866,6 +954,13 @@ struct PreviewKnowledgeService: KnowledgeService {
     func recordAccess(
         type: String,
         id: String,
+        kind: KnowledgeAccessKind,
+        spaceID: UUID?,
+        agentID: UUID?
+    ) async {}
+
+    func recordAccess(
+        _ entities: [(type: String, id: String)],
         kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
