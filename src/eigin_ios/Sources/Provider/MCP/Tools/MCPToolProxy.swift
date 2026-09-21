@@ -60,14 +60,7 @@ struct MCPToolProxy: Tool {
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         let id = toolCall.id
 
-        // Parse the JSON arguments string into MCP Value arguments
-        let mcpArguments: [String: Value]? = if let args = ToolHelpers
-            .parseArguments(toolCall.function.arguments)
-        {
-            args.mapValues { convertToValue($0) }
-        } else {
-            nil
-        }
+        let mcpArguments = Self.decodeArguments(toolCall.function.arguments)
 
         do {
             let (content, isError) = try await connection.callTool(
@@ -186,19 +179,15 @@ struct MCPToolProxy: Tool {
         )
     }
 
-    // MARK: - Value Conversion
+    // MARK: - Arguments
 
-    /// Converts a Swift `Any` value to an MCP `Value`.
-    private func convertToValue(_ any: Any) -> Value {
-        switch any {
-        case let string as String: .string(string)
-        case let int as Int: .int(int)
-        case let double as Double: .double(double)
-        case let bool as Bool: .bool(bool)
-        case let array as [Any]: .array(array.map { convertToValue($0) })
-        case let dict as [String: Any]: .object(dict.mapValues { convertToValue($0) })
-        default: .string(String(describing: any))
-        }
+    /// Decodes a tool call's JSON arguments string into MCP `Value` arguments.
+    ///
+    /// Decodes to `Value` directly — `JSONSerialization`'s `NSNumber` boxing
+    /// can't distinguish `true` from `1`.
+    static func decodeArguments(_ json: String) -> [String: Value]? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([String: Value].self, from: data)
     }
 
     /// Converts MCP tool content to a plain string.
