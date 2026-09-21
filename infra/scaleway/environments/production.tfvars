@@ -4,6 +4,7 @@ scw_region   = "fr-par"
 
 # Relay: General config
 max_scale                    = 3
+min_scale                    = 1
 ip_rate_limit_requests       = 500
 ip_rate_limit_window_seconds = 60
 # One trusted hop: Scaleway's ingress. Verify empirically before changing.

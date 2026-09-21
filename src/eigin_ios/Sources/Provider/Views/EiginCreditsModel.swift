@@ -68,7 +68,10 @@ final class EiginCreditsModel {
             products = try await creditsService.availableProducts()
             hasLoadedProducts = true
         } catch {
-            self.error = error.localizedDescription
+            self.error = Self.userMessage(
+                for: error,
+                fallback: Localized.Provider.Eigin.purchaseRetry
+            )
         }
     }
 
@@ -89,7 +92,12 @@ final class EiginCreditsModel {
             }
             return true
         } catch {
-            self.error = error.localizedDescription
+            // No purchase is in flight on this path, so the pending-recovery copy would
+            // claim something untrue; a neutral retry line is the honest fallback.
+            self.error = Self.userMessage(
+                for: error,
+                fallback: Localized.Provider.Eigin.purchaseRetry
+            )
             return false
         }
     }
@@ -109,8 +117,30 @@ final class EiginCreditsModel {
             // Expected user outcomes, not failures worth surfacing.
             return false
         } catch {
-            self.error = error.localizedDescription
+            self.error = Self.userMessage(for: error)
             return false
+        }
+    }
+
+    /// Plain, calm copy per failure class. A config problem must not read like the user's
+    /// connection failure, and an interrupted purchase must not read as lost money:
+    /// unfinished transactions are redeemed automatically at the next launch. Call sites
+    /// without a purchase in flight pick their own neutral fallback.
+    private static func userMessage(
+        for error: Error,
+        fallback: String = Localized.Provider.Eigin.purchasePendingRecovery
+    ) -> String {
+        switch error {
+        case CreditsError.productNotFound:
+            Localized.Provider.Eigin.purchaseUnavailable
+        case CreditsError.purchaseVerificationFailed, RelayClientError.proofVerificationFailed:
+            Localized.Provider.Eigin.purchaseVerification
+        case RelayClientError.serviceUnavailable:
+            Localized.Provider.Eigin.purchaseOutage
+        case RelayClientError.network:
+            Localized.Provider.Eigin.purchaseNetwork
+        default:
+            fallback
         }
     }
 }

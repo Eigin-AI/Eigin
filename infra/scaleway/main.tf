@@ -10,8 +10,9 @@ module "relay" {
   scw_secret_key    = var.scw_secret_key
   scw_project_id    = scaleway_account_project.eigin.id
   scw_region        = var.scw_region
-  staan_api_key    = var.staan_api_key
+  staan_api_key     = var.staan_api_key
   monthly_pool_size = var.monthly_pool_size
+  min_scale         = var.min_scale
   max_scale         = var.max_scale
 
   # Model-asset mirror — bucket + identities live in the relay module (only the
