@@ -19912,6 +19912,24 @@
         }
       }
     },
+    "watch.turn-delayed" : {
+      "comment" : "Reply when the turn is given up because the background time ran out",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg løb tør for tid. Send en ny besked eller åbn appen for at fortsætte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I ran out of time on that. Send another message or open the app to continue."
+          }
+        }
+      }
+    },
     "widgets.chatPillTitle" : {
       "comment" : "Placeholder text of the widget's faux input pill.",
       "localizations" : {

@@ -97,6 +97,31 @@ struct WatchTurnRunnerTests {
         #expect(context.messages.map(\.role) == ["user"])
     }
 
+    @Test("an abandoned turn persists its fragments but yields no reply")
+    @MainActor func abandonedTurnPersistsNoReply() async throws {
+        let (agent, provider, container) = try makeContainer()
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta("Okay, I'm going to look that up."), .finished(.stop),
+        ])
+        registerServices(container: container, chatService: service)
+        UserDefaults.standard.removeObject(forKey: StorageKey.watchChat)
+        defer { UserDefaults.standard.removeObject(forKey: StorageKey.watchChat) }
+
+        await #expect(throws: CancellationError.self) {
+            try await WatchTurnRunner.run(
+                question: "do the slow thing", isAbandoned: { true }
+            )
+        }
+
+        // The work did happen: narration and tool results stay in the chat as
+        // context for the next message. Only the wrist keeps silent — the
+        // give-up message reads on its own.
+        let context = try WatchAgentContext.resolve()
+        #expect(context.messages.map(\.role) == ["user", "assistant"])
+        #expect(context.messages.last?.content == "Okay, I'm going to look that up.")
+    }
+
     @Test("permission prompting is disabled for a pocketed phone")
     @MainActor func promptingDisabled() throws {
         let (agent, provider, container) = try makeContainer()

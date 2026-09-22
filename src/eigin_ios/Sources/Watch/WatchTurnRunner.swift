@@ -13,7 +13,13 @@ import Foundation
 @MainActor
 enum WatchTurnRunner {
     /// Answers `question`, returning the agent's reply.
-    static func run(question: String) async throws -> String {
+    ///
+    /// An abandoned turn (`isAbandoned`, set when the background budget runs
+    /// out) keeps its messages in the chat but yields no reply — the wrist
+    /// already heard the give-up notice.
+    static func run(
+        question: String, isAbandoned: @escaping () -> Bool = { false }
+    ) async throws -> String {
         let context = try WatchAgentContext.resolve()
 
         let userMessage = ChatMessage(role: "user", content: question)
@@ -81,6 +87,10 @@ enum WatchTurnRunner {
         loop.settle()
 
         context.persist(produced)
+
+        // Persists even when abandoned — the conversation keeps the context.
+        // The wrist hears nothing more; the give-up notice covers the turn.
+        guard !isAbandoned() else { throw CancellationError() }
 
         // The last assistant message is the answer; earlier rounds narrate
         // tool use and would only make a wrist notification ramble.
