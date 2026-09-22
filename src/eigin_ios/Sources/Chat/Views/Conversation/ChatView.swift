@@ -233,6 +233,7 @@ struct ChatView: View {
                     spaceID: viewModel.chat?.spaceID,
                     space: space,
                     mcpServers: mcpServers,
+                    integrations: integrations,
                     onPersist: { [modelContext] newMessages in
                         guard let chat = viewModel.chat else { return }
                         for cm in newMessages {

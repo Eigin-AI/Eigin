@@ -36,6 +36,10 @@ struct ToolRegistry: ToolExecutor {
 
     @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
         guard let tool = toolsByName[toolCall.function.name] else {
+            AppLogger.warning(
+                "Unknown tool \(public: toolCall.function.name); registered: \(private: toolsByName.keys.sorted().joined(separator: ", "))",
+                category: .tool
+            )
             return ToolResult(
                 toolCallID: toolCall.id,
                 content: ToolHelpers.output(errors: ["Unknown tool: \(toolCall.function.name)"]),

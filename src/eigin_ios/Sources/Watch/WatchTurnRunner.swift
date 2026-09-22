@@ -24,6 +24,17 @@ enum WatchTurnRunner {
             knowledgeService: Container.shared.knowledgeService()
         )
 
+        // Resolve the chat's active skills with the shared capability gate,
+        // so a skill whose provider is gone doesn't claim tools the turn
+        // can't supply.
+        let connected = Container.shared.integrationManager()
+            .connectedCapabilities(integrations: context.integrations)
+        let activeSkills = SkillCatalog.activeSkills(
+            for: context.chat,
+            mcpServers: context.mcpServers,
+            connectedCapabilities: connected
+        )
+
         let turn = await MessagePipeline.prepareTurn(
             messages: context.messages,
             agent: context.agent,
@@ -32,6 +43,8 @@ enum WatchTurnRunner {
             spaceID: nil,
             chatID: context.chat.id,
             mcpServers: context.mcpServers,
+            integrations: context.integrations,
+            activeSkills: activeSkills,
             gatekeeper: gatekeeper,
             // Headless mode tells the model it is answering a wrist-sized,
             // voice-transcribed question: one or two plain sentences.

@@ -539,9 +539,13 @@ final class LiveCallService: @unchecked Sendable {
     @MainActor
     private func loadActiveSkills(agent: Agent) -> [Skill] {
         guard let chat = fetchChat(agent: agent) else { return [] }
-        return chat.activeSkillEntries.compactMap {
-            SkillCatalog.skill(forID: $0.skillID, mcpServers: mcpServers)
-        }
+        let connected = Container.shared.integrationManager()
+            .connectedCapabilities(integrations: fetchEnabledIntegrations())
+        return SkillCatalog.activeSkills(
+            for: chat,
+            mcpServers: mcpServers,
+            connectedCapabilities: connected
+        )
     }
 
     @MainActor
@@ -558,6 +562,20 @@ final class LiveCallService: @unchecked Sendable {
         )
         descriptor.fetchLimit = 1
         return (try? context.fetch(descriptor))?.first
+    }
+
+    @MainActor
+    private func fetchSelections() -> [CapabilityProviderSelection] {
+        guard let agent, let context = agent.modelContext else { return [] }
+        return (try? context.fetch(FetchDescriptor<CapabilityProviderSelection>())) ?? []
+    }
+
+    /// Current enabled integrations — re-fetched so a provider swap mid-call
+    /// takes effect on the next turn round, mirroring the text-chat rebuild.
+    @MainActor
+    private func fetchEnabledIntegrations() -> [Integration] {
+        guard let agent, let context = agent.modelContext else { return [] }
+        return ((try? context.fetch(FetchDescriptor<Integration>())) ?? []).filter(\.isEnabled)
     }
 
     // MARK: - Chat
@@ -646,6 +664,7 @@ final class LiveCallService: @unchecked Sendable {
                 permissionPolicy: policy,
                 spaceID: spaceID, chatID: chatID,
                 mcpServers: mcpServers,
+                integrations: fetchEnabledIntegrations(),
                 activeSkills: activeSkills,
                 activeFlow: fetchChat(agent: agent)?.activeFlow,
                 gatekeeper: gatekeeper,
@@ -684,6 +703,14 @@ final class LiveCallService: @unchecked Sendable {
                 }
                 let mcpTools = await Container.shared.mcpServerManager()
                     .prepareTools(servers: activeMCPServers)
+                // Fresh integration tools, mirroring the text-chat rebuild —
+                // so reactivation or a provider swap mid-call takes effect.
+                let integrationToolsByCapability = Container.shared.integrationManager()
+                    .toolsByCapability(
+                        integrations: fetchEnabledIntegrations(),
+                        selections: fetchSelections(),
+                        context: ToolContext(spaceID: spaceID, chatID: chatID, agentID: agent.id)
+                    )
                 let updatedRegistry = ToolRegistry.chat(
                     spaceID: spaceID, chatID: chatID,
                     agentID: agent.id,
@@ -691,7 +718,8 @@ final class LiveCallService: @unchecked Sendable {
                     activeSkills: BundledSkill.alwaysActive
                         + updatedSkills.filter { !$0.alwaysActive },
                     mcpTools: mcpTools,
-                    mcpSkills: turn.mcpSkills
+                    mcpSkills: turn.mcpSkills,
+                    integrationToolsByCapability: integrationToolsByCapability
                 )
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)
             }

@@ -22,6 +22,13 @@ enum SkillActivation {
                 return !existing.alwaysActive
             }
         }
+        chat.activeSkillEntries.removeAll { entry in
+            if entry.skillID == skillID { return true }
+            // Small-context mode: single slot, one on-demand skill at a time.
+            guard isSmallContext, let existing = BundledSkill.skill(forID: entry.skillID)
+            else { return false }
+            return !existing.alwaysActive
+        }
         chat.activeSkillEntries.append(
             ActiveSkillEntry(
                 skillID: skillID,

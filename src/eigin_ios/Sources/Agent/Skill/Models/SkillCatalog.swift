@@ -12,6 +12,35 @@ enum SkillCatalog {
         BundledSkill.skill(forID: id) ?? MCPServerSkill.skill(forID: id, servers: mcpServers)
     }
 
+    /// Resolves a chat's persisted skill entries, dropping skills whose
+    /// required capabilities are no longer connected — shared by the text
+    /// chat, live call, and watch turn paths.
+    static func activeSkills(
+        for chat: Chat,
+        mcpServers: [MCPServer],
+        connectedCapabilities: Set<Capability>
+    ) -> [Skill] {
+        resolvable(
+            from: chat.activeSkillEntries.compactMap {
+                skill(forID: $0.skillID, mcpServers: mcpServers)
+            },
+            connectedCapabilities: connectedCapabilities
+        )
+    }
+
+    /// Drops resolved skills whose required capabilities are no longer
+    /// connected. The active-skill gate shared by the text chat, live call,
+    /// and watch turn paths — kept in one place so the three can't drift.
+    static func resolvable(
+        from skills: [Skill],
+        connectedCapabilities: Set<Capability>
+    ) -> [Skill] {
+        skills.filter { skill in
+            skill.requiredCapabilities.isEmpty
+                || !skill.requiredCapabilities.isDisjoint(with: connectedCapabilities)
+        }
+    }
+
     /// Filters `candidates` down to skills that could be activated right now: on-demand,
     /// not already active, and capability-satisfied.
     static func activatable(
