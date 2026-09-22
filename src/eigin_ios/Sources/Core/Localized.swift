@@ -6547,6 +6547,11 @@ enum Localized {
         static var transcribeFailed: String {
             Localized.get("watch.transcribe-failed")
         }
+
+        /// Reply when the turn is given up because the background time ran out
+        static var turnDelayed: String {
+            Localized.get("watch.turn-delayed")
+        }
     }
 
     enum Widgets {

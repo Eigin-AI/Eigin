@@ -103,26 +103,48 @@ final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
     /// Runs the turn under a background assertion and delivers the result.
     ///
     /// A WatchConnectivity wake gives only a few seconds by default, which a
-    /// tool-using turn will outrun. The assertion buys the rest.
+    /// tool-using turn will outrun. The assertion buys the rest. When even
+    /// that runs low, the turn is given up and a guidance message goes out
+    /// before the app suspends — the question is already persisted to the
+    /// watch chat, so the next message (wrist or phone) continues from it.
+    /// A suspended turn never resumes on its own, so waiting is pointless.
     @MainActor
     private static func answer(question: String) async {
-        var task = UIBackgroundTaskIdentifier.invalid
-        task = UIApplication.shared.beginBackgroundTask(withName: "WatchTurn") {
-            UIApplication.shared.endBackgroundTask(task)
-            task = .invalid
+        var gaveUp = false
+        let turn = Task {
+            try await WatchTurnRunner.run(question: question, isAbandoned: { gaveUp })
         }
-        defer {
-            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
-        }
+        let budget = BackgroundTaskGuard(onExpiring: {
+            gaveUp = true
+            turn.cancel()
+            AppLogger.warning(
+                "Watch turn outlived its background budget, giving up",
+                category: .watch
+            )
+            // The expiration window must be spent on local queue operations
+            // only: park the message in the transfer queue and mirror it by
+            // notification. `sendMessage` needs the session to answer and
+            // could linger past suspension, losing the message.
+            WCSession.default.transferUserInfo([
+                WatchMessage.actionKey: WatchMessage.answer,
+                WatchMessage.errorKey: Localized.Watch.turnDelayed,
+            ])
+            notify(Localized.Watch.turnDelayed)
+        })
+        budget.begin()
+        defer { budget.end() }
 
         do {
-            let reply = try await WatchTurnRunner.run(question: question)
+            let reply = try await turn.value
             AppLogger.info("Watch turn answered", category: .watch)
             send([
                 WatchMessage.actionKey: WatchMessage.answer,
                 WatchMessage.replyKey: reply,
             ], announcing: reply)
         } catch {
+            // The give-up message already went out; a cancelled turn's error
+            // is not a second, competing answer.
+            guard !gaveUp else { return }
             AppLogger.error(
                 "Watch turn failed: \(private: error.localizedDescription)", category: .watch
             )
@@ -136,7 +158,9 @@ final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
     /// Announces an answer from the phone for queued deliveries: a phone
     /// notification mirrors to the wrist. See `WatchReplyRouter`.
     private static func notify(_ body: String) {
-        guard !body.isEmpty else { return }
+        guard shouldNotify(appState: UIApplication.shared.applicationState),
+              !body.isEmpty
+        else { return }
         let content = UNMutableNotificationContent()
         content.title = "Eigin"
         content.body = body
@@ -151,6 +175,14 @@ final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
                 identifier: UUID().uuidString, content: content, trigger: nil
             )
         )
+    }
+
+    /// Whether an answer's announcement warrants a notification banner.
+    /// Skipped when the app is foreground-active: the user already has the
+    /// app in front of them, and the answer lands in the chat and on the
+    /// watch regardless.
+    static func shouldNotify(appState: UIApplication.State) -> Bool {
+        appState != .active
     }
 
     /// Pushes the answer to the watch — live while the watch app is reachable,

@@ -28,7 +28,16 @@ final class AskModel {
     private let recorder = VoiceRecorder()
     private let link = PhoneLink()
 
-    init() {
+    /// How long to wait before assuming the phone is silent — long enough
+    /// for the phone's ~30s background budget plus transfer and transcription
+    /// slack.
+    private let slowTurnTimeout: TimeInterval
+    private var slowTurnTask: Task<Void, Never>?
+
+    /// `slowTurnTimeout` is injectable to keep the behaviour easily exercisable
+    /// in a future watch test target; the real watch uses the default.
+    init(slowTurnTimeout: TimeInterval = 45) {
+        self.slowTurnTimeout = slowTurnTimeout
         link.onAnswer = { [weak self] _, errorMessage in
             self?.turnFinished(errorMessage: errorMessage)
         }
@@ -79,13 +88,36 @@ final class AskModel {
         link.send(url: url) { [weak self] message in
             self?.fail(message)
         }
+        scheduleSlowTurnTimeout()
         // The reply itself arrives as a wrist notification.
         WKInterfaceDevice.current().play(.click)
+    }
+
+    /// Backstop for a phone that never answers at all — force-quit, crash,
+    /// never launched — where even the phone's own give-up message cannot
+    /// arrive.
+    private func scheduleSlowTurnTimeout() {
+        slowTurnTask?.cancel()
+        slowTurnTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: .seconds(slowTurnTimeout))
+            guard !Task.isCancelled else { return }
+            slowTurn()
+        }
+    }
+
+    /// The turn outstayed its welcome: settle back to ready with a word
+    /// about giving up and how to continue instead of a forever-spinner.
+    /// The phone-side give-up usually lands first, at ~30s.
+    private func slowTurn() {
+        guard phase == .sending else { return }
+        fail(Localized.Watch.turnDelayed)
     }
 
     /// The turn finished ... completion is a haptic and a fresh start. A
     /// newer ask owns the watch, so a stale turn's completion stays silent.
     private func turnFinished(errorMessage: String?) {
+        slowTurnTask?.cancel()
         guard phase == .sending else { return }
         if let errorMessage {
             fail(errorMessage)
