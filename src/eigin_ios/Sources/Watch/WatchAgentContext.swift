@@ -16,6 +16,7 @@ struct WatchAgentContext {
     let chat: Chat
     let permissionPolicy: AgentPermissionPolicy
     let mcpServers: [MCPServer]
+    let integrations: [Integration]
     let modelContext: ModelContext
 
     /// Resolves against the persistent watch chat, so context carries across
@@ -63,6 +64,9 @@ struct WatchAgentContext {
             ),
             mcpServers: (try? context.fetch(
                 FetchDescriptor<MCPServer>(predicate: #Predicate { $0.isEnabled })
+            )) ?? [],
+            integrations: (try? context.fetch(
+                FetchDescriptor<Integration>(predicate: #Predicate { $0.isEnabled })
             )) ?? [],
             modelContext: context
         )

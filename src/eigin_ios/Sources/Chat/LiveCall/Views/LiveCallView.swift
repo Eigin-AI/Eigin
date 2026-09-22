@@ -13,6 +13,7 @@ struct LiveCallView: View {
     let spaceID: UUID?
     let space: Space?
     let mcpServers: [MCPServer]
+    let integrations: [Integration]
     var onPersist: (([ChatMessage]) -> Void)?
     var onChatGrant: (([ToolCapability]) -> Void)?
     /// Invoked with the underlying error when the call ends abnormally.
@@ -69,6 +70,7 @@ struct LiveCallView: View {
                     spaceID: spaceID,
                     space: space,
                     mcpServers: mcpServers,
+                    integrations: integrations,
                     onPersist: onPersist,
                     onChatGrant: onChatGrant,
                     onError: onError
@@ -165,6 +167,7 @@ private struct PreviewCallView: View {
             spaceID: nil,
             space: nil,
             mcpServers: [],
+            integrations: [],
             previewService: service
         )
         .previewEnvironment()

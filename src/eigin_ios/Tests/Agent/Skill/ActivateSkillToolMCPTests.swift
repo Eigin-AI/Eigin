@@ -30,12 +30,19 @@ struct ActivateSkillToolMCPTests {
         )
     }
 
-    init() {
+    @MainActor init() {
         Container.shared.reset()
         Container.shared.mcpServerManager.register {
             MCPServerManager(
                 keychainService: PreviewKeychainService(),
                 oauthService: PreviewMCPOAuthService()
+            )
+        }
+        Container.shared.integrationManager.register {
+            @MainActor in IntegrationManager(
+                oauthService: FakeIntegrationOAuthService(),
+                imapCredentialStore: FakeIMAPCredentialStore(),
+                aulaCredentialStore: FakeAulaCredentialStore()
             )
         }
     }
@@ -88,7 +95,10 @@ struct ActivateSkillToolMCPTests {
         #expect(!chat.isSkillActive("mcp__disabled"))
     }
 
-    @Test @MainActor func alreadyActiveSkillErrorsBeforeAttemptingConnection() async throws {
+    @Test @MainActor func alreadyActiveMCPSkillStillAttemptsReconnection() async throws {
+        // #262: re-activating an active skill must attempt to heal it (fresh
+        // connection) rather than short-circuiting on "already active" —
+        // otherwise a chat with drifted skill/tool state has no recovery path.
         let (agent, chat, container) = try makeFixture()
         let server = MCPServer(name: "Broken", url: "")
         container.mainContext.insert(server)
@@ -107,6 +117,86 @@ struct ActivateSkillToolMCPTests {
         )
 
         #expect(result.isError)
-        #expect(result.content.contains("already active"))
+        #expect(!result.content.contains("already active"))
+        #expect(result.content.contains("Broken"))
+        // Activation failed, so the existing entry stays.
+        #expect(chat.isSkillActive("mcp__broken"))
+    }
+
+    @Test @MainActor func alreadyActiveBundledSkillReactivatesInsteadOfErroring() async throws {
+        let (agent, chat, container) = try makeFixture()
+        container.mainContext.insert(Integration(
+            typeID: "google",
+            accountLabel: "test@gmail.com",
+            grantedCapabilities: [Capability.email.rawValue]
+        ))
+        chat.activeSkillEntries.append(
+            ActiveSkillEntry(skillID: "email", activatedAt: .now, activatingToolCallID: "earlier")
+        )
+
+        let tool = ActivateSkillTool(chatID: chat.id)
+        let result = await tool.execute(
+            makeCall(arguments: #"{"skill_id": "email"}"#),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(result.content.contains("email"))
+        #expect(chat.isSkillActive("email"))
+        #expect(chat.activeSkillEntries.count(where: { $0.skillID == "email" }) == 1)
+    }
+
+    @Test @MainActor func staleEntryWithMissingCapabilityIsClearedWithActionableError(
+    ) async throws {
+        // #262: skill says active, but no connected provider supplies the
+        // capability anymore — the stale entry must be dropped so a later
+        // activation can succeed, and the error must name the capability.
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        chat.activeSkillEntries.append(
+            ActiveSkillEntry(skillID: "email", activatedAt: .now, activatingToolCallID: "earlier")
+        )
+
+        let tool = ActivateSkillTool(chatID: chat.id)
+        let result = await tool.execute(
+            makeCall(arguments: #"{"skill_id": "email"}"#),
+            agent: agent
+        )
+
+        #expect(result.isError)
+        #expect(result.content.contains("no connected provider"))
+        #expect(!chat.isSkillActive("email"))
+    }
+
+    @Test @MainActor func staleEntryReactivatesOnceProviderReturns() async throws {
+        // With the integration disabled the stale entry is dropped; once the
+        // provider comes back, activation succeeds again — no perma-dead-end.
+        let (agent, chat, container) = try makeFixture()
+        let integration = Integration(
+            typeID: "google",
+            accountLabel: "test@gmail.com",
+            grantedCapabilities: [Capability.email.rawValue],
+            isEnabled: false
+        )
+        container.mainContext.insert(integration)
+        chat.activeSkillEntries.append(
+            ActiveSkillEntry(skillID: "email", activatedAt: .now, activatingToolCallID: "earlier")
+        )
+
+        let tool = ActivateSkillTool(chatID: chat.id)
+        let result = await tool.execute(
+            makeCall(arguments: #"{"skill_id": "email"}"#),
+            agent: agent
+        )
+        #expect(result.isError)
+
+        // User re-enables the provider: reactivation now succeeds.
+        integration.isEnabled = true
+        let recovered = await tool.execute(
+            makeCall(arguments: #"{"skill_id": "email"}"#),
+            agent: agent
+        )
+        #expect(!recovered.isError)
+        #expect(chat.isSkillActive("email"))
     }
 }

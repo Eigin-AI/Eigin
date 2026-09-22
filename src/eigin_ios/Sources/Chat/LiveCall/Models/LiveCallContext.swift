@@ -16,6 +16,7 @@ struct LiveCallContext {
     let spaceID: UUID?
     let space: Space?
     let mcpServers: [MCPServer]
+    let integrations: [Integration]
 
     // Callbacks
     var onPersist: (([ChatMessage]) -> Void)?

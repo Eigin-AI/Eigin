@@ -100,11 +100,7 @@ struct ActivateSkillTool: Tool {
         }
 
         if chat.isSkillActive(skillID) {
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers.output(errors: ["Skill '\(skillID)' is already active"]),
-                isError: true
-            )
+            return await reactivate(skillID: skillID, context: context, chat: chat, toolCallID: id)
         }
 
         // Bundled and MCP server skills are checked directly (rather than
@@ -114,6 +110,80 @@ struct ActivateSkillTool: Tool {
             return activateBundled(skill, on: chat, toolCallID: id)
         }
         return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
+    }
+
+    /// Idempotent re-activation: re-resolves the skill against currently
+    /// connected providers and re-registers tools. Drops the entry when its
+    /// capability is no longer connected, so a later activation can succeed.
+    @MainActor private func reactivate(
+        skillID: String,
+        context: ModelContext,
+        chat: Chat,
+        toolCallID id: String
+    ) async -> ToolResult {
+        if let skill = BundledSkill.skill(forID: skillID) {
+            if skill.alwaysActive, !isSmallContext {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers.output(errors: ["Skill '\(skill.id)' is always active"]),
+                    isError: true
+                )
+            }
+            let missing = missingCapabilities(of: skill, context: context)
+            guard missing.isEmpty else {
+                // Stale entry: the backing capability is gone. Drop it so a
+                // later activation isn't blocked, and tell the agent why.
+                chat.activeSkillEntries.removeAll { $0.skillID == skillID }
+                let names = missing.map(\.displayName).sorted().joined(separator: ", ")
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers.output(errors: [
+                        "Skill '\(skillID)' was active but no connected provider supplies \(names) anymore. Connect one in Settings, then activate again.",
+                    ]),
+                    isError: true
+                )
+            }
+            SkillActivation.activate(
+                skillID: skill.id,
+                on: chat,
+                activatingToolCallID: id,
+                isSmallContext: isSmallContext
+            )
+            return activationResult(skill: skill, toolCallID: id)
+        }
+        // MCP-backed skill: reconnects before re-activating, healing a
+        // dropped server connection.
+        return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
+    }
+
+    /// Capabilities the skill needs that no connected, enabled integration
+    /// currently provides.
+    @MainActor private func missingCapabilities(
+        of skill: Skill,
+        context: ModelContext
+    ) -> Set<Capability> {
+        guard !skill.requiredCapabilities.isEmpty else { return [] }
+        let integrations = ((try? context.fetch(FetchDescriptor<Integration>())) ?? [])
+            .filter(\.isEnabled)
+        let connected = Container.shared.integrationManager()
+            .connectedCapabilities(integrations: integrations)
+        return skill.requiredCapabilities.subtracting(connected)
+    }
+
+    /// The shared success payload for (re)activating a bundled skill.
+    @MainActor private func activationResult(skill: Skill, toolCallID id: String) -> ToolResult {
+        ToolResult(
+            toolCallID: id,
+            content: ToolHelpers.output(result: [
+                "activated": skill.id,
+                "tools_available": skill.requiredTools.map(\.key).sorted(),
+                // Included inline so the model has it this turn — the Gatekeeper's
+                // per-turn hint (which also carries this instruction on every
+                // subsequent turn) isn't recomputed mid-turn after a tool call.
+                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
+            ]),
+            isError: false
+        )
     }
 
     // MARK: - Bundled skills
@@ -136,18 +206,7 @@ struct ActivateSkillTool: Tool {
             activatingToolCallID: id,
             isSmallContext: isSmallContext
         )
-        return ToolResult(
-            toolCallID: id,
-            content: ToolHelpers.output(result: [
-                "activated": skill.id,
-                "tools_available": skill.requiredTools.map(\.key).sorted(),
-                // Included inline so the model has it this turn — the Gatekeeper's
-                // per-turn hint (which also carries this instruction on every
-                // subsequent turn) isn't recomputed mid-turn after a tool call.
-                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
-            ]),
-            isError: false
-        )
+        return activationResult(skill: skill, toolCallID: id)
     }
 
     // MARK: - MCP server skills

@@ -268,8 +268,11 @@ final class ChatViewModel {
             }
             self.chatLoop.onToolsChanged = { [weak self] in
                 guard let self else { return (tools: registry.definitions, executor: registry) }
+                let currentIntegrations = ((try? modelContext.fetch(
+                    FetchDescriptor<Integration>()
+                )) ?? []).filter(\.isEnabled)
                 let updatedSkills = resolvedActiveSkills(
-                    integrations: integrations,
+                    integrations: currentIntegrations,
                     mcpServers: servers
                 )
 
@@ -297,6 +300,17 @@ final class ChatViewModel {
                     }
                     let mcpTools = await Container.shared.mcpServerManager()
                         .prepareTools(servers: activeMCPServers)
+                    let integrationManager = Container.shared.integrationManager()
+                    let selections = (try? modelContext.fetch(
+                        FetchDescriptor<CapabilityProviderSelection>()
+                    )) ?? []
+                    let integrationToolsByCapability = integrationManager.toolsByCapability(
+                        integrations: currentIntegrations,
+                        selections: selections,
+                        context: ToolContext(
+                            spaceID: chat?.spaceID, chatID: chat?.id, agentID: agent.id
+                        )
+                    )
                     updatedRegistry = ToolRegistry.chat(
                         spaceID: chat?.spaceID, chatID: chat?.id,
                         agentID: agent.id,
@@ -305,7 +319,7 @@ final class ChatViewModel {
                             + updatedSkills.filter { !$0.alwaysActive },
                         mcpTools: mcpTools,
                         mcpSkills: turn.mcpSkills,
-                        integrationToolsByCapability: turn.integrationToolsByCapability,
+                        integrationToolsByCapability: integrationToolsByCapability,
                         onBrowse: browseHandler,
                         onPresentOptions: optionsHandler
                     )
@@ -589,24 +603,34 @@ final class ChatViewModel {
 
     // MARK: - Permissions
 
-    /// The chat's persisted active skills, dropping any whose required
-    /// capability is no longer connected — e.g. the user activated `email`
-    /// then disconnected their Google account. Without this, a stale skill
-    /// would keep injecting instructions ("if an email account is
-    /// connected...") and the agent could still try to call its tools, which
-    /// ``IntegrationManager`` no longer supplies, landing on "Unknown tool".
+    /// The chat's persisted active skills, with any whose required capability
+    /// is no longer connected dropped, so the prompt never claims a skill whose
+    /// tools ``IntegrationManager`` can't supply.
     private func resolvedActiveSkills(
         integrations: [Integration],
         mcpServers: [MCPServer]
     ) -> [Skill] {
+        guard let chat else { return [] }
         let connected = Container.shared.integrationManager()
             .connectedCapabilities(integrations: integrations)
-        return (chat?.activeSkillEntries ?? [])
-            .compactMap { SkillCatalog.skill(forID: $0.skillID, mcpServers: mcpServers) }
-            .filter { skill in
-                skill.requiredCapabilities.isEmpty
-                    || !skill.requiredCapabilities.isDisjoint(with: connected)
-            }
+        let resolved = SkillCatalog.activeSkills(
+            for: chat,
+            mcpServers: mcpServers,
+            connectedCapabilities: connected
+        )
+        // Surface the drop when it happens, so a chat's activation state and
+        // tool availability don't drift apart silently.
+        for skill in chat.activeSkillEntries
+            where !resolved.contains(where: { $0.id == skill.skillID })
+        {
+            let missing = SkillCatalog.skill(forID: skill.skillID, mcpServers: mcpServers)?
+                .requiredCapabilities.subtracting(connected).map(\.rawValue)
+            AppLogger.info(
+                "Dropping active skill \(public: skill.skillID) — capabilities not connected: \(public: missing?.joined(separator: ", ") ?? "?")",
+                category: .chat
+            )
+        }
+        return resolved
     }
 
     func loadPermissionPolicy(for agent: Agent) -> AgentPermissionPolicy {
