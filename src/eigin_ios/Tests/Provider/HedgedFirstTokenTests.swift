@@ -422,6 +422,194 @@ struct HedgedFirstTokenTests {
         #expect(opened.failures.withLock { $0.count } == 1)
     }
 
+    @Test("Expiry hands the timeout to the hook once: the replacement wins the race")
+    func expiryChasesAndReplacementWins() async throws {
+        let opened = DispatchLog()
+        let silent = makeStream().stream
+        let replacement = makeStream()
+        let attribution = RaceWinner()
+
+        let raced = withHedgedFirstToken(
+            primaryModel: "glm-5.3",
+            plan: nil,
+            ceiling: .milliseconds(150),
+            raceWinner: attribution,
+            openPrimary: { model in
+                opened.recordPrimary(model)
+                // Silent forever: the ceiling expires.
+                return silent
+            },
+            openFallback: { nil },
+            primaryFailed: { model, error in
+                opened.failures.withLock { $0.append((model, error)) }
+                return ("gpt-5.6", replacement.stream)
+            },
+            onLoser: { _, _ in }
+        )
+
+        let received = Collector()
+        // Feed from an unstructured task: the consumer loop runs to the end
+        // of the stream before this test task continues.
+        let feeder = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            replacement.continuation.yield(7)
+            try? await Task.sleep(for: .milliseconds(80))
+            replacement.continuation.finish()
+        }
+        var caught: (any Error)?
+        do {
+            for try await event in raced {
+                received.append(event)
+            }
+        } catch {
+            caught = error
+        }
+        feeder.cancel()
+
+        #expect(received.items == [7])
+        #expect(caught == nil)
+        #expect(attribution.current == "gpt-5.6")
+
+        let failures = opened.failures.withLock { $0 }
+        #expect(failures.count == 1)
+        #expect(failures.first?.1 is FirstEventTimeout)
+    }
+
+    @Test("A second silent ceiling fails the race: the chase runs once")
+    func expiryChaseRunsOnceThenFails() async throws {
+        let opened = DispatchLog()
+        let silent = makeStream().stream
+        let silentReplacement = makeStream()
+        let attribution = RaceWinner()
+
+        let raced = withHedgedFirstToken(
+            primaryModel: "glm-5.3",
+            plan: nil,
+            ceiling: .milliseconds(100),
+            raceWinner: attribution,
+            openPrimary: { model in
+                opened.recordPrimary(model)
+                return silent
+            },
+            openFallback: { nil },
+            primaryFailed: { model, error in
+                opened.failures.withLock { $0.append((model, error)) }
+                return ("gpt-5.6", silentReplacement.stream)
+            },
+            onLoser: { _, _ in }
+        )
+
+        var caught: (any Error)?
+        do {
+            for try await _ in raced {}
+        } catch {
+            caught = error
+        }
+
+        #expect(caught is FirstEventTimeout)
+        #expect(attribution.current == nil)
+        // One expiry chased, one expiry failed: the hook saw the timeout once.
+        #expect(opened.failures.withLock { $0.count } == 1)
+
+        silentReplacement.continuation.finish()
+    }
+
+    @Test("Expiry with a hook that has no replacement surfaces the timeout")
+    func expiryWithoutReplacementSurfaces() async throws {
+        let opened = DispatchLog()
+        let (primary, primaryTx) = makeStream()
+        let attribution = RaceWinner()
+
+        let raced = withHedgedFirstToken(
+            primaryModel: "glm-5.3",
+            plan: nil,
+            ceiling: .milliseconds(100),
+            raceWinner: attribution,
+            openPrimary: { model in
+                opened.recordPrimary(model)
+                return primary
+            },
+            openFallback: { nil },
+            primaryFailed: { model, error in
+                opened.failures.withLock { $0.append((model, error)) }
+                return nil
+            },
+            onLoser: { _, _ in }
+        )
+
+        var caught: (any Error)?
+        do {
+            for try await _ in raced {}
+        } catch {
+            caught = error
+        }
+
+        #expect(caught is FirstEventTimeout)
+        #expect(attribution.current == nil)
+        let failures = opened.failures.withLock { $0 }
+        #expect(failures.count == 1)
+        #expect(failures.first?.1 is FirstEventTimeout)
+
+        primaryTx.finish()
+    }
+
+    @Test("Runner-up speaks after expiry started a chase: the runner-up wins")
+    func runnerUpWinsDuringPendingChase() async throws {
+        let opened = DispatchLog()
+        let silent = makeStream().stream
+        let (fallback, fallbackTx) = makeStream()
+        let slowReplacement = makeStream()
+        let attribution = RaceWinner()
+
+        let raced = withHedgedFirstToken(
+            primaryModel: "glm-5.3",
+            plan: HedgePlan(delay: .milliseconds(200), fallbackModel: "glm-5.2"),
+            ceiling: .milliseconds(120),
+            raceWinner: attribution,
+            openPrimary: { model in
+                opened.recordPrimary(model)
+                return silent
+            },
+            openFallback: {
+                opened.fallbackOpened.withLock { $0 = true }
+                return fallback
+            },
+            primaryFailed: { model, error in
+                opened.failures.withLock { $0.append((model, error)) }
+                // A slow router: the chase is still pending when the
+                // runner-up opens and speaks.
+                try? await Task.sleep(for: .milliseconds(200))
+                return ("gpt-5.6", slowReplacement.stream)
+            },
+            onLoser: { _, _ in }
+        )
+
+        let received = Collector()
+        let feeder = Task {
+            // Opening at 200ms, speaking at 240ms — both inside the slow hook.
+            try? await Task.sleep(for: .milliseconds(240))
+            fallbackTx.yield(20)
+            try? await Task.sleep(for: .milliseconds(80))
+            fallbackTx.finish()
+        }
+        var caught: (any Error)?
+        do {
+            for try await event in raced {
+                received.append(event)
+            }
+        } catch {
+            caught = error
+        }
+        feeder.cancel()
+
+        #expect(caught == nil)
+        #expect(received.items == [20])
+        #expect(attribution.current == "glm-5.2")
+        #expect(opened.failures.withLock { $0.count } == 1)
+
+        slowReplacement.continuation.finish()
+    }
+
     private struct DispatchFailure: Error {}
 }
 

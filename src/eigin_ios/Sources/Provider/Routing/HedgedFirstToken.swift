@@ -1,7 +1,9 @@
 import Foundation
 import os
 
-/// Thrown when a stream produces nothing before its deadline.
+/// Thrown when nobody speaks within the race's ceiling budget: either a first
+/// expiry with a hook that has no replacement, or a second expiry where
+/// nobody — replacement or runner-up — spoke in time.
 struct FirstEventTimeout: Error {}
 
 /// The race's winning model — whichever side spoke first. The racing stream
@@ -39,7 +41,9 @@ struct HedgePlan: Sendable {
 /// `primaryFailed` decides an undecided-race primary failure: it may return a
 /// replacement stream (the race continues) or nil (the error surfaces). A
 /// failed runner-up dispatch degrades silently to primary-only. No event on
-/// either side within `ceiling` fails with ``FirstEventTimeout``.
+/// either side within `ceiling` expires the clock once: the timeout goes to
+/// `primaryFailed` for one chase, then a second silent ceiling fails with
+/// ``FirstEventTimeout``.
 func withHedgedFirstToken<T: Sendable>(
     primaryModel: String,
     plan: HedgePlan?,
@@ -117,6 +121,13 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             var dead = false
             var surfacedError = Error?.none
         }
+
+        /// Spent by the first expiry that reaches a decision. A second
+        /// expiry — a rearmed ceiling that nobody met — fails the race.
+        var timeoutChaseUsed = false
+        /// One chase at a time: concurrent initiators (expiry + stream death)
+        /// would otherwise record the failure twice and race two replacements.
+        var chaseInFlight = false
 
         var tasks: [Task<Void, Never>] {
             [primaryForwarding, fallbackForwarding, hedgeTimer, watchdog].compactMap { $0 }
@@ -199,19 +210,68 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             guard !Task.isCancelled else { return }
             expired()
         }
-        lock.withLock { $0.watchdog = task }
+        // Replace, don't append: overlapping starters (a rearmed ceiling and
+        // a guard-restarted one) must leave exactly one ticker running.
+        lock.withLock { state in
+            state.watchdog?.cancel()
+            state.watchdog = task
+        }
     }
 
-    /// Nothing spoke anywhere in time — indistinguishable from everything hanging.
+    /// Nothing spoke anywhere within the ceiling. The first expiry hands the
+    /// timeout to the chase hook once — it may re-dispatch under a model that
+    /// answers within a rearmed ceiling. A live runner-up keeps that fresh
+    /// ceiling itself (the hook can't answer for it). The second expiry fails
+    /// the race: nobody spoke in two ceilings.
     private func expired() {
-        let mine = lock.withLock { state -> Bool in
-            guard !state.finished, state.winner == nil else { return false }
-            state.finished = true
-            return true
+        let decision: ExpiryDecision = lock.withLock { state in
+            guard !state.finished, state.winner == nil else { return .ignore }
+            if state.timeoutChaseUsed {
+                state.finished = true
+                return .fail
+            }
+            state.timeoutChaseUsed = true
+            return !state.fallback.opened || state.fallbackDeath.dead
+                ? .chase
+                : .rearm
         }
-        guard mine else { return }
-        cancelTasks()
-        continuation.finish(throwing: FirstEventTimeout())
+        switch decision {
+        case .ignore:
+            break
+        case .fail:
+            cancelTasks()
+            continuation.finish(throwing: FirstEventTimeout())
+        case .rearm:
+            startWatchdog()
+        case .chase:
+            // The consumed watchdog is done; drop it so nothing expired lingers.
+            lock.withLock { $0.watchdog = nil }
+            let model = lock.withLock { $0.currentPrimaryModel }
+            Task { [self] in
+                await handlePrimaryFailure(model, FirstEventTimeout())
+                // The runner-up may have attached while the hook ran. If the
+                // chase was then abandoned (the hook can't answer for a live
+                // side, or the race closed meanwhile), the live runner-up
+                // still owes a ceiling — otherwise a fully silent race would
+                // sit with no timers at all.
+                let needsClock = lock.withLock { state -> Bool in
+                    !state.finished && state.winner == nil
+                        && state.fallback.opened && !state.fallbackDeath.dead
+                }
+                if needsClock { startWatchdog() }
+            }
+        }
+    }
+
+    private enum ExpiryDecision: Sendable {
+        /// The race was decided or finished since the timer fired.
+        case ignore
+        /// The chase was already spent: fail instead of waiting forever.
+        case fail
+        /// A live runner-up gets a fresh ceiling.
+        case rearm
+        /// Hand the timeout to the chase hook.
+        case chase
     }
 
     private func startHedgeTimer() {
@@ -265,13 +325,17 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
 
     /// Decides whether a primary-side failure can be chased. True only for an
     /// undecided race with no fallback yet attached — anything else is either a
-    /// settled loser (swallow) or already covered by the fallback stream.
+    /// settled loser (swallow) or already covered by the fallback stream. One
+    /// chase runs at a time: concurrent initiators would otherwise record the
+    /// failure twice and race two replacements.
     private func handlePrimaryFailure(_ failedModel: String, _ error: Error) async -> Bool {
-        let canChase = lock.withLock { state -> Bool in
+        let claimed = lock.withLock { state -> Bool in
             !state.finished && state.winner == nil
                 && (!state.fallback.opened || state.fallbackDeath.dead)
+                && !state.chaseInFlight
         }
-        guard canChase else { return false }
+        guard claimed else { return false }
+        defer { lock.withLock { $0.chaseInFlight = false } }
 
         guard let replacement = await primaryFailed(failedModel, error) else {
             // Nothing to switch to — surface the error to the consumer.
@@ -282,6 +346,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         let decided = lock.withLock { state -> Bool in
             guard !state.finished, state.winner == nil else { return false }
             state.currentPrimaryModel = replacement.model
+            // A replacement gets a fresh ceiling: the old window was the
+            // original primary's.
+            state.watchdog?.cancel()
+            state.watchdog = nil
             return true
         }
         guard decided else {
@@ -289,6 +357,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             _ = replacement.stream
             return false
         }
+        startWatchdog()
         AppLogger.info(
             "Primary \(public: failedModel) failed (\(public: String(describing: error))); racing on \(public: replacement.model)",
             category: .routing
