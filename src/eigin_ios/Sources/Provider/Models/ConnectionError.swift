@@ -28,6 +28,15 @@ struct ConnectionError: Equatable {
     }
 
     init(from error: Error) {
+        // The hedged race's first-token ceiling expired: silence from every
+        // side, no error body to quote. Reuse the network-timeout card.
+        if error is FirstEventTimeout {
+            title = Localized.Ui.connectionTimedOut
+            suggestion = Localized.Errors.Provider.timeout
+            rawDescription = nil
+            recovery = nil
+            return
+        }
         if let creditsError = error as? CreditsError, case .noCreditsRemaining = creditsError {
             title = Localized.Provider.Eigin.outOfCreditsTitle
             suggestion = Localized.Provider.Eigin.outOfCreditsBody

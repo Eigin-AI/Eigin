@@ -33,4 +33,14 @@ struct ConnectionErrorTests {
         #expect(error.title == Localized.Model.NotLoaded.title)
         #expect(error.suggestion == Localized.Model.NotLoaded.suggestion)
     }
+
+    @Test func firstEventTimeoutMapsToNetworkTimeoutCard() {
+        let error = ConnectionError(from: FirstEventTimeout())
+
+        #expect(error.title == Localized.Ui.connectionTimedOut)
+        #expect(error.suggestion == Localized.Errors.Provider.timeout)
+        // Weird raw wire output (Cocoa's "Eigin.FirstEventTimeout error 1")
+        // must never leak through as the detail.
+        #expect(error.rawDescription == nil)
+    }
 }

@@ -5,8 +5,10 @@ import Foundation
 /// Thresholds below are estimates and want tuning against real traffic.
 actor DefaultModelRouter: ModelRouter {
     /// No first token by here is indistinguishable from a hang, so the attempt counts as
-    /// a failure and another model gets a turn.
-    static let firstTokenCeiling: Duration = .seconds(30)
+    /// a failure and another model gets a turn. The worst fully silent turn is two
+    /// ceilings — first expiry chases once, a silent chase fails on the rearmed
+    /// ceiling — so the user waits at most ~40s before the timeout card.
+    static let firstTokenCeiling: Duration = .seconds(20)
     /// Above this, a model is working but unpleasant to wait for.
     static let slowFirstTokenThreshold: Duration = .seconds(10)
     /// Below this, generation is crawling even if it started promptly.
