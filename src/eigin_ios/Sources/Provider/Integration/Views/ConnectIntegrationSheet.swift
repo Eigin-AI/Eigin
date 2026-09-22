@@ -292,6 +292,10 @@ struct ConnectIntegrationSheet: View {
 
     // MARK: - Credentials (address route only)
 
+    private var isCredentialsFormValid: Bool {
+        !trimmed(clientID).isEmpty
+    }
+
     private var credentialsStep: some View {
         VStack(spacing: Sizing.PageLayout.gap) {
             AppNotice(
@@ -309,7 +313,7 @@ struct ConnectIntegrationSheet: View {
                 )
 
                 AppButton(Localized.Ui.connect) { continueWithCredentials() }
-                    .disabled(!clientID.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(!isCredentialsFormValid)
             }
         }
     }
