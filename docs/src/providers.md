@@ -4,7 +4,7 @@ Eigin treats inference as a utility. The agent doesn't care which model is on th
 
 ## Eigin Relay
 
-A built-in provider backed by Eigin's cloud inference proxy. It's the easiest way to connect cloud AI: buy credits with an in-app purchase and start chatting. Behind the scenes it forwards requests to a vetted upstream provider at cost. See [Eigin Relay](./relay.md).
+A built-in provider backed by Eigin's cloud inference proxy. It's the easiest way to connect cloud AI: buy credits with an in-app purchase and start chatting. Behind the scenes it forwards requests to a vetted upstream provider. See [Eigin Relay](./relay.md).
 
 ## Cloud providers
 

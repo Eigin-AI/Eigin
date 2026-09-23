@@ -2,7 +2,7 @@
 
 | Version | Date | Author | Status |
 |---|---|---|---|
-| 0.1 | 2026-09-03 | Daniel Rothmann | Draft |
+| 0.1 | 2026-09-03 | Daniel Rothmann | Submitted |
 
 ## Introduction
 

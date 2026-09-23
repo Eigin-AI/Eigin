@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- The README banner: one frame per call to renderFrame(t). Driven by render-gif.mjs. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "FiveSerifText";
+    src: url("../../fonts/FiveSerifText/FiveSerifText-Regular.otf");
+  }
+  html, body { margin: 0; }
+  /* Colours are design tokens: surface base, surface alternative, text base, text muted, primary. */
+  .stage { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #EAEAE9; }
+  .bubble {
+    position: absolute; white-space: nowrap; background: #F3F3F3; color: #323331;
+    font-family: "FiveSerifText", Georgia, serif; line-height: 1;
+    padding: .72em 1.05em; border-radius: .95em;
+  }
+  .bubble.muted { color: rgba(0, 0, 0, .5); }
+  .blob { position: absolute; left: 515px; top: 235px; width: 250px; height: 250px; overflow: visible; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <svg class="blob" viewBox="0 0 100 100"><path fill="#A7B04E"/></svg>
+</div>
+<script>
+  // left, top, font px, muted, text
+  const messages = [
+    [470, 34, 19, true, "Summarise this week's emails from school."],
+    [80, 96, 28, false, "Plan my week around the kids."],
+    [840, 104, 24, false, "I feel tired today."],
+    [110, 222, 22, false, "Can you help me say no to my boss?"],
+    [880, 228, 22, false, "Move my 3pm and let Anna know."],
+    [-140, 350, 19, true, "Remind me what the doctor said."],
+    [1030, 352, 19, true, "How did I sleep this week?"],
+    [20, 470, 22, false, "Help me write to my sister. It's been a while."],
+    [830, 474, 24, false, "Remind me to call Mum after work."],
+    [140, 604, 19, true, "Find a quiet café near my next meeting."],
+    [660, 596, 28, false, "Why do I always get anxious on Sundays?"],
+  ];
+  // Order messages appear in: alternates asks and confidences, and neighbours never arrive together.
+  const arrival = [1, 10, 4, 7, 9, 2, 0, 3, 6, 5, 8];
+
+  const stage = document.querySelector(".stage");
+  const path = document.querySelector(".blob path");
+  const bubbles = messages.map(([left, top, size, muted, text]) => {
+    const el = document.createElement("div");
+    el.className = muted ? "bubble muted" : "bubble";
+    el.style.cssText = `left:${left}px; top:${top}px; font-size:${size}px`;
+    el.textContent = text;
+    stage.insertBefore(el, stage.firstChild);
+    return { el };
+  });
+
+  // A fog of questions: each fades in, lingers, and fades out.
+  const FADE = 0.9;
+  const VISIBLE = 0.85; // share of the loop each message is on screen
+  const smooth = (x) => x * x * (3 - 2 * x);
+
+  // One blob cycle, so the loop stays short.
+  window.bannerLoop = () => window.BannerBlob.LOOP;
+
+  window.renderFrame = (t) => {
+    const loop = window.bannerLoop();
+    path.setAttribute("d", window.BannerBlob.blobPath(t));
+    bubbles.forEach(({ el }, i) => {
+      const offset = (arrival.indexOf(i) / bubbles.length) * loop;
+      const age = (((t - offset) % loop) + loop) % loop;
+      const shown = VISIBLE * loop;
+      const opacity = age > shown ? 0 : smooth(Math.min(1, age / FADE, (shown - age) / FADE));
+      el.style.opacity = opacity.toFixed(3);
+    });
+  };
+</script>
+</body>
+</html>

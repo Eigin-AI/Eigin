@@ -4,7 +4,7 @@ Eigin is a powerful agent that works within a strict harness: a permission syste
 
 ## Local-first data
 
-Chats, knowledge, intents, and settings are stored on your device. Data leaves the device in two cases, both under your control.
+Chats, knowledge, intents, and settings are stored on your device. Data only leaves it for something you chose.
 
 #### Inference
 Generating a reply sends the conversation to whichever engine you choose:
@@ -12,6 +12,9 @@ Generating a reply sends the conversation to whichever engine you choose:
 - **Eigin Relay**: a privacy-preserving, European-owned service that proxies AI inference for you.
 - **Your own provider**: any OpenAI-compatible provider. Eigin highlights sensible options, though data handling follows each provider's terms.
 - **A local model**: runs entirely on-device, so nothing leaves for inference.
+
+#### Integrations
+Services you connect, like Gmail, are called directly from your device, without passing through Eigin infrastructure.
 
 #### Connectivity services
 A few features, like web search, run through the Eigin Relay because they need a server-side key. The relay is only ever contacted when you use it, and is built to see only the request being made.

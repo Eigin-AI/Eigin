@@ -4,10 +4,10 @@ Eigin shares its compliance self-assessments openly, with claims referenced to t
 
 | Assessment | Framework | Status |
 |---|---|---|
-| [CASA](./casa.md) | Cloud Application Security Assessment v2.1.1 | Final, pending lab verification |
+| [CASA](./casa.md) | Cloud Application Security Assessment v2.1.1 | Final, independently validated by TAC Security |
 | [AI Act](./ai-act.md) | Regulation (EU) 2024/1689 | Draft |
 | [GDPR](./gdpr.md) | Regulation (EU) 2016/679 | Draft |
-| [App Store Review](./app-store.md) | App Store Review Guidelines, June 2026 | Draft |
+| [App Store Review](./app-store.md) | App Store Review Guidelines, June 2026 | Submitted |
 
 ## Legal entity
 

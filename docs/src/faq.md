@@ -1,24 +1,42 @@
 # Frequently asked questions
 
-**Isn't this just a wrapper around an AI API?**
+## Compared to others
 
-No. The inference call is one part of a larger system. Eigin is a persistent agent with its own identity, knowledge graph, and context management that carry across conversations. The model is a component, not the product.
+**How is it different from OpenClaw or Hermes?**
+
+They're powerful tools for people who like to tinker: you set up a server, give the agent broad access and see what it can do. Eigin is a native app you just download. It runs on the user's device, serves one person, and works within a least-privilege permission model, so it's safe to use by default.
+
+**How is it different from Muse or Spark?**
+
+They're just as easy to pick up, but they run on their company's servers, under their terms. Eigin is local-first: the agent and everything it knows stay on the user's device, it works with any model, and it keeps the user in the loop.
+
+## How it works
 
 **How does the local/cloud split work?**
 
-The agent, its data, and its tools run on device. With a cloud provider, the inference call goes off device with your key. With a local model, nothing leaves the device.
+Everything lives and runs on the device. Data only leaves for something the user chose: their cloud model, a service they connected, or a relay feature like web search. See [System context](./system-context.md).
 
-**Why native apps rather than cross-platform or web?**
+**Why native apps rather than cross-platform?**
 
-Eigin does heavy lifting at the platform level: on-device ML, hardware acceleration, background execution, deep OS integration. Cross-platform frameworks cost you drift, performance, and UI fidelity this close to the metal. Native fits what we're building.
+Eigin does heavy lifting at the platform level: on-device ML, hardware acceleration, background execution and deep OS integration. Cross-platform frameworks would cost performance and quality this close to the metal. Native fits what we're building.
 
-**Can I self-host the relay?**
+**Can I trust it?**
 
-Yes. It ships as a Docker image with Terraform to deploy it. Configure it with your own keys.
+Eigin runs in a strict agent runtime with a fixed set of declared tools and no shell. By default, it asks before changing the user's data or acting on their behalf. We trade some capability for safety. See [Permissions](./tools/permissions.md) and [Privacy and security](./privacy.md).
 
-**How does Eigin's agent model differ from frameworks like OpenClaw or NemoClaw?**
+## Business and licence
 
-Those are server-side, autonomy-first frameworks built to give an agent broad control over a machine or workflow. Eigin is edge-oriented: the agent runs on the user's device, serves the individual, and operates within a least-privilege permission model. Personal AI, not an autonomous system.
+**How do you make money?**
+
+The app is free, and users pay AI providers directly for what they use. We take a margin on inference through [Eigin Relay](./relay.md), which is optional. Most of our revenue comes from adapting Eigin for organisations and institutions.
+
+**Can I self-host?**
+
+The app already runs on the user's device, and anyone can fork it. The relay ships as a Docker image with Terraform, so you can run your own. See [Eigin Relay](./relay.md#self-hosting).
+
+**What if you change the deal?**
+
+There's no lock-in. The user's data stays their own, the code is AGPL, and everything we've shipped under those terms stays that way.
 
 **How do I contribute?**
 

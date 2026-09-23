@@ -33,3 +33,4 @@ Each part of the block comes from a small **source**. Most are stateless; a few 
 | **Text** | Full formatting: markdown, lists, code blocks. |
 | **Dictation** | The user is speaking; infer intent through transcription noise. |
 | **Live call** | Half-duplex voice; keep replies short and speech-friendly. |
+| **Headless** | Voice from a small device like Apple Watch; one or two plain, speakable sentences. |
