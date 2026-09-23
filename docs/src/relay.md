@@ -13,7 +13,7 @@ The relay forwards inference to a vetted upstream provider, so users can run cap
 Inference is gated by credits, tied to a purchase or grant rather than an identity:
 
 - Users buy non-expiring credit packs via IAP, or receive a direct grant. Either creates a wallet identified by a hash of the transaction, not the person.
-- A request is admitted when the wallet has balance. Credits are debited after completion, based on actual upstream token usage. Roughly 1 credit buys €0.01 of inference at upstream cost.
+- A request is admitted when the wallet has balance. Credits are debited after completion, based on actual upstream token usage. Roughly 1 credit buys €0.01 of inference at upstream cost. Credit packs are priced at their credit value, plus the store's platform fee and our margin.
 
 ## Model assets
 

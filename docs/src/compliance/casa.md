@@ -13,6 +13,8 @@ Eigin is a local-first personal AI app. The agent, its memory, and its tool call
 
 This document is our self-assessment against the [CASA Specification](https://github.com/appdefensealliance/ASA-WG/blob/main/CASA/CASA%20Specification.md) v2.1.1. It describes our system, what is in scope, and makes a claim for each CASA requirement.
 
+The assessment has been independently validated by TAC Security, an authorised CASA lab, which issued our letter of validation.
+
 ## System context
 
 See the shared [system context](./README.md#system-context) for components and dependencies.

@@ -32,19 +32,27 @@
 
 :root {
     /* Design tokens — dark mode (from design/tokens.json) */
-    --bg-primary: #1B1B1B;      /* color.surface.standard.alternative dark */
-    --bg-secondary: #0E0001;    /* color.surface.standard.elevated dark */
-    --bg-elevated: #0E0001;     /* color.surface.standard.elevated dark */
+    --bg-primary: #232323;      /* color.surface.standard.base dark */
+    --bg-secondary: #1B1B1B;    /* color.surface.standard.alternative dark */
+    --bg-elevated: #1B1B1B;     /* color.surface.standard.alternative dark */
     --accent: #A7B04E;          /* palette.brand.primary — links, active */
     --accent-warm: #B39779;     /* palette.brand.accent — decorative */
     --text-primary: #EFEFEF;    /* palette.neutral.800 dark */
     --text-secondary: #E8E8E8;  /* palette.neutral.700 dark */
-    --text-muted: #7E7F7B;      /* palette.neutral.500 dark */
+    --text-muted: rgba(255, 255, 255, 0.5); /* color.text.standard.muted dark */
     --border: #4C4C4A;          /* palette.neutral.400 dark */
 
     --font-family: "Five Serif Text", Georgia, serif;
     --font-display: "North East CN", "Helvetica Neue", sans-serif;
     --font-mono: "Menlo", "Monaco", "Courier New", monospace;
+
+    /* Spacing and radius (from design/tokens.json) */
+    --space-8: 8px;
+    --space-16: 16px;
+    --space-24: 24px;
+    --space-32: 32px;
+    --space-48: 48px;
+    --radius-card: 24px;
 }
 
 /* Override mdBook coal theme */
@@ -111,27 +119,41 @@ h1 {
     margin-bottom: 0.4em;
 }
 
+/* titleL */
 h2 {
-    font-size: clamp(26px, 3vw, 38px);
-    line-height: 0.96;
-    margin-top: 1.2em;
-    margin-bottom: 0.3em;
-}
-
-h3 {
-    font-size: clamp(20px, 2.2vw, 26px);
+    font-size: 36px;
     line-height: 1.0;
-    margin-top: 1.0em;
-    margin-bottom: 0.3em;
+    letter-spacing: -0.5px;
+    margin-top: var(--space-48);
+    margin-bottom: var(--space-16);
 }
 
+/* titleM */
+h3 {
+    font-size: 30px;
+    line-height: 1.0;
+    margin-top: var(--space-32);
+    margin-bottom: var(--space-16);
+}
+
+/* titleM, for a page's lead line; kept out of the sidebar outline */
+.content .tagline {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1.1;
+    font-feature-settings: "ss01";
+    margin: var(--space-24) 0 var(--space-8);
+}
+
+/* titleXS */
 h4,
 h5,
 h6 {
-    font-size: 18px;
-    line-height: 1.0;
-    margin-top: 0.8em;
-    margin-bottom: 0.2em;
+    font-size: 20px;
+    line-height: 1.25;
+    margin-top: var(--space-24);
+    margin-bottom: var(--space-8);
 }
 
 code {
@@ -168,8 +190,32 @@ a:hover {
     background-color: var(--bg-secondary);
 }
 
+/* miniLabel */
 .menu-title {
     color: var(--text-muted) !important;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* miniLabel for sidebar part headings */
+.sidebar .part-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: var(--space-24);
+}
+
+.sidebar .chapter {
+    font-size: 15px;
+}
+
+.sidebar ol.section {
+    padding-inline-start: 12px;
 }
 
 .sidebar-scrollbox {
@@ -201,13 +247,20 @@ ol.section {
 
 .content p {
     line-height: 1.4;
-    margin-bottom: 0.7em;
+    margin: 0 0 var(--space-16);
 }
 
 .content ul,
 .content ol {
     line-height: 1.4;
-    margin-bottom: 0.7em;
+    margin: 0 0 var(--space-16);
+}
+
+.content img {
+    display: block;
+    max-width: 100%;
+    border-radius: var(--radius-card);
+    margin: var(--space-24) 0;
 }
 
 blockquote {
@@ -217,6 +270,11 @@ blockquote {
     padding: 1em;
     margin: 1.5em 0;
     color: var(--text-secondary);
+}
+
+/* The box's padding already spaces the last line. */
+blockquote p:last-child {
+    margin-bottom: 0;
 }
 
 table {

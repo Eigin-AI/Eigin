@@ -4,45 +4,46 @@
 >
 > **- Sam Altman**
 
-He's right. People bring their plans, their worries, their health, their relationships to a personal AI. And today, all of it lands on someone else's servers: handed to a stranger every time you ask for help.
+He's right. People bring their plans, worries, health and relationships to personal AI. Today, all of it lands on someone else's servers, handed to a stranger every time they ask for help.
 
-**Personal AI is too personal to be anyone's but yours.** Eigin is built on that conviction: your agent runs on your device, its memory and knowledge stay with you. Nothing leaves unless you decide it does.
+**Personal AI is too personal to be anyone's but yours.** Eigin is built on that conviction.
 
-Large language models are becoming commodities. Choosing a model should feel like choosing a phone carrier or a utility company: pick one that works for you, switch when you want, take your stuff with you.
+Large language models are becoming commodities. Choosing one should feel like choosing a phone carrier or a utility: pick one that works, and switch when you want. The utility can change. The house (and everything in it) stays yours.
 
-You bring the inference, Eigin manages the personal - on your device and under your control.
+Eigin is free and open source, because personal AI should belong to people.
 
-Eigin is free and open source, because personal AI is something that should belong to everyone. Our mission is funded by providing sovereign AI to institutions that need the same guarantees individuals do.
+## Goals
 
-## Principles
+These are what we're trying to achieve when we design Eigin.
 
-These are the principles that ground our decision-making.
+#### Ownership
+Eigin is local-first. Conversations, the agent, its memory and its tools live on the user's device. That puts users in control of their own data, which strengthens privacy, security and individual digital sovereignty.
 
-They set what Eigin is and isn't, and where we put our focus.
+Eigin works without an internet connection. The cloud is an upgrade, not a requirement.
 
-#### Design for ownership
-Eigin is local-first. Chats, knowledge, and settings stay on the device. Outgoing requests are ones you allow: inference calls to your chosen providers, and optional connectivity features. No tracking, no hidden incentives: Eigin serves you, not a platform.
+#### Authorship
+Eigin is malleable software. Users are the authors of their AI, not just consumers of it. The agent starts as a blank slate with sensible defaults, then takes shape around the person using it.
 
-#### A blank slate
-No persona baked in. Eigin is opinionated about how it works, not about who your agent is. An agent starts without a fixed personality and shapes one around you as it learns who you are and what you need: its character is yours to mold, keep, or delete.
+The user decides what Eigin is: its character, skills, capabilities, goals and more.
 
-#### Model-agnostic
-Bring your own key. Use Eigin Relay, any OpenAI-compatible provider, or run a local model with no network at all. Models are interchangeable utilities that don't significantly change the core experience.
+#### Human at the helm
+Eigin exists to support humans. It isn't a replacement for humans, or a separate entity with a will of its own. People decide what it does, within limits they accept and limits that are good for people in general.
 
-#### Curated and simple
-A personal agent, any provider, native apps, deep configuration: there's complexity here. Eigin abstracts the complexity with an opinionated implementation, so it works well on day one - for everyone, not just power users.
+#### For everyone, every day
+Eigin should be something people reach for daily, without being power users. There's real complexity in the AI stack. Our job is to absorb it, so owning a personal AI is accessible to anyone.
 
-#### Built for daily use
-Something you want to reach for - native apps that integrate with the OS, built to the standard of the platform they run on. 
+## Non-goals
 
-## What Eigin is not
-To know what you are, sometimes it's equally important to know what you're not. Eigin is:
+These are the things we actively steer away from when we design Eigin.
 
 #### Not SaaS
-No subscription, account or lock-in. Eigin is software you run, not a service you rent: bring your own provider, keep your data, and leave or self-host whenever you want.
+Eigin is software for the user's device. We're about empowering the individual, not creating lock-in or dependency. Our added services are optional and self-hostable.
+
+#### Not always on
+Eigin isn't built to run unattended for long stretches. We don't pretend AI agents can do that reliably, so our focus is what can be done safely and reliably, every time.
 
 #### Not a model zoo
-Not for benchmarking, comparing outputs or trying every possible model. For getting things done.
+Eigin isn't for benchmarking, tinkering or trying every single model. It's for getting things done.
 
 #### Not everything
-We'd rather do a few things well than many things poorly. Our primary focus is on the local-first personal agent harness, model normalisation and conversation through voice and text.
+Eigin doesn't try to do everything. We'd rather do a few things well: the local-first agent, deeply personal context, and conversation through voice and text.
