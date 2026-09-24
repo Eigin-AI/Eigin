@@ -18,3 +18,13 @@ docs:
     - aws s3 sync docs/book/ s3://eigin-docs/ --endpoint-url https://s3.fr-par.scw.cloud --delete
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+cla:
+  image: alpine:3.20
+  tags:
+    - shared
+  script:
+    - apk add --no-cache curl jq
+    - sh .gitlab/scripts/check-cla.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "dev/eigin"

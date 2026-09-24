@@ -88,6 +88,7 @@ Record kept under Art. 30(1). Controller: Eigin ApS, CVR 46428765, Denmark, hell
 | Credit wallets | Purchasers and grant recipients | Purchase or grant hash, token digest, balance | Hosting provider (EU) | None | Wallet on request; bookkeeping per Danish law | [CASA](./casa.md) |
 | Model asset mirror | App users downloading a local model | IP address | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
 | Service operations | Relay users | Wallet ID, error text, IP address in platform logs | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
+| Contributor agreements | Contributors to the source code | GitLab user ID and username, agreement version, date, sign comment. For entities, the signed agreement and covered accounts | None | None | Kept while the contribution is distributed, as proof of the license (Art. 17(3)(e)) | Private GitLab project, maintainers only |
 
 ## Annex B: Processors
 
