@@ -23,4 +23,4 @@ Use the [feature request template](https://code.eigin.ai/dev/eigin/-/issues/new?
 
 ## Contributor agreement
 
-Before we can merge contributions, we'll ask you to agree to a simple contributor agreement. The details are being finalised. We'll update this section when it's ready.
+Before we can merge your first contribution, you need to agree to our [contributor license agreement](./contributor-agreement.md). A bot guides you through it on your first merge request.

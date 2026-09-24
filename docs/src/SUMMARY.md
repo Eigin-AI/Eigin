@@ -10,6 +10,9 @@
 - [Development environment](./contributing/development-environment.md)
 - [Build from source](./contributing/build-from-source.md)
 - [Guidelines](./contributing/guidelines.md)
+- [Contributor agreement](./contributing/contributor-agreement.md)
+  - [Individual agreement](./contributing/individual-agreement.md)
+  - [Entity agreement](./contributing/entity-agreement.md)
 - [Naming](./contributing/naming.md)
 
 # Platform

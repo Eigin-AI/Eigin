@@ -62,3 +62,5 @@ When working on a task, issues typically provide the problem context and expecte
 **Testing** — test behavior, not structure. Prefer outside-in tests with real dependencies. When dependencies are slow, unreliable, or unavailable, fake at the boundary. Don't test data models, fakes, or views.
 
 **Optionality** — defer decisions until we have the information to make them well. When the shape of something isn't clear, implement the simplest thing: simple code is cheaper to change than a wrong abstraction. Abstract only when you're confident in the shape and expect the implementation to change underneath. The exception is sticky decisions (persisted schemas, protocol contracts) where optionality is structurally low — invest more care upfront.
+
+**Legal text** — the contributor agreements (`docs/src/contributing/*-agreement.md`) are signed by version. Never reword or restyle them. Change them only on purpose, together with a new CLA version in `.gitlab/scripts/check-cla.sh`.
