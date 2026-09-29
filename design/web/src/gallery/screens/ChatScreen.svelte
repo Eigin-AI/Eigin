@@ -63,7 +63,7 @@ Want me to hold Friday mornings open for the next month?`;
       <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
     {/snippet}
     {#snippet center()}
-      <BrandAvatar label="Eigin">
+      <BrandAvatar emoji="🪶" label="Agent">
         <Icon name="brand/avatar" size="fill" />
       </BrandAvatar>
     {/snippet}

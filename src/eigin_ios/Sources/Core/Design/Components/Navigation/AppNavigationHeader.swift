@@ -148,10 +148,7 @@ private struct HeaderFullPreview: View {
                     )
                 },
                 center: {
-                    AppBrandAvatar(
-                        image: Iconography.Brand.avatar,
-                        action: {}
-                    )
+                    AppBrandAvatar(action: {})
                 },
                 trailing: {
                     AppActionButton(

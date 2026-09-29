@@ -123,6 +123,7 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ChatHeaderView(
                 chat: viewModel.chat,
+                emoji: agent?.emoji,
                 onBack: { dismiss() },
                 onPhone: startLiveCall,
                 isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting

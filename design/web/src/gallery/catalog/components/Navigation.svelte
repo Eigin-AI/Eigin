@@ -53,7 +53,7 @@
           <ActionButton icon="functional/note" variant="open" size="medium" label="New note" />
         {/snippet}
         {#snippet center()}
-          <BrandAvatar>
+          <BrandAvatar emoji="🪶" label="Agent">
             <Icon name="brand/avatar" size="fill" />
           </BrandAvatar>
         {/snippet}
@@ -78,6 +78,9 @@
 
   <h2 class="t-titleM">Brand Avatar</h2>
   <div class="row">
+    <BrandAvatar emoji="🪶" label="Agent">
+      <Icon name="brand/avatar" size="fill" />
+    </BrandAvatar>
     <BrandAvatar>
       <Icon name="brand/avatar" size="fill" />
     </BrandAvatar>

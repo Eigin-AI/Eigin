@@ -1,19 +1,23 @@
 import SwiftUI
 
-/// Chat-specific navigation header: back to list, brand avatar, and phone / live-call button.
+/// Chat-specific navigation header: back to list, agent avatar, and phone /
+/// live-call button.
 struct ChatHeaderView: View {
     let chat: Chat?
+    let emoji: String?
     let onBack: () -> Void
     let onPhone: () -> Void
     let isPhoneDisabled: Bool
 
     init(
         chat: Chat?,
+        emoji: String? = nil,
         onBack: @escaping () -> Void,
         onPhone: @escaping () -> Void,
         isPhoneDisabled: Bool = false
     ) {
         self.chat = chat
+        self.emoji = emoji
         self.onBack = onBack
         self.onPhone = onPhone
         self.isPhoneDisabled = isPhoneDisabled
@@ -30,7 +34,7 @@ struct ChatHeaderView: View {
                 )
             },
             center: {
-                AppBrandAvatar(image: Iconography.Brand.avatar, action: {})
+                AppBrandAvatar(emoji: emoji)
             },
             trailing: {
                 AppActionButton(

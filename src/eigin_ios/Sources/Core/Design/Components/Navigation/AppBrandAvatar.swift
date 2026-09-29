@@ -1,19 +1,32 @@
 import SwiftUI
 
-/// A circular avatar with the brand spot color as background.
+/// A circular avatar carrying the agent's presence.
 ///
-/// Displays an image centered inside a circle filled with the spot button color.
-/// The image is inset so it doesn't touch the circle edge.
+/// With an `emoji` the circle softens to a neutral surface and shows the
+/// agent's symbol — the same vessel as the onboarding avatar. Without one it
+/// falls back to the brand mark on the brand spot color. The emoji pops in
+/// the first time it appears; the symbol is memoized, so recurring loads
+/// render instantly and a changed identity pops again.
 struct AppBrandAvatar: View {
-    let image: Image
+    /// The agent's symbol; nil falls back to the brand mark.
+    let emoji: String?
+    let fallback: Image
     let size: CGFloat
     let insets: EdgeInsets
     let action: (() -> Void)?
 
     @Environment(\.colors) private var colors
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(Self.shownEmojiKey) private var shownEmoji: String = ""
+    @State private var facePopped = false
+
+    /// The emoji state is shared app-wide so the pop happens once, not once
+    /// per header per launch.
+    private static let shownEmojiKey = "agentAvatarShownEmoji"
 
     init(
-        image: Image,
+        emoji: String? = nil,
+        fallback: Image = Iconography.Brand.avatar,
         size: CGFloat = 56,
         insets: EdgeInsets = EdgeInsets(
             top: Spacing.n8,
@@ -23,33 +36,69 @@ struct AppBrandAvatar: View {
         ),
         action: (() -> Void)? = nil
     ) {
-        self.image = image
+        self.emoji = emoji
+        self.fallback = fallback
         self.size = size
         self.insets = insets
         self.action = action
     }
 
-    var body: some View {
-        let content = image
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .foregroundStyle(colors.text.standard.base)
-            .padding(insets)
+    private var face: String? {
+        guard let emoji, !emoji.isEmpty else { return nil }
+        return emoji
+    }
 
-        if let action {
-            Button(action: action) {
-                content
-                    .frame(width: size, height: size)
-                    .background(colors.surface.impact.base)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
+    var body: some View {
+        avatar(background: face == nil ? colors.surface.impact.base : colors.surface
+            .standard.elevated)
+    }
+
+    /// Settled from `facePopped` or the memoized symbol.
+    private var isFaceSettled: Bool {
+        facePopped || face == shownEmoji
+    }
+
+    @ViewBuilder
+    private var faceOrFallback: some View {
+        if let face {
+            Text(face)
+                .font(.system(size: size * 0.55))
+                .id(face)
+                .scaleEffect(isFaceSettled ? 1 : 0.2)
+                .opacity(isFaceSettled ? 1 : 0)
         } else {
-            content
-                .frame(width: size, height: size)
-                .background(colors.surface.impact.base)
-                .clipShape(Circle())
+            fallback
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(colors.text.standard.base)
+                .padding(insets)
         }
+    }
+
+    private func avatar(background: Color) -> some View {
+        faceOrFallback
+            .frame(width: size, height: size)
+            .background(background)
+            .clipShape(Circle())
+            .onAppear(perform: settleFace)
+            .onChange(of: emoji, initial: false) { _, _ in settleFace() }
+    }
+
+    /// Reveal memoized symbols instantly; pop only a symbol seen for the
+    /// first time (fresh install, or a changed identity).
+    private func settleFace() {
+        guard let face else { return }
+        if face == shownEmoji {
+            facePopped = true
+            return
+        }
+        shownEmoji = face
+        facePopped = false
+        if reduceMotion {
+            facePopped = true
+            return
+        }
+        withAnimation(.spring(duration: 0.6, bounce: 0.2)) { facePopped = true }
     }
 }
 
@@ -82,7 +131,16 @@ private struct BrandAvatarPreview: View {
     var body: some View {
         ZStack {
             colors.surface.standard.base.ignoresSafeArea()
-            AppBrandAvatar(image: Image(systemName: "apple.logo"), action: action)
+            VStack(spacing: Spacing.n16) {
+                // The agent's face on its neutral vessel.
+                AppBrandAvatar(
+                    emoji: "🫥",
+                    fallback: Image(systemName: "apple.logo"),
+                    action: action
+                )
+                // Brand-mark fallback.
+                AppBrandAvatar(fallback: Image(systemName: "apple.logo"), action: action)
+            }
         }
     }
 }

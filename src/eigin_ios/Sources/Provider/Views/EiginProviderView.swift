@@ -36,7 +36,7 @@ struct EiginProviderView: View {
                         state: connectionState,
                         status: statusLabel
                     ) {
-                        AppBrandAvatar(image: Iconography.Brand.avatar, size: 64)
+                        AppBrandAvatar(size: 64)
                     }
 
                     if let notice { notice }
