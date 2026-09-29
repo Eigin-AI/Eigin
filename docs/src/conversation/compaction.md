@@ -14,9 +14,13 @@ How Eigin compacts depends on the model:
 
 ## Summarization
 
-The default for capable models, and deliberately aggressive: Eigin compacts early, at about a quarter of the context window, rather than late, since long contexts drive up cost and accelerate rot.
+The default for capable models, and deliberately aggressive: compaction fires at about a quarter of the context window, since long contexts cost more and rot attention earlier.
 
-When triggered, everything except the latest user message is sent to the same model to produce a summary, which replaces the older messages as a `<conversation_summary>`. If the history has already blown past the window, the oldest messages are truncated to make the compaction call itself fit; truncation is the last-resort fallback.
+The summary is produced in-conversation: Eigin appends a synthetic user message to the turn's payload asking the model to summarize everything above it — most recent turns excepted — in a fixed template, inside `<conversation_summary>` tags. The request continues the payload just served, so the provider's prompt cache covers almost all of it; the reply becomes the summary.
+
+The most recent turns stay verbatim after the summary: at least two whole turns, extended while they fit a small fraction of the window. The conversation resumes from `[summary, recent turns verbatim]`. The divider marks where compaction fired; nothing is hidden from the user.
+
+If the summarise request wouldn't fit the model's window, the oldest covered messages are truncated first. Last resort.
 
 ## Sliding window
 

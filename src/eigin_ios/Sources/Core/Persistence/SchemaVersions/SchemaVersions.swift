@@ -266,6 +266,28 @@ enum SchemaV9: VersionedSchema {
     }
 }
 
+enum SchemaV10: VersionedSchema {
+    static let versionIdentifier = Schema.Version(10, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV7.Agent.self,
+            SchemaV10.Chat.self,
+            SchemaV10.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV6.MCPServer.self,
+            SchemaV9.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -300,18 +322,21 @@ enum SchemaV9: VersionedSchema {
 ///
 /// V8 → V9 is a lightweight stage: adding `lastReviewedAt` (defaulting to `nil`)
 /// to `FirmSource`. No existing data is touched.
+///
+/// V9 → V10 is a lightweight stage: adding `compactionRetainedMessageCount`
+/// (defaulting to `nil`) to `Message`. No existing data is touched.
 enum EiginMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
-            SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self,
+            SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
         ]
     }
 
     static var stages: [MigrationStage] {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
-            migrateV6toV7, migrateV7toV8, migrateV8toV9,
+            migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10,
         ]
     }
 
@@ -365,5 +390,10 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV8toV9 = MigrationStage.lightweight(
         fromVersion: SchemaV8.self,
         toVersion: SchemaV9.self
+    )
+
+    static let migrateV9toV10 = MigrationStage.lightweight(
+        fromVersion: SchemaV9.self,
+        toVersion: SchemaV10.self
     )
 }

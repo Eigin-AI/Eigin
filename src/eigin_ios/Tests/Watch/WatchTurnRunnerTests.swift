@@ -10,7 +10,7 @@ struct WatchTurnRunnerTests {
     private func makeContainer() throws -> (Agent, Provider, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV4.models, version: SchemaV4.versionIdentifier),
+            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
             configurations: config
         )
         let provider = Provider(name: "Test", baseURL: "https://fake.local")

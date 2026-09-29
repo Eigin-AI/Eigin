@@ -10,30 +10,141 @@ struct CompactionServiceTests {
 
     // MARK: - compact()
 
+    private func summaryEvents(_ text: String) -> [ChatStreamEvent] {
+        [.contentDelta(text), .finished(.stop)]
+    }
+
+    /// Turn-payload shape used by the compact tests: [system, user].
+    private func turnPayload() -> [ChatMessage] {
+        [
+            ChatMessage(role: "system", content: "You are a helpful agent."),
+            ChatMessage(role: "user", content: "Hello world"),
+        ]
+    }
+
     @Test func compactReturnsSummary() async {
         let fake = FakeChatService()
-        // Produce tokens that together form a 60+ char summary
+        // Produce a 60+ char summary inside the required tags.
         let summary = "The user discussed project architecture and deployment plans in detail."
-        let tokens = summary.split(separator: " ").map { String($0) + " " }
-        fake.enqueueTokens(tokens)
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
 
-        let result = await CompactionService.compact(
-            messages: [ChatMessage(role: "user", content: "Hello world")],
+        let outcome = await CompactionService.compact(
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
             baseURL: dummyURL,
             providerID: dummyProviderID,
             model: dummyModel,
             chatService: fake
         )
 
-        #expect(result != nil)
-        #expect(result == summary.trimmingCharacters(in: .whitespacesAndNewlines))
+        #expect(outcome.summary == summary)
+        #expect(!outcome.droppedAllCovered)
+    }
+
+    @Test func compactRequestContinuesTheTurnPayload() async {
+        // The request must be the turn's exact payload plus only the summarise
+        // suffix — that's what lets a provider's prompt cache cover the whole
+        // conversation instead of re-prefilling a rebuilt transcript.
+        let fake = FakeChatService()
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
+
+        let payload = turnPayload()
+        let outcome = await CompactionService.compact(
+            apiMessages: payload,
+            coveredCount: 1,
+            retainedCount: 1,
+            contextWindow: 1_000_000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+        #expect(outcome.summary != nil)
+
+        let request = fake.capturedEventMessages
+        // [system, user, assistant ack, user instruction]
+        #expect(request.count == payload.count + 2)
+        #expect(request.map(\.role) == ["system", "user", "assistant", "user"])
+        // Prefix is byte-identical to the turn payload.
+        #expect(request.prefix(payload.count).map(\.localID) == payload.map(\.localID))
+        // The instruction names the retained count and demands the tagged block.
+        #expect(request.last?.content?.contains("final 1 messages") == true)
+        #expect(request.last?.content?.contains("<conversation_summary>") == true)
+    }
+
+    @Test func compactSkipsAckWhenPayloadEndsOnAssistant() async {
+        let fake = FakeChatService()
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
+
+        let payload: [ChatMessage] = [
+            ChatMessage(role: "system", content: "System"),
+            ChatMessage(role: "user", content: "Hi"),
+            ChatMessage(role: "assistant", content: "Hello"),
+        ]
+        _ = await CompactionService.compact(
+            apiMessages: payload,
+            coveredCount: 2,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+
+        // [system, user, assistant, user instruction] — no ack needed.
+        let request = fake.capturedEventMessages
+        #expect(request.count == payload.count + 1)
+        #expect(request.last?.role == "user")
+    }
+
+    @Test func compactUsesEventStreamWithTurnTools() async {
+        // Tools ride along so the request serialises identically to the turn's —
+        // some providers key their prompt cache on the tool definitions too.
+        let fake = FakeChatService()
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
+
+        let tool = ToolDefinition(name: "web_search", description: "Search", parameters: JSONSchema(
+            type: "object",
+            properties: [:],
+            required: []
+        ))
+        _ = await CompactionService.compact(
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
+            tools: [tool],
+            cacheKey: "chat-1",
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+
+        #expect(fake.capturedEventTools?.map(\.function.name) == ["web_search"])
+        #expect(fake.capturedEventCacheKey == "chat-1")
     }
 
     @Test func compactReportsProgressPhases() async {
         let fake = FakeChatService()
         let summary = "The user discussed project architecture and deployment plans in detail."
-        let tokens = summary.split(separator: " ").map { String($0) + " " }
-        fake.enqueueTokens(tokens)
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
 
         let collector = PhaseCollector()
         let onProgress: @Sendable (CompactionPhase) -> Void = { phase in
@@ -45,7 +156,10 @@ struct CompactionServiceTests {
         }
 
         _ = await CompactionService.compact(
-            messages: [ChatMessage(role: "user", content: "Hello world")],
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
             baseURL: dummyURL,
             providerID: dummyProviderID,
             model: dummyModel,
@@ -61,33 +175,141 @@ struct CompactionServiceTests {
 
     @Test func compactRejectsTooShortSummary() async {
         let fake = FakeChatService()
-        // Produce tokens totalling < 50 chars
-        fake.enqueueTokens(["Short."])
+        fake.enqueueEventStream(summaryEvents("Short."))
 
-        let result = await CompactionService.compact(
-            messages: [ChatMessage(role: "user", content: "Hi")],
+        let outcome = await CompactionService.compact(
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
             baseURL: dummyURL,
             providerID: dummyProviderID,
             model: dummyModel,
             chatService: fake
         )
 
-        #expect(result == nil)
+        #expect(outcome.summary == nil)
+        #expect(!outcome.droppedAllCovered)
     }
 
     @Test func compactReturnsNilOnStreamError() async {
         let fake = FakeChatService()
-        fake.enqueueTokenError(NSError(domain: "test", code: 1))
+        fake.throwOnEventStream(NSError(domain: "test", code: 1))
 
-        let result = await CompactionService.compact(
-            messages: [ChatMessage(role: "user", content: "Hello")],
+        let outcome = await CompactionService.compact(
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 0,
+            contextWindow: 1_000_000,
             baseURL: dummyURL,
             providerID: dummyProviderID,
             model: dummyModel,
             chatService: fake
         )
 
-        #expect(result == nil)
+        #expect(outcome.summary == nil)
+        #expect(!outcome.droppedAllCovered)
+    }
+
+    // MARK: - Window fit
+
+    /// Builds a ~100-token message (400 chars / 4, plus 4 framing overhead).
+    private func sized(_ prefix: String) -> ChatMessage {
+        ChatMessage(role: "user", content: prefix + String(repeating: "x", count: 390))
+    }
+
+    @Test func compactTruncatesCoveredHistoryToFitWindow() async {
+        // A small window forces the covered history down; the dropped oldest
+        // messages must not reach the request.
+        let fake = FakeChatService()
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
+
+        // 30 covered messages of ~100 tokens each: far past what the window
+        // leaves for them after the instruction and retained tail.
+        let covered = (0 ..< 30).map { sized("OLD \($0) ") }
+        let payload = [
+            ChatMessage(role: "system", content: "System"),
+        ] + covered + [sized("RETAINED ")]
+        let outcome = await CompactionService.compact(
+            apiMessages: payload,
+            coveredCount: 30,
+            retainedCount: 1,
+            contextWindow: 4000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+
+        #expect(outcome.summary != nil)
+        let requestText = fake.capturedEventMessages.map { $0.content ?? "" }.joined()
+        // The oldest covered messages were dropped from the request (trailing
+        // space avoids matching "OLD 10" when checking "OLD 1")…
+        #expect(!requestText.contains("OLD 0 "))
+        #expect(!requestText.contains("OLD 9 "))
+        // …the retained tail and the newest covered messages are still there.
+        #expect(requestText.contains("OLD 29 "))
+        #expect(requestText.contains("RETAINED"))
+    }
+
+    @Test func compactDroppedAllCoveredWhenWindowImpossiblySmall() async {
+        // Retained + system already blow the budget — there is no room to
+        // summarise anything, and no stream call is made.
+        let fake = FakeChatService()
+        let payload = [
+            ChatMessage(role: "system", content: String(repeating: "s", count: 4000)),
+            sized("OLD "),
+            sized("RETAINED "),
+        ]
+        let outcome = await CompactionService.compact(
+            apiMessages: payload,
+            coveredCount: 1,
+            retainedCount: 1,
+            contextWindow: 1000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+
+        #expect(outcome.summary == nil)
+        #expect(outcome.droppedAllCovered)
+        #expect(fake.capturedEventMessages.isEmpty)
+    }
+
+    // MARK: - parseSummary()
+
+    @Test func parseSummaryExtractsTaggedBlock() {
+        let inner = "The conversation covered Swift concurrency in depth with examples."
+        let raw = "Sure, here is the summary.\n<conversation_summary>\n\(inner)\n</conversation_summary>\nDone."
+        #expect(CompactionService.parseSummary(raw) == inner)
+    }
+
+    @Test func parseSummaryRejectsUntaggedReply() {
+        // In-conversation, an untagged reply is likely the model answering the
+        // user — it must not become the summary.
+        #expect(CompactionService.parseSummary(
+            "The conversation covered Swift concurrency in depth with examples."
+        ) == nil)
+    }
+
+    @Test func parseSummaryAcceptsMissingCloseTag() {
+        // Streams can end before the closing tag arrives; the body after the
+        // opening tag is still the summary.
+        let inner = "The conversation covered Swift concurrency in depth with examples."
+        #expect(CompactionService.parseSummary(
+            "<conversation_summary>\n\(inner)"
+        ) == inner)
+    }
+
+    @Test func parseSummaryRejectsTooShort() {
+        #expect(CompactionService.parseSummary("Too short.") == nil)
+        #expect(CompactionService.parseSummary(
+            "<conversation_summary>short</conversation_summary>"
+        ) == nil)
     }
 
     // MARK: - truncateForBudget()
@@ -248,6 +470,132 @@ struct CompactionServiceTests {
         // Step 500 / 100 per turn ⇒ ~1 change per 5 turns, far below the 60 turns.
         // A plain per-turn truncation would change on nearly every turn.
         #expect(changes < 20)
+    }
+
+    // MARK: - retainedTail()
+
+    private func user(_ content: String)
+        -> ChatMessage
+    {
+        ChatMessage(role: "user", content: content)
+    }
+
+    private func assistant(_ content: String) -> ChatMessage {
+        ChatMessage(
+            role: "assistant",
+            content: content
+        )
+    }
+
+    private func assistantWithTools(ids: [String]) -> ChatMessage {
+        ChatMessage(role: "assistant", toolCalls: ids.map {
+            ToolCall(id: $0, type: "function", function: .init(name: "test", arguments: "{}"))
+        })
+    }
+
+    private func toolResult(id: String) -> ChatMessage {
+        ChatMessage(role: "tool", content: "result", toolCallID: id)
+    }
+
+    @Test func retainedTailReturnsAllWhenWithinBudget() {
+        let messages = [user("hello"), assistant("hi"), user("more"), assistant("sure")]
+        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100_000)
+        #expect(result.map(\.localID) == messages.map(\.localID))
+    }
+
+    @Test func retainedTailKeepsMinimumTurnsEvenWhenOverBudget() {
+        // Two oversized turns exceed the budget, but the minimum keeps them anyway.
+        let messages = [
+            user("old"), assistant("old reply"),
+            user(String(repeating: "x", count: 4000)), assistant(String(
+                repeating: "x",
+                count: 4000
+            )),
+            user(String(repeating: "x", count: 4000)), assistant(String(
+                repeating: "x",
+                count: 4000
+            )),
+        ]
+        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100)
+        #expect(result.count == 4)
+        #expect(result.first?.localID == messages[2].localID)
+    }
+
+    @Test func retainedTailExtendsWithShortTurnsUpToBudget() {
+        // 10 turns of ~44 tokens each (~440 total). A 250-token budget keeps 2
+        // minimum turns, then packs in as many further turns as fit.
+        var messages: [ChatMessage] = []
+        for i in 0 ..< 10 {
+            messages.append(user("hello \(i)"))
+            messages.append(assistant("reply \(i)"))
+        }
+        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 250)
+        #expect(result.count > 4)
+        #expect(result.count <= messages.count)
+        // Contiguous newest suffix, cut on a turn boundary (even count).
+        #expect(result.last?.localID == messages.last?.localID)
+        #expect(result.first?.role == "user")
+        #expect(result.count.isMultiple(of: 2))
+    }
+
+    @Test func retainedTailNeverSplitsToolRound() {
+        let messages = [
+            user("first"), assistant("reply"),
+            sizedMessage(tokens: 1000), // oversized turn blows the budget mid-walk
+            user("go"),
+            assistantWithTools(ids: ["A"]),
+            toolResult(id: "A"),
+            assistant("done"),
+            user("again"), assistant("final"),
+        ]
+        // The budget stops the walk before the oversized turn, keeping the tool
+        // round that follows it fully intact.
+        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100)
+        #expect(result.map(\.localID) == Array(messages[3...].map(\.localID)))
+    }
+
+    @Test func retainedTailStopsAtSyntheticSummaryCarrier() {
+        let carrier = ChatMessage(
+            role: "user",
+            content: "<conversation_summary>\nOlder conversation summary.\n</conversation_summary>"
+        )
+        let messages = [
+            carrier, assistant("Understood"),
+            user("hello"), assistant("hi"),
+            user("more"), assistant("sure"),
+        ]
+        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100_000)
+        #expect(result.map(\.localID) == Array(messages[2...].map(\.localID)))
+    }
+
+    @Test func retainedTailEmptyWhenNoUserMessages() {
+        let messages = [assistant("a"), assistant("b")]
+        #expect(CompactionService.retainedTail(messages: messages, tokenBudget: 100).isEmpty)
+    }
+
+    // MARK: - Retained tail in the instruction
+
+    @Test func instructionTellsModelToSkipRetainedTail() async {
+        let fake = FakeChatService()
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        fake.enqueueEventStream(summaryEvents(
+            "<conversation_summary>\n\(summary)\n</conversation_summary>"
+        ))
+
+        _ = await CompactionService.compact(
+            apiMessages: turnPayload(),
+            coveredCount: 1,
+            retainedCount: 12,
+            contextWindow: 1_000_000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: fake
+        )
+
+        let instruction = fake.capturedEventMessages.last?.content ?? ""
+        #expect(instruction.contains("final 12 messages"))
+        #expect(instruction.contains("<conversation_summary>"))
     }
 
     // MARK: - Small-context budget

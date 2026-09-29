@@ -8,30 +8,42 @@ import SwiftData
 /// building, ``Gatekeeper`` hydration, API message assembly, token estimation,
 /// and compaction into a single pipeline so chat and live calls stay in sync.
 enum MessagePipeline {
-    /// Context usage ratio at which automatic compaction triggers.
-    static let compactionThreshold: Double = 0.25
+    /// Compaction tuning for capable models (the summarisation path).
+    enum Compaction {
+        /// Context usage ratio at which summarisation triggers. Deliberately
+        /// aggressive: long contexts cost more and rot attention earlier.
+        static let threshold: Double = 0.25
 
-    /// Models at or below this context window size are "small" — they get
-    /// sliding window compaction, a minimal system prompt, and reduced tools.
-    static let smallContextThreshold: Int = 16000
+        /// Fraction of the context window kept verbatim after a summary, so
+        /// what just happened survives compaction at full fidelity. Scales
+        /// with the window: a 128k model retains ~6.4k tokens, a 32k model
+        /// ~1.6k.
+        static let retainedFraction: Double = 0.05
 
-    /// Low-water mark for the small-context sliding window, as a fraction of the
-    /// budget. When kept history exceeds the budget (high-water mark) it is
-    /// trimmed back to this fraction in one step, so the kept prefix stays stable
-    /// for many turns between trims (preserving the on-device KV cache) instead of
-    /// shifting every turn.
-    static let slidingWindowLowWaterFraction: Double = 0.5
+        /// Minimum recent turns (user message + everything after it) kept
+        /// verbatim, even when they exceed ``retainedFraction``.
+        static let minimumRetainedTurns = 2
+    }
 
-    /// Fraction of the context window kept as the usable input budget for
-    /// small-context models. The character-based token estimator can undercount
-    /// by up to 2x for multilingual SentencePiece models (e.g. Gemma / Danish),
-    /// so we truncate well before the real limit to leave the engine headroom.
-    static let smallContextSafetyFactor: Double = 0.75
+    /// Compaction tuning for small-context on-device models. They can't afford
+    /// a summarisation call; the oldest messages are dropped instead, with
+    /// hysteresis so the kept prefix — and the on-device KV cache — stays
+    /// stable between trims.
+    enum SmallContext {
+        /// Context windows at or below this size use the sliding window.
+        static let windowLimit: Int = 16000
 
-    /// Fraction of the context window the emergency compaction pass is allowed to
-    /// fill when truncating oldest messages so the compaction API call itself
-    /// fits within the window.
-    static let emergencyCompactionBudgetFraction: Double = 0.75
+        /// When kept history exceeds the budget, it is trimmed back to this
+        /// fraction of it in one step, so the boundary only moves occasionally
+        /// instead of every turn.
+        static let slidingWindowLowWaterFraction: Double = 0.5
+
+        /// Fraction of the window usable as input budget. The character-based
+        /// token estimator can undercount up to 2x for multilingual
+        /// SentencePiece models (e.g. Gemma/Danish), so truncate well before
+        /// the real limit to leave the engine headroom.
+        static let inputSafetyFactor: Double = 0.75
+    }
 
     /// Synthetic assistant acknowledgement inserted after a compaction summary
     /// so the outgoing conversation starts with a valid user→assistant turn.
@@ -87,7 +99,7 @@ enum MessagePipeline {
         // injected. Skipped for small-context models, which never get MCP tools.
         let turnModel = model ?? agent.model
         let contextWindow = KnownModelCatalog.lookup(turnModel)?.contextWindow ?? 128_000
-        let isSmallContextModel = contextWindow <= smallContextThreshold
+        let isSmallContextModel = contextWindow <= SmallContext.windowLimit
         let mcpServerManager = Container.shared.mcpServerManager()
         nonisolated(unsafe) let servers = mcpServers
         let mcpSkills = isSmallContextModel ? [] : MCPServerSkill.project(servers: servers)
@@ -203,19 +215,12 @@ enum MessagePipeline {
 
         let registry = builtRegistry
 
-        // 7. Extract the compaction summary (if any) and the real post-summary
-        //    conversation slice. The summary will be rendered as a synthetic
-        //    user+assistant pair inside ``buildAPIMessages``; the hint block is
-        //    appended to the last *real* user message, not the synthetic one.
-        let compactionSummary: String?
-        let conversationMessages: [ChatMessage]
-        if let idx = messages.lastIndex(where: { $0.isCompactionSummary }) {
-            compactionSummary = messages[idx].content
-            conversationMessages = Array(messages[(idx + 1)...])
-        } else {
-            compactionSummary = nil
-            conversationMessages = messages
-        }
+        // 7. Extract the compaction summary (if any) and the conversation slice
+        //    around it — see ``splitAtLatestSummary``. The summary is rendered as
+        //    a synthetic user+assistant pair inside ``buildAPIMessages``; the hint
+        //    block is appended to the last *real* user message, not the synthetic
+        //    one.
+        let (compactionSummary, conversationMessages) = splitAtLatestSummary(messages)
 
         // 8. Ask the Gatekeeper for the per-turn hint block
         let hintInput = SystemHintInput(
@@ -299,6 +304,28 @@ enum MessagePipeline {
     }
 
     // MARK: - API Message Assembly
+
+    /// Splits persisted messages at the latest compaction summary into the
+    /// summary's content and the conversation slice to send to the model.
+    ///
+    /// The slice is everything after the summary plus the
+    /// ``ChatMessage/compactionRetainedMessageCount`` messages immediately before
+    /// it — those were kept verbatim when the summary was made. Returns the
+    /// input unchanged (as the conversation) when there is no summary.
+    static func splitAtLatestSummary(
+        _ messages: [ChatMessage]
+    ) -> (summary: String?, conversation: [ChatMessage]) {
+        guard let summaryIndex = messages.lastIndex(where: { $0.isCompactionSummary }) else {
+            return (nil, messages)
+        }
+        let retainedCount = messages[summaryIndex].compactionRetainedMessageCount ?? 0
+        let retainedStart = messages.index(
+            summaryIndex, offsetBy: -retainedCount, limitedBy: messages.startIndex
+        ) ?? messages.startIndex
+        let conversation = Array(messages[retainedStart ..< summaryIndex])
+            + Array(messages[(summaryIndex + 1)...])
+        return (messages[summaryIndex].content, conversation)
+    }
 
     /// Builds API messages for normal-context chat turns.
     ///
@@ -499,11 +526,9 @@ enum MessagePipeline {
         let needsCompaction: Bool
     }
 
-    /// Decides whether compaction is needed and runs it if so.
-    ///
-    /// Compacts the entire conversation history into a summary, keeping only the
-    /// user's latest message verbatim. In an emergency (tokens exceed the full
-    /// context window), older messages are truncated so the compaction API call fits.
+    /// Compacts everything except the recent messages when usage warrants it
+    /// (see ``Compaction``), resuming from `[system, summary, retained…]`.
+    /// Summarisation runs in-conversation (see ``CompactionService``).
     ///
     /// Callers should update their `needsCompaction` flag from the result.
     static func compactIfNeeded(
@@ -515,15 +540,18 @@ enum MessagePipeline {
         providerID: UUID,
         model: String,
         chatService: any ChatService,
+        tools: [ToolDefinition]? = nil,
+        cacheKey: String? = nil,
         onProgress: (@Sendable (CompactionPhase) -> Void)? = nil
     ) async -> CompactionResult {
         // Small-context models: use sliding window (drop oldest messages) instead
         // of expensive LLM-based summarisation.
-        if contextWindow <= smallContextThreshold {
+        if contextWindow <= SmallContext.windowLimit {
             // Reserve space for generation output so the KV cache doesn't
             // evict the system prompt during generation.
             let maxOutput = KnownModelCatalog.lookup(model)?.maxOutput ?? 256
-            let inputBudget = Int(Double(contextWindow - maxOutput) * smallContextSafetyFactor)
+            let inputBudget = Int(Double(contextWindow - maxOutput) * SmallContext
+                .inputSafetyFactor)
             guard estimatedTokens > inputBudget else {
                 return CompactionResult(
                     apiMessages: apiMessages,
@@ -534,7 +562,7 @@ enum MessagePipeline {
             let systemPrompt = apiMessages.first!
             let systemTokens = TokenEstimator.estimate(systemPrompt.content ?? "") + 4
             let highMark = max(inputBudget - systemTokens, 0)
-            let lowMark = Int(Double(highMark) * slidingWindowLowWaterFraction)
+            let lowMark = Int(Double(highMark) * SmallContext.slidingWindowLowWaterFraction)
             let conversationMessages = Array(apiMessages.dropFirst())
             let truncated = CompactionService.windowedForBudget(
                 messages: conversationMessages,
@@ -552,10 +580,11 @@ enum MessagePipeline {
             )
         }
 
-        let threshold = Int(Double(contextWindow) * compactionThreshold)
+        let threshold = Int(Double(contextWindow) * Compaction.threshold)
         let isEmergency = estimatedTokens > contextWindow
 
-        // Stale flag: conversation has been shortened well below the threshold
+        // A previous attempt left the flag stuck on; once a shrinking
+        // conversation is well below the threshold, stop retrying.
         if needsCompaction && !isEmergency && estimatedTokens < threshold / 2 {
             return CompactionResult(apiMessages: apiMessages, summary: nil, needsCompaction: false)
         }
@@ -569,52 +598,72 @@ enum MessagePipeline {
             category: .chat
         )
 
-        // Compact everything except the user's latest message.
+        // Compact the older history; keep the recent tail verbatim so current
+        // work survives compaction at full fidelity.
         let conversationMessages = Array(apiMessages.dropFirst()) // drop system prompt
         guard conversationMessages.count > 1 else {
             return CompactionResult(apiMessages: apiMessages, summary: nil, needsCompaction: false)
         }
-        let lastMessage = conversationMessages.last!
-        var toCompact = Array(conversationMessages.dropLast())
 
-        // Emergency: truncate oldest messages so the compaction API call fits.
-        if isEmergency {
-            let compactionBudget = Int(Double(contextWindow) * emergencyCompactionBudgetFraction)
-            let truncated = CompactionService.truncateForBudget(
-                messages: toCompact,
-                tokenBudget: compactionBudget
-            )
+        let retainedBudget = Int(Double(contextWindow) * Compaction.retainedFraction)
+        var retained = CompactionService.retainedTail(
+            messages: conversationMessages,
+            tokenBudget: retainedBudget,
+            minimumTurns: Compaction.minimumRetainedTurns
+        )
+        // Degenerate conversation with no user turn anywhere — still keep the
+        // newest message out of the summary so the payload ends on a model
+        // reply the conversation can continue from.
+        if retained.isEmpty {
+            retained = [conversationMessages.last!]
+        }
+        let covered = Array(conversationMessages.dropLast(retained.count))
 
-            if truncated.count < toCompact.count {
-                AppLogger.warning(
-                    "Emergency: dropping \(public: toCompact.count - truncated.count) oldest messages to fit budget",
-                    category: .chat
-                )
-                toCompact = truncated
-            }
-
-            if toCompact.isEmpty {
-                AppLogger.warning(
-                    "Emergency fallback: returning system prompt + latest message",
-                    category: .chat
-                )
-                return CompactionResult(
-                    apiMessages: [apiMessages[0], lastMessage],
-                    summary: nil, needsCompaction: false
-                )
-            }
+        guard !covered.isEmpty else {
+            return CompactionResult(apiMessages: apiMessages, summary: nil, needsCompaction: false)
         }
 
-        AppLogger.info("Compacting \(public: toCompact.count) messages", category: .chat)
+        AppLogger.info(
+            "Compacting \(public: covered.count) messages, retaining \(public: retained.count)",
+            category: .chat
+        )
 
-        guard let summary = await CompactionService.compact(
-            messages: toCompact,
+        // Same tools and cache key as the turn itself, so the summarise request
+        // keeps the turn's provider cache prefix byte-identical.
+        let outcome = await CompactionService.compact(
+            apiMessages: apiMessages,
+            coveredCount: covered.count,
+            retainedCount: retained.count,
+            contextWindow: contextWindow,
+            tools: tools,
+            cacheKey: cacheKey,
             baseURL: baseURL,
             providerID: providerID,
             model: model,
             chatService: chatService,
             onProgress: onProgress
-        ) else {
+        )
+
+        if outcome.droppedAllCovered {
+            // Minimum-turn retention can itself blow the window-fit budget —
+            // warn when the fallback payload still exceeds what fits.
+            let fallbackTokens = TokenEstimator.estimateRequest(
+                messages: [apiMessages[0]] + retained,
+                toolDefinitions: tools ?? []
+            )
+            if fallbackTokens > contextWindow {
+                AppLogger.warning(
+                    "Compaction fallback exceeds the window (\(public: fallbackTokens)/\(public: contextWindow))",
+                    category: .chat
+                )
+            }
+            return CompactionResult(
+                apiMessages: [apiMessages[0]] + retained,
+                summary: nil, needsCompaction: false
+            )
+        }
+
+        guard let summary = outcome.summary else {
             return CompactionResult(apiMessages: apiMessages, summary: nil, needsCompaction: true)
         }
 
@@ -623,11 +672,15 @@ enum MessagePipeline {
             content: "Summary of earlier conversation:\n\n\(summary)"
         )
         summaryMessage.isCompactionSummary = true
+        // The triggering user message is persisted before the summary row (see
+        // ``ChatViewModel.send``), so the payload's retained tail is the same
+        // rows in the store and this count marks the retention boundary in both.
+        summaryMessage.compactionRetainedMessageCount = retained.count
 
         AppLogger.info("Summary stored (\(public: summary.count) chars)", category: .chat)
 
         return CompactionResult(
-            apiMessages: [apiMessages[0], summaryMessage, lastMessage],
+            apiMessages: [apiMessages[0], summaryMessage] + retained,
             summary: summaryMessage, needsCompaction: false
         )
     }

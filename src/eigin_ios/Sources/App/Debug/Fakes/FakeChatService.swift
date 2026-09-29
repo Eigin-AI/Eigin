@@ -19,6 +19,26 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         lock.withLock { _capturedMessages.last ?? [] }
     }
 
+    /// Captures message arrays passed to ``chatCompletionEventStream``, in call order.
+    private var _capturedEventMessages: [[ChatMessage]] = []
+
+    /// Message array from the most recent ``chatCompletionEventStream`` call.
+    var capturedEventMessages: [ChatMessage] {
+        lock.withLock { _capturedEventMessages.last ?? [] }
+    }
+
+    private var _capturedEventTools: [ToolDefinition]?
+    private var _capturedEventCacheKey: String?
+
+    /// Tools and cache key from the most recent ``chatCompletionEventStream`` call.
+    var capturedEventTools: [ToolDefinition]? {
+        lock.withLock { _capturedEventTools }
+    }
+
+    var capturedEventCacheKey: String? {
+        lock.withLock { _capturedEventCacheKey }
+    }
+
     /// Enqueue an event stream response. Each call to chatCompletionEventStream
     /// will consume the next sequence in order.
     func enqueueEventStream(_ events: [ChatStreamEvent]) {
@@ -106,11 +126,11 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         messages: [ChatMessage],
         model: String,
         tools: [ToolDefinition]?,
-        cacheKey _: String?
+        cacheKey: String?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         try await chatCompletionEventStream(
             baseURL: baseURL, providerID: providerID, messages: messages,
-            model: model, tools: tools, cacheKey: nil, inlineToolRunner: nil
+            model: model, tools: tools, cacheKey: cacheKey, inlineToolRunner: nil
         )
     }
 
@@ -139,10 +159,15 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         messages: [ChatMessage],
         model: String,
         tools: [ToolDefinition]?,
-        cacheKey _: String?,
+        cacheKey: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        lock.withLock { _lastModel = model }
+        lock.withLock {
+            _lastModel = model
+            _capturedEventMessages.append(messages)
+            _capturedEventTools = tools
+            _capturedEventCacheKey = cacheKey
+        }
         let preStreamDelay = lock.withLock { _preStreamDelay }
         if preStreamDelay > .zero {
             try await Task.sleep(for: preStreamDelay)

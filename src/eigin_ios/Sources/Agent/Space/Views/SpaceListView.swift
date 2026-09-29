@@ -123,7 +123,7 @@ struct SpaceListView: View {
     }
     .modelContainer({ () -> ModelContainer in
         let container = try! ModelContainer(
-            for: Schema(SchemaV9.models, version: SchemaV9.versionIdentifier),
+            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
@@ -167,7 +167,7 @@ struct SpaceListView: View {
     }
     .modelContainer({ () -> ModelContainer in
         let container = try! ModelContainer(
-            for: Schema(SchemaV9.models, version: SchemaV9.versionIdentifier),
+            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let provider = Provider(name: "Preview Provider", baseURL: "https://fake.local")

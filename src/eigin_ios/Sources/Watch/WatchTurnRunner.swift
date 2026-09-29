@@ -66,7 +66,9 @@ enum WatchTurnRunner {
             baseURL: context.provider.baseURL,
             providerID: context.provider.id,
             model: context.agent.model,
-            chatService: Container.shared.chatService()
+            chatService: Container.shared.chatService(),
+            tools: turn.registry.definitions,
+            cacheKey: context.chat.id.uuidString
         )
         if let summary = compacted.summary {
             context.persist([summary])

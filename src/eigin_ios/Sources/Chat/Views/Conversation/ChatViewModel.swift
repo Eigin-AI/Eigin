@@ -250,11 +250,15 @@ final class ChatViewModel {
                 }
             )
 
+            // Persist the user message before compaction: the summary row lands
+            // right after the latest user message, and the retained count equals
+            // the rows kept before it — payload and store stay aligned.
+            persistMessage(userMessage)
+
             let apiMessages = await applyCompactionIfNeeded(
                 turn: turn, provider: provider, model: routedModel, agent: agent
             )
 
-            persistMessage(userMessage)
             let registry = turn.registry
 
             // Rebuild tool registry mid-turn when skills are activated.
@@ -277,7 +281,7 @@ final class ChatViewModel {
                 )
 
                 let contextWindow = KnownModelCatalog.lookup(routedModel)?.contextWindow ?? 128_000
-                let isSmallContext = contextWindow <= MessagePipeline.smallContextThreshold
+                let isSmallContext = contextWindow <= MessagePipeline.SmallContext.windowLimit
 
                 let activeOnDemand = updatedSkills.last
                 let updatedRegistry: ToolRegistry
@@ -516,6 +520,8 @@ final class ChatViewModel {
             providerID: provider.id,
             model: model,
             chatService: Container.shared.chatService(),
+            tools: turn.registry.definitions,
+            cacheKey: chatID.uuidString,
             onProgress: onProgress
         )
 
