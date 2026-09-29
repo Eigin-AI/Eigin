@@ -242,8 +242,43 @@ struct KnowledgeSearchEngineTests {
             queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
         )
         #expect(try #require(scoreOf(results, "actor.a")) > scoreOf(results, "actor.b")!)
-        // Both used, so both above the neutral 1.0 baseline.
-        #expect(try #require(scoreOf(results, "actor.b")) > 1.0)
+        // Stale use decays with the access half-life: after 90 days a count
+        // of 5 has faded to near-neutral (barely above the 1.0 baseline).
+        #expect(try #require(scoreOf(results, "actor.b")) < 1.05)
+    }
+
+    /// Issue #267: a keyword-matched, never-accessed entity must outrank one
+    /// with a big but long-stale access history (cosine below the keyword
+    /// level, heavy use that stopped 90 days ago).
+    @Test func staleHighFrequencyDoesNotOutrankNeutralKeywordMatch() async throws {
+        let now = Date()
+        let fake = FakeKnowledgeService()
+        fake.entities["actor.max"] = namedEntity(type: "actor", id: "max", name: "Max")
+        fake.entities["note.talk"] = namedEntity(type: "note", id: "talk", name: "Talk")
+
+        // Query (unit length) + needle "max".
+        let query = [0.6, 0.8, 0.0]
+        fake.sources = [
+            // actor.max: no cosine signal (orthogonal), keyword match → 0.5.
+            source(
+                type: "actor", id: "max", embedding: unit(2),
+                accessCount: 0, lastAccessedAt: nil
+            ),
+            // note.talk: cosine 0.45 with the query (below the keyword level),
+            // heavy but stale use: 20 accesses, last one 90 days ago.
+            source(
+                type: "note", id: "talk",
+                embedding: [0.27, 0.36, 0.893],
+                accessCount: 20,
+                lastAccessedAt: now.addingTimeInterval(-90 * 86400)
+            ),
+        ]
+
+        let results = try await KnowledgeSearchEngine.score(
+            queryEmbedding: query, keywordNeedle: "max",
+            knowledgeService: fake, spaceID: nil, agentID: nil
+        )
+        #expect(results.first?.qualifiedID == "actor.max")
     }
 
     @Test func importanceBreaksTiesAroundNeutral() async throws {

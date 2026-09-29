@@ -203,7 +203,7 @@ struct MemoryConsolidationTests {
         #expect(candidates.evictionCandidates.map(\.qualifiedID) == ["note.old_thought"])
     }
 
-    @Test func protectsRecentImportantAndFrequent() async {
+    @Test func protectsRecentAndImportant() async {
         let f = FakeKnowledgeService()
         f.entities["note.recent"] = namedEntity(type: "note", id: "recent", name: "Recent")
         f.entities["fact.allergy"] = namedEntity(
@@ -211,7 +211,6 @@ struct MemoryConsolidationTests {
             id: "allergy",
             name: "Penicillin allergy"
         )
-        f.entities["thing.coffee"] = namedEntity(type: "thing", id: "coffee", name: "Coffee")
         f.sources = [
             // Recently touched → within grace period.
             source(
@@ -231,7 +230,21 @@ struct MemoryConsolidationTests {
                 lastAccessedAt: daysAgo(200),
                 importance: 0.95
             ),
-            // Old but historically frequent → activation stays high.
+        ]
+
+        let candidates = await MemoryConsolidation.candidates(
+            knowledgeService: f, spaceID: nil, agentID: nil, now: now
+        )
+
+        #expect(candidates.evictionCandidates.isEmpty)
+    }
+
+    @Test func evictsLongUntouchedMemoryDespiteHistoricalFrequency() async {
+        let f = FakeKnowledgeService()
+        f.entities["thing.coffee"] = namedEntity(type: "thing", id: "coffee", name: "Coffee")
+        f.sources = [
+            // Heavily used, but untouched for 200 days: activation
+            // decays below the floor despite the high historical count.
             source(
                 type: "thing",
                 id: "coffee",
@@ -246,7 +259,7 @@ struct MemoryConsolidationTests {
             knowledgeService: f, spaceID: nil, agentID: nil, now: now
         )
 
-        #expect(candidates.evictionCandidates.isEmpty)
+        #expect(candidates.evictionCandidates.map(\.qualifiedID) == ["thing.coffee"])
     }
 
     @Test func excludesExpiredAndContested() async {

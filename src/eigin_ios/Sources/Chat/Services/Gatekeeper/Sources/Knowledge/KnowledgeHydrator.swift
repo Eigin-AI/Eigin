@@ -145,13 +145,6 @@ enum KnowledgeHydrator {
             results.append(entry)
         }
 
-        // Surfacing to the agent is an indirect use signal.
-        await knowledgeService.recordAccess(
-            topScored.map { (type: $0.entity.entityType, id: $0.qualifiedID) },
-            kind: .indirect,
-            spaceID: spaceID,
-            agentID: agentID
-        )
         return results
     }
 
