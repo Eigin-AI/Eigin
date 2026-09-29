@@ -29,9 +29,9 @@ struct FirmSourceMigrationTests {
         try seedV7Store(at: url)
         let before = Date()
 
-        // Reopen under the current schema, running the full V7 → V8 → V9 chain.
+        // Reopen under the current schema, running the full V7 → … → V10 chain.
         let migrated = try ModelContainer(
-            for: Schema(SchemaV9.models, version: SchemaV9.versionIdentifier),
+            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
             migrationPlan: EiginMigrationPlan.self,
             configurations: ModelConfiguration(url: url)
         )

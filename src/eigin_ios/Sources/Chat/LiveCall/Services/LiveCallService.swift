@@ -679,7 +679,9 @@ final class LiveCallService: @unchecked Sendable {
                 estimatedTokens: turn.estimatedTokens,
                 contextWindow: turn.contextWindow,
                 baseURL: provider.baseURL, providerID: provider.id,
-                model: agent.model, chatService: Container.shared.chatService()
+                model: agent.model, chatService: Container.shared.chatService(),
+                tools: turn.registry.definitions,
+                cacheKey: chatID?.uuidString
             )
             let apiMessages = compactionResult.apiMessages
             if let summary = compactionResult.summary {

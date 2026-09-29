@@ -18,9 +18,12 @@ struct ChatMessage: Codable {
     /// Not part of CodingKeys — injected into the request body by the ProviderAdapter.
     var providerMetadata: [String: String]?
 
-    /// Local-only flag marking this message as a compaction summary.
-    /// Not sent to the API — used by ``ChatItem.buildItems()`` and ``buildAPIMessages()``.
+    /// Compaction event, local-only (not sent to the API): this message is a
+    /// compaction summary, and how many messages immediately before it are kept
+    /// verbatim. ``MessagePipeline.prepareTurn`` honours the count when
+    /// reassembling the conversation on later turns.
     var isCompactionSummary: Bool = false
+    var compactionRetainedMessageCount: Int? = nil
 
     /// Lightweight references to locally-stored attachments (images, etc.).
     ///
