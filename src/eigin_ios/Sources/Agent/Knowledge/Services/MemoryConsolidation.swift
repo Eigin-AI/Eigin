@@ -62,10 +62,10 @@ enum MemoryConsolidation {
     static let conflictThreshold = KnowledgeConflictHint.threshold
 
     /// Activation below which a memory is stale enough to consider retiring.
-    /// Frequency keeps activation up, so a once-used, long-untouched memory
-    /// falls here while a historically well-used one stays protected. Sits
-    /// above the accessCount-1 floor (~0.11) and below the freshly-touched
-    /// baseline (~0.2), so recent memories are safe.
+    /// Activation decays with the access half-life, so past frequency only
+    /// shields a memory while it keeps being used — anything untouched long
+    /// enough falls here regardless of historical use. Still bounded by the
+    /// 90-day grace period below, and fresh memories start above it.
     static let evictionActivationFloor: Double = 0.15
 
     /// A memory must have gone untouched at least this long to be an eviction

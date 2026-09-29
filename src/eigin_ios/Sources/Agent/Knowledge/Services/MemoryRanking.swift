@@ -22,8 +22,8 @@ enum MemoryRanking {
     /// clear everyday high-frequency trivia — the safety net has to win.
     static let importanceWeight = 0.35
 
-    /// Recency half-life in days: an access this many days ago counts half as
-    /// much toward recency as one just now.
+    /// Half-life in days for decaying the access count: accesses this many
+    /// days old count half as much toward frequency as current ones.
     static let recencyHalfLifeDays = 14.0
 
     /// Frequency saturation constant. Larger = frequency saturates more slowly,
@@ -54,23 +54,16 @@ enum MemoryRanking {
 
     /// Recency × frequency activation in `[0, 1)`. Zero when never accessed.
     ///
-    /// Frequency is scaled by how recently the memory was last used, so a
-    /// frequently-but-long-ago-used memory still keeps meaningful strength (its
-    /// frequency), while a recently-and-often-used memory scores highest.
+    /// The stored access count is decayed by the recency half-life — an access
+    /// 14 days ago counts half, 28 days ago a quarter — so frequency measures
+    /// *recent* use, and a memory whose accesses stop fades toward zero
+    /// without needing another access. Decayed count then saturates, so each
+    /// additional access matters less as usage accumulates.
     static func activation(accessCount: Double, lastAccessedAt: Date?, now: Date) -> Double {
-        guard accessCount > 0 else { return 0 }
+        guard accessCount > 0, let last = lastAccessedAt else { return 0 }
 
-        let recency: Double
-        if let last = lastAccessedAt {
-            let elapsedDays = max(0, now.timeIntervalSince(last)) / 86400
-            recency = exp(-elapsedDays / recencyHalfLifeDays * log(2))
-        } else {
-            recency = 0
-        }
-
-        // Frequency counts on its own; recency lifts it further. Even a stale
-        // but frequently-used memory keeps half its frequency weight.
-        let strength = accessCount * (0.5 + 0.5 * recency)
-        return strength / (strength + frequencySaturation)
+        let elapsedDays = max(0, now.timeIntervalSince(last)) / 86400
+        let effectiveCount = accessCount * exp(-elapsedDays / recencyHalfLifeDays * log(2))
+        return effectiveCount / (effectiveCount + frequencySaturation)
     }
 }
