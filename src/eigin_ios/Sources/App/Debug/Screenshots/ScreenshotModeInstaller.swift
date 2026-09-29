@@ -60,7 +60,13 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
 
         // Fakes resolve through the container; no root-level overrides needed.
         ScreenshotMode.stage(
-            root: AnyView(ScreenshotSceneRoot(scene: scene, chat: firstChat(in: context))),
+            root: AnyView(
+                ScreenshotSceneRoot(
+                    scene: scene,
+                    chat: firstChat(in: context),
+                    agentEmoji: fixtures.agent.emoji
+                )
+            ),
             container: container
         )
     }

@@ -45,7 +45,7 @@ struct ChatListView: View {
                         )
                     },
                     center: {
-                        AppBrandAvatar(image: Iconography.Brand.avatar, action: {})
+                        AppBrandAvatar(emoji: agent?.emoji)
                     },
                     trailing: {
                         AppActionButton(

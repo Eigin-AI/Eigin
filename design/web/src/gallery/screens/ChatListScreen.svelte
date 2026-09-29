@@ -60,7 +60,7 @@
       <ActionButton icon="brand/security" variant="open" size="medium" label="Filter by space" />
     {/snippet}
     {#snippet center()}
-      <BrandAvatar label="Eigin">
+      <BrandAvatar emoji="🪶" label="Agent">
         <Icon name="brand/avatar" size="fill" />
       </BrandAvatar>
     {/snippet}

@@ -14,6 +14,8 @@ struct ScreenshotCanvas: View {
     var permissionRequest: PermissionRequest?
     /// Initial composer text (`follow-up` scene), so the screen reads mid-reply.
     var composerText: String?
+    /// Fixture agent's symbol for the header avatar.
+    var emoji: String?
 
     @State private var messageText: String
     @State private var isSheetPresented = false
@@ -25,11 +27,13 @@ struct ScreenshotCanvas: View {
         chat: Chat?,
         items: [ChatItem],
         permissionRequest: PermissionRequest? = nil,
+        emoji: String? = nil,
         composerText: String? = nil
     ) {
         self.chat = chat
         self.items = items
         self.permissionRequest = permissionRequest
+        self.emoji = emoji
         _messageText = State(initialValue: composerText ?? "")
     }
 
@@ -37,6 +41,7 @@ struct ScreenshotCanvas: View {
         VStack(spacing: 0) {
             ChatHeaderView(
                 chat: chat,
+                emoji: emoji,
                 onBack: {},
                 onPhone: {},
                 isPhoneDisabled: true

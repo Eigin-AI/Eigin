@@ -9,6 +9,14 @@ struct ScreenshotSceneRoot: View {
     /// Header chat for chat scenes; created by the installer. The connections
     /// scene doesn't need one.
     let chat: Chat?
+    /// Fixture agent's symbol, shown in the canvas headers.
+    var agentEmoji: String?
+
+    init(scene: ScreenshotScene, chat: Chat?, agentEmoji: String? = nil) {
+        self.scene = scene
+        self.chat = chat
+        self.agentEmoji = agentEmoji
+    }
 
     /// Anchor the UI tests wait for instead of matching on text, so a copy or
     /// locale change cannot break the captures.
@@ -18,22 +26,28 @@ struct ScreenshotSceneRoot: View {
         Group {
             switch scene {
             case .memory:
-                ScreenshotCanvas(chat: chat, items: ScreenshotMemoryScene.items)
+                ScreenshotCanvas(chat: chat, items: ScreenshotMemoryScene.items, emoji: agentEmoji)
             case .followUp:
                 ScreenshotCanvas(
                     chat: chat,
                     items: ScreenshotFollowUpScene.items,
+                    emoji: agentEmoji,
                     composerText: "Yes please."
                 )
             case .onDevice:
-                ScreenshotCanvas(chat: chat, items: ScreenshotOnDeviceScene.items)
+                ScreenshotCanvas(
+                    chat: chat,
+                    items: ScreenshotOnDeviceScene.items,
+                    emoji: agentEmoji
+                )
             case .care:
-                ScreenshotCanvas(chat: chat, items: ScreenshotCareScene.items)
+                ScreenshotCanvas(chat: chat, items: ScreenshotCareScene.items, emoji: agentEmoji)
             case .asksFirst:
                 ScreenshotCanvas(
                     chat: chat,
                     items: ScreenshotAsksFirstScene.items,
-                    permissionRequest: ScreenshotAsksFirstScene.permissionRequest
+                    permissionRequest: ScreenshotAsksFirstScene.permissionRequest,
+                    emoji: agentEmoji
                 )
             case .connections:
                 NavigationStack { ConnectionsView() }
