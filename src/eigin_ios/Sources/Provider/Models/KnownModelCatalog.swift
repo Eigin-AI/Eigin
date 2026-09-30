@@ -4,7 +4,7 @@ import Foundation
 /// provider URL alone is not enough (e.g. models accessed via a router).
 enum ModelFamily: String {
     case openai, anthropic, google, mistral, grok, zhipu, moonshot, alibaba, minimax, deepseek,
-         apple, gemma, nvidia
+         apple, gemma, nvidia, corti
 }
 
 /// Metadata for a model family in the curated catalog.
@@ -195,6 +195,8 @@ enum KnownModelCatalog {
         "glm-5.1",
         "qwen3.7-max",
         "qwen3.7-plus",
+        "corti-s1",
+        "corti-s1-mini",
         "gpt-5.4-nano",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
@@ -1268,6 +1270,60 @@ enum KnownModelCatalog {
             supportsReasoning: false,
             supportsVision: false,
             isRecommended: false
+        ),
+
+        // Corti (EU-hosted; limits measured against the API, not documented)
+        KnownModelEntry(
+            pattern: "corti-s1-mini-instant",
+            displayName: "Corti S1 Mini Instant",
+            family: .corti,
+            contextWindow: 262_144,
+            maxOutput: nil,
+            inputCostPerMillion: nil,
+            outputCostPerMillion: nil,
+            supportsToolCall: true,
+            supportsReasoning: false,
+            supportsVision: true,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "corti-s1-mini",
+            displayName: "Corti S1 Mini",
+            family: .corti,
+            contextWindow: 262_144,
+            maxOutput: nil,
+            inputCostPerMillion: nil,
+            outputCostPerMillion: nil,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "corti-s1-instant",
+            displayName: "Corti S1 Instant",
+            family: .corti,
+            contextWindow: 262_144,
+            maxOutput: nil,
+            inputCostPerMillion: nil,
+            outputCostPerMillion: nil,
+            supportsToolCall: true,
+            supportsReasoning: false,
+            supportsVision: false,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "corti-s1",
+            displayName: "Corti S1",
+            family: .corti,
+            contextWindow: 262_144,
+            maxOutput: nil,
+            inputCostPerMillion: nil,
+            outputCostPerMillion: nil,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: false,
+            isRecommended: true
         ),
 
         // Apple
