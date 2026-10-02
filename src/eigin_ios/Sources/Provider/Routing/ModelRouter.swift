@@ -96,6 +96,26 @@ struct RouteRequest: Sendable {
     let isAuto: Bool
     let requirements: RouteRequirements
     let providers: [RoutingProvider]
+    let conversationID: UUID?
+    let lastUserMessage: String?
+
+    init(
+        currentProviderID: UUID,
+        currentModel: String,
+        isAuto: Bool,
+        requirements: RouteRequirements,
+        providers: [RoutingProvider],
+        conversationID: UUID? = nil,
+        lastUserMessage: String? = nil
+    ) {
+        self.currentProviderID = currentProviderID
+        self.currentModel = currentModel
+        self.isAuto = isAuto
+        self.requirements = requirements
+        self.providers = providers
+        self.conversationID = conversationID
+        self.lastUserMessage = lastUserMessage
+    }
 
     var currentProvider: RoutingProvider? {
         providers.first { $0.id == currentProviderID }
@@ -149,8 +169,12 @@ enum RouteChange: Sendable, Equatable {
     case modelRetired(previous: String)
     /// The model still exists but is erroring or too slow.
     case modelDegraded(previous: String, reason: DegradationReason)
-    /// Enough idle time passed to clear health and reset preference to the top.
+    /// Idle reset, a brand-new conversation, or the first turn after a relaunch:
+    /// any conversation whose cache (or absence of one) is worth restarting at the
+    /// tier-appropriate top.
     case sessionReset(previous: String)
+    /// The message scored complex, so the conversation moved up to a reasoning model.
+    case steppedUp(previous: String)
 }
 
 enum DegradationReason: Sendable, Equatable {

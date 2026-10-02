@@ -582,6 +582,333 @@ struct ModelRouterTests {
         #expect(await router.resolve(request(model: Self.best)).model == Self.best)
     }
 
+    // MARK: - Complexity routing
+
+    /// Mixed-tier fixture: `gpt-4.1` is the best non-reasoning model, `corti-s1` the
+    /// reasoning model (which ranks *below* `gpt-4.1` in the flat preference list).
+    static let fastModel = "gpt-4.1"
+    static let reasoningModel = "corti-s1"
+
+    private func tieredRequest(
+        model: String,
+        conversationID: UUID,
+        lastUserMessage: String?,
+        providers: [RoutingProvider]? = nil,
+        requirements: RouteRequirements = RouteRequirements()
+    ) -> RouteRequest {
+        let message = lastUserMessage
+        return RouteRequest(
+            currentProviderID: cloudID,
+            currentModel: model,
+            isAuto: true,
+            requirements: requirements,
+            providers: providers ?? [
+                RoutingProvider(
+                    id: cloudID,
+                    name: "Test Cloud",
+                    baseURL: "https://cloud.test/v1",
+                    availableModels: [Self.fastModel, Self.reasoningModel]
+                ),
+            ],
+            conversationID: conversationID,
+            lastUserMessage: message
+        )
+    }
+
+    /// Short and casual — no complexity signals.
+    private static let simpleMessage = "hi"
+    /// Two reasoning markers: steps up via the override regardless of score.
+    private static let complexMessage = "think through this step by step, please"
+
+    @Test("a fresh conversation starts on the fast tier")
+    func freshConversationStartsFast() async {
+        let router = makeRouter()
+        let conversation = UUID()
+
+        // The agent is parked on the top reasoning model; a new conversation drops
+        // to the best non-reasoning model instead of inheriting it.
+        let route = await router.resolve(
+            tieredRequest(
+                model: Self.reasoningModel, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(route.model == Self.fastModel)
+        #expect(route.change == .sessionReset(previous: Self.reasoningModel))
+    }
+
+    @Test("a complex message steps up and the lock holds")
+    func stepUpAndLock() async {
+        let router = makeRouter()
+        let conversation = UUID()
+
+        let start = await router.resolve(
+            tieredRequest(
+                model: Self.fastModel, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(start.model == Self.fastModel)
+        #expect(start.change == nil)
+
+        let stepped = await router.resolve(
+            tieredRequest(
+                model: start.model, conversationID: conversation,
+                lastUserMessage: Self.complexMessage
+            )
+        )
+        #expect(stepped.model == Self.reasoningModel)
+        #expect(stepped.change == .steppedUp(previous: Self.fastModel))
+
+        // The lock: a simple follow-up keeps the reasoning model.
+        let held = await router.resolve(
+            tieredRequest(
+                model: stepped.model, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(held.model == Self.reasoningModel)
+        #expect(held.change == nil)
+
+        // A different conversation never inherits the step-up…
+        let other = UUID()
+        let fresh = await router.resolve(
+            tieredRequest(
+                model: held.model, conversationID: other,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(fresh.model == Self.fastModel)
+
+        // …and returning to the first conversation: the step-up lock holds there
+        // too. Conversation-scoped, not agent-scoped.
+        let back = await router.resolve(
+            tieredRequest(
+                model: fresh.model, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(back.model == Self.reasoningModel)
+        #expect(back.change == nil)
+    }
+
+    @Test("a first message that is already complex routes straight to reasoning")
+    func complexFirstMessage() async {
+        let router = makeRouter()
+        let route = await router.resolve(
+            tieredRequest(
+                model: Self.fastModel, conversationID: UUID(),
+                lastUserMessage: Self.complexMessage
+            )
+        )
+        #expect(route.model == Self.reasoningModel)
+    }
+
+    @Test(
+        "the anchor wins over agent.model: a step-up in one conversation never leaks into another"
+    )
+    func anchoredStayOverridesAgentModel() async throws {
+        let router = makeRouter()
+        let provider = RoutingProvider(
+            id: cloudID,
+            name: "Test Cloud",
+            baseURL: "https://cloud.test/v1",
+            availableModels: [Self.fastModel, Self.reasoningModel]
+        )
+
+        // Real callers pass agent.model as currentModel — the global that other
+        // conversations' turns may have repointed. Conversation B is fast, but the
+        // agent's model says reasoning (conversation A stepped up).
+        let simpleB = tieredRequest(
+            model: Self.reasoningModel, conversationID: UUID(),
+            lastUserMessage: Self.simpleMessage, providers: [provider]
+        )
+        try await router.resolve(
+            tieredRequest(
+                model: Self.fastModel, conversationID: #require(simpleB.conversationID),
+                lastUserMessage: Self.simpleMessage, providers: [provider]
+            )
+        )
+
+        // B returns while agent.model still says reasoning: B keeps its own fast
+        // model, and agent.model is re-anchored to it.
+        let back = await router.resolve(simpleB)
+        #expect(back.model == Self.fastModel)
+        #expect(back.change == nil)
+
+        // The inverse: A locked to reasoning returns while agent.model says fast.
+        let lockedA = tieredRequest(
+            model: Self.reasoningModel, conversationID: UUID(),
+            lastUserMessage: Self.complexMessage, providers: [provider]
+        )
+        await router.resolve(lockedA)
+        let agentReparked = try tieredRequest(
+            model: Self.fastModel, conversationID: #require(lockedA.conversationID),
+            lastUserMessage: Self.simpleMessage, providers: [provider]
+        )
+        let held = await router.resolve(agentReparked)
+        #expect(held.model == Self.reasoningModel)
+        #expect(held.change == nil)
+    }
+
+    @Test("a session reset restarts a locked conversation on the fast tier")
+    func sessionResetRestartsLockedConversationFast() async {
+        let clock = TestClock()
+        let router = makeRouter(clock: clock)
+        let conversation = UUID()
+
+        // Lock the conversation into reasoning.
+        let stepped = await router.resolve(
+            tieredRequest(
+                model: Self.fastModel, conversationID: conversation,
+                lastUserMessage: Self.complexMessage
+            )
+        )
+        #expect(stepped.model == Self.reasoningModel)
+        let held = await router.resolve(
+            tieredRequest(
+                model: stepped.model, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(held.model == Self.reasoningModel)
+
+        // After an idle hour the conversation's cache is cold: the same simple
+        // message restarts it on the fast tier instead of holding the lock.
+        clock.advance(61 * 60)
+        let reset = await router.resolve(
+            tieredRequest(
+                model: held.model, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage
+            )
+        )
+        #expect(reset.model == Self.fastModel)
+        #expect(reset.change == .sessionReset(previous: Self.reasoningModel))
+    }
+
+    @Test("a provider with only reasoning models behaves as before")
+    func reasoningOnlyProvider() async {
+        let router = makeRouter()
+        let provider = RoutingProvider(
+            id: cloudID,
+            name: "Test Cloud",
+            baseURL: "https://cloud.test/v1",
+            availableModels: [Self.best, Self.second]
+        )
+
+        let simple = await router.resolve(
+            tieredRequest(
+                model: Self.best, conversationID: UUID(),
+                lastUserMessage: Self.simpleMessage, providers: [provider]
+            )
+        )
+        #expect(simple.model == Self.best)
+
+        let complex = await router.resolve(
+            tieredRequest(
+                model: simple.model, conversationID: UUID(),
+                lastUserMessage: Self.complexMessage, providers: [provider]
+            )
+        )
+        #expect(complex.model == Self.best)
+    }
+
+    @Test("mid-turn failover from a reasoning model prefers another reasoning model")
+    func complexRetryStaysInTier() async {
+        let router = makeRouter()
+        let provider = RoutingProvider(
+            id: cloudID,
+            name: "Test Cloud",
+            baseURL: "https://cloud.test/v1",
+            availableModels: [Self.fastModel, "gpt-4.1-mini", "corti-s1-mini", Self.reasoningModel]
+        )
+
+        // A complex turn runs on the reasoning model; it fails mid-stream.
+        let request = tieredRequest(
+            model: Self.reasoningModel, conversationID: UUID(),
+            lastUserMessage: Self.complexMessage, providers: [provider]
+        )
+        await router.record(outcome(
+            model: Self.reasoningModel,
+            result: .failed(.providerOverloaded)
+        ))
+
+        // The retry prefers the remaining reasoning model even though gpt-4.1-mini
+        // ranks above it in the flat preference list.
+        let next = await router.retry(after: failure(503), request: request)
+        #expect(next?.model == "corti-s1-mini")
+
+        // Without a complexity signal, the tier of the model that was running —
+        // the conversation's current tier — decides: stay with reasoning.
+        let plain = await router.retry(
+            after: failure(503),
+            request: tieredRequest(
+                model: Self.reasoningModel, conversationID: UUID(),
+                lastUserMessage: nil, providers: [provider]
+            )
+        )
+        #expect(plain?.model == "corti-s1-mini")
+
+        // A fast conversation fails mid-turn: the next fast model gets the turn.
+        let fastFailure = await router.retry(
+            after: failure(503),
+            request: tieredRequest(
+                model: "gpt-4.1-mini", conversationID: UUID(),
+                lastUserMessage: nil, providers: [provider]
+            )
+        )
+        #expect(fastFailure?.model == Self.fastModel)
+    }
+
+    @Test("a forced vision switch stays in the conversation's reasoning tier")
+    func visionKeepsReasoningTier() async {
+        let router = makeRouter()
+        let conversation = UUID()
+        let provider = RoutingProvider(
+            id: cloudID,
+            name: "Test Cloud",
+            baseURL: "https://cloud.test/v1",
+            availableModels: [Self.fastModel, "corti-s1-mini", Self.reasoningModel]
+        )
+
+        // Locked into reasoning…
+        let stepped = await router.resolve(
+            tieredRequest(
+                model: Self.fastModel, conversationID: conversation,
+                lastUserMessage: Self.complexMessage, providers: [provider]
+            )
+        )
+        #expect(stepped.model == Self.reasoningModel)
+
+        // …then an image arrives on a simple message. `corti-s1` cannot see, so
+        // the switch lands on the best reasoning *vision* model, not the best
+        // vision model overall.
+        let vision = await router.resolve(
+            tieredRequest(
+                model: stepped.model, conversationID: conversation,
+                lastUserMessage: Self.simpleMessage, providers: [provider],
+                requirements: RouteRequirements(needsVision: true)
+            )
+        )
+        #expect(vision.model == "corti-s1-mini")
+    }
+
+    @Test("failover still cascades down to a fast model when no reasoning model is healthy")
+    func retryCascadesDown() async {
+        let router = makeRouter()
+        let request = tieredRequest(
+            model: Self.reasoningModel, conversationID: UUID(),
+            lastUserMessage: Self.complexMessage
+        )
+        await router.record(outcome(
+            model: Self.reasoningModel,
+            result: .failed(.providerOverloaded)
+        ))
+
+        let next = await router.retry(after: failure(503), request: request)
+        #expect(next?.model == Self.fastModel)
+    }
+
     // MARK: - Helpers
 
     private func outcome(

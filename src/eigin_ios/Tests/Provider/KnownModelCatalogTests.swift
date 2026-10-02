@@ -407,3 +407,17 @@ struct BestModelTests {
         #expect(KnownModelCatalog.bestModel(from: []) == nil)
     }
 }
+
+// MARK: - Instant variants are ranked (arbitrary ties are unspecified ordering)
+
+extension KnownModelCatalogTests {
+    @Test("every entry's pattern appears in the preference ranking")
+    func allPatternsAreRanked() {
+        for entry in KnownModelCatalog.entries {
+            #expect(
+                KnownModelCatalog.preferenceRanking.contains(entry.pattern),
+                "\(entry.pattern) is missing from preferenceRanking — unranked entries tie and sort arbitrarily"
+            )
+        }
+    }
+}
