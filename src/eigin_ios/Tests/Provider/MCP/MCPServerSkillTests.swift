@@ -91,4 +91,13 @@ struct MCPServerSkillTests {
         #expect(!skill.alwaysActive)
         #expect(skill.requiredCapabilities.isEmpty)
     }
+
+    @Test func descriptorIsBoundedForLongServerInstructions() throws {
+        // MCP metadata varies wildly in length; long instructions degrade the
+        // mean-pooled retrieval vector, so the descriptor is capped.
+        let server = makeServer(name: "GitLab", instructions: String(repeating: "x", count: 2000))
+        let skill = try #require(MCPServerSkill.project(servers: [server]).first)
+        #expect(skill.descriptor.count <= 500)
+        #expect(skill.descriptor == skill.description.prefix(500))
+    }
 }

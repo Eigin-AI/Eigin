@@ -341,7 +341,6 @@ final class ChatViewModel {
                     toolExecutor: registry,
                     cacheKey: chatID.uuidString,
                     model: routedModel,
-                    initialToolCalls: turn.initialToolCalls,
                     sentAt: sentAt
                 )
                 let completed = chatLoop.completeRound()

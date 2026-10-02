@@ -7,28 +7,13 @@ import Foundation
 /// responsible for deciding whether activation is appropriate (e.g. checking
 /// `isSkillActive`/`alwaysActive` first) — this just performs the mutation.
 enum SkillActivation {
-    /// Activates `skillID` on `chat`. In small-context mode, deactivates any
-    /// other on-demand skill first (single slot: only one on-demand skill
-    /// active at a time).
+    /// Activates `skillID` on `chat`, replacing any existing entry for it.
     static func activate(
         skillID: String,
         on chat: Chat,
-        activatingToolCallID: String,
-        isSmallContext: Bool
+        activatingToolCallID: String
     ) {
-        if isSmallContext {
-            chat.activeSkillEntries.removeAll { entry in
-                guard let existing = BundledSkill.skill(forID: entry.skillID) else { return false }
-                return !existing.alwaysActive
-            }
-        }
-        chat.activeSkillEntries.removeAll { entry in
-            if entry.skillID == skillID { return true }
-            // Small-context mode: single slot, one on-demand skill at a time.
-            guard isSmallContext, let existing = BundledSkill.skill(forID: entry.skillID)
-            else { return false }
-            return !existing.alwaysActive
-        }
+        chat.activeSkillEntries.removeAll { $0.skillID == skillID }
         chat.activeSkillEntries.append(
             ActiveSkillEntry(
                 skillID: skillID,

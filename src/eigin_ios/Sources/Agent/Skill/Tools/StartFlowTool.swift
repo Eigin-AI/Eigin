@@ -33,11 +33,9 @@ struct StartFlowTool: Tool {
     }
 
     private let chatID: UUID?
-    var isSmallContext: Bool = false
 
-    init(chatID: UUID? = nil, isSmallContext: Bool = false) {
+    init(chatID: UUID? = nil) {
         self.chatID = chatID
-        self.isSmallContext = isSmallContext
     }
 
     func definition() -> ToolDefinition {
@@ -114,8 +112,7 @@ struct StartFlowTool: Tool {
             SkillActivation.activate(
                 skillID: flow.skillID,
                 on: chat,
-                activatingToolCallID: id,
-                isSmallContext: isSmallContext
+                activatingToolCallID: id
             )
         }
 
