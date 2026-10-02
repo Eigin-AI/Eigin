@@ -219,7 +219,7 @@ final class ChatViewModel {
             // Route before the turn is built: the prompt budget and tool registry are
             // sized from the model that ends up running.
             let (provider, routedModel) = await self.applyRoute(
-                agent: agent, provider: provider, messages: msgs
+                agent: agent, provider: provider, messages: msgs, conversationID: chatID
             )
 
             let activeSkills = self.resolvedActiveSkills(
@@ -341,7 +341,8 @@ final class ChatViewModel {
                     toolExecutor: registry,
                     cacheKey: chatID.uuidString,
                     model: routedModel,
-                    sentAt: sentAt
+                    sentAt: sentAt,
+                    conversationID: chatID
                 )
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)
@@ -372,9 +373,15 @@ final class ChatViewModel {
     /// detour is not: `providerID` and `model` keep pointing at what the user picked, and
     /// the next online turn returns there on its own.
     private func applyRoute(
-        agent: Agent, provider: Provider, messages: [ChatMessage]
+        agent: Agent, provider: Provider, messages: [ChatMessage], conversationID: UUID
     ) async -> (provider: Provider, model: String) {
-        guard let request = RouteRequest(agent: agent, provider: provider, messages: messages)
+        guard let request = RouteRequest(
+            agent: agent,
+            provider: provider,
+            messages: messages,
+            conversationID: conversationID,
+            lastUserMessage: messages.last(where: { $0.role == "user" })?.content
+        )
         else {
             return (provider, agent.model)
         }

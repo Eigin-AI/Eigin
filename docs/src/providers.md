@@ -41,9 +41,26 @@ A curated list of known models with metadata: display names, context windows, co
 
 When **Automatic** model selection is enabled, a router picks which of the provider's models runs each turn. Picking a specific model turns routing off.
 
-The router is asked before a turn is built, since the prompt budget and tool registry are sized from the model that runs. After the turn it receives performance metrics, and how the turn ended.
+The router is asked before a turn is built, since the prompt budget and tool registry are sized from the model that runs. The chat loop sends requirements (like whether the turn needs vision), relaxed progressively until some model fits, and reports back how the turn went. The result is best-effort, not a guarantee.
 
-The chat loop sends requirements to the router (like whether it needs vision), and the router resolves that to a model based on best-effort. Requirements get progressively relaxed until a model can be found.
+Two dimensions drive the choice:
+
+- **Health — down the list.** An erroring, hung, or consistently slow model is quarantined in-session and the next preference takes over.
+- **Complexity — up the list.** Messages are scored locally by `QueryComplexity` (see below); simple turns run on the best non-reasoning model, heavy messages climb to the best reasoning model.
+
+Rejected keys, empty wallets, and malformed requests still appear as errors to the user instead.
+
+### Complexity routing
+
+Routing has a second axis: how much reasoning the message needs. The score picks a
+**tier**, with `preferenceRanking` ordering models within each tier — fast (non-
+reasoning) or careful (reasoning).
+
+### Step-up rules
+
+- Two or more reasoning markers ("step by step", "tænk igennem") always step up, regardless of score. A stepped-up conversation stays there: a reasoning model answers simple follow-ups without collapsing back, which keeps the prompt cache warm.
+- **Per conversation.** Stickiness anchors on the model *this conversation* last used, so a step-up in one chat never leaks into another. An unknown conversation ID is a fresh start, and an idle session reset restarts a locked conversation on the fast tier — the prompt cache is cold by then anyway.
+- **Failover is the safety net.** A complex turn that fails prefers another reasoning model, but cascades to a fast one rather than answer nothing. Model health stays global — a model quarantined in one conversation is quarantined everywhere.
 
 Rejected keys, empty wallets, and malformed requests still appear as errors to the user instead.
 

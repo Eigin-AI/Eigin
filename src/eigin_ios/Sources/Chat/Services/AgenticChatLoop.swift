@@ -191,9 +191,8 @@ final class AgenticChatLoop {
         cacheKey: String? = nil,
         model: String? = nil,
         sentAt: ContinuousClock.Instant? = nil,
-        // Pre-flattened routing for surfaces whose agent has no store-backed context yet
-        // (onboarding).
-        routing: RouteRequest? = nil
+        routing: RouteRequest? = nil,
+        conversationID: UUID? = nil
     ) async throws -> [ChatMessage] {
         reset()
         turnSentAt = sentAt
@@ -256,7 +255,8 @@ final class AgenticChatLoop {
                 tools: currentTools,
                 cacheKey: cacheKey,
                 inlineToolRunner: inlineRunner,
-                routing: routing
+                routing: routing,
+                conversationID: conversationID
             )
 
             contentBuffer = ""

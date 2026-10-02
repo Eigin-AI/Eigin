@@ -18,7 +18,8 @@ extension AgenticChatLoop {
         tools: [ToolDefinition]?,
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner? = nil,
-        routing: RouteRequest? = nil
+        routing: RouteRequest? = nil,
+        conversationID: UUID? = nil
     ) async throws -> TurnStream {
         let dispatchedAt = ContinuousClock.now
 
@@ -40,7 +41,9 @@ extension AgenticChatLoop {
                 agent: agent,
                 provider: provider,
                 model: activeModel,
-                requirements: retryRequirements(messages: messages, tools: tools)
+                requirements: retryRequirements(messages: messages, tools: tools),
+                conversationID: conversationID,
+                lastUserMessage: messages.last(where: { $0.role == "user" })?.content
             )
         guard let request else {
             return primaryOnlyStream(
@@ -189,7 +192,9 @@ extension AgenticChatLoop {
                     currentModel: model,
                     isAuto: request.isAuto,
                     requirements: request.requirements,
-                    providers: retryProviders.withLock { $0 }
+                    providers: retryProviders.withLock { $0 },
+                    conversationID: request.conversationID,
+                    lastUserMessage: request.lastUserMessage
                 )
                 guard
                     let next = await router.retry(after: error, request: request),

@@ -170,7 +170,10 @@ final class LiveCallService: @unchecked Sendable {
 
     // MARK: - Init
 
-    init() {
+    private let modelRouter: any ModelRouter
+
+    init(modelRouter: any ModelRouter = Container.shared.modelRouter()) {
+        self.modelRouter = modelRouter
         dictation.keepSessionActive = true
     }
 
@@ -580,6 +583,27 @@ final class LiveCallService: @unchecked Sendable {
 
     // MARK: - Chat
 
+    /// Asks the router where this turn should run. Live calls start on the fast tier
+    /// and step up when a message scores complex, exactly like text chat.
+    private func routedModel(
+        agent: Agent, provider: Provider, chatID: UUID?, messages: [ChatMessage]
+    ) async -> String {
+        guard agent.autoModel,
+              let request = RouteRequest(
+                  agent: agent,
+                  provider: provider,
+                  messages: messages,
+                  conversationID: chatID,
+                  lastUserMessage: messages.last(where: { $0.role == "user" })?.content
+              )
+        else {
+            return agent.model
+        }
+        let route = await modelRouter.resolve(request)
+        guard route.staysOn(providerID: provider.id) else { return agent.model }
+        return route.model
+    }
+
     private func sendMessage(_ text: String) {
         guard let agent, let provider else { return }
         guard let policy = permissionPolicy else { return }
@@ -657,6 +681,12 @@ final class LiveCallService: @unchecked Sendable {
         streamTask = Task { [weak self] in
             guard let self else { return }
 
+            // Live calls take part in the same complexity routing as text chat:
+            // start fast, step up when a message scores complex.
+            let routedModel = await routedModel(
+                agent: agent, provider: provider, chatID: chatID, messages: messages
+            )
+
             let activeSkills = loadActiveSkills(agent: agent)
 
             let turn = await MessagePipeline.prepareTurn(
@@ -679,7 +709,7 @@ final class LiveCallService: @unchecked Sendable {
                 estimatedTokens: turn.estimatedTokens,
                 contextWindow: turn.contextWindow,
                 baseURL: provider.baseURL, providerID: provider.id,
-                model: agent.model, chatService: Container.shared.chatService(),
+                model: routedModel, chatService: Container.shared.chatService(),
                 tools: turn.registry.definitions,
                 cacheKey: chatID?.uuidString
             )
@@ -732,7 +762,9 @@ final class LiveCallService: @unchecked Sendable {
                     tools: turn.registry.definitions,
                     agent: agent, provider: provider,
                     chatService: chatService, toolExecutor: turn.registry,
-                    cacheKey: chatID?.uuidString
+                    cacheKey: chatID?.uuidString,
+                    model: routedModel,
+                    conversationID: chatID
                 )
                 messages.append(contentsOf: produced)
                 onPersist?(produced)
