@@ -52,9 +52,6 @@ enum MessagePipeline {
     struct TurnInputs {
         let apiMessages: [ChatMessage]
         let registry: ToolRegistry
-        /// Tool-call intents from the Gatekeeper (today: skill activations), run
-        /// by the agent loop as a synthetic pre-round before the first model stream.
-        let initialToolCalls: [ToolCall]
         let mcpTools: [any Tool]
         /// Every enabled MCP server projected into a ``Skill`` (catalog
         /// entries), not just active ones — reused when rebuilding the
@@ -293,7 +290,6 @@ enum MessagePipeline {
         return TurnInputs(
             apiMessages: apiMessages,
             registry: registry,
-            initialToolCalls: preprocessing.toolCallIntents,
             mcpTools: mcpTools,
             mcpSkills: mcpSkills,
             integrationToolsByCapability: integrationToolsByCapability,

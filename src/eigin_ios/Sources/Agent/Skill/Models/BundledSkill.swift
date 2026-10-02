@@ -122,12 +122,7 @@ enum BundledSkill {
             ManageVocabularyTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["personality", "voice", "proactivity", "initiative"],
-                .danish: ["personlighed", "stemme", "proaktivitet", "initiativ"],
-            ]
-        )
+        customDescriptor: "Change my personality, voice, proactivity, and general behavior; adjust how the agent talks and takes initiative."
     )
 
     static let email = Skill(
@@ -139,10 +134,7 @@ enum BundledSkill {
         requiredTools: [],
         requiredCapabilities: [.email],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [.danish: ["indboks"]],
-            shared: ["email", "inbox", "mail", "gmail"]
-        )
+        customDescriptor: "Read, draft, and send email through the user's connected email account; check the inbox and reply to messages."
     )
 
     static let aula = Skill(
@@ -154,13 +146,7 @@ enum BundledSkill {
         requiredTools: [],
         requiredCapabilities: [.aula],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["school", "daycare", "nursery"],
-                .danish: ["skole", "institution", "vuggestue", "børnehave"],
-            ],
-            shared: ["aula"]
-        )
+        customDescriptor: "Get school and daycare messages, updates, and notices from the child's school (Aula)."
     )
 
     static let organization = Skill(
@@ -178,12 +164,7 @@ enum BundledSkill {
             GetChatTranscriptTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["space", "folder", "archive", "transcript"],
-                .danish: ["mappe", "arkiv"],
-            ]
-        )
+        customDescriptor: "Organize chats into spaces and folders, archive conversations, and look up past chat transcripts."
     )
 
     static let scheduling = Skill(
@@ -200,20 +181,7 @@ enum BundledSkill {
             ManageReminderTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: [
-                    "calendar",
-                    "meeting",
-                    "remind",
-                    "reminder",
-                    "appointment",
-                    "schedule",
-                    "event",
-                ],
-                .danish: ["kalender", "møde", "aftale", "påmindelse", "begivenhed"],
-            ]
-        )
+        customDescriptor: "Check, create, and change calendar events, meetings, appointments, and reminders."
     )
 
     static let planning = Skill(
@@ -232,12 +200,7 @@ enum BundledSkill {
             ManageReminderTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["trip", "itinerary", "festival", "conference", "gathering"],
-                .danish: ["rejse", "tur", "konference"],
-            ]
-        )
+        customDescriptor: "Help plan an upcoming trip, event, day out, gathering, festival, or conference; build an itinerary."
     )
 
     static let health = Skill(
@@ -255,12 +218,7 @@ enum BundledSkill {
             GetHealthLogTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["nutrition", "calories", "workout", "sleep", "weight", "steps"],
-                .danish: ["kost", "kalorier", "træning", "søvn", "vægt", "skridt", "helbred"],
-            ]
-        )
+        customDescriptor: "Track nutrition, calories, workouts, sleep, weight, steps, and other health measurements; log food and body data."
     )
 
     static let cooking = Skill(
@@ -274,12 +232,7 @@ enum BundledSkill {
             AdvanceFlowTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["recipe", "cook", "dinner", "meal", "food"],
-                .danish: ["opskrift", "aftensmad", "måltid", "mad"],
-            ]
-        )
+        customDescriptor: "Find a recipe, decide what to cook for dinner, and walk through cooking a meal step by step."
     )
 
     static let recommendations = Skill(
@@ -293,11 +246,6 @@ enum BundledSkill {
             AdvanceFlowTool.capability,
         ],
         alwaysActive: false,
-        triggers: SkillTriggers(
-            byLanguage: [
-                .english: ["recommend", "book", "movie", "album", "game"],
-                .danish: ["anbefal", "bog", "film", "spil"],
-            ]
-        )
+        customDescriptor: "Recommend a book, movie, album, or game worth reading, watching, listening to, or playing."
     )
 }

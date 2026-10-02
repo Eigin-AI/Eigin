@@ -78,6 +78,10 @@ enum MCPServerSkill {
             .joined(separator: ", ")
         let smallInstruction = "\(instruction) Tools: \(toolList)."
 
+        // MCP metadata varies wildly in length; long instructions degrade the
+        // mean-pooled retrieval vector, so the descriptor is capped.
+        let descriptor = String(smallInstruction.prefix(500))
+
         return Skill(
             id: id,
             displayName: server.name,
@@ -86,7 +90,8 @@ enum MCPServerSkill {
             smallInstruction: smallInstruction,
             requiredTools: requiredTools,
             requiredCapabilities: [],
-            alwaysActive: false
+            alwaysActive: false,
+            customDescriptor: descriptor
         )
     }
 }

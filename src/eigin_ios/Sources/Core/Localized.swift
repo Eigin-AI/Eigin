@@ -4999,6 +4999,11 @@ enum Localized {
                 Localized.get("tools.agent.resolveIntent")
             }
 
+            /// Display name for the search-skills tool
+            static var searchSkills: String {
+                Localized.get("tools.agent.searchSkills")
+            }
+
             /// Display name for the start-flow tool
             static var startFlow: String {
                 Localized.get("tools.agent.startFlow")
@@ -5343,6 +5348,11 @@ enum Localized {
             /// One-sentence description of the search_places tool, shown in the tool detail sheet
             static var searchPlaces: String {
                 Localized.get("tools.description.searchPlaces")
+            }
+
+            /// One-sentence description of the search_skills tool, shown in the tool detail sheet
+            static var searchSkills: String {
+                Localized.get("tools.description.searchSkills")
             }
 
             /// One-sentence description of the set_presentation tool, shown in the tool detail

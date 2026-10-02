@@ -256,6 +256,13 @@ extension Container {
         }.singleton
     }
 
+    // MARK: - Skills
+
+    /// One index so hints and search hit one descriptor cache.
+    var skillIndex: Factory<SkillIndex> {
+        self { SkillIndex() }.singleton
+    }
+
     // MARK: - Watch
 
     var watchLink: Factory<WatchLink> {

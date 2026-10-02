@@ -15110,6 +15110,23 @@
         }
       }
     },
+    "tools.agent.searchSkills" : {
+      "comment" : "Display name for the search-skills tool",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søg kompetencer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search Skills"
+          }
+        }
+      }
+    },
     "tools.agent.startFlow" : {
       "comment" : "Display name for the start-flow tool",
       "localizations" : {
@@ -16211,6 +16228,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Changes how willing your agent is to reach out on its own."
+          }
+        }
+      }
+    },
+    "tools.description.searchSkills" : {
+      "comment" : "One-sentence description of the search_skills tool, shown in the tool detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søger i hele kompetencekataloget efter passende kompetencer."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Searches the full skill catalog for skills matching a need."
           }
         }
       }

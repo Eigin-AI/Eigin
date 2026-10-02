@@ -150,50 +150,74 @@ struct GatekeeperTests {
         #expect(block.contains("## Interaction mode"))
     }
 
-    // MARK: - Activation intents (trigger matching)
+    // MARK: - Skill hints (retrieval, not activation)
 
     private func userMessage(_ text: String) -> ChatMessage {
         ChatMessage(role: "user", content: text)
     }
 
-    @Test func emitsActivationIntentForMatchedSkill() async {
-        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+    /// Every query and descriptor embeds to the same vector → everything matches.
+    private func matchingSkillIndex() -> SkillIndex {
+        SkillIndex(embed: { _ in [1.0, 0.0] })
+    }
+
+    /// Query embeds to [1, 0], descriptors to [0, 1] → cosine 0, below threshold.
+    private func noMatchSkillIndex(query: String) -> SkillIndex {
+        SkillIndex(embed: { text in text == query ? [1.0, 0.0] : [0.0, 1.0] })
+    }
+
+    private func makeGatekeeper(skillIndex: SkillIndex) -> Gatekeeper {
+        Gatekeeper(
+            proactivity: .reactive,
+            knowledgeService: FakeKnowledgeService(),
+            skillIndex: skillIndex
+        )
+    }
+
+    @Test func hintsMatchedSkillsInsteadOfActivating() async {
+        let gatekeeper = makeGatekeeper(skillIndex: matchingSkillIndex())
         let result = await gatekeeper.beforeTurn(input(
             availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
             messages: [userMessage("find this issue on GitLab")]
         ))
 
-        #expect(result.toolCallIntents.count == 1)
-        let call = result.toolCallIntents.first
-        #expect(call?.function.name == "activate_skill")
-        #expect(call?.function.arguments.contains("gitlab") == true)
+        // Skills are hinted, never auto-activated: beforeTurn returns a hint.
+        let hint = result.hint ?? ""
+        #expect(hint.contains("## Available skills"))
+        #expect(hint.contains("gitlab"))
     }
 
-    @Test func noIntentWhenNoTriggerMatch() async {
-        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+    @Test func noSkillSectionWhenNothingMatchesThreshold() async {
+        let gatekeeper = makeGatekeeper(
+            skillIndex: noMatchSkillIndex(query: "find this issue on GitLab")
+        )
         let result = await gatekeeper.beforeTurn(input(
             availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
-            messages: [userMessage("what is the weather today")]
-        ))
-        #expect(result.toolCallIntents.isEmpty)
-    }
-
-    @Test func noIntentForAlreadyActiveSkill() async {
-        let gatekeeper = makeGatekeeper(proactivity: .reactive)
-        let gitlab = skill(id: "gitlab", displayName: "GitLab")
-        let result = await gatekeeper.beforeTurn(input(
-            availableSkills: [gitlab],
-            activeSkills: [gitlab],
             messages: [userMessage("find this issue on GitLab")]
         ))
-        #expect(result.toolCallIntents.isEmpty)
+        #expect(!(result.hint ?? "").contains("## Available skills"))
     }
 
-    @Test func noIntentWithoutUserMessage() async {
-        let gatekeeper = makeGatekeeper(proactivity: .reactive)
+    @Test func noSkillSectionInSmallContext() async {
+        // Small-context models get no skill tools at all — no hints either.
+        let gatekeeper = makeGatekeeper(skillIndex: matchingSkillIndex())
         let result = await gatekeeper.beforeTurn(input(
-            availableSkills: [skill(id: "gitlab", displayName: "GitLab")]
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            isSmallContext: true,
+            messages: [userMessage("find this issue on GitLab")]
         ))
-        #expect(result.toolCallIntents.isEmpty)
+        #expect(!(result.hint ?? "").contains("## Available skills"))
+    }
+
+    @Test func fallsBackToCappedFullListWhenEmbedderUnavailable() async {
+        let gatekeeper = makeGatekeeper(skillIndex: SkillIndex(embed: { _ in nil }))
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            messages: [userMessage("find this issue on GitLab")]
+        ))
+        let hint = result.hint ?? ""
+        #expect(hint.contains("## Available skills"))
+        #expect(hint.contains("GitLab"))
+        #expect(hint.contains("search_skills"))
     }
 }

@@ -28,24 +28,15 @@ struct ActivateSkillTool: Tool {
     }
 
     private let chatID: UUID?
-    let isSmallContext: Bool
 
-    init(chatID: UUID? = nil, isSmallContext: Bool = false) {
+    init(chatID: UUID? = nil) {
         self.chatID = chatID
-        self.isSmallContext = isSmallContext
     }
 
     func definition() -> ToolDefinition {
-        let skills = isSmallContext
-            ? BundledSkill.all
-            : BundledSkill.all.filter { !$0.alwaysActive }
-        let skillIDs = skills.map(\.id)
-        let description = isSmallContext
-            ? "Activate a skill to load its instructions and tools."
-            : "Activate a skill to load its instructions and tools. Available skills: \(skillIDs.joined(separator: ", "))."
-        return ToolDefinition(
+        ToolDefinition(
             name: name,
-            description: description,
+            description: "Activate a skill by ID to load its instructions and tools. Use `search_skills` or the skills hinted in your system hint to find IDs.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -122,7 +113,7 @@ struct ActivateSkillTool: Tool {
         toolCallID id: String
     ) async -> ToolResult {
         if let skill = BundledSkill.skill(forID: skillID) {
-            if skill.alwaysActive, !isSmallContext {
+            if skill.alwaysActive {
                 return ToolResult(
                     toolCallID: id,
                     content: ToolHelpers.output(errors: ["Skill '\(skill.id)' is always active"]),
@@ -146,8 +137,7 @@ struct ActivateSkillTool: Tool {
             SkillActivation.activate(
                 skillID: skill.id,
                 on: chat,
-                activatingToolCallID: id,
-                isSmallContext: isSmallContext
+                activatingToolCallID: id
             )
             return activationResult(skill: skill, toolCallID: id)
         }
@@ -180,7 +170,7 @@ struct ActivateSkillTool: Tool {
                 // Included inline so the model has it this turn — the Gatekeeper's
                 // per-turn hint (which also carries this instruction on every
                 // subsequent turn) isn't recomputed mid-turn after a tool call.
-                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
+                "instruction": skill.instruction,
             ]),
             isError: false
         )
@@ -193,7 +183,7 @@ struct ActivateSkillTool: Tool {
         on chat: Chat,
         toolCallID id: String
     ) -> ToolResult {
-        if skill.alwaysActive, !isSmallContext {
+        if skill.alwaysActive {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: ["Skill '\(skill.id)' is always active"]),
@@ -203,8 +193,7 @@ struct ActivateSkillTool: Tool {
         SkillActivation.activate(
             skillID: skill.id,
             on: chat,
-            activatingToolCallID: id,
-            isSmallContext: isSmallContext
+            activatingToolCallID: id
         )
         return activationResult(skill: skill, toolCallID: id)
     }
@@ -263,8 +252,7 @@ struct ActivateSkillTool: Tool {
         SkillActivation.activate(
             skillID: skillID,
             on: chat,
-            activatingToolCallID: id,
-            isSmallContext: isSmallContext
+            activatingToolCallID: id
         )
 
         return ToolResult(
@@ -272,7 +260,7 @@ struct ActivateSkillTool: Tool {
             content: ToolHelpers.output(result: [
                 "activated": skillID,
                 "tools_available": skill.requiredTools.map(\.key).sorted(),
-                "instruction": isSmallContext ? skill.smallInstruction : skill.instruction,
+                "instruction": skill.instruction,
             ]),
             isError: false
         )
