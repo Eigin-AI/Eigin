@@ -65,13 +65,14 @@ struct WebToolTests {
     @Test func sanitizeCollapsesWhitespace() {
         let html = "Hello    world\n\n\n\n\nNew section"
         let (text, _) = HTMLSanitizer.sanitize(html)
-        #expect(text == "Hello world\nNew section")
+        // Untagged text is one inline run — whitespace collapses to spaces.
+        #expect(text == "Hello world New section")
     }
 
     @Test func sanitizeCollapsesMixedWhitespaceWithNewlines() {
         let html = "Line 1\n\n  \n\n\n \n Line 2"
         let (text, _) = HTMLSanitizer.sanitize(html)
-        #expect(text == "Line 1\nLine 2")
+        #expect(text == "Line 1 Line 2")
     }
 
     @Test func sanitizeTruncatesLongContent() {

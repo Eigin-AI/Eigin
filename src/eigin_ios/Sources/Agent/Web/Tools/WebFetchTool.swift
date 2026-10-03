@@ -56,7 +56,7 @@ struct WebFetchTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Fetch a URL and return its content as plain text.",
+            description: "Fetch a web page to get its content.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -129,10 +129,13 @@ struct WebFetchTool: Tool {
             // Site allows bots — fast background fetch, no UI
             do {
                 var (text, warnings) = try await HTMLSanitizer.fetchAndSanitize(url: url)
-                if isSmallContext, text.count > Self.smallContextOutputLength {
-                    text = String(text.prefix(Self.smallContextOutputLength))
-                    warnings
-                        .append("Content truncated to \(Self.smallContextOutputLength) characters.")
+                if isSmallContext {
+                    let outcome = MarkdownTruncation.truncateWithWarning(
+                        text,
+                        limit: Self.smallContextOutputLength
+                    )
+                    text = outcome.text
+                    warnings = outcome.warnings
                 }
                 let result: [String: Any] = ["url": urlString, "content": text]
                 return ToolResult(
@@ -172,9 +175,13 @@ struct WebFetchTool: Tool {
         switch browsingResult {
         case .success(var text):
             var warnings: [String] = []
-            if isSmallContext, text.count > Self.smallContextOutputLength {
-                text = String(text.prefix(Self.smallContextOutputLength))
-                warnings.append("Content truncated to \(Self.smallContextOutputLength) characters.")
+            if isSmallContext {
+                let outcome = MarkdownTruncation.truncateWithWarning(
+                    text,
+                    limit: Self.smallContextOutputLength
+                )
+                text = outcome.text
+                warnings = outcome.warnings
             }
             let result: [String: Any] = ["url": urlString, "content": text]
             return ToolResult(

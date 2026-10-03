@@ -35,6 +35,9 @@ packages:
     revision: "dbb1d0bb6bc7742249cf4800513c5562d54fa734"
   LiteRTLM:
     path: Packages/LiteRTLM
+  SwiftSoup:
+    url: https://github.com/scinfu/SwiftSoup.git
+    from: "2.13.0"
 
 schemes:
   Eigin:
@@ -126,6 +129,7 @@ targets:
     dependencies:
       - package: swift-markdown
         product: Markdown
+      - package: SwiftSoup
       - package: iosMath
         product: iosMath
       - package: HighlightSwift
@@ -223,9 +227,15 @@ targets:
   EiginTests:
     type: bundle.unit-test
     platform: iOS
-    sources: Tests
+    sources:
+      - Tests
+    # Folder references keep the on-disk layout inside the test bundle.
+    resources:
+      - path: Tests/Core/Utilities/Fixtures
+        type: folder
     dependencies:
       - target: Eigin
+      - package: SwiftSoup
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -341,6 +351,7 @@ targets:
     dependencies:
       - package: swift-markdown
         product: Markdown
+      - package: SwiftSoup
       - package: iosMath
         product: iosMath
       - package: HighlightSwift

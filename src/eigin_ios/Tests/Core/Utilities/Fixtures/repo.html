@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>SwiftSoup example repository</title></head>
+<body>
+  <header class="AppHeader">
+    <nav aria-label="Global">
+      <a href="https://code.example.com/features">Features</a>
+      <a href="https://code.example.com/enterprise">Enterprise</a>
+      <a href="https://docs.example.org/docs">Docs</a>
+      <a class="header-signin" href="https://code.example.com/login?return_to=https%3A%2F%2Fcode.example.com%2Fscinfu%2Fswiftsoup">Sign in</a>
+    </nav>
+    <div class="AppHeader-context"><span>You signed in with another tab or window.</span></div>
+  </header>
+
+  <main>
+    <div class="repo-title">
+      <h1><a href="/scinfu/swiftsoup">example-project / soupkit</a></h1>
+      <span>Public</span>
+    </div>
+    <section id="readme">
+      <h2>README</h2>
+      <p><strong>SoupKit</strong> is a pure library for parsing messy markup.
+      It conforms to the <strong>WHATWG parsing specification</strong> and runs
+      on macOS, iOS, tvOS, watchOS, and Linux.</p>
+      <h3>Installation</h3>
+      <pre><code class="language-swift">dependencies: [
+    .package(url: "https://code.example.com/scinfu/soupkit.git", from: "2.13.0"),
+]</code></pre>
+      <h3>Clean HTML for security</h3>
+      <p>Remove unsafe markup with a whitelist:</p>
+      <pre><code class="language-swift">let clean = try SoupKit.clean(
+    "&lt;button onclick=bad()&gt;Click&lt;/button&gt;&lt;b&gt;Important text&lt;/b&gt;",
+    whitelist: Whitelist.basic()
+)</code></pre>
+      <h3>Platform support</h3>
+      <table>
+        <tr><th>Platform</th><th>Status</th></tr>
+        <tr><td>macOS</td><td>ready</td></tr>
+        <tr><td>iOS</td><td>ready</td></tr>
+        <tr><td>Linux</td><td>ready</td></tr>
+        <tr><td>watchOS</td><td>ready</td></tr>
+      </table>
+    </section>
+  </main>
+
+  <aside class="sidebar">
+    <h3>Stats</h3>
+    <a href="/scinfu/stars">5.1k stars</a>
+    <a href="/scinfu/watchers">55 watching</a>
+  </aside>
+
+  <footer>
+    <a href="/site/terms">Terms</a>
+    <a href="/site/privacy">Privacy</a>
+  </footer>
+</body>
+</html>

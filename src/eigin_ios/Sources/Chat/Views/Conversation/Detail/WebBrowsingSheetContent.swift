@@ -93,10 +93,12 @@ private struct BrowsingWebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onCommit: onCommit, onResult: onResult)
+        Coordinator(url: url, onCommit: onCommit, onResult: onResult)
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
+        /// Page URL, used to resolve relative links in extracted HTML.
+        let url: URL
         let onCommit: () -> Void
         let onResult: (BrowsingResult) -> Void
         private var didComplete = false
@@ -111,7 +113,12 @@ private struct BrowsingWebView: UIViewRepresentable {
         /// Hard timeout — if nothing useful extracted by this point, give up.
         private let timeout: Duration = .seconds(8)
 
-        init(onCommit: @escaping () -> Void, onResult: @escaping (BrowsingResult) -> Void) {
+        init(
+            url: URL,
+            onCommit: @escaping () -> Void,
+            onResult: @escaping (BrowsingResult) -> Void
+        ) {
+            self.url = url
             self.onCommit = onCommit
             self.onResult = onResult
             super.init()
@@ -174,9 +181,10 @@ private struct BrowsingWebView: UIViewRepresentable {
         private func extractText(from webView: WKWebView) async {
             guard !didComplete else { return }
             do {
+                // innerHTML → Markdown preserves headings, links, and lists.
                 let raw = try await webView
-                    .evaluateJavaScript("document.body.innerText") as? String ?? ""
-                let sanitized = HTMLSanitizer.sanitize(raw)
+                    .evaluateJavaScript("document.body.innerHTML") as? String ?? ""
+                let sanitized = HTMLSanitizer.sanitize(raw, baseURL: url)
                 if sanitized.text.count >= minTextLength {
                     finish(.success(sanitized.text))
                 }
