@@ -109,14 +109,11 @@ struct WebSearchTool: Tool {
         }
 
         var content = json
-        var warnings: [String] = []
-
         let limit = isSmallContext ? Self.smallContextOutputLength : HTMLSanitizer
             .maxOutputLength
-        if content.count > limit {
-            content = String(content.prefix(limit))
-            warnings.append("Content truncated to \(limit) characters.")
-        }
+        let outcome = MarkdownTruncation.truncateWithWarning(content, limit: limit)
+        content = outcome.text
+        let warnings = outcome.warnings
 
         let result: [String: Any] = [
             "query": query,

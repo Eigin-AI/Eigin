@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Example Portal</title></head>
+<body>
+  <div class="cookie-consent cookie-banner">
+    <p>We use cookies to improve your experience. <a href="/cookies">Learn more</a></p>
+    <button>Accept all</button>
+  </div>
+
+  <nav class="main-navigation" role="navigation">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/reports">Reports</a>
+    <a href="/settings">Settings</a>
+  </nav>
+
+  <form class="site-search" role="search">
+    <select name="category"><option>All</option></select>
+    <input type="text" name="q" placeholder="Search this site">
+    <button type="submit">Search</button>
+  </form>
+
+  <div class="promo-slot sponsored">
+    <a href="https://ads.example.net/banner">Sponsored deal</a>
+  </div>
+
+  <main>
+    <h1>Welcome to your portal</h1>
+    <p>Your account is active. The next scheduled maintenance is
+    <strong>14 October</strong>; expect read-only mode for two hours.</p>
+    <ul>
+      <li><a href="/reports/weekly">This week's report</a>
+        <ul><li><a href="/reports/weekly/energy">Energy usage</a></li></ul>
+      </li>
+      <li><a href="/reports/annual">Annual summary</a></li>
+    </ul>
+  </main>
+
+  <aside class="breadcrumb">You are here: <a href="/">Start</a> / <a href="/reports">Reports</a></aside>
+</body>
+</html>

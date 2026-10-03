@@ -94,6 +94,14 @@ struct LicenseEntry: Identifiable {
             copyright: "Copyright (c) 2023 Stefan Britton"
         ),
         LicenseEntry(
+            name: "SwiftSoup",
+            repository: URL(string: "https://github.com/scinfu/SwiftSoup"),
+            version: "2.13.0",
+            distribution: nil,
+            kind: .mit,
+            copyright: "Copyright (c) 2016 Nabil Chatbi"
+        ),
+        LicenseEntry(
             name: "MCP Swift SDK",
             repository: URL(string: "https://github.com/modelcontextprotocol/swift-sdk"),
             version: "0.11.0",

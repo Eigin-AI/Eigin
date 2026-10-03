@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>fetch() - Web API reference</title></head>
+<body>
+  <nav class="sidebar-nav">
+    <a href="/en-US/docs/Web">Web reference</a>
+    <a href="/en-US/docs/Web/API">APIs</a>
+    <a href="/en-US/docs/Learn">Learn web development</a>
+  </nav>
+
+  <main>
+    <h1>fetch()</h1>
+    <p>The <code>fetch()</code> method starts an HTTP request and returns a
+    promise. Unlike <code>XMLHttpRequest</code>, it works with promises.</p>
+    <p>Calling <a href="/en-US/docs/Web/API/fetch#usage"><code>fetch(resource, options)</code></a>
+    returns a <code>Promise</code> that resolves to a <code>Response</code>
+    object once headers arrive.</p>
+
+    <h2>Requesting JSON</h2>
+    <p>A minimal request looks like this:</p>
+    <pre><code class="language-javascript">async function getData() {
+  const response = await fetch("https://api.example.org/products.json");
+  if (!response.ok) {
+    throw new Error(`Status: ${response.status}`);
+  }
+  return response.json();
+}</code></pre>
+
+    <h2>Request options</h2>
+    <table>
+      <thead>
+        <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>method</code></td><td>GET</td><td>The request method</td></tr>
+        <tr><td><code>mode</code></td><td>cors</td><td>Cross-origin behavior</td></tr>
+        <tr><td><code>credentials</code></td><td>same-origin</td><td>Cookie policy for the request</td></tr>
+      </tbody>
+    </table>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="/en-US/docs/Web/API/Headers">Headers</a>
+        <ul>
+          <li><a href="/en-US/docs/Web/API/Headers/append">append()</a></li>
+          <li><a href="/en-US/docs/Web/API/Headers/get">get()</a></li>
+        </ul>
+      </li>
+      <li><a href="/en-US/docs/Web/API/Request">Request</a></li>
+    </ul>
+  </main>
+
+  <footer class="page-footer">
+    <a href="/en-US/about">About MDN-like docs</a>
+  </footer>
+</body>
+</html>

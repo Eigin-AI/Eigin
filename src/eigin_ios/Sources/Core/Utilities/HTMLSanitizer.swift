@@ -26,7 +26,7 @@ enum WebToolError: Error, LocalizedError {
     }
 }
 
-/// Shared HTML-to-plain-text utility used by ``WebSearchTool`` and ``WebFetchTool``.
+/// Shared HTML-to-Markdown utility used by ``WebSearchTool`` and ``WebFetchTool``.
 enum HTMLSanitizer {
     static let maxOutputLength = 20000
     static let requestTimeout: TimeInterval = 15
@@ -72,7 +72,7 @@ enum HTMLSanitizer {
             throw WebToolError.decodingFailed
         }
 
-        let result = sanitize(html)
+        let result = sanitize(html, baseURL: url)
         if result.text.isEmpty {
             throw WebToolError.emptyContent
         }
@@ -90,114 +90,16 @@ enum HTMLSanitizer {
             || mimeType.contains("javascript")
     }
 
-    /// Convert raw HTML to plain text.
-    static func sanitize(_ html: String) -> (text: String, warnings: [String]) {
-        var text = html
-        var warnings: [String] = []
-
-        // 1. Remove script, style, noscript, head blocks (content + tags)
-        let blockTags = ["script", "style", "noscript", "head"]
-        for tag in blockTags {
-            text = text.replacingOccurrences(
-                of: "<\(tag)[^>]*>[\\s\\S]*?</\(tag)>",
-                with: "",
-                options: [.regularExpression, .caseInsensitive]
-            )
-        }
-
-        // 2. Replace block-closing tags with newlines
-        let newlineTags = ["<br[^>]*>", "</p>", "</div>", "</li>", "</tr>"]
-        for pattern in newlineTags {
-            text = text.replacingOccurrences(
-                of: pattern,
-                with: "\n",
-                options: [.regularExpression, .caseInsensitive]
-            )
-        }
-
-        // 3. Strip all remaining HTML tags
-        text = text.replacingOccurrences(
-            of: "<[^>]+>",
-            with: "",
-            options: .regularExpression
+    /// Convert raw HTML to Markdown, truncated to ``maxOutputLength``.
+    /// `baseURL` resolves relative link and image URLs against the page URL.
+    static func sanitize(
+        _ html: String,
+        baseURL: URL? = nil
+    ) -> (text: String, warnings: [String]) {
+        let outcome = MarkdownTruncation.truncateWithWarning(
+            HTMLToMarkdownConverter.convert(html, baseURL: baseURL),
+            limit: maxOutputLength
         )
-
-        // 4. Decode HTML entities
-        text = decodeHTMLEntities(text)
-
-        // 5. Collapse whitespace:
-        //    - Any whitespace run containing a newline → single newline
-        //    - Remaining horizontal whitespace runs → single space
-        text = text.replacingOccurrences(
-            of: "[ \\t]*\\n[ \\t\\n]*",
-            with: "\n",
-            options: .regularExpression
-        )
-        text = text.replacingOccurrences(
-            of: "[ \\t]{2,}",
-            with: " ",
-            options: .regularExpression
-        )
-
-        // 6. Trim
-        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // 7. Truncate
-        if text.count > maxOutputLength {
-            text = String(text.prefix(maxOutputLength))
-            warnings.append("Content truncated to \(maxOutputLength) characters.")
-        }
-
-        return (text, warnings)
-    }
-
-    // MARK: - Entity Decoding
-
-    private static func decodeHTMLEntities(_ string: String) -> String {
-        var result = string
-
-        // Named entities
-        let namedEntities: [(String, String)] = [
-            ("&amp;", "&"),
-            ("&lt;", "<"),
-            ("&gt;", ">"),
-            ("&quot;", "\""),
-            ("&#39;", "'"),
-            ("&apos;", "'"),
-            ("&nbsp;", " "),
-        ]
-        for (entity, char) in namedEntities {
-            result = result.replacingOccurrences(of: entity, with: char)
-        }
-
-        // Numeric decimal entities: &#NNN;
-        if let regex = try? NSRegularExpression(pattern: "&#(\\d+);") {
-            let nsRange = NSRange(result.startIndex..., in: result)
-            let matches = regex.matches(in: result, range: nsRange).reversed()
-            for match in matches {
-                guard let codeRange = Range(match.range(at: 1), in: result),
-                      let code = UInt32(result[codeRange]),
-                      let scalar = Unicode.Scalar(code)
-                else { continue }
-                let charRange = Range(match.range, in: result)!
-                result.replaceSubrange(charRange, with: String(scalar))
-            }
-        }
-
-        // Numeric hex entities: &#xHHH;
-        if let regex = try? NSRegularExpression(pattern: "&#x([0-9a-fA-F]+);") {
-            let nsRange = NSRange(result.startIndex..., in: result)
-            let matches = regex.matches(in: result, range: nsRange).reversed()
-            for match in matches {
-                guard let codeRange = Range(match.range(at: 1), in: result),
-                      let code = UInt32(result[codeRange], radix: 16),
-                      let scalar = Unicode.Scalar(code)
-                else { continue }
-                let charRange = Range(match.range, in: result)!
-                result.replaceSubrange(charRange, with: String(scalar))
-            }
-        }
-
-        return result
+        return (outcome.text, outcome.warnings)
     }
 }

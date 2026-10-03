@@ -4,6 +4,7 @@
 |---------|-----------|---------|---------|
 | SwiftStreamingMarkdown (vendored & modified) | https://github.com/microsoft/SwiftStreamingMarkdown | see [swift-streaming-markdown.md](swift-streaming-markdown.md) | MIT |
 | swift-markdown | https://github.com/swiftlang/swift-markdown | 0.7.3 | Apache 2.0 |
+| SwiftSoup | https://github.com/scinfu/SwiftSoup | from 2.13.0, see project.yml | MIT |
 | iosMath | https://github.com/junyan72/iosMath | pinned by commit, see project.yml | MIT |
 | HighlightSwift | https://github.com/appstefan/highlightswift | pinned by commit, see project.yml | MIT |
 | MCP Swift SDK | https://github.com/modelcontextprotocol/swift-sdk | 0.11.0 | Apache 2.0 (relicensing from MIT in progress upstream) |
