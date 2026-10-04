@@ -4038,6 +4038,13 @@ enum Localized {
                 }
             }
 
+            enum Corti {
+                /// Step-by-step instruction for obtaining a Corti API key
+                static var instruction: String {
+                    Localized.get("provider.setup.corti.instruction")
+                }
+            }
+
             enum Custom {
                 /// A description of the API key field, indicating that it is required for using an
                 /// OpenAI-compatible API. It also includes a suggestion for how to obtain it from
