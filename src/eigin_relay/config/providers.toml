@@ -12,3 +12,7 @@ base_url = "https://api.mistral.ai/v1"
 [[providers]]
 id = "tensorx"
 base_url = "https://api.tensorx.ai/v1"
+
+[[providers]]
+id = "corti"
+base_url = "https://ai.eu.corti.app/v1"

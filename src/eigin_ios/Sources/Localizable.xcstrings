@@ -12105,6 +12105,23 @@
         }
       }
     },
+    "provider.setup.corti.instruction" : {
+      "comment" : "Step-by-step instruction for obtaining a Corti API key",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hent din API-nøgle i Corti-konsollen på console.corti.app."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get your API key in the Corti console at console.corti.app."
+          }
+        }
+      }
+    },
     "provider.setup.changeProvider" : {
       "comment" : "Secondary action that returns the user to the provider picker from the connect sheet",
       "localizations" : {

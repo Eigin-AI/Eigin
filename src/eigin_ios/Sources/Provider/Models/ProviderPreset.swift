@@ -172,5 +172,13 @@ struct ProviderPreset: Identifiable, Hashable {
             apiKeyURL: "https://cloud.infercom.ai/apis",
             region: .europe
         ),
+        ProviderPreset(
+            id: "corti",
+            name: "Corti",
+            baseURL: "https://ai.eu.corti.app/v1",
+            helpText: Localized.Provider.Setup.Corti.instruction,
+            apiKeyURL: "https://console.corti.app",
+            region: .europe
+        ),
     ]
 }

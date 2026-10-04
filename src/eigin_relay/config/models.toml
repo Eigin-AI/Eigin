@@ -53,3 +53,39 @@ aliases = ["kimi-k3", "moonshotai/Kimi-K3", "Kimi-K3"]
 input_millicredits_per_1m_tokens = 275_000
 cached_input_millicredits_per_1m_tokens = 70_000
 output_millicredits_per_1m_tokens = 1_380_000
+
+[[models]]
+id = "corti/corti-s1"
+provider = "corti"
+upstream_id = "corti-s1"
+aliases = ["corti-s1"]
+input_millicredits_per_1m_tokens = 178_000
+cached_input_millicredits_per_1m_tokens = 17_800
+output_millicredits_per_1m_tokens = 712_000
+
+[[models]]
+id = "corti/corti-s1-instant"
+provider = "corti"
+upstream_id = "corti-s1-instant"
+aliases = ["corti-s1-instant"]
+input_millicredits_per_1m_tokens = 178_000
+cached_input_millicredits_per_1m_tokens = 17_800
+output_millicredits_per_1m_tokens = 712_000
+
+[[models]]
+id = "corti/corti-s1-mini"
+provider = "corti"
+upstream_id = "corti-s1-mini"
+aliases = ["corti-s1-mini"]
+input_millicredits_per_1m_tokens = 89_000
+cached_input_millicredits_per_1m_tokens = 8_900
+output_millicredits_per_1m_tokens = 356_000
+
+[[models]]
+id = "corti/corti-s1-mini-instant"
+provider = "corti"
+upstream_id = "corti-s1-mini-instant"
+aliases = ["corti-s1-mini-instant"]
+input_millicredits_per_1m_tokens = 89_000
+cached_input_millicredits_per_1m_tokens = 8_900
+output_millicredits_per_1m_tokens = 356_000

@@ -99,7 +99,7 @@ Eigin integrates models it does not train. The GPAI provider obligations (Art. 5
 | Model | Provider | How Eigin uses it |
 |---|---|---|
 | Gemma 4 E2B | Google | Unmodified weights, mirrored and checksum-verified ([local model](../ios/local-model.md)) |
-| Hosted models via the Relay | Mistral, TensorX | Forwarded unread ([relay](../relay.md)) |
+| Hosted models via the Relay | Mistral, TensorX, Corti | Forwarded unread ([relay](../relay.md)) |
 | User's own provider | Chosen by the user | Any OpenAI-compatible API, under the user's key and terms |
 
 Eigin relies on the providers' published model documentation to understand capabilities and limits. Model routing and the catalog record per-model capabilities ([providers](../providers.md)). Because Eigin does no fine-tuning, the downstream-modification threshold in the GPAI guidelines is not approached.

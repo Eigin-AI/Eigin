@@ -8,7 +8,7 @@ A built-in provider backed by Eigin's cloud inference proxy. It's the easiest wa
 
 ## Cloud providers
 
-Bring your own key to a third-party provider. Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom. Each preset bundles a base URL, logo, help text, and a link to get an API key. You can also add a custom provider with any OpenAI-compatible base URL.
+Bring your own key to a third-party provider. Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom, Corti. Each preset bundles a base URL, logo, help text, and a link to get an API key. You can also add a custom provider with any OpenAI-compatible base URL.
 
 ## Local providers
 

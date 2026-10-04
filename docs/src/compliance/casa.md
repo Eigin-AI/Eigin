@@ -185,6 +185,7 @@ Forwarding Gmail content to an inference provider is a transfer of Google user d
 |---|---|---|---|---|
 | [TensorX](https://tensorx.ai/dpa/) | Dublin, Helsinki | DPA §3.2 | DPA §3.2 | Ephemeral enclaves |
 | [Mistral](https://legal.mistral.ai/terms/data-processing-addendum) | France | Org-level ZDR | Follows from ZDR | See the [Trust Center](https://trust.mistral.ai/) |
+| [Corti](https://www.corti.ai/legal/terms-and-conditions) | Denmark | Terms: zero retention | Follows from zero retention | See the [trust center](https://app.drata.com/trust/9cc6d701-0c38-11ee-865f-029d78a187d9) |
 
 Google user data is never used for advertising or model training. See the [privacy policy](https://www.eigin.ai/privacy/).
 
