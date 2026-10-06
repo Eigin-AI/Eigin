@@ -289,7 +289,7 @@ struct RetentionCompactionTests {
 
         let result = await MessagePipeline.compactIfNeeded(
             apiMessages: messages,
-            estimatedTokens: contextWindow / 2, // past the 25% trigger
+            estimatedTokens: 60000, // past the 50% trigger for a 100k window
             contextWindow: contextWindow,
             baseURL: dummyURL,
             providerID: dummyProviderID,
@@ -329,7 +329,8 @@ struct RetentionCompactionTests {
             messages: result.apiMessages,
             toolDefinitions: []
         )
-        #expect(estimate < Int(Double(contextWindow) * MessagePipeline.Compaction.threshold))
+        #expect(estimate <
+            Int(Double(contextWindow) * MessagePipeline.Compaction.threshold(for: contextWindow)))
     }
 
     @Test func splitAtLatestSummaryHonoursRetainedCount() {
@@ -374,7 +375,7 @@ struct RetentionCompactionTests {
         // A failed attempt leaves needsCompaction stuck on. Once the
         // conversation has shrunk well below the threshold, compaction
         // clears the flag instead of retrying forever.
-        let contextWindow = 100_000 // threshold 25_000, stale limit 12_500
+        let contextWindow = 100_000 // threshold 50_000, stale limit 25_000
         let messages = [
             ChatMessage(role: "system", content: "System"),
             user("Hi"),
@@ -395,6 +396,58 @@ struct RetentionCompactionTests {
 
         #expect(result.needsCompaction == false)
         #expect(result.summary == nil)
+    }
+
+    @Test func compactionThresholdScalesWithContextWindowSize() async {
+        // Windows below 500k trigger at 50% of the context, 500k and above
+        // keep the 25% trigger.
+        let summary = "The user discussed project architecture and deployment plans in detail."
+        let messages = [
+            ChatMessage(role: "system", content: "System"),
+            user("Hi"),
+            assistant("Hello"),
+        ]
+
+        func makeFake() -> FakeChatService {
+            let fake = FakeChatService()
+            fake.enqueueEventStream([
+                .contentDelta("<conversation_summary>\n\(summary)\n</conversation_summary>"),
+                .finished(.stop),
+            ])
+            return fake
+        }
+
+        // 300k window at 30% usage: below the 50% trigger, so no compaction.
+        let smallWindowResult = await MessagePipeline.compactIfNeeded(
+            apiMessages: messages,
+            estimatedTokens: 90000,
+            contextWindow: 300_000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: makeFake(),
+            tools: [],
+            cacheKey: "chat-1"
+        )
+        #expect(smallWindowResult.summary == nil)
+        #expect(smallWindowResult.needsCompaction == false)
+
+        // 500k window at 26% usage: past the 25% large-window trigger. Needs
+        // enough history that the 5% retained budget (25k tokens) doesn't
+        // cover the whole conversation — 150 turns of ~208 tokens works.
+        let largeWindowConversation = conversation(turns: 150)
+        let largeWindowResult = await MessagePipeline.compactIfNeeded(
+            apiMessages: largeWindowConversation,
+            estimatedTokens: 130_000,
+            contextWindow: 500_000,
+            baseURL: dummyURL,
+            providerID: dummyProviderID,
+            model: dummyModel,
+            chatService: makeFake(),
+            tools: [],
+            cacheKey: "chat-1"
+        )
+        #expect(largeWindowResult.summary != nil)
     }
 
     @Test func retainedCountReassemblesStoreRowsAfterPersist() {
