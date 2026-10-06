@@ -35,21 +35,18 @@ struct ChatInputBar: View {
     @State private var textBeforeDictation = ""
     @State private var dictationText = ""
     @State private var didAutoStartDictation = false
+    @State private var commit = DictationCommit()
 
     private var effectiveText: String {
         guard isDictating else { return text }
-        if textBeforeDictation.isEmpty {
-            return dictationText
-        } else if dictationText.isEmpty {
-            return textBeforeDictation
-        } else {
-            return textBeforeDictation + " " + dictationText
-        }
+        return DictationCommit.combining(textBeforeDictation, dictationText)
     }
 
     private var canSend: Bool {
         let hasText = !effectiveText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return (hasText || hasStagedAttachments) && !isDisabled
+        // A commit in flight means dictation is being finalized; block send
+        // until it lands so the tail isn't dropped and send can't double-fire.
+        return (hasText || hasStagedAttachments) && !isDisabled && !commit.isFinishing
     }
 
     private var showStopButton: Bool {
@@ -135,23 +132,33 @@ struct ChatInputBar: View {
 
     private func stopDictation() {
         Haptics.light()
-        dictationService.stop()
-        text = effectiveText
-        isDictating = false
         soundManager.playUISound(.dictationStopped)
+        isDictating = false
+        let before = textBeforeDictation
+        // Finalize (bounded) so the tail word isn't lost, then commit.
+        Task { @MainActor in
+            if let finalText = await commit.commit(before: before) {
+                text = finalText
+            }
+        }
     }
 
     private func send() {
         Haptics.medium()
         isFocused.wrappedValue = false
-        let mode: InteractionMode = isDictating ? .dictation : .text
-        if isDictating {
-            text = effectiveText
-            dictationService.stop()
-            isDictating = false
-        }
         soundManager.playUISound(.sending)
-        onSend(mode)
+        guard isDictating else {
+            onSend(.text)
+            return
+        }
+        let before = textBeforeDictation
+        isDictating = false
+        // Finalize before sending; the commit rejects re-entry meanwhile.
+        Task { @MainActor in
+            guard let finalText = await commit.commit(before: before) else { return }
+            text = finalText
+            onSend(.dictation)
+        }
     }
 
     private func stopStreaming() {
