@@ -106,8 +106,8 @@ struct SupersedeKnowledgeTool: Tool {
             return ToolResult(
                 toolCallID: callID,
                 content: ToolHelpers.output(result: [
-                    "old": "\(old.type).\(old.id)",
-                    "new": "\(new.type).\(new.id)",
+                    "old": "\(old.type).\(FirmIDNormalization.normalize(old.id))",
+                    "new": "\(new.type).\(FirmIDNormalization.normalize(new.id))",
                     "status": "superseded",
                 ]),
                 isError: false

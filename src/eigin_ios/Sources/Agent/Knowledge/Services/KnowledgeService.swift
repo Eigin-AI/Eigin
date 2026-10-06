@@ -144,6 +144,10 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     /// Path format: `{prefix}/{type}/{id}.firm` → qualified ID is `{type}.{id}`.
     /// Handles malformed paths where the ID already contains the type prefix
     /// (e.g. `actor/actor.daniel.firm` → still returns `actor.daniel`).
+    ///
+    /// The result is Firm-normalized (snake_case): the graph normalizes every
+    /// ID (`"v1"` → `"v_1"`), so keys derived from paths must match keys built
+    /// from graph IDs or the same entity appears twice (see #285).
     private func entityKey(for path: String) -> String {
         // Strip prefix and ".firm" to get "type/id".
         var stripped = path
@@ -166,7 +170,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             id = String(id.dropFirst(type.count + 1))
         }
 
-        return "\(type).\(id)"
+        return FirmIDNormalization.normalize("\(type).\(id)")
     }
 
     /// Filters sources to those visible in the given scope, then deduplicates
@@ -405,21 +409,51 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         chatID: UUID? = nil
     ) async throws {
         try await ensureBuilt(spaceID: spaceID, agentID: agentID)
-        let dsl = try session.generateEntityDsl(entity: entity)
 
-        let shortID = entity.id.hasPrefix("\(entity.entityType).")
+        // Canonicalize the ID the same way Firm will at graph-build time
+        // ("v1" → "v_1"), so the stored path and DSL always match the graph's
+        // view of the entity — however the caller addressed it.
+        let rawID = entity.id.hasPrefix("\(entity.entityType).")
             ? String(entity.id.dropFirst(entity.entityType.count + 1))
             : entity.id
+        let shortID = FirmIDNormalization.normalize(rawID)
         let targetPath = BundledKnowledge.entityPath(
             prefix: BundledKnowledge.knowledgePrefix,
             type: entity.entityType,
             id: shortID
         )
+        let targetKey = entityKey(for: targetPath)
+        let canonicalEntity = FirmEntity(
+            id: "\(entity.entityType).\(shortID)",
+            entityType: entity.entityType,
+            fields: entity.fields
+        )
+        let dsl = try session.generateEntityDsl(entity: canonicalEntity)
 
         let context = ModelContext(modelContainer)
         let userSources = try context.fetch(
             FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
         )
+
+        // Resolve the shadow-winner row this entity currently lives in, if any.
+        // Matching by normalized entity key (not exact path) catches rows
+        // stored under a raw ID ("…_v1.firm") when the caller addresses the
+        // normalized ID ("…_v_1") — the historical cause of a misleading
+        // EntityAlreadyExists on update/supersede (#285).
+        let visible = visibleSources(
+            from: userSources,
+            spaceID: spaceID,
+            agentID: agentID,
+            accessPolicy: activeAccessPolicy
+        )
+        let existing = visible.first { entityKey(for: $0.path) == targetKey }
+        // Bundled seed entities aren't SwiftData rows, so the winner scan
+        // above can't see them — check them by key directly.
+        if existing == nil, isBundledEntity(type: entity.entityType, id: shortID) {
+            throw KnowledgeServiceError.cannotModifyBundled(
+                type: entity.entityType, id: shortID
+            )
+        }
 
         // Validate by building a trial session before persisting. If any
         // load/build throws, addEntity throws and nothing is adopted below.
@@ -427,29 +461,24 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         for source in BundledKnowledge.allSources {
             try trial.loadSource(content: source.content, path: source.path)
         }
-        let targetKey = entityKey(for: targetPath)
-        let deduped = visibleSources(
-            from: userSources,
-            spaceID: spaceID,
-            agentID: agentID,
-            accessPolicy: activeAccessPolicy
-        )
-        for source in deduped {
-            // Skip any source defining the same entity (regardless of path or scope).
-            if entityKey(for: source.path) == targetKey { continue }
+        for source in visible {
+            // Skip the row being replaced — its entity is redefined by the
+            // new DSL under the canonical path.
+            if let existing, source.persistentModelID == existing.persistentModelID { continue }
             try trial.loadSource(content: source.content, path: source.path)
         }
         try trial.loadSource(content: dsl, path: targetPath)
         try trial.build()
 
         // Compute embedding for the entity's primary content.
-        let embeddingText = KnowledgeEmbedding.embeddingText(for: entity)
+        let embeddingText = KnowledgeEmbedding.embeddingText(for: canonicalEntity)
         let embedding = EmbeddingHelpers.embed(embeddingText)
 
         // Validation passed — persist to SwiftData and adopt the trial session.
-        let existing = userSources
-            .first { $0.path == targetPath && $0.spaceID == spaceID && $0.agentID == agentID }
+        // Updates land on the row the caller actually sees (the shadow winner,
+        // in its own scope), and migrate its path to the canonical form.
         if let existing {
+            existing.path = targetPath
             existing.content = dsl
             existing.chatID = chatID
             existing.embedding = embedding
@@ -477,45 +506,15 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     }
 
     func deleteEntity(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws {
-        // Check if this is a bundled entity.
-        let bundledPath = BundledKnowledge.entityPath(
-            prefix: BundledKnowledge.bundledPrefix,
-            type: type,
-            id: id
-        )
-        if BundledKnowledge.allSources.contains(where: { $0.path == bundledPath }) {
+        // Bundled seed entities aren't SwiftData rows, so resolveSource below
+        // can't match them — throw the right error up front.
+        if isBundledEntity(type: type, id: id) {
             throw KnowledgeServiceError.cannotDeleteBundled(type: type, id: id)
         }
 
-        // Use the Firm session to find the actual source path for this entity.
-        // This is necessary because the Firm parser may normalize IDs (e.g. "v1" → "v_1"),
-        // so reconstructing the path from the normalized ID would produce a mismatch.
-        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
-
-        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-
-        // Bundled sources can't be deleted.
-        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
-            throw KnowledgeServiceError.cannotDeleteBundled(type: type, id: id)
-        }
-
-        let context = ModelContext(modelContainer)
-        let allSources = try context.fetch(
-            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        let (context, source) = try await resolveSource(
+            type: type, id: id, spaceID: spaceID, agentID: agentID
         )
-
-        // Find the FirmSource record matching the session's path, respecting visibility.
-        let visible = visibleSources(
-            from: allSources,
-            spaceID: spaceID,
-            agentID: agentID,
-            accessPolicy: activeAccessPolicy
-        )
-        guard let source = visible.first(where: { $0.path == sourcePath }) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
 
         context.delete(source)
         try context.save()
@@ -524,21 +523,15 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         try await rebuild(spaceID: spaceID, agentID: agentID, accessPolicy: activeAccessPolicy)
     }
 
-    /// Soft-hide (`expired = true`) or restore a memory. Expiry is a SwiftData
-    /// flag, not part of the Firm DSL, so no rebuild is needed — search reads it
-    /// live from the source. Acts on the shadow-winner visible in the scope.
-    func setExpired(
-        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
-    ) async throws {
+    /// Resolve the shadow-winner ``FirmSource`` for `(type, id)` in the scope.
+    ///
+    /// Matches by normalized entity key, so callers may pass either the raw or
+    /// the Firm-normalized ID ("v1" vs "v_1"); rows stored under a raw-ID path
+    /// are still found. Throws `entityNotFound` when no visible row matches.
+    private func resolveSource(
+        type: String, id: String, spaceID: UUID?, agentID: UUID?
+    ) async throws -> (context: ModelContext, source: FirmSource) {
         try await ensureBuilt(spaceID: spaceID, agentID: agentID)
-
-        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
-            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
-        }
-
         let context = ModelContext(modelContainer)
         let allSources = try context.fetch(
             FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
@@ -547,10 +540,34 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             from: allSources, spaceID: spaceID, agentID: agentID,
             accessPolicy: activeAccessPolicy
         )
-        guard let source = visible.first(where: { $0.path == sourcePath }) else {
+        let targetKey = FirmIDNormalization.normalize("\(type).\(id)")
+        guard let source = visible.first(where: { entityKey(for: $0.path) == targetKey }) else {
+            // Bundled seed entities aren't SwiftData rows, so they never show
+            // up above — surface the right error instead of "not found".
+            if isBundledEntity(type: type, id: id) {
+                throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
+            }
             throw KnowledgeServiceError.entityNotFound(type: type, id: id)
         }
+        return (context, source)
+    }
 
+    /// Whether a bundled seed entity exists for `(type, id)`, compared by
+    /// normalized key so raw and normalized IDs both match.
+    private func isBundledEntity(type: String, id: String) -> Bool {
+        let targetKey = FirmIDNormalization.normalize("\(type).\(id)")
+        return BundledKnowledge.allSources.contains { entityKey(for: $0.path) == targetKey }
+    }
+
+    /// Soft-hide (`expired = true`) or restore a memory. Expiry is a SwiftData
+    /// flag, not part of the Firm DSL, so no rebuild is needed — search reads it
+    /// live from the source. Acts on the shadow-winner visible in the scope.
+    func setExpired(
+        type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
+    ) async throws {
+        let (context, source) = try await resolveSource(
+            type: type, id: id, spaceID: spaceID, agentID: agentID
+        )
         source.expired = expired
         source.updatedAt = .now
         try context.save()
@@ -563,27 +580,9 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     func setContested(
         type: String, id: String, contested: Bool, spaceID: UUID?, agentID: UUID?
     ) async throws {
-        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
-
-        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
-            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
-        }
-
-        let context = ModelContext(modelContainer)
-        let allSources = try context.fetch(
-            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        let (context, source) = try await resolveSource(
+            type: type, id: id, spaceID: spaceID, agentID: agentID
         )
-        let visible = visibleSources(
-            from: allSources, spaceID: spaceID, agentID: agentID,
-            accessPolicy: activeAccessPolicy
-        )
-        guard let source = visible.first(where: { $0.path == sourcePath }) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-
         source.contested = contested
         source.updatedAt = .now
         try context.save()
@@ -593,27 +592,9 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     func setImportance(
         type: String, id: String, importance: Double, spaceID: UUID?, agentID: UUID?
     ) async throws {
-        try await ensureBuilt(spaceID: spaceID, agentID: agentID)
-
-        guard let sourcePath = try session.findEntitySource(entityType: type, id: id) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-        if sourcePath.hasPrefix(BundledKnowledge.bundledPrefix) {
-            throw KnowledgeServiceError.cannotModifyBundled(type: type, id: id)
-        }
-
-        let context = ModelContext(modelContainer)
-        let allSources = try context.fetch(
-            FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
+        let (context, source) = try await resolveSource(
+            type: type, id: id, spaceID: spaceID, agentID: agentID
         )
-        let visible = visibleSources(
-            from: allSources, spaceID: spaceID, agentID: agentID,
-            accessPolicy: activeAccessPolicy
-        )
-        guard let source = visible.first(where: { $0.path == sourcePath }) else {
-            throw KnowledgeServiceError.entityNotFound(type: type, id: id)
-        }
-
         source.importance = min(1, max(0, importance))
         source.updatedAt = .now
         try context.save()
@@ -624,7 +605,8 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         guard !qualifiedIDs.isEmpty else { return }
         try await ensureBuilt(spaceID: spaceID, agentID: agentID)
 
-        let targets = Set(qualifiedIDs)
+        // Callers may pass raw or normalized IDs; compare like for like.
+        let targets = Set(qualifiedIDs.map { FirmIDNormalization.normalize($0) })
         let context = ModelContext(modelContainer)
         let allSources = try context.fetch(
             FetchDescriptor<FirmSource>(sortBy: [SortDescriptor(\.createdAt)])
@@ -676,16 +658,25 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         agentID: UUID?
     ) async throws -> FirmSource? {
         try await ensureBuilt(spaceID: spaceID, agentID: agentID)
+        let canonicalID = FirmIDNormalization.normalize(id)
         let targetPath = BundledKnowledge.entityPath(
             prefix: BundledKnowledge.knowledgePrefix,
             type: type,
-            id: id
+            id: canonicalID
         )
+        let targetKey = "\(type).\(canonicalID)"
         let context = ModelContext(modelContainer)
         let allSources = try context.fetch(FetchDescriptor<FirmSource>())
+        // Exact path+scope first; then same path; then normalized-key match,
+        // which also catches legacy rows stored under a raw-ID path.
         return allSources
             .first { $0.path == targetPath && $0.spaceID == spaceID && $0.agentID == agentID }
             ?? allSources.first { $0.path == targetPath }
+            ?? allSources.first {
+                entityKey(for: $0.path) == targetKey
+                    && $0.spaceID == spaceID && $0.agentID == agentID
+            }
+            ?? allSources.first { entityKey(for: $0.path) == targetKey }
     }
 
     /// Record a retrieval of a memory, bumping its use signals.
@@ -740,7 +731,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             for entity in entities {
                 let shortID = entity.id.hasPrefix("\(entity.type).")
                     ? String(entity.id.dropFirst(entity.type.count + 1)) : entity.id
-                let targetKey = "\(entity.type).\(shortID)"
+                let targetKey = FirmIDNormalization.normalize("\(entity.type).\(shortID)")
                 let debounceKey = "\(spaceLabel)|\(agentLabel)|\(targetKey)"
                 var deltaWeight = kind.weight
                 if let prior = state.recentAccess[debounceKey],

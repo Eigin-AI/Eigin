@@ -218,7 +218,11 @@ struct AddKnowledgeTool: Tool {
             )
 
             var result: [String: Any] = [
-                "id": "\(entityType).\(entityID)", "status": "created",
+                // Echo the Firm-normalized ID — the same ID get_knowledge and
+                // list_knowledge report — so callers don't have to reconcile
+                // two spellings of the same entry.
+                "id": "\(entityType).\(FirmIDNormalization.normalize(entityID))",
+                "status": "created",
             ]
 
             if let importance = (args["importance"] as? NSNumber)?.doubleValue {
