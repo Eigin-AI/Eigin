@@ -10,6 +10,11 @@ protocol DictationService {
     var error: String? { get }
     func start()
     func stop()
+    /// Stops capturing, finalizes the analyzer, and returns the complete
+    /// transcription — including the tail that hadn't been transcribed yet.
+    /// Always ends in `.idle`.
+    @MainActor
+    func finish() async -> String
     func setLocale(_ locale: Locale)
     func setContextualStrings(_ strings: [String])
 }
@@ -99,6 +104,130 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         }
     }
 
+    /// Stops capturing, finalizes the analyzer, and returns the complete
+    /// transcription — the buffered backlog plus the flushed tail. Bounded by
+    /// ``finalizationTimeout``; returns the latest transcription if the
+    /// analyzer doesn't finish in time. Always tears down to `.idle`.
+    /// Upper bound on waiting for analyzer startup when finishing during
+    /// `.preparing` (a very fast send). Keeps the user-visible delay small
+    /// while letting the buffered backlog still be transcribed.
+    private static let startupGrace: Duration = .seconds(1)
+
+    /// Upper bound on waiting for the tail transcription when finishing. A
+    /// short tail typically finalizes in well under a second; the cap only
+    /// bounds the worst case so sending still feels immediate.
+    private static let finalizationTimeout: Duration = .seconds(1.2)
+
+    /// Interval for the bounded readiness and completion polls below — long
+    /// enough not to spam, short enough not to delay a send noticeably.
+    private static let pollInterval: Duration = .milliseconds(50)
+
+    @MainActor
+    func finish() async -> String {
+        guard state.isActive else { return transcription }
+
+        // Analyzer still coming up: give it a brief bounded chance so the
+        // audio buffered during setup gets transcribed too, instead of
+        // hard-stopping and dropping the whole backlog.
+        await waitForAnalyzerReadiness(timeout: Self.startupGrace)
+
+        guard state.isActive else { return transcription }
+        if case .preparing = state {
+            // Still not ready after the grace period — nothing to finalize.
+            stop()
+            return transcription
+        }
+
+        // No new audio enters the pipeline from here, and nowhere is left
+        // to hold it: finish the raw stream so the feeder drains the
+        // backlog and ends the analyzer input.
+        audioEngine.inputNode.removeTap(onBus: 0)
+        audioEngine.stop()
+        rawContinuation?.finish()
+
+        // Finalize through end-of-input so volatile tail results become final.
+        let finalized = await withTimeout(Self.finalizationTimeout) {
+            await self.drainAndFinalize()
+            return await MainActor.run { self.transcription }
+        }
+
+        if finalized != nil {
+            finishTeardown()
+        } else {
+            // Timed out — tear down in the background so the next start is fresh.
+            Task { @MainActor [weak self] in self?.finishTeardown() }
+        }
+        return finalized ?? transcription
+    }
+
+    /// Thread-safe completion flag for polling task completion.
+    private final class CompletionFlag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var done = false
+
+        var isDone: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return done
+        }
+
+        func markDone() {
+            lock.lock()
+            done = true
+            lock.unlock()
+        }
+    }
+
+    /// Tears down remaining pipeline state after finalization, mirroring
+    /// ``stop()``. Main actor so state mutations stay serialized with the
+    /// rest of the service's lifecycle changes.
+    @MainActor
+    private func finishTeardown() {
+        // Invalidate in-flight setup callbacks, then full teardown.
+        generation += 1
+        tearDownAudio()
+        deactivateSession()
+    }
+
+    /// Waits (bounded) for analyzer setup to leave `.preparing`.
+    private func waitForAnalyzerReadiness(timeout: Duration) async {
+        let deadline = ContinuousClock.now + timeout
+        while state == .preparing, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: Self.pollInterval)
+            if Task.isCancelled { return }
+        }
+    }
+
+    /// Waits for the feeder to drain the backlog and end the analyzer input,
+    /// then finalizes through end-of-input so final results flush into
+    /// `transcription`. Polls instead of awaiting task values so the enclosing
+    /// timeout can cancel the wait.
+    private func drainAndFinalize() async {
+        await waitFor(analyzerTask)
+        guard !Task.isCancelled else { return }
+        if let analyzer {
+            try? await analyzer.finalizeAndFinishThroughEndOfInput()
+        }
+        await waitFor(resultTask)
+    }
+
+    /// Returns when the task completes or the caller is cancelled. Polls a
+    /// completion flag rather than awaiting `task.value`, which ignores
+    /// cancellation and would stall the bounded wait in finish().
+    private func waitFor(_ task: Task<Void, Never>?) async {
+        guard let task else { return }
+        let completion = CompletionFlag()
+        let watcher = Task {
+            await task.value
+            completion.markDone()
+        }
+        defer { watcher.cancel() }
+        while !completion.isDone {
+            try? await Task.sleep(for: Self.pollInterval)
+            if Task.isCancelled { return }
+        }
+    }
+
     func start() {
         guard case .idle = state else { return }
         generation += 1
@@ -119,6 +248,12 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         guard state != .idle else { return }
 
         tearDownAudio()
+        deactivateSession()
+    }
+
+    /// Resets to `.idle` and releases the audio session (unless an external
+    /// owner such as CallKit manages it).
+    private func deactivateSession() {
         state = .idle
 
         if keepSessionActive { return }
@@ -150,12 +285,18 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         converter = nil
     }
 
-    /// Sets up the audio session, engine, transcriber, and analyzer.
-    /// Follows Apple's recommended pattern: create analyzer → create result
-    /// task → call start(inputSequence:) → feed audio.
+    /// Sets up the audio pipeline in two phases:
+    ///
+    /// Phase A starts capturing immediately — audio session, tap, engine. Raw
+    /// buffers back up in an unbounded stream while Phase B (transcriber and
+    /// analyzer setup, the slow part) runs in parallel. Once the analyzer is
+    /// up, the feeder drains the backlog from the true beginning of the
+    /// utterance, so the first words are never lost.
     private func beginRecording(generation gen: Int, attempt: Int = 0) async {
         let engine = audioEngine
         let externalSessionOwner = keepSessionActive
+
+        // --- Phase A — capture immediately ---
 
         // When keepSessionActive is true, an external owner (e.g. CallKit)
         // manages the audio session — skip setup to avoid conflicts.
@@ -182,6 +323,45 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         engine.stop()
         engine.inputNode.removeTap(onBus: 0)
         engine.reset()
+
+        // The raw stream must exist before the tap is installed so capture
+        // can start before the analyzer does. Unbounded because the backlog
+        // it holds spans only analyzer setup (~hundreds of ms of PCM).
+        var rawContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+        let rawStream = AsyncStream<AVAudioPCMBuffer>(bufferingPolicy: .unbounded) {
+            rawContinuation = $0
+        }
+        self.rawContinuation = rawContinuation
+
+        do {
+            try startCapture(
+                engine: engine,
+                rawContinuation: rawContinuation!
+            )
+        } catch {
+            rawContinuation?.finish()
+            self.rawContinuation = nil
+            await retryCapture(
+                generation: gen,
+                attempt: attempt,
+                message: "Could not start audio engine."
+            )
+            return
+        }
+
+        // Audio is flowing. If this attempt is already stale, stop before
+        // touching global state.
+        guard gen == generation else {
+            engine.stop()
+            engine.inputNode.removeTap(onBus: 0)
+            self.rawContinuation?.finish()
+            self.rawContinuation = nil
+            return
+        }
+
+        await MainActor.run { UIApplication.shared.isIdleTimerDisabled = true }
+
+        // --- Phase B — analyzer, in parallel with capture ---
 
         // Pick transcriber — prefer SpeechTranscriber on capable devices
         // with the locale's model already installed. Fall back to
@@ -260,27 +440,21 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: modules
         ) else {
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                guard gen == generation else { return }
-                state = .error("No compatible audio format available.")
-            }
+            await abortAnalyzerSetup(
+                engine: engine,
+                message: "No compatible audio format available.",
+                generation: gen
+            )
             return
         }
 
-        // Create two streams matching Apple's sample pattern:
-        // 1. Raw PCM buffers from the audio tap → async world
-        // 2. Converted AnalyzerInput buffers → SpeechAnalyzer
+        // The analyzer input stream; the raw stream already exists and is
+        // collecting audio from the live tap.
         let (inputSequence, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
-        var rawContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
-        let rawStream = AsyncStream<AVAudioPCMBuffer>(bufferingPolicy: .unbounded) {
-            rawContinuation = $0
-        }
 
-        // Store state before starting the engine.
+        // Store state before starting the analyzer.
         analyzer = newAnalyzer
         inputContinuation = inputBuilder
-        self.rawContinuation = rawContinuation
         converter = BufferConverter()
 
         // Step 1: Create result iteration task BEFORE calling start()
@@ -331,77 +505,8 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             }
         }
 
-        // Step 4: Install tap with native format — yields raw buffers
-        // to the intermediate stream (not directly to the analyzer).
-        let nativeFormat = authoritativeInputFormat(engine: engine)
-
-        do {
-            try ObjCExceptionCatcher.try {
-                engine.inputNode.installTap(
-                    onBus: 0, bufferSize: 4096,
-                    format: nativeFormat
-                ) { buffer, _ in
-                    rawContinuation?.yield(buffer)
-                }
-            }
-        } catch {
-            analyzer = nil
-            inputContinuation = nil
-            self.rawContinuation?.finish()
-            self.rawContinuation = nil
-            converter = nil
-            resultTask?.cancel()
-            resultTask = nil
-            analyzerTask?.cancel()
-            analyzerTask = nil
-            let maxRetries = 8
-            if attempt < maxRetries {
-                let delay = min(1.0, 0.3 + Double(attempt) * 0.2)
-                try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-                guard gen == generation else { return }
-                await beginRecording(generation: gen, attempt: attempt + 1)
-            } else {
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    guard gen == generation else { return }
-                    state = .error("Could not start audio engine.")
-                }
-            }
-            return
-        }
-
-        // Step 5: Start the engine — audio now flows.
-        engine.prepare()
-        do {
-            try engine.start()
-        } catch {
-            engine.inputNode.removeTap(onBus: 0)
-            analyzer = nil
-            inputContinuation = nil
-            self.rawContinuation?.finish()
-            self.rawContinuation = nil
-            converter = nil
-            resultTask?.cancel()
-            resultTask = nil
-            analyzerTask?.cancel()
-            analyzerTask = nil
-            let maxRetries = 8
-            if attempt < maxRetries {
-                let delay = min(1.0, 0.3 + Double(attempt) * 0.2)
-                try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
-                guard gen == generation else { return }
-                await beginRecording(generation: gen, attempt: attempt + 1)
-            } else {
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    guard gen == generation else { return }
-                    state = .error("Could not start audio engine.")
-                }
-            }
-            return
-        }
-
-        // Check generation before committing.
+        // Capture may already be running — tear down the analyzer side and
+        // the capture that belongs to this (stale or failed) attempt.
         guard gen == generation else {
             engine.stop()
             engine.inputNode.removeTap(onBus: 0)
@@ -409,7 +514,6 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             inputContinuation = nil
             self.rawContinuation?.finish()
             self.rawContinuation = nil
-            converter = nil
             resultTask?.cancel()
             resultTask = nil
             analyzerTask?.cancel()
@@ -421,12 +525,72 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
             guard let self else { return }
             guard gen == generation else { return }
             state = .listening
-            UIApplication.shared.isIdleTimerDisabled = true
             // In live-call mode an external AudioRouteCoordinator owns route
             // recovery; only self-observe during standalone dictation.
             if !keepSessionActive {
                 startObservingAudioNotifications()
             }
+        }
+    }
+
+    /// Installs the input tap and starts the engine so buffers flow into
+    /// `rawContinuation` immediately. Throws if either step fails.
+    private func startCapture(
+        engine: AVAudioEngine,
+        rawContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation
+    ) throws {
+        try ObjCExceptionCatcher.try {
+            engine.inputNode.installTap(
+                onBus: 0, bufferSize: 4096,
+                format: authoritativeInputFormat(engine: engine)
+            ) { buffer, _ in
+                rawContinuation.yield(buffer)
+            }
+        }
+        engine.prepare()
+        try engine.start()
+    }
+
+    /// Retries capture setup with backoff, or surfaces an error when the
+    /// retry budget is exhausted.
+    private func retryCapture(generation gen: Int, attempt: Int, message: String) async {
+        let maxRetries = 8
+        if attempt < maxRetries {
+            let delay = min(1.0, 0.3 + Double(attempt) * 0.2)
+            try? await Task.sleep(for: .milliseconds(Int(delay * 1000)))
+            guard gen == generation else { return }
+            await beginRecording(generation: gen, attempt: attempt + 1)
+        } else {
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                guard gen == generation else { return }
+                state = .error(message)
+            }
+        }
+    }
+
+    /// Tears down a failed analyzer setup, including the capture that has
+    /// already started for this attempt.
+    private func abortAnalyzerSetup(
+        engine: AVAudioEngine,
+        message: String,
+        generation gen: Int
+    ) async {
+        engine.stop()
+        engine.inputNode.removeTap(onBus: 0)
+        analyzer = nil
+        inputContinuation = nil
+        rawContinuation?.finish()
+        rawContinuation = nil
+        resultTask?.cancel()
+        resultTask = nil
+        analyzerTask?.cancel()
+        analyzerTask = nil
+
+        await MainActor.run { [weak self] in
+            guard let self else { return }
+            guard gen == generation else { return }
+            state = .error(message)
         }
     }
 
@@ -554,6 +718,10 @@ struct PreviewDictationService: DictationService {
 
     func start() {}
     func stop() {}
+    func finish() async -> String {
+        ""
+    }
+
     func setLocale(_ locale: Locale) {}
     func setContextualStrings(_ strings: [String]) {}
 }
