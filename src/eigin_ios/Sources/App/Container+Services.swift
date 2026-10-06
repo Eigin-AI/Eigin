@@ -118,7 +118,29 @@ extension Container {
     // MARK: - Chat & Provider
 
     var chatService: Factory<any ChatService> {
-        self { DefaultChatService(keychainService: self.keychainService()) }.singleton
+        self {
+            DefaultChatService(
+                keychainService: self.keychainService(),
+                providerCredentialResolver: self.providerCredentialResolver()
+            )
+        }.singleton
+    }
+
+    /// Keychain-backed storage and refresh for ChatGPT sign-in credentials.
+    var chatGPTCredentialStore: Factory<any ProviderCredentialStoring> {
+        self {
+            DefaultChatGPTCredentialStore(
+                keychain: self.keychainService(),
+                serviceKey: AppKeys.keychainServiceName
+            )
+        }.singleton
+    }
+
+    /// Resolves the refreshable credential store a provider needs, by provider.
+    var providerCredentialResolver: Factory<any ProviderCredentialResolving> {
+        self {
+            DefaultProviderCredentialResolver(chatGPT: self.chatGPTCredentialStore())
+        }.singleton
     }
 
     var networkReachability: Factory<any NetworkReachability> {

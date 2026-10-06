@@ -8,6 +8,7 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     private nonisolated(unsafe) static var _responseQueues: [String: [(Data, HTTPURLResponse)]] =
         [:]
     private nonisolated(unsafe) static var _capturedBodies: [String: Data] = [:]
+    private nonisolated(unsafe) static var _capturedRequests: [String: URLRequest] = [:]
     private nonisolated(unsafe) static var _capturedRanges: [String: [String]] = [:]
     private nonisolated(unsafe) static var _delays: [String: TimeInterval] = [:]
     private nonisolated(unsafe) var isStopped = false
@@ -26,6 +27,10 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
     /// The most recent request body sent to `url`, for asserting what the client serialized.
     static func lastRequestBody(for url: String) -> Data? {
         lock.withLock { _capturedBodies[url] }
+    }
+
+    static func lastRequest(for url: String) -> URLRequest? {
+        lock.withLock { _capturedRequests[url] }
     }
 
     /// Queue a response for a URL. Queued responses are consumed in FIFO order across successive
@@ -81,6 +86,7 @@ final class FakeURLProtocol: URLProtocol, @unchecked Sendable {
         if let body = Self.readBody(from: request) {
             Self.lock.withLock { Self._capturedBodies[urlString] = body }
         }
+        Self.lock.withLock { Self._capturedRequests[urlString] = request }
 
         if let delay = Self.lock.withLock({ Self._delays[urlString] }) {
             DispatchQueue.global().asyncAfter(deadline: .now() + delay) { [self] in

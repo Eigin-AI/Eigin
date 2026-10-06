@@ -12,8 +12,12 @@ struct PreviewKeychainService: KeychainService {
     }
 
     func delete(key: String) {}
-    func providerKey(for providerID: UUID) -> String {
-        "fake.\(providerID)"
+    func providerKey(for providerID: UUID, suffix: String?) -> String {
+        if let suffix {
+            "fake.\(providerID).\(suffix)"
+        } else {
+            "fake.\(providerID)"
+        }
     }
 
     func mcpKey(for serverID: UUID, suffix: String) -> String {

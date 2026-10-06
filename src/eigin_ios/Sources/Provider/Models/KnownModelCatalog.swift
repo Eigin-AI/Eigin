@@ -164,6 +164,9 @@ enum KnownModelCatalog {
         "corti-s1-mini-instant",
         "claude-sonnet-5",
         "claude-sonnet-4-6",
+        "gpt-6.1",
+        "gpt-6.1-astra",
+        "gpt-6-astra",
         "gpt-5.6",
         "gpt-5.6-terra",
         "glm-5.3",
@@ -207,6 +210,8 @@ enum KnownModelCatalog {
         "glm-5.1",
         "qwen3.7-max",
         "qwen3.7-plus",
+        "gpt-6.1-luna",
+        "gpt-6.1-sol",
         "gpt-5.4-nano",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
@@ -320,6 +325,74 @@ enum KnownModelCatalog {
     /// pattern first.
     static let entries: [KnownModelEntry] = [
         // OpenAI
+        // SIWC (ChatGPT subscription) family — letter-suffixed slugs that the
+        // pattern matcher won't reach from the base pattern alone.
+        // `gpt-6-astra` listed live on an eligible account.
+        KnownModelEntry(
+            pattern: "gpt-6-astra",
+            displayName: "GPT-6 Astra",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 2.50,
+            outputCostPerMillion: 15.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "gpt-6.1-astra",
+            displayName: "GPT-6.1 Astra",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 2.50,
+            outputCostPerMillion: 15.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
+        KnownModelEntry(
+            pattern: "gpt-6.1-sol",
+            displayName: "GPT-6.1 Sol",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 5.00,
+            outputCostPerMillion: 30.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "gpt-6.1-luna",
+            displayName: "GPT-6.1 Luna",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 1.00,
+            outputCostPerMillion: 6.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: false
+        ),
+        KnownModelEntry(
+            pattern: "gpt-6.1",
+            displayName: "GPT-6.1",
+            family: .openai,
+            contextWindow: 1_050_000,
+            maxOutput: 128_000,
+            inputCostPerMillion: 5.00,
+            outputCostPerMillion: 30.00,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
         KnownModelEntry(
             pattern: "gpt-5.6",
             displayName: "GPT-5.6",

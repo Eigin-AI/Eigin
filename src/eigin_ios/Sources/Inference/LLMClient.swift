@@ -33,8 +33,13 @@ enum LLMClientFactory {
                 relayClient: Container.shared.relayClient()
             )
         }
-        if baseURL.contains("api.anthropic.com") {
+        if ProviderPreset.isAnthropic(baseURL) {
             return AnthropicClient(baseURL: baseURL, apiToken: apiToken)
+        }
+        if ProviderPreset.isChatGPTSubscription(baseURL) {
+            // ChatGPT subscription sign-in: Responses API with a short-lived
+            // access token. The sentinel never reaches the wire.
+            return ResponsesAPIClient(apiToken: apiToken)
         }
         return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken)
     }

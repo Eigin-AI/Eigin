@@ -18,8 +18,12 @@ final class FakeKeychainService: KeychainService, @unchecked Sendable {
         lock.withLock { storage[key] = nil }
     }
 
-    func providerKey(for providerID: UUID) -> String {
-        "provider.\(providerID.uuidString)"
+    func providerKey(for providerID: UUID, suffix: String?) -> String {
+        if let suffix {
+            "provider.\(providerID.uuidString).\(suffix)"
+        } else {
+            "provider.\(providerID.uuidString)"
+        }
     }
 
     func mcpKey(for serverID: UUID, suffix: String) -> String {

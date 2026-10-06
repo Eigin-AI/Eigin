@@ -43,4 +43,36 @@ struct ConnectionErrorTests {
         // must never leak through as the detail.
         #expect(error.rawDescription == nil)
     }
+
+    // MARK: - Responses API (ChatGPT subscription) errors
+
+    @Test func planNotEligibleMapsToPlusRequiredCard() {
+        let error = ConnectionError(from: ResponsesAPIError.planNotEligible)
+
+        #expect(error.title == Localized.Errors.Chatgpt.plusRequiredTitle)
+        #expect(error.suggestion == Localized.Errors.Chatgpt.plusRequiredSuggestion)
+    }
+
+    @Test func usageLimitExceededMapsToPlanLimitCard() {
+        let error = ConnectionError(from: ResponsesAPIError.usageLimitExceeded)
+
+        #expect(error.title == Localized.Errors.Chatgpt.usageLimitTitle)
+        #expect(error.suggestion == Localized.Errors.Chatgpt.usageLimitSuggestion)
+    }
+
+    @Test func invalidUserMapsToSignInAgainCard() {
+        let error = ConnectionError(from: ResponsesAPIError.invalidUser)
+
+        #expect(error.title == Localized.Errors.Chatgpt.invalidUserTitle)
+        #expect(error.suggestion == Localized.Errors.Chatgpt.invalidUserSuggestion)
+    }
+
+    @Test func unsupportedCapabilityNamesTheCapability() {
+        let error = ConnectionError(
+            from: ResponsesAPIError.unsupportedCapability(param: "temperature")
+        )
+
+        #expect(error.title == Localized.Errors.Chatgpt.unsupportedCapabilityTitle)
+        #expect(error.suggestion == Localized.Errors.Chatgpt.unsupportedCapabilitySuggestion)
+    }
 }

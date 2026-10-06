@@ -930,6 +930,75 @@ enum Localized {
             }
         }
 
+        enum Chatgpt {
+            /// Suggestion when the ChatGPT sign-in is no longer valid
+            static var invalidUserSuggestion: String {
+                Localized.get("errors.chatgpt.invalidUserSuggestion")
+            }
+
+            /// Error title when the ChatGPT sign-in is no longer valid
+            static var invalidUserTitle: String {
+                Localized.get("errors.chatgpt.invalidUserTitle")
+            }
+
+            /// Notice body when the user declined ChatGPT plan usage during sign-in
+            static var planUsageNotGranted: String {
+                Localized.get("errors.chatgpt.planUsageNotGranted")
+            }
+
+            /// Suggestion when the signed-in account is not ChatGPT Plus or Pro
+            static var plusRequiredSuggestion: String {
+                Localized.get("errors.chatgpt.plusRequiredSuggestion")
+            }
+
+            /// Error title when the signed-in account is not ChatGPT Plus or Pro
+            static var plusRequiredTitle: String {
+                Localized.get("errors.chatgpt.plusRequiredTitle")
+            }
+
+            /// Suggestion when ChatGPT sign-in could not be completed — causes vary (e.g. an
+            /// ineligible subscription)
+            static var signinFailedSuggestion: String {
+                Localized.get("errors.chatgpt.signinFailedSuggestion")
+            }
+
+            /// Title when ChatGPT sign-in could not be completed (may have multiple causes)
+            static var signinFailedTitle: String {
+                Localized.get("errors.chatgpt.signinFailedTitle")
+            }
+
+            /// Suggestion when ChatGPT plan usage is temporarily unavailable
+            static var unavailableSuggestion: String {
+                Localized.get("errors.chatgpt.unavailableSuggestion")
+            }
+
+            /// Error title when ChatGPT plan usage is temporarily unavailable
+            static var unavailableTitle: String {
+                Localized.get("errors.chatgpt.unavailableTitle")
+            }
+
+            /// Suggestion when the request uses something the ChatGPT plan flow doesn't support.
+            /// The argument names the unsupported capability.
+            static var unsupportedCapabilitySuggestion: String {
+                Localized.get("errors.chatgpt.unsupportedCapabilitySuggestion")
+            }
+
+            /// Error title when the request uses something the ChatGPT plan flow doesn't support
+            static var unsupportedCapabilityTitle: String {
+                Localized.get("errors.chatgpt.unsupportedCapabilityTitle")
+            }
+
+            /// Suggestion when the ChatGPT plan's usage limit is reached
+            static var usageLimitSuggestion: String {
+                Localized.get("errors.chatgpt.usageLimitSuggestion")
+            }
+
+            /// Error title when the ChatGPT plan's usage limit is reached
+            static var usageLimitTitle: String {
+                Localized.get("errors.chatgpt.usageLimitTitle")
+            }
+        }
+
         enum Connection {
             /// Short error title for a generic connection failure
             static var failed: String {
@@ -3362,6 +3431,11 @@ enum Localized {
                 String(format: Localized.get("provider.ai-screen.showAllModels"), p1)
             }
 
+            /// Button that reruns the ChatGPT sign-in to replace an expired or rejected credential.
+            static var signInAgain: String {
+                Localized.get("provider.ai-screen.signInAgain")
+            }
+
             enum Facts {
                 /// Fact row: the mechanism (API key or sign-in).
                 static var connectsVia: String {
@@ -4035,6 +4109,13 @@ enum Localized {
                 /// Step-by-step instruction for obtaining a Berget API key
                 static var instruction: String {
                     Localized.get("provider.setup.berget.instruction")
+                }
+            }
+
+            enum Chatgpt {
+                /// How to connect via ChatGPT subscription sign-in
+                static var instruction: String {
+                    Localized.get("provider.setup.chatgpt.instruction")
                 }
             }
 

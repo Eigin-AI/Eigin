@@ -9,14 +9,23 @@ protocol KeychainService: Sendable {
     func read(key: String) -> String?
     /// Removes the entry for the given key, if it exists.
     func delete(key: String)
-    /// Returns the canonical keychain key used to store a provider's API token.
-    func providerKey(for providerID: UUID) -> String
+    /// Returns the canonical keychain key for a provider credential: the
+    /// provider's API token (suffix `nil`) or a named field of a refreshable
+    /// credential (e.g. suffix `access_token`).
+    func providerKey(for providerID: UUID, suffix: String?) -> String
     /// Returns the canonical keychain key for an MCP server credential.
     func mcpKey(for serverID: UUID, suffix: String) -> String
     /// Returns the canonical keychain key for an integration credential.
     func integrationKey(for integrationID: UUID, suffix: String) -> String
     /// The keychain key under which the credit-wallet collection is stored as a JSON blob.
     var creditWalletsKey: String { get }
+}
+
+extension KeychainService {
+    /// The provider's static API-token key.
+    func providerKey(for providerID: UUID) -> String {
+        providerKey(for: providerID, suffix: nil)
+    }
 }
 
 /// Implementation of ``KeychainService`` backed by the iOS Keychain (Security framework).
@@ -75,8 +84,12 @@ struct DefaultKeychainService: KeychainService {
         SecItemDelete(query as CFDictionary)
     }
 
-    func providerKey(for providerID: UUID) -> String {
-        "\(serviceKey).provider.\(providerID.uuidString)"
+    func providerKey(for providerID: UUID, suffix: String?) -> String {
+        if let suffix {
+            "\(serviceKey).provider.\(providerID.uuidString).\(suffix)"
+        } else {
+            "\(serviceKey).provider.\(providerID.uuidString)"
+        }
     }
 
     func mcpKey(for serverID: UUID, suffix: String) -> String {

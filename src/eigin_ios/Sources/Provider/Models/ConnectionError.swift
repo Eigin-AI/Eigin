@@ -44,6 +44,55 @@ struct ConnectionError: Equatable {
             recovery = .purchaseEiginRelayCredits
             return
         }
+        if let signInError = error as? ChatGPTSubscriptionError {
+            switch signInError {
+            case .subscriptionRequired:
+                // Grant refusal at the token endpoint — we can't tell from
+                // OpenAI's bare invalid_grant whether it is eligibility or
+                // something else, so the card stays generic.
+                title = Localized.Errors.Chatgpt.signinFailedTitle
+                suggestion = Localized.Errors.Chatgpt.signinFailedSuggestion
+                rawDescription = nil
+            case .planUsageNotGranted:
+                title = Localized.Errors.Connection.title
+                suggestion = Localized.Errors.Chatgpt.planUsageNotGranted
+                rawDescription = nil
+            default:
+                title = Localized.Errors.Connection.title
+                suggestion = signInError.errorDescription ?? error.localizedDescription
+                rawDescription = nil
+            }
+            return
+        }
+        if let responsesError = error as? ResponsesAPIError {
+            switch responsesError {
+            case .planNotEligible:
+                title = Localized.Errors.Chatgpt.plusRequiredTitle
+                suggestion = Localized.Errors.Chatgpt.plusRequiredSuggestion
+                rawDescription = error.localizedDescription
+            case .usageLimitExceeded:
+                title = Localized.Errors.Chatgpt.usageLimitTitle
+                suggestion = Localized.Errors.Chatgpt.usageLimitSuggestion
+                rawDescription = error.localizedDescription
+            case .invalidUser:
+                title = Localized.Errors.Chatgpt.invalidUserTitle
+                suggestion = Localized.Errors.Chatgpt.invalidUserSuggestion
+                rawDescription = error.localizedDescription
+            case .usageUnavailable:
+                title = Localized.Errors.Chatgpt.unavailableTitle
+                suggestion = Localized.Errors.Chatgpt.unavailableSuggestion
+                rawDescription = error.localizedDescription
+            case .unsupportedCapability(let param):
+                title = Localized.Errors.Chatgpt.unsupportedCapabilityTitle
+                suggestion = Localized.Errors.Chatgpt.unsupportedCapabilitySuggestion
+                rawDescription = nil
+            case .httpError, .interruptedStream, .invalidResponse:
+                title = Localized.Errors.Connection.failed
+                suggestion = error.localizedDescription
+                rawDescription = nil
+            }
+            return
+        }
         if let localError = error as? LocalClientError {
             switch localError {
             case .deviceUnsupported(let detail):

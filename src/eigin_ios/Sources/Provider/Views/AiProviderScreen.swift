@@ -32,9 +32,15 @@ struct AiProviderScreen: View {
     }
 
     private var connectsVia: String {
-        preset?.authMethod == .oAuthPKCE
+        preset?.authMethod == .oAuthPKCE || preset?.authMethod == .chatGPTSubscription
             ? Localized.Provider.Connect.viaSignIn
             : Localized.Provider.Connect.viaApiKey
+    }
+
+    /// ChatGPT subscription sign-in carries a refreshable credential, not a
+    /// static key — nothing to mask, and replacement means signing in again.
+    private var isChatGPTProvider: Bool {
+        ProviderPreset.isChatGPTSubscription(provider.baseURL)
     }
 
     var body: some View {
@@ -82,6 +88,10 @@ struct AiProviderScreen: View {
 
                     facts
 
+                    if isChatGPTProvider {
+                        signInRefresh
+                    }
+
                     if isReplacingKey {
                         keyReplacement
                     }
@@ -111,6 +121,11 @@ struct AiProviderScreen: View {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
         } message: {
             Text(Localized.Provider.Edit.removeWarning)
+        }
+        .sheet(item: $signInAgainAuth, onDismiss: {
+            signInAgainTask?.cancel()
+        }) { auth in
+            SafariView(url: auth.url)
         }
     }
 
@@ -151,10 +166,29 @@ struct AiProviderScreen: View {
                     value: connectsVia,
                     accessory: .none
                 ),
+            ] + (isChatGPTProvider ? [] : [
                 AppRowSpec(
                     title: Localized.Provider.AiScreen.Facts.key,
                     value: maskedKey,
                     accessory: .none
+                ),
+            ])
+        )
+    }
+
+    // MARK: - Sign-in refresh (ChatGPT)
+
+    @State private var signInAgainAuth: ChatGPTAuthPresentation?
+    @State private var signInAgainTask: Task<Void, Never>?
+
+    /// Reruns the sign-in to replace a dead or rejected credential.
+    private var signInRefresh: some View {
+        AppRowsGroup(
+            rows: [
+                AppRowSpec(
+                    title: Localized.Provider.AiScreen.signInAgain,
+                    accessory: .chevron,
+                    action: { reconnectChatGPT() }
                 ),
             ]
         )
@@ -357,8 +391,61 @@ struct AiProviderScreen: View {
 
     private func removeProvider() {
         keychainService.delete(key: keychainService.providerKey(for: provider.id))
+        if isChatGPTProvider {
+            Task { await chatGPTCredentialStore.clear(providerID: provider.id) }
+        }
         modelContext.delete(provider)
         dismiss()
+    }
+
+    // MARK: - ChatGPT reauthorization
+
+    @Injected(\.chatGPTCredentialStore) private var chatGPTCredentialStore
+
+    /// Reruns the ChatGPT sign-in, verifies the fresh credential, and replaces
+    /// the stored one — the sign-in group's answer to an expired or revoked
+    /// subscription connection. Dismissing the browser sheet cancels the wait.
+    private func reconnectChatGPT() {
+        isConnecting = true
+        connectionError = nil
+
+        signInAgainTask = Task {
+            do {
+                let service = DefaultChatGPTSignInService(credentialStore: chatGPTCredentialStore)
+                let clientID = await chatGPTCredentialStore.clientID(providerID: provider.id)
+                let idToken = await chatGPTCredentialStore.idToken(providerID: provider.id)
+                let credential = try await service.authenticate(
+                    existingClientID: clientID,
+                    idTokenHint: idToken
+                ) { url in
+                    signInAgainAuth = ChatGPTAuthPresentation(url: url)
+                }
+                signInAgainTask = nil
+                signInAgainAuth = nil
+
+                let client = ResponsesAPIClient(apiToken: credential.accessToken)
+                let modelIDs = try await client.fetchModels()
+
+                // Enablements survive the sign-in where models do.
+                provider.availableModels = modelIDs
+                provider.enabledModels = provider.enabledModels.filter { modelIDs.contains($0) }
+                provider.updatedAt = .now
+                await chatGPTCredentialStore.save(credential, providerID: provider.id)
+
+                isConnecting = false
+                Haptics.success()
+            } catch ChatGPTSubscriptionError.userCancelled, is CancellationError {
+                signInAgainTask = nil
+                signInAgainAuth = nil
+                isConnecting = false
+            } catch {
+                signInAgainTask = nil
+                signInAgainAuth = nil
+                connectionError = ConnectionError(from: error)
+                isConnecting = false
+                Haptics.error()
+            }
+        }
     }
 }
 
