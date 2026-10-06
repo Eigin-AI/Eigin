@@ -199,7 +199,8 @@ struct UpdateKnowledgeTool: Tool {
                 chatID: chatID
             )
             var result: [String: Any] = [
-                "id": "\(entityType).\(entityID)",
+                // `existing.id` is the graph's canonical qualified ID.
+                "id": existing.id,
                 "status": "updated",
             ]
 
