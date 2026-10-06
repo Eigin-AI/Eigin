@@ -10,9 +10,23 @@ import SwiftData
 enum MessagePipeline {
     /// Compaction tuning for capable models (the summarisation path).
     enum Compaction {
-        /// Context usage ratio at which summarisation triggers. Deliberately
-        /// aggressive: long contexts cost more and rot attention earlier.
-        static let threshold: Double = 0.25
+        /// Context windows at or above this size use ``largeWindowThreshold``.
+        static let largeWindowLimit: Int = 500_000
+
+        /// Trigger for windows at or above ``largeWindowLimit``.
+        static let largeWindowThreshold: Double = 0.25
+
+        /// Trigger for windows below ``largeWindowLimit``. At 25%, a 300k
+        /// model would compact after only 75k tokens; 50% keeps 150k of
+        /// conversation before summarising.
+        static let smallWindowThreshold: Double = 0.5
+
+        /// Context usage ratio at which summarisation triggers. Large windows
+        /// trigger earlier (in fraction terms): they have enough headroom, and
+        /// long contexts cost more and rot attention earlier.
+        static func threshold(for contextWindow: Int) -> Double {
+            contextWindow >= largeWindowLimit ? largeWindowThreshold : smallWindowThreshold
+        }
 
         /// Fraction of the context window kept verbatim after a summary, so
         /// what just happened survives compaction at full fidelity. Scales
@@ -576,7 +590,7 @@ enum MessagePipeline {
             )
         }
 
-        let threshold = Int(Double(contextWindow) * Compaction.threshold)
+        let threshold = Int(Double(contextWindow) * Compaction.threshold(for: contextWindow))
         let isEmergency = estimatedTokens > contextWindow
 
         // A previous attempt left the flag stuck on; once a shrinking
