@@ -42,6 +42,7 @@ struct ProviderConnectSheetContent: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Injected(\.keychainService) private var keychainService
+    @Injected(\.chatGPTCredentialStore) private var chatGPTCredentialStore
 
     let mode: Mode
     /// The way in, carried straight from the group the row was picked from.
@@ -78,7 +79,7 @@ struct ProviderConnectSheetContent: View {
     }
 
     private var route: Route {
-        if preset != nil, method == .oAuthPKCE { return .signIn }
+        if preset != nil, method == .oAuthPKCE || method == .chatGPTSubscription { return .signIn }
         if preset != nil { return .apiKey }
         return .address
     }
@@ -96,6 +97,14 @@ struct ProviderConnectSheetContent: View {
     @State private var createdModels: [String] = []
     @State private var pendingToken: String?
     @State private var pendingBaseURL: String?
+    /// ChatGPT sign-in: full credential held until Done commits the provider.
+    @State private var pendingChatGPTCredential: ChatGPTCredential?
+    /// One state for the consent screen — a two-state (flag + URL) sheet
+    /// can present blank when SwiftUI snapshots the content before the URL
+    /// lands. Dismissal cancels the in-flight flow.
+    @State private var chatGPTAuth: ChatGPTAuthPresentation?
+    /// Kept so dismissing the consent sheet cancels the in-flight flow.
+    @State private var chatGPTAuthTask: Task<Void, Never>?
 
     // MARK: - Route state
 
@@ -121,6 +130,11 @@ struct ProviderConnectSheetContent: View {
                 if let urlString = preset?.apiKeyURL, let url = URL(string: urlString) {
                     SafariView(url: url)
                 }
+            }
+            .sheet(item: $chatGPTAuth, onDismiss: {
+                chatGPTAuthTask?.cancel()
+            }) { auth in
+                SafariView(url: auth.url)
             }
     }
 
@@ -211,6 +225,9 @@ struct ProviderConnectSheetContent: View {
             )
 
             AppButton(Localized.Common.Actions.cancel, variant: .secondary) {
+                // Cancels any in-flight ChatGPT sign-in wait, which dismisses
+                // the consent sheet through its own error path.
+                chatGPTAuthTask?.cancel()
                 connectAttempt += 1
                 step = .start
             }
@@ -298,7 +315,21 @@ struct ProviderConnectSheetContent: View {
 
     private let oauthService: (any OAuthPKCEService)?
 
+    /// Created on demand — the sign-in service is cheap to build and the
+    /// injected credential store isn't usable inside `init`.
+    private var chatGPTService: ChatGPTSignInService? {
+        if case .preset(let preset, _) = mode, preset.authMethod == .chatGPTSubscription {
+            DefaultChatGPTSignInService(credentialStore: chatGPTCredentialStore)
+        } else {
+            nil
+        }
+    }
+
     private func startOAuth() {
+        if chatGPTService != nil {
+            startChatGPTSignIn()
+            return
+        }
         guard let oauthService, !isAuthenticating else { return }
         isAuthenticating = true
         connectionError = nil
@@ -326,6 +357,64 @@ struct ProviderConnectSheetContent: View {
                     title: Localized.Errors.Connection.title,
                     suggestion: error.localizedDescription
                 )
+                Haptics.error()
+                step = .failed
+            }
+        }
+    }
+
+    // MARK: - ChatGPT sign-in (SIWC)
+
+    /// Sign in with ChatGPT: the consent screen appears over the connect
+    /// sheet, the loopback server on 127.0.0.1 receives the redirect, and the
+    /// validated credential is verified against the Responses API before
+    /// anything is saved.
+    private func startChatGPTSignIn() {
+        guard let chatGPTService, !isAuthenticating else { return }
+        isAuthenticating = true
+        connectionError = nil
+        step = .working
+        connectAttempt += 1
+        let attempt = connectAttempt
+
+        // Dismissing the consent sheet (swipe-down) cancels the wait — the
+        // loopback server stops and the flow returns to the start step.
+        chatGPTAuthTask = Task {
+            func isCurrent() -> Bool {
+                attempt == connectAttempt
+            }
+            defer {
+                isAuthenticating = false
+                chatGPTAuthTask = nil
+            }
+            do {
+                let credential = try await chatGPTService.authenticate(
+                    existingClientID: nil,
+                    idTokenHint: nil
+                ) { [self] url in
+                    chatGPTAuth = ChatGPTAuthPresentation(url: url)
+                }
+                guard isCurrent() else { return }
+                chatGPTAuthTask = nil
+                chatGPTAuth = nil
+                pendingChatGPTCredential = credential
+                Haptics.success()
+                await createProviderAndContinue(
+                    apiToken: credential.accessToken,
+                    attempt: attempt
+                )
+            } catch ChatGPTSubscriptionError.userCancelled, ChatGPTSubscriptionError.declined,
+                is CancellationError
+            {
+                guard isCurrent() else { return }
+                chatGPTAuthTask = nil
+                chatGPTAuth = nil
+                step = .start
+            } catch {
+                guard isCurrent() else { return }
+                chatGPTAuthTask = nil
+                chatGPTAuth = nil
+                connectionError = ConnectionError(from: error)
                 Haptics.error()
                 step = .failed
             }
@@ -407,13 +496,32 @@ struct ProviderConnectSheetContent: View {
         let provider = Provider(name: providerName, baseURL: baseURL)
         provider.availableModels = createdModels
         // Recommended and Other arrive on; unknown IDs start off and say why
-        // on the models screen.
-        provider.enabledModels = KnownModelCatalog.knownModels(in: createdModels)
-        modelContext.insert(provider)
+        // on the models screen. A ChatGPT sign-in lists a small curated set
+        // that may outrun the local catalogue, though — an empty result there
+        // would leave a fresh connection unusable, so all models arrive on.
+        let known = KnownModelCatalog.knownModels(in: createdModels)
+        provider.enabledModels =
+            (ProviderPreset.isChatGPTSubscription(baseURL) && known.isEmpty)
+                ? createdModels
+                : known
 
-        keychainService.save(key: keychainService.providerKey(for: provider.id), value: token)
-
-        onComplete(provider)
+        if let credential = pendingChatGPTCredential {
+            // Save before the provider becomes visible: a kill between insert
+            // and save would leave a connection that looks signed in but is
+            // not. The credential store is fast; Done can afford the await.
+            Task {
+                await chatGPTCredentialStore.save(credential, providerID: provider.id)
+                modelContext.insert(provider)
+                onComplete(provider)
+            }
+        } else {
+            keychainService.save(
+                key: keychainService.providerKey(for: provider.id),
+                value: token
+            )
+            modelContext.insert(provider)
+            onComplete(provider)
+        }
     }
 
     /// First worthwhile label from a URL's host — the integration sheet's
@@ -425,13 +533,3 @@ struct ProviderConnectSheetContent: View {
 }
 
 // MARK: - Safari View
-
-private struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        SFSafariViewController(url: url)
-    }
-
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
-}

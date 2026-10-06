@@ -5,6 +5,8 @@ struct ProviderPreset: Identifiable, Hashable {
     enum AuthMethod {
         case apiKey
         case oAuthPKCE
+        /// Sign in with ChatGPT — OpenAI subscription OAuth (SIWC).
+        case chatGPTSubscription
         case none
     }
 
@@ -81,6 +83,18 @@ struct ProviderPreset: Identifiable, Hashable {
         baseURL.hasPrefix("eigin-relay://")
     }
 
+    /// Whether this provider connects via ChatGPT subscription sign-in (SIWC). Inference goes to
+    /// the Responses API on `api.openai.com`, authorized by a refreshable OAuth token rather than
+    /// a keychain key.
+    static func isChatGPTSubscription(_ baseURL: String) -> Bool {
+        baseURL.hasPrefix("openai-chatgpt://")
+    }
+
+    /// Whether this provider runs on Anthropic's API (different wire format).
+    static func isAnthropic(_ baseURL: String) -> Bool {
+        baseURL.contains("api.anthropic.com")
+    }
+
     static let all: [ProviderPreset] = [
         ProviderPreset(
             id: "eigin",
@@ -101,6 +115,15 @@ struct ProviderPreset: Identifiable, Hashable {
             systemImage: "cpu.fill",
             authMethod: .none,
             region: nil
+        ),
+        ProviderPreset(
+            id: "openai-chatgpt",
+            name: "ChatGPT",
+            baseURL: "openai-chatgpt://",
+            helpText: Localized.Provider.Setup.Chatgpt.instruction,
+            apiKeyURL: nil,
+            authMethod: .chatGPTSubscription,
+            region: .usa
         ),
         ProviderPreset(
             id: "openai",

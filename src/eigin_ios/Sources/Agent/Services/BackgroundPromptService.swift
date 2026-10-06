@@ -92,8 +92,11 @@ enum BackgroundPromptService {
         // Relay and on-device providers carry no keychain API key, so this resolves to an empty
         // token and the turn proceeds; relay is authorized per-request via the credit wallet.
         let keychain = DefaultKeychainService(serviceKey: AppKeys.keychainServiceName)
-        guard ProviderCredentials.apiToken(
-            baseURL: provider.baseURL, providerID: provider.id, keychain: keychain
+        guard await ProviderCredentials.apiToken(
+            baseURL: provider.baseURL,
+            providerID: provider.id,
+            keychain: keychain,
+            credentialStores: Container.shared.providerCredentialResolver()
         ) != nil else {
             AppLogger.warning("Provider credentials not available", category: .backgroundPrompt)
             return silentResult
@@ -197,7 +200,10 @@ enum BackgroundPromptService {
         ]
 
         // Use AgenticChatLoop for full provider compatibility (thought signatures, etc.).
-        let chatService: ChatService = DefaultChatService(keychainService: keychain)
+        let chatService: ChatService = DefaultChatService(
+            keychainService: keychain,
+            providerCredentialResolver: Container.shared.providerCredentialResolver()
+        )
 
         let (produced, rounds) = await runChatLoop(
             apiMessages: apiMessages,

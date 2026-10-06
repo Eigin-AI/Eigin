@@ -20116,6 +20116,261 @@
           }
         }
       }
+    },
+    "errors.chatgpt.plusRequiredTitle" : {
+      "comment" : "Error title when the signed-in account is not ChatGPT Plus or Pro",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT Plus eller Pro påkrævet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT Plus or Pro required"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.plusRequiredSuggestion" : {
+      "comment" : "Suggestion when the signed-in account is not ChatGPT Plus or Pro",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log ind kræver et ChatGPT Plus- eller Pro-abonnement. Brug en API-nøgle i stedet, eller opgradér i ChatGPT-appen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-in needs a ChatGPT Plus or Pro subscription. Use an API key instead, or upgrade in the ChatGPT app."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.usageLimitTitle" : {
+      "comment" : "Error title when the ChatGPT plan's usage limit is reached",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbrugsgrænsen er nået"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan usage limit reached"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.usageLimitSuggestion" : {
+      "comment" : "Suggestion when the ChatGPT plan's usage limit is reached",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit ChatGPT-abonnements forbrugsgrænse er brugt op. Tjek dine ChatGPT-indstillinger, eller prøv igen senere."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your ChatGPT plan's usage limit is used up. Check your ChatGPT settings, or try again later."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.invalidUserTitle" : {
+      "comment" : "Error title when the ChatGPT sign-in is no longer valid",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log ind igen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in again"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.invalidUserSuggestion" : {
+      "comment" : "Suggestion when the ChatGPT sign-in is no longer valid",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit ChatGPT-login er ikke længere gyldigt. Log ind igen for at fortsætte med dit abonnement."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your ChatGPT sign-in is no longer valid. Sign in again to keep using your subscription."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unavailableTitle" : {
+      "comment" : "Error title when ChatGPT plan usage is temporarily unavailable",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT er utilgængelig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT is unavailable"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unavailableSuggestion" : {
+      "comment" : "Suggestion when ChatGPT plan usage is temporarily unavailable",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT-abonnementet kunne ikke nås. Prøv igen om lidt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT plan usage couldn't be reached. Try again in a moment."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unsupportedCapabilityTitle" : {
+      "comment" : "Error title when the request uses something the ChatGPT plan flow doesn't support",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Understøttes ikke her"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not supported here"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unsupportedCapabilitySuggestion" : {
+      "comment" : "Suggestion when the request uses something the ChatGPT plan flow doesn't support. The argument names the unsupported capability.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ChatGPT-abonnementet kan ikke det. Prøv en anden udbyder i stedet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The ChatGPT subscription can't do that. Try a different provider instead."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.planUsageNotGranted" : {
+      "comment" : "Notice body when the user declined ChatGPT plan usage during sign-in",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonnementsbrug blev ikke godkendt ved login, så ChatGPT kan ikke svare her. Log ind igen og godkend abonnementsbrug, eller brug en API-nøgle i stedet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan usage wasn't approved during sign-in, so ChatGPT can't answer here. Sign in again and approve plan usage, or use an API key instead."
+          }
+        }
+      }
+    },
+    "provider.ai-screen.signInAgain" : {
+      "comment" : "Button that reruns the ChatGPT sign-in to replace an expired or rejected credential.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log ind igen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in again"
+          }
+        }
+      }
+    },
+    "provider.setup.chatgpt.instruction" : {
+      "comment" : "How to connect via ChatGPT subscription sign-in",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log ind for at bruge dit ChatGPT Plus- eller Pro-abonnement i Eigin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to use your ChatGPT Plus or Pro subscription in Eigin."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.signinFailedTitle" : {
+      "comment" : "Title when ChatGPT sign-in could not be completed (may have multiple causes)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke forbinde til din ChatGPT-konto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't connect to your ChatGPT account"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.signinFailedSuggestion" : {
+      "comment" : "Suggestion when ChatGPT sign-in could not be completed — causes vary (e.g. an ineligible subscription)",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der opstod et problem ved login. Tjek at din konto har et ChatGPT Plus- eller Pro-abonnement, og prøv igen eller brug en anden udbyder."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There was a problem signing in. Make sure your account has a ChatGPT Plus or Pro subscription, then try again or use a different provider."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

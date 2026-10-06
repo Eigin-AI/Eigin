@@ -59,6 +59,7 @@ extension ChatService {
 /// Implementation that uses ``LLMClientFactory`` to pick the right client for each provider.
 struct DefaultChatService: ChatService {
     let keychainService: KeychainService
+    let providerCredentialResolver: any ProviderCredentialResolving
 
     func chatCompletionStream(
         baseURL: String,
@@ -66,8 +67,11 @@ struct DefaultChatService: ChatService {
         messages: [ChatMessage],
         model: String
     ) async throws -> AsyncThrowingStream<String, Error> {
-        guard let apiKey = ProviderCredentials.apiToken(
-            baseURL: baseURL, providerID: providerID, keychain: keychainService
+        guard let apiKey = await ProviderCredentials.apiToken(
+            baseURL: baseURL,
+            providerID: providerID,
+            keychain: keychainService,
+            credentialStores: providerCredentialResolver
         ) else {
             AppLogger.error(
                 "API key not found for provider \(public: providerID)",
@@ -109,8 +113,11 @@ struct DefaultChatService: ChatService {
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        guard let apiKey = ProviderCredentials.apiToken(
-            baseURL: baseURL, providerID: providerID, keychain: keychainService
+        guard let apiKey = await ProviderCredentials.apiToken(
+            baseURL: baseURL,
+            providerID: providerID,
+            keychain: keychainService,
+            credentialStores: providerCredentialResolver
         ) else {
             AppLogger.error(
                 "API key not found for provider \(public: providerID)",
@@ -153,6 +160,9 @@ private func isRetryable(_ error: Error) -> Bool {
         case .invalidURL, .invalidResponse:
             return false
         }
+    }
+    if let responsesError = error as? ResponsesAPIError {
+        return responsesError.isRetryable
     }
     if let urlError = error as? URLError {
         switch urlError.code {

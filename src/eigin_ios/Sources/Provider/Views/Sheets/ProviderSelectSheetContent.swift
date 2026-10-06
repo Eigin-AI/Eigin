@@ -34,7 +34,11 @@ struct ProviderSelectSheetContent: View {
     /// a key — a preset offering both genuinely appears in both groups,
     /// because the group you pick from IS the way you want to connect.
     private var signInPresets: [ProviderPreset] {
-        filtered(ProviderPreset.all.filter { $0.authMethod == .oAuthPKCE })
+        filtered(
+            ProviderPreset.all.filter {
+                $0.authMethod == .oAuthPKCE || $0.authMethod == .chatGPTSubscription
+            }
+        )
     }
 
     private var apiKeyPresets: [ProviderPreset] {
@@ -84,7 +88,7 @@ struct ProviderSelectSheetContent: View {
                                 id: preset.id,
                                 title: preset.name,
                                 icon: markIcon(for: preset),
-                                action: { onSelect(.preset(preset, method: .oAuthPKCE)) }
+                                action: { onSelect(.preset(preset, method: preset.authMethod)) }
                             )
                         }
                     )
