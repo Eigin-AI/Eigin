@@ -29,12 +29,6 @@ extension SchemaV10 {
             activeSkillEntries.contains { $0.skillID == id }
         }
 
-        /// Clears all active skills and any in-progress flow (e.g. after compaction).
-        func clearActiveSkills() {
-            activeSkillEntries.removeAll()
-            activeFlow = nil
-        }
-
         var titleOrigin: TitleOrigin {
             get { titleOriginRaw }
             set { titleOriginRaw = newValue }

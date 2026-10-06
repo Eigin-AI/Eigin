@@ -2,7 +2,8 @@ import Foundation
 
 /// Records a skill activation within a chat, anchoring it in time and message history.
 ///
-/// Used by the skill lifetime system (42F-6). Skills stay active until compaction.
+/// Used by the skill lifetime system (42F-6). Skills stay active for the life of the
+/// chat, including across conversation compaction.
 struct ActiveSkillEntry: Codable, Equatable {
     /// The ID of the activated skill (matches ``Skill/id``).
     let skillID: String

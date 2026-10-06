@@ -542,7 +542,6 @@ final class ChatViewModel {
         }
 
         persistMessage(summaryMessage)
-        chat?.clearActiveSkills()
         refreshAllPersisted()
         try? modelContext.save()
 

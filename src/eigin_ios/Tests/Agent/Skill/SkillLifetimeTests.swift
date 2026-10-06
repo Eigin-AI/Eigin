@@ -42,21 +42,9 @@ struct SkillLifetimeTests {
 
         activate("web", at: .now, on: chat)
 
-        // Skills no longer expire by message count — they survive until compaction.
+        // Skills stay active for the life of the chat, including across compaction.
         #expect(chat.activeSkillEntries.count == 1)
         #expect(chat.activeSkillEntries.first?.skillID == "web")
-    }
-
-    @Test @MainActor func clearActiveSkillsRemovesAll() throws {
-        let container = try makeContainer()
-        let chat = makeChat(in: container)
-
-        activate("web", at: .now, on: chat)
-        activate("email", at: .now, on: chat)
-        #expect(chat.activeSkillEntries.count == 2)
-
-        chat.clearActiveSkills()
-        #expect(chat.activeSkillEntries.isEmpty)
     }
 
     @Test @MainActor func isSkillActiveReflectsEntries() throws {
@@ -68,8 +56,5 @@ struct SkillLifetimeTests {
         activate("web", at: .now, on: chat)
         #expect(chat.isSkillActive("web"))
         #expect(!chat.isSkillActive("email"))
-
-        chat.clearActiveSkills()
-        #expect(!chat.isSkillActive("web"))
     }
 }

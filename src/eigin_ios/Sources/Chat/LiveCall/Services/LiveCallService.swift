@@ -552,11 +552,6 @@ final class LiveCallService: @unchecked Sendable {
     }
 
     @MainActor
-    private func clearActiveSkills(agent: Agent) {
-        fetchChat(agent: agent)?.clearActiveSkills()
-    }
-
-    @MainActor
     private func fetchChat(agent: Agent) -> Chat? {
         guard let chatID, let context = agent.modelContext else { return nil }
         let targetChatID = chatID
@@ -717,7 +712,6 @@ final class LiveCallService: @unchecked Sendable {
             if let summary = compactionResult.summary {
                 messages.append(summary)
                 onPersist?([summary])
-                clearActiveSkills(agent: agent)
             }
 
             // Rebuild tool registry mid-turn when skills are activated.
