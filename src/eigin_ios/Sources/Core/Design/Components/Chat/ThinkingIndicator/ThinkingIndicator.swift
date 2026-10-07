@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The thinking indicator: a near-circle that scales in and morphs through the
 /// forms in `MorphForm.all` while breathing, with a line of copy that
-/// speaks up as the wait drags on.
+/// reflects what the agent is doing — its ladder speaks up as the wait
+/// drags on.
 ///
 /// Fully time-derived: the choreography is recomputed from `shownAt` every
 /// frame, so the view can be torn down and rebuilt without glitching. One
@@ -15,10 +16,12 @@ import SwiftUI
 struct ThinkingIndicator: View {
     /// When this appearance began — anchors the shape cycle, entry and breath.
     let shownAt: Date
-    /// When the current thinking stretch began; nil while stalled on the user.
+    /// When the current activity stretch began; nil while stalled on the user.
     let clockStart: Date?
-    /// Thinking seconds accumulated before the current stretch.
+    /// Activity seconds accumulated before the current stretch.
     let priorElapsed: TimeInterval
+    /// What the agent is currently doing — selects the copy.
+    let activity: ThinkingActivity
     /// Whether the turn is currently parked waiting for the user.
     let isStalled: Bool
 
@@ -42,7 +45,7 @@ struct ThinkingIndicator: View {
         // their own removal. The clock pauses during stalls via
         // `clockStart`/`priorElapsed`, so the ladder resumes where it left off.
         let elapsed = (clockStart.map { date.timeIntervalSince($0) } ?? 0) + priorElapsed
-        let stage = isStalled ? nil : ThinkingCopy.stage(at: elapsed)
+        let label = Self.label(for: activity, elapsed: elapsed, isStalled: isStalled)
         return HStack(spacing: Spacing.n12) {
             // The chat wait is always thinking, so the wobble runs at full
             // intensity from entry. The blob drives its own timeline.
@@ -56,12 +59,27 @@ struct ThinkingIndicator: View {
             // A single Text morphing between rungs: no structural change, so
             // the label never plays its own transition while the indicator
             // itself scales away — it always exits with the indicator.
-            Text(isStalled ? Localized.Chat.Thinking.waitingForYou : stage?.text ?? "")
+            Text(label)
                 .typography(Typography.chatMessage)
                 .foregroundStyle(colors.text.standard.muted.opacity(0.6))
                 .contentTransition(.interpolate)
         }
-        .animation(.easeInOut(duration: 0.4), value: stage)
+        .animation(.easeInOut(duration: 0.4), value: label)
+    }
+
+    /// The copy for a state: ladder rung for thinking/working, a fixed label
+    /// for preparation, and the waiting-on-user copy whenever stalled.
+    private static func label(
+        for activity: ThinkingActivity,
+        elapsed: TimeInterval,
+        isStalled: Bool
+    ) -> String {
+        if isStalled { return Localized.Chat.Thinking.waitingForYou }
+        switch activity {
+        case .thinking: return ThinkingCopy.stage(at: elapsed)?.text ?? ""
+        case .working: return WorkingCopy.stage(at: elapsed)?.text ?? ""
+        case .preparing: return Localized.Chat.gettingThingsReady
+        }
     }
 }
 
@@ -71,18 +89,28 @@ struct ThinkingIndicator: View {
             shownAt: .now.addingTimeInterval(-6.5),
             clockStart: .now.addingTimeInterval(-6.5),
             priorElapsed: 0,
+            activity: .thinking,
             isStalled: false
         )
         ThinkingIndicator(
             shownAt: .now.addingTimeInterval(-11),
             clockStart: .now.addingTimeInterval(-11),
             priorElapsed: 0,
+            activity: .working,
             isStalled: false
         )
         ThinkingIndicator(
             shownAt: .now.addingTimeInterval(-45),
             clockStart: .now.addingTimeInterval(-45),
             priorElapsed: 0,
+            activity: .thinking,
+            isStalled: false
+        )
+        ThinkingIndicator(
+            shownAt: .now.addingTimeInterval(-3),
+            clockStart: nil,
+            priorElapsed: 0,
+            activity: .preparing,
             isStalled: false
         )
     }
@@ -102,7 +130,10 @@ struct ThinkingIndicator: View {
                 .frame(width: 21, height: 21)
             }
         }
-        ThinkingIndicator(shownAt: .now, clockStart: nil, priorElapsed: 5, isStalled: true)
+        ThinkingIndicator(
+            shownAt: .now, clockStart: nil, priorElapsed: 5,
+            activity: .thinking, isStalled: true
+        )
     }
     .padding(Spacing.n32)
     .background(Color(white: 0.09))

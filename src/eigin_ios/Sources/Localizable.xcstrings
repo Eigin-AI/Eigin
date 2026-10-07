@@ -978,6 +978,23 @@
         }
       }
     },
+    "chat.gettingThingsReady" : {
+      "comment" : "Status label shown by the thinking figure while something outside the chat turn is being prepared",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gør klar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getting things ready"
+          }
+        }
+      }
+    },
     "chat.input.messagePlaceholder" : {
       "comment" : "TextField placeholder for chat input",
       "localizations" : {
@@ -1195,6 +1212,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ chat%2$@"
+          }
+        }
+      }
+    },
+    "chat.working.sorryForTheWait" : {
+      "comment" : "Shown by the thinking indicator while the agent runs tools, for very long waits",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beklager, du skal vente"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sorry to keep you waiting"
+          }
+        }
+      }
+    },
+    "chat.working.stillWorking" : {
+      "comment" : "Shown by the thinking indicator while the agent runs tools, after a longer wait",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arbejder stadig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still working"
+          }
+        }
+      }
+    },
+    "chat.working.takingAWhile" : {
+      "comment" : "Shown by the thinking indicator while the agent runs tools, when the wait is unusually long",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tager et stykke tid"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taking a while"
+          }
+        }
+      }
+    },
+    "chat.working.working" : {
+      "comment" : "Shown by the thinking indicator while the agent runs tools, after a short wait",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arbejder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working"
           }
         }
       }

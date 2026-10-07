@@ -71,6 +71,12 @@ struct ChatFeed: View {
     /// Item ID of the streaming message. Rendered as an ordinary row so committing it
     /// updates the row in place.
     var streamingItemID: String?
+    /// Phase of the agent's chat loop — tells the feed when the turn is busy
+    /// forming or running tool calls, so the indicator can say so.
+    var chatPhase: ChatPhase = .idle
+    /// Something outside the chat turn is being prepared (onboarding wrap-up);
+    /// shows the indicator with a preparing label even though the loop is idle.
+    var isPreparing: Bool = false
     /// Action for the trailing user-message footer (e.g. retry last turn).
     /// `nil` hides the footer — set while streaming or when retry is unavailable.
     var onUserMessageFooterAction: (() -> Void)?
@@ -94,6 +100,8 @@ struct ChatFeed: View {
         items: [ChatItem],
         throttler: any StreamThrottling,
         streamingItemID: String? = nil,
+        chatPhase: ChatPhase = .idle,
+        isPreparing: Bool = false,
         messageText: Binding<String>,
         isInputDisabled: Bool,
         autoStartDictation: Bool = false,
@@ -112,6 +120,8 @@ struct ChatFeed: View {
         self.items = items
         self.throttler = throttler
         self.streamingItemID = streamingItemID
+        self.chatPhase = chatPhase
+        self.isPreparing = isPreparing
         _messageText = messageText
         self.isInputDisabled = isInputDisabled
         self.autoStartDictation = autoStartDictation
@@ -139,9 +149,12 @@ struct ChatFeed: View {
             .toolbar(.hidden, for: .tabBar)
             .onAppear {
                 armAutoCamera()
-                // A feed mounted mid-wait (thinking, or parked on the user)
-                // arms its own fresh indicator.
+                // A feed mounted mid-wait (thinking, working, preparing, or
+                // parked on the user) arms its own fresh indicator.
                 if shouldShowThinkingIndicator {
+                    if let activity = indicatorActivity {
+                        thinkingIndicatorState.setActivity(activity)
+                    }
                     thinkingIndicatorState.setShown(true)
                 }
             }
@@ -215,7 +228,7 @@ struct ChatFeed: View {
             minHeight: isAgentOpened ? scroll.viewportHeight : 0,
             alignment: .topLeading
         )
-        .animation(.easeIn(duration: 0.2), value: isThinking)
+        .animation(.easeIn(duration: 0.2), value: shouldShowThinkingIndicator)
     }
 
     private var feedContent: some View {
@@ -263,7 +276,7 @@ struct ChatFeed: View {
                         )
                         // Animates the indicator shrinking out (and the reply
                         // taking its place) instead of popping.
-                        .animation(.easeIn(duration: 0.2), value: isThinking)
+                        .animation(.easeIn(duration: 0.2), value: shouldShowThinkingIndicator)
                     } else {
                         // When the conversation opens with an agent-initiated
                         // message (no user turn yet), the same minHeight +
@@ -400,9 +413,16 @@ struct ChatFeed: View {
             .onChange(of: shouldShowThinkingIndicator) { _, shouldShow in
                 thinkingIndicatorState.setShown(shouldShow)
             }
-            // Stalls park the thinking clock; resuming restarts it.
+            // Stalls park the activity clock; resuming restarts it.
             .onChange(of: isAwaitingUserInput) { _, stalled in
                 thinkingIndicatorState.setStalled(stalled)
+            }
+            // Activity swaps swap the copy and restart its ladder — never
+            // the indicator itself.
+            .onChange(of: indicatorActivity) { _, activity in
+                if let activity {
+                    thinkingIndicatorState.setActivity(activity)
+                }
             }
         }
     }
@@ -436,6 +456,7 @@ struct ChatFeed: View {
                     shownAt: shownAt,
                     clockStart: thinkingIndicatorState.clockStart,
                     priorElapsed: thinkingIndicatorState.priorElapsed,
+                    activity: thinkingIndicatorState.activity,
                     isStalled: isAwaitingUserInput
                 )
                 // Entry is part of the indicator's own timeline; removal scales
@@ -450,10 +471,28 @@ struct ChatFeed: View {
         }
     }
 
-    /// Turn waiting on the model, with nothing parked on the user.
+    /// What the agent is doing right now, or nil when nothing new is
+    /// visibly happening and the turn is quiet. `isPreparing` wins over a
+    /// settled chat phase; tool work wins over the streaming throttler.
+    private var indicatorActivity: ThinkingActivity? {
+        if isPreparing { return .preparing }
+        if isAwaitingUserInput { return nil }
+        switch chatPhase {
+        case .streamingTools, .readyToExecute, .executingTools:
+            return .working
+        case .streamingProse, .idle, .done:
+            return isThinking ? .thinking : nil
+        }
+    }
+
+    /// Turn waiting on the model, with nothing parked on the user. Also
+    /// covers the quiet stretch where everything streamed so far is already
+    /// displayed but the stream is open — the model may be reasoning or
+    /// forming long tool calls before its next visible output.
     private var isThinking: Bool {
         let waiting = throttler.phase == .waiting
-            || (throttler.phase == .streaming && throttler.displayedText.isEmpty)
+            || (throttler.phase == .streaming
+                && (throttler.displayedText.isEmpty || throttler.hasCaughtUp))
         return waiting && !isAwaitingUserInput
     }
 
@@ -466,9 +505,10 @@ struct ChatFeed: View {
     }
 
     /// Whether a thinking indicator belongs on screen: the turn is
-    /// mid-flight, either thinking or parked on the user.
+    /// mid-flight (thinking or working), preparing something, or parked
+    /// on the user.
     private var shouldShowThinkingIndicator: Bool {
-        isThinking || isAwaitingUserInput
+        indicatorActivity != nil || isAwaitingUserInput
     }
 
     private func itemRow(for item: ChatItem) -> some View {

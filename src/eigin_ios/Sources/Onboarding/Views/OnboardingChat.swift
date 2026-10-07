@@ -94,6 +94,8 @@ struct OnboardingChat: View {
                     items: chatItems,
                     throttler: chatLoop.throttler,
                     streamingItemID: chatLoop.streamingItemID,
+                    chatPhase: chatLoop.chatPhase,
+                    isPreparing: isFinishing,
                     messageText: $messageText,
                     isInputDisabled: isStreaming,
                     onSend: { _ in handleSend() },
