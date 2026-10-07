@@ -11,6 +11,7 @@ struct ChatListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Environment(\.scenePhase) private var scenePhase
+    @Injected(\.tabBarVisibility) private var tabBarVisibility
     @Injected(\.chatAttachmentStore) private var attachmentStore
     @Query(sort: \Chat.updatedAt, order: .reverse) private var chats: [Chat]
     @Query private var agents: [Agent]
@@ -134,6 +135,12 @@ struct ChatListView: View {
             .tabBarPadding()
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        // Hide the footer at push start, before the pushed view renders.
+        .onChange(of: path.count) {
+            if !path.isEmpty {
+                tabBarVisibility.setHidden(true)
+            }
+        }
     }
 
     private var groupedChats: [(String, [Chat])] {

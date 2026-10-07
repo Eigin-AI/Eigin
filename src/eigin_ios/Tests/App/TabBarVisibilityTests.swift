@@ -1,8 +1,9 @@
 @testable import Eigin
 import Testing
 
-/// Verifies the tab-bar visibility depth bookkeeping: hidden while any view
-/// pushes, visible again once the stack drains, clamped at zero.
+/// Verifies the tab-bar visibility toggle that `ContentView` drives from
+/// the `HidesTabBarPreferenceKey` preference: hidden while any publisher is
+/// present, visible again once none are.
 @MainActor
 @Suite("TabBarVisibility")
 struct TabBarVisibilityTests {
@@ -10,45 +11,26 @@ struct TabBarVisibilityTests {
         TabBarVisibility()
     }
 
-    @Test func pushHidesAndPopShows() {
+    @Test func setHiddenHidesAndShows() {
         let bar = make()
         #expect(bar.isVisible)
 
-        bar.push()
+        bar.setHidden(true)
         #expect(!bar.isVisible)
 
-        bar.pop()
+        bar.setHidden(false)
         #expect(bar.isVisible)
     }
 
-    @Test func nestedPushesKeepBarHiddenUntilStackDrains() {
+    @Test func repeatedSameStateIsANoOp() {
         let bar = make()
-        bar.push()
-        bar.push()
-        bar.pop()
+
+        bar.setHidden(true)
+        bar.setHidden(true)
         #expect(!bar.isVisible)
 
-        bar.pop()
-        #expect(bar.isVisible)
-    }
-
-    @Test func popBelowZeroClampsInsteadOfDesyncing() {
-        let bar = make()
-        bar.pop()
-        bar.pop()
-
-        bar.push()
-        #expect(!bar.isVisible)
-
-        bar.pop()
-        #expect(bar.isVisible)
-    }
-
-    @Test func popAllDrainsImmediately() {
-        let bar = make()
-        bar.push()
-        bar.push()
-        bar.popAll()
+        bar.setHidden(false)
+        bar.setHidden(false)
         #expect(bar.isVisible)
     }
 }

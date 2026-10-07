@@ -29,8 +29,9 @@ struct ContentView: View {
             NavigationBarView(selectedTab: $selectedTab)
         }
         .id("\(themeManager.currentTheme.id)-\(languageManager.currentLanguage.rawValue)")
-        .onChange(of: selectedTab) {
-            tabBarVisibility.popAll()
+        // Hide the bar while any `.hidesTabBar()` view is on-screen.
+        .onPreferenceChange(HidesTabBarPreferenceKey.self) {
+            tabBarVisibility.setHidden($0)
         }
         // The system runs the matching closure in-app shortly before the app
         // is foregrounded. ContentView hands the route to the shared pending

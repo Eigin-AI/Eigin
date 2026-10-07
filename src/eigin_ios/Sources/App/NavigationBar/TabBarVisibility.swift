@@ -2,18 +2,8 @@ import Factory
 import Observation
 import SwiftUI
 
-/// Tracks how many nested views across the app have requested the tab bar be hidden.
-/// The bar is visible when depth is zero, hidden otherwise.
-///
-/// Read through Factory injection (`@Injected(\.tabBarVisibility)`);
-/// `.shared` is the
-/// production instance. Usage from destination views:
-///
-///     .onAppear  { tabBarVisibility.push() }
-///     .onDisappear { tabBarVisibility.pop() }
-///
-/// Or use the shorthand modifier:
-///     .hidesTabBar()
+/// Controls whether the bottom tab bar is visible. `ContentView` drives it
+/// from the `HidesTabBarPreferenceKey` preference.
 @MainActor
 @Observable
 final class TabBarVisibility {
@@ -21,33 +11,40 @@ final class TabBarVisibility {
 
     private(set) var isVisible: Bool = true
 
-    /// Clamping happens in the mutators, not didSet: under @Observable an
-    /// assignment inside didSet re-enters the generated setter and recurses.
-    private var depth: Int = 0 {
-        didSet {
-            let new = depth <= 0
-            if new != isVisible {
-                withAnimation(Animations.snap) {
-                    isVisible = new
-                }
-            }
-        }
-    }
-
     /// Internal so tests can build isolated instances; the container hands
     /// out `.shared` unless overridden.
     init() {}
 
-    func push() {
-        depth += 1
+    func setHidden(_ hidden: Bool) {
+        let visible = !hidden
+        guard visible != isVisible else { return }
+        if visible {
+            // Returning: slide back up.
+            withAnimation(Animations.snap) {
+                isVisible = visible
+            }
+        } else {
+            // Hiding: remove instantly rather than animating out. The
+            // navigation transition does not run root-level animations
+            // concurrently, so a slide would linger over the incoming
+            // screen's bottom content (e.g. the chat input bar).
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                isVisible = visible
+            }
+        }
     }
+}
 
-    func pop() {
-        depth = max(0, depth - 1)
-    }
+// MARK: - Preference plumbing
 
-    func popAll() {
-        depth = 0
+/// Preference set by any view that wants the tab bar hidden.
+struct HidesTabBarPreferenceKey: PreferenceKey {
+    static let defaultValue = false
+
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
     }
 }
 
@@ -56,7 +53,7 @@ final class TabBarVisibility {
 extension View {
     /// Hides the bottom tab bar while this view is on-screen.
     func hidesTabBar() -> some View {
-        modifier(HidesTabBarModifier())
+        preference(key: HidesTabBarPreferenceKey.self, value: true)
     }
 
     /// Adds permanent bottom padding equal to the tab bar height so scroll
@@ -65,15 +62,5 @@ extension View {
         safeAreaInset(edge: .bottom) {
             Spacer().frame(height: AppNavigationBar.height)
         }
-    }
-}
-
-private struct HidesTabBarModifier: ViewModifier {
-    @Injected(\.tabBarVisibility) private var tabBarVisibility
-
-    func body(content: Content) -> some View {
-        content
-            .onAppear { tabBarVisibility.push() }
-            .onDisappear { tabBarVisibility.pop() }
     }
 }

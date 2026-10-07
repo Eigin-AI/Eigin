@@ -3,9 +3,9 @@ import SwiftUI
 
 /// The bottom navigation bar that overlays the root content.
 ///
-/// Sits at the bottom of the screen, extending into the safe area. The bar is
-/// visible when the global `TabBarVisibility` depth is zero (no pushed views
-/// have requested it hidden). Switching tabs resets the depth.
+/// Sits at the bottom of the screen, extending into the safe area. `ContentView`
+/// hides it while any `.hidesTabBar()` view is on-screen (see
+/// `HidesTabBarPreferenceKey`).
 struct NavigationBarView: View {
     @Binding var selectedTab: RootTab
     @Injected(\.tabBarVisibility) private var tabBarVisibility
