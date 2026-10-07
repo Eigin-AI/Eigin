@@ -64,6 +64,7 @@ struct SpaceBootstrapView: View {
                 items: chatItems,
                 throttler: chatLoop.throttler,
                 streamingItemID: chatLoop.streamingItemID,
+                chatPhase: chatLoop.chatPhase,
                 messageText: $messageText,
                 isInputDisabled: isStreaming,
                 onSend: { _ in send() },

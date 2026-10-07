@@ -294,6 +294,12 @@ enum Localized {
             Localized.get("chat.deleteWarning")
         }
 
+        /// Status label shown by the thinking figure while something outside the chat turn is being
+        /// prepared
+        static var gettingThingsReady: String {
+            Localized.get("chat.gettingThingsReady")
+        }
+
         /// A button label that lets the user interrupt a live call.
         static var myTurn: String {
             Localized.get("chat.myTurn")
@@ -393,6 +399,29 @@ enum Localized {
             /// Status label shown by the thinking figure while the turn waits for the user to act
             static var waitingForYou: String {
                 Localized.get("chat.thinking.waitingForYou")
+            }
+        }
+
+        enum Working {
+            /// Shown by the thinking indicator while the agent runs tools, for very long waits
+            static var sorryForTheWait: String {
+                Localized.get("chat.working.sorryForTheWait")
+            }
+
+            /// Shown by the thinking indicator while the agent runs tools, after a longer wait
+            static var stillWorking: String {
+                Localized.get("chat.working.stillWorking")
+            }
+
+            /// Shown by the thinking indicator while the agent runs tools, when the wait is
+            /// unusually long
+            static var takingAWhile: String {
+                Localized.get("chat.working.takingAWhile")
+            }
+
+            /// Shown by the thinking indicator while the agent runs tools, after a short wait
+            static var working: String {
+                Localized.get("chat.working.working")
             }
         }
     }

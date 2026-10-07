@@ -12,6 +12,7 @@ final class PassthroughThrottler: StreamThrottling {
     private(set) var displayedText = ""
     private(set) var fullText = ""
     private(set) var scrollTrigger = 0
+    private(set) var hasCaughtUp = false
 
     func start() {
         phase = .waiting
@@ -21,6 +22,8 @@ final class PassthroughThrottler: StreamThrottling {
         fullText += chunk
         displayedText = fullText
         phase = .streaming
+        // Displayed text always equals the full text here.
+        hasCaughtUp = true
     }
 
     func finish() {
@@ -43,5 +46,6 @@ final class PassthroughThrottler: StreamThrottling {
         displayedText = ""
         fullText = ""
         scrollTrigger = 0
+        hasCaughtUp = false
     }
 }

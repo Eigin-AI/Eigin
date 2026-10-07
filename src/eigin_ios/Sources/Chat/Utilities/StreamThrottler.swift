@@ -8,6 +8,9 @@ protocol StreamThrottling: AnyObject {
     var displayedText: String { get }
     var fullText: String { get }
     var scrollTrigger: Int { get }
+    /// Everything received is displayed while the stream is still open —
+    /// the model is generating but nothing new is visibly happening.
+    var hasCaughtUp: Bool { get }
     func start()
     func feed(_ chunk: String)
     func finish()
@@ -31,6 +34,8 @@ final class StreamThrottler: StreamThrottling {
     private(set) var displayedText = ""
     private(set) var fullText = ""
     private(set) var scrollTrigger = 0
+    /// All received text is displayed while the stream is still open.
+    private(set) var hasCaughtUp = false
 
     private var inputCount = 0
     private var displayedCount = 0
@@ -91,6 +96,7 @@ final class StreamThrottler: StreamThrottling {
         }
         fullText += chunk
         inputCount += chunk.count
+        hasCaughtUp = false
         lastFeedTime = now()
     }
 
@@ -132,6 +138,7 @@ final class StreamThrottler: StreamThrottling {
         scrollTrigger = 0
         serverDone = false
         tickCount = 0
+        hasCaughtUp = false
         lastFeedTime = 0
     }
 
@@ -172,9 +179,16 @@ final class StreamThrottler: StreamThrottling {
                       now() - lastFeedTime >= stallGrace
             {
                 revealStalledTail()
+                hasCaughtUp = true
+            } else if now() - lastFeedTime >= stallGrace {
+                // All revealed and the stream has been quiet a beat: the
+                // model is generating without visible output.
+                if !hasCaughtUp { hasCaughtUp = true }
             }
             return
         }
+
+        if hasCaughtUp { hasCaughtUp = false }
 
         // Advance the catch-up cursor by a time-scaled fraction of the gap, so reveal
         // speed is the same regardless of how often this fires or the display's

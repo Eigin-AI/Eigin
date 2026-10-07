@@ -140,6 +140,7 @@ struct ChatView: View {
                     items: viewModel.chatItems,
                     throttler: viewModel.chatLoop.throttler,
                     streamingItemID: viewModel.chatLoop.streamingItemID,
+                    chatPhase: viewModel.chatLoop.chatPhase,
                     messageText: $viewModel.messageText,
                     isInputDisabled: !canSend ||
                         (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction) ||
