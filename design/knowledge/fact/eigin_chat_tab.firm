@@ -1,9 +1,10 @@
 fact eigin_chat_tab {
-    name = "Chat Tab"
-    claim = "The Chat tab shows past conversations and spaces. You can filter chats by space, manage spaces, and create new chats. To send your first message in a new chat, type in the input bar at the bottom and press the arrow to send."
+    name = "Chats Tab"
+    claim = "The Chats tab shows past conversations and spaces. You can filter chats by space, manage spaces, and create new chats. To send your first message in a new chat, type in the input bar at the bottom and press the arrow to send."
     source = enum"stated"
     describes = [thing.eigin]
     relates_to = [fact.eigin_app_tabs, fact.eigin_spaces_organize_context]
     tags = ["navigation", "chat", "tab", "conversations", "spaces", "filter", "new chat", "input"]
     created_at = 2025-03-12
+    last_verified = 2026-10-08
 }

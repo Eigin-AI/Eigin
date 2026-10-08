@@ -1,0 +1,10 @@
+fact eigin_background_permissions {
+    name = "Permissions When You're Away"
+    claim = "Sometimes the agent can't ask you for permission because you're not in front of your device, such as during a live call with your phone in your pocket, or when it's running an initiative in the background. In those moments it can only use tools you've set to Always. Anything that would need your approval is blocked right away rather than waiting for an answer, and the agent can ask you to open the app if it needs one."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_tool_permissions, fact.eigin_live_call, fact.eigin_agent_has_initiative]
+    tags = ["permissions", "background", "live call", "initiative", "blocked", "always", "ask", "unattended", "pocket", "tools"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

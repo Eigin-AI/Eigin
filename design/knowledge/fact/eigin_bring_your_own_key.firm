@@ -1,10 +1,10 @@
 fact eigin_bring_your_own_key {
-    name = "Bring Your Own Key"
-    claim = "You can bring your own API key for any cloud provider you use. The key lives on your device, and your billing relationship is with the provider directly: Eigin isn't a middleman. Because it works with any OpenAI-compatible provider, you're never tied to a single vendor."
+    name = "Bring Your Own AI Model"
+    claim = "You can bring your own API key for any cloud AI provider you use, or sign in with a service you already pay for, such as a ChatGPT Plus or Pro subscription. It's just one more option: Eigin gives you all of them. A key lives on your device, and your billing relationship is with the provider directly, so Eigin isn't a middleman. Because Eigin works with any OpenAI-compatible provider, you're never tied to a single vendor."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_ai_providers]
-    tags = ["providers", "api key", "key", "vendor", "openai", "compatible", "direct", "billing", "on-device", "lock-in"]
+    relates_to = [fact.eigin_ai_providers, fact.eigin_cost_model]
+    tags = ["providers", "api key", "key", "subscription", "sign in", "chatgpt", "plus", "pro", "vendor", "openai", "compatible", "direct", "billing", "on-device", "lock-in"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

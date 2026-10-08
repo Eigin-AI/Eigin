@@ -1,0 +1,10 @@
+fact eigin_relay_models {
+    name = "Relay Models"
+    claim = "Eigin Relay serves European models with zero data retention, primarily using Corti: Danish AI inference with clinical-grade security running on the Gefion supercomputer in Copenhagen. The relay also provides additional models from Mistral in France and TensorX in Ireland."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_relay, fact.eigin_relay_credits, fact.eigin_is_private_ai]
+    tags = ["relay", "models", "corti", "gefion", "copenhagen", "denmark", "danish", "default", "preferred", "european", "mistral", "france", "tensorx", "ireland", "open models", "zero data retention", "inference", "upstream"]
+    created_at = 2026-10-07
+    last_verified = 2026-10-08
+}

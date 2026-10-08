@@ -1,0 +1,10 @@
+fact eigin_watermarking {
+    name = "Watermarking"
+    claim = "When you copy a full message from the agent, or the agent sends an email for you, Eigin adds an invisible watermark to the text that marks it as Eigin-generated. It doesn't change the text's content or meaning, and it's not stored in your chat. This follows the spirit of the EU AI Act's rules on marking AI-generated content."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_is_private_ai]
+    tags = ["watermark", "watermarking", "copy", "email", "ai act", "generated", "invisible", "text", "compliance"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

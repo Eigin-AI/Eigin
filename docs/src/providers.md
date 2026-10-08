@@ -4,11 +4,11 @@ Eigin treats inference as a utility. The agent doesn't care which model is on th
 
 ## Eigin Relay
 
-A built-in provider backed by Eigin's cloud inference proxy. It's the easiest way to connect cloud AI: buy credits with an in-app purchase and start chatting. Behind the scenes it forwards requests to a vetted upstream provider. See [Eigin Relay](./relay.md).
+A built-in provider backed by Eigin's cloud inference proxy. It's the easiest way to connect cloud AI: buy credits with an in-app purchase and start chatting. Behind the scenes it forwards requests to vetted upstream providers. See [Eigin Relay](./relay.md).
 
 ## Cloud providers
 
-Bring your own key to a third-party provider. Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom, Corti. Each preset bundles a base URL, logo, help text, and a link to get an API key. You can also add a custom provider with any OpenAI-compatible base URL.
+Bring your own key to a third-party provider. Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom, Corti. Each preset bundles a base URL, logo, help text, and a link to get an API key. You can also add a custom provider with any OpenAI-compatible base URL. Or skip keys entirely: link a provider with an account you already have — EUrouter, OpenRouter, or OpenAI through a ChatGPT Plus or Pro subscription.
 
 ## Local providers
 
@@ -21,6 +21,7 @@ Rather than a client per provider, Eigin uses a small set:
 - **OpenAI-compatible client**: any provider implementing the OpenAI REST API (`/models`, `/chat/completions`). Covers OpenAI, Google, Mistral, OpenRouter, and most others.
 - **Relay client**: the OpenAI-compatible client pointed at the [Eigin Relay](./relay.md), plus credit-wallet management. No API key: each request is authorized with a credit token instead.
 - **Anthropic client**: a native implementation for the Messages API, which differs enough to warrant its own client (auth headers, content blocks, typed SSE events, system prompt handling).
+- **Responses client**: OpenAI's Responses API, used for the ChatGPT subscription sign-in flow. The credential is a short-lived OAuth access token rather than an API key.
 - **Local client**: bridges the agent loop to the on-device model, holding session state per chat.
 
 A factory selects the client from the base URL: the relay URL routes to the relay client, other cloud URLs to OpenAI or Anthropic, and `local://` to the on-device client. Adding an OpenAI-compatible provider is just adding a preset.

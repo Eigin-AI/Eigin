@@ -6,5 +6,5 @@ fact eigin_live_call {
     relates_to = [fact.eigin_voice_is_core, fact.eigin_chat_actions]
     tags = ["voice", "live call", "call", "hands-free", "phone", "pace", "interrupt", "hang up", "background", "screen lock", "turn", "walkie-talkie"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

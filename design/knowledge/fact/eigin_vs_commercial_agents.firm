@@ -1,0 +1,10 @@
+fact eigin_vs_commercial_agents {
+    name = "Eigin vs. Commercial Personal Agents"
+    claim = "Commercial personal agents such as Meta's Muse, OpenAI's Dots and Google's Spark are closed products, tied to one company's models, cloud and business model. Your data lives on their servers, and the agent ultimately serves the vendor's interests. Eigin is also a personal agent, but it's local-first, open source and free to use with any AI provider you choose. The agent works for you alone."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_vs_openclaw, fact.eigin_is_private_ai, fact.eigin_free_and_open, fact.eigin_ai_providers]
+    tags = ["comparison", "commercial", "muse", "meta", "dots", "openai", "spark", "google", "closed", "vendor", "lock-in", "privacy", "open source", "local-first"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

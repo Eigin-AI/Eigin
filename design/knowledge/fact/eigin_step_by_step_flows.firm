@@ -1,0 +1,10 @@
+fact eigin_step_by_step_flows {
+    name = "Step-by-Step Flows"
+    claim = "Some skills offer step-by-step flows. The agent takes you through a set of stages one at a time, for example to collect information from you and then give recommendations. Planning a trip, deciding what to cook, and finding a book, game or music to enjoy all work this way, so the conversation stays on track instead of everything coming at once."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_has_skills]
+    tags = ["flows", "step by step", "stages", "planning", "trip", "cooking", "recommendations", "guided", "skills"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

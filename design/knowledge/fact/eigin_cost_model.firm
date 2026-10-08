@@ -1,10 +1,10 @@
 fact eigin_cost_model {
     name = "Cost Model"
-    claim = "The app itself is free: no subscription, no service fee. You only pay for the AI you use. Bring your own provider key and pay the provider directly at their prices, with your own relationship with them, or buy Eigin Relay credits for easy, private access to European cloud AI. Unlike plan-based subscriptions, this is metered: you pay for what you use, so heavy use can add up while light use stays cheap. Eigin helps you pick cost-effective models, but it's always your call whether to reach for the premium ones or a cheaper model."
+    claim = "The app itself is free: no subscription, no service fee. You only pay for the AI you use, and how is up to you. Use an existing subscription such as ChatGPT Plus or Pro, bring your own provider key and pay the provider directly at their prices, or buy Eigin Relay credits for easy, private access to European cloud AI. Keys and Relay credits are metered, so heavy use can add up while light use stays cheap. Eigin helps you pick cost-effective models, but it's always your call whether to reach for the premium ones or a cheaper model."
     source = enum"stated"
     describes = [thing.eigin]
     relates_to = [fact.eigin_bring_your_own_key, fact.eigin_ai_providers, fact.eigin_free_and_open, fact.eigin_relay_credits]
-    tags = ["cost", "pricing", "free", "subscription", "metered", "pay-as-you-go", "api", "spend", "budget", "provider", "models", "credits", "relay", "at cost"]
+    tags = ["cost", "pricing", "free", "subscription", "metered", "pay-as-you-go", "api", "spend", "budget", "provider", "models", "credits", "relay", "chatgpt"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

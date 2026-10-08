@@ -1,10 +1,10 @@
 fact eigin_agent_tab {
     name = "Agent Tab"
-    claim = "The Agent tab is where you change your agent yourself — its name, look, and voice, and which AI provider and model it runs on. For most of this you don't need the tab at all: you can simply ask the agent to change it. But when you'd rather do it by hand, this is the place."
+    claim = "The Agent tab is where you configure your agent. You choose which AI provider and model it uses, or leave it on automatic routing, which is the default. You can change its symbol and name, the voice it speaks with, and how proactive it is. For a lot of this you don't need the tab at all: you can simply ask the agent to change it. When you'd rather do it by hand, this is the place."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_app_tabs, fact.eigin_ai_providers, fact.eigin_agent_self_configurable]
-    tags = ["navigation", "agent", "tab", "name", "voice", "presentation", "provider", "model", "configure"]
+    relates_to = [fact.eigin_app_tabs, fact.eigin_ai_providers, fact.eigin_agent_self_configurable, fact.eigin_agent_has_initiative, fact.eigin_agent_tab_review, fact.eigin_local_voice]
+    tags = ["navigation", "agent", "tab", "name", "symbol", "emoji", "voice", "initiative", "proactivity", "provider", "model", "automatic", "routing", "configure"]
     created_at = 2025-03-12
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

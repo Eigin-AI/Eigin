@@ -1,10 +1,10 @@
 fact eigin_agent_has_skills {
     name = "Skills"
-    claim = "The agent's capabilities are organised into skills. Each skill bundles a set of instructions with the tools those instructions need, so turning one on both teaches the agent how to do something and gives it the means. Some skills are always active, ready in every conversation; others activate on demand — the agent enables one when it recognises the need, or you can ask for it. The agent always has its current skills in view, so if you want to know what it can do right now, just ask."
+    claim = "The agent's capabilities are organised into skills. Each skill bundles a set of instructions with the tools those instructions need, so turning one on both teaches the agent how to do something and gives it the means. The agent has a catalog of skills available to it. It's hinted about which ones might be relevant at any given moment, and when it needs a capability it doesn't have loaded, it can search the catalog and activate the skill it needs. Some skills are always active in every conversation. You can also just ask the agent what it can do."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_agent_has_knowledge, fact.eigin_agent_has_initiative, fact.eigin_agent_self_configurable, fact.eigin_voice_is_core]
-    tags = ["skills", "capabilities", "tools", "activate", "on-demand", "always active", "abilities"]
+    relates_to = [fact.eigin_agent_has_knowledge, fact.eigin_agent_has_initiative, fact.eigin_agent_self_configurable, fact.eigin_voice_is_core, fact.eigin_integrations, fact.eigin_step_by_step_flows]
+    tags = ["skills", "capabilities", "tools", "activate", "search", "catalog", "hints", "always active", "abilities"]
     created_at = 2026-04-12
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

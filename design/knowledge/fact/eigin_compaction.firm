@@ -1,8 +1,9 @@
 fact eigin_compaction {
     name = "Context Compaction"
-    claim = "When conversations get long, context is automatically compressed so the conversation can continue indefinitely without losing important information."
+    claim = "AI models can only handle conversations of a certain length, and their performance gets worse as a conversation grows long. So Eigin compacts long conversations: the agent is given a summary of what has happened plus the most recent messages, and the conversation carries on without losing what matters. Models with a small context window skip the summary step and use a sliding window instead, dropping the oldest messages as the chat grows."
     source = enum"stated"
     describes = [thing.eigin]
-    tags = ["conversation", "context", "compression", "long conversations"]
+    tags = ["conversation", "context", "compaction", "summary", "sliding window", "long conversations", "context window"]
     created_at = 2025-03-11
+    last_verified = 2026-10-08
 }

@@ -1,10 +1,10 @@
 fact eigin_ai_providers {
     name = "AI Providers"
-    claim = "Your AI can come from wherever you like. Use Eigin Relay's cloud AI, or bring one of the major providers that work out of the box — OpenAI, Anthropic, Google, Mistral, and more, including several smaller European ones. You can connect any provider that speaks the OpenAI API, or run a model right on your device. They're all valid choices, and because the agent doesn't care which is behind it, you can switch whenever you want."
+    claim = "Your AI can come from wherever you like. Use Eigin Relay's cloud AI, sign in with a subscription you already have (such as ChatGPT Plus or Pro), or set up an API key with an inference provider you trust. Eigin supports both the big labs and a host of European providers out of the box, and you can add any other OpenAI-compatible provider by its address. You can also run a model right on your device. They're all valid choices, and because the agent doesn't care which is behind it, you can switch whenever you want."
     source = enum"stated"
     describes = [thing.eigin]
     relates_to = [fact.eigin_bring_your_own_key, fact.eigin_relay, fact.eigin_local_model]
-    tags = ["providers", "models", "api", "relay", "openai", "anthropic", "google", "mistral", "european", "local", "on-device", "openai-compatible", "switch", "choice"]
+    tags = ["providers", "models", "api", "relay", "subscription", "chatgpt", "openai", "anthropic", "google", "mistral", "european", "local", "on-device", "openai-compatible", "switch", "choice"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }
