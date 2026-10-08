@@ -7,9 +7,9 @@ import SwiftUI
 /// The agent opens already knowing the user's name and priority, gets to know
 /// them, and records what it learns into its core documents via tools. A
 /// side-channel ``OnboardingAssessment`` runs in parallel each turn to drive the
-/// avatar's fill and pace the agent through ``OnboardingPacing`` hints. When the
-/// agent has proposed its own identity and called `done` — or the turn budget is
-/// spent — onboarding finishes and the reveal begins.
+/// avatar's fill and pace the agent through ``OnboardingPacing`` hints. The
+/// agent commits everything in one ``FinishOnboardingTool`` call, which ends the
+/// turn; then the reveal plays, and the real chat answers the commit.
 struct OnboardingChat: View {
     @Environment(\.colors) private var colors
     @Environment(\.modelContext) private var modelContext
@@ -38,7 +38,8 @@ struct OnboardingChat: View {
     @State private var userTurns = 0
     @State private var fillProgress = OnboardingStep.initiative.avatarProgress
     @State private var lastAssessment = OnboardingAssessment.Result.empty
-    @State private var revealDigest: String?
+    @State private var commit: OnboardingCommit?
+    @State private var didReveal = false
 
     private let pacing = OnboardingPacing()
 
@@ -109,19 +110,20 @@ struct OnboardingChat: View {
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
 
-            if let digest = revealDigest {
+            if didReveal, let commit {
                 OnboardingRevealOverlay(
                     agent: agent,
-                    digest: digest,
+                    digest: commit.introduction,
                     onContinue: handoff
                 )
                 .transition(.opacity)
             }
         }
-        .animation(Animations.gentle, value: revealDigest != nil)
+        .animation(Animations.gentle, value: didReveal)
         .task {
             guard !didAppear else { return }
             didAppear = true
+            HatchSimulation.prewarm()
             await generate(userText: nil)
         }
     }
@@ -186,9 +188,21 @@ struct OnboardingChat: View {
         }
 
         let hint = pacing.hint(result: lastAssessment, turnsTaken: userTurns, language: language)
+        AppLogger.debug(
+            "Onboarding turn \(public: userTurns) hint: \(public: hint)",
+            category: .onboarding
+        )
         apiMessages = appendSystemHint(hint, to: apiMessages)
 
-        let registry = ToolRegistry.onboarding(agentID: agent.id)
+        let registry = ToolRegistry.onboarding(
+            agentID: agent.id,
+            userName: seedName,
+            canCommit: pacing.canCommit(turnsTaken: userTurns)
+        ) { committed in
+            commit = committed
+        }
+        // Nothing is said after the commit: the reveal speaks for the agent.
+        chatLoop.shouldTerminate = { commit != nil }
         do {
             let routing = routingContext(turnModel)
             _ = try await chatLoop.run(
@@ -204,7 +218,7 @@ struct OnboardingChat: View {
             let completed = chatLoop.completeRound()
             displayedMessages.append(contentsOf: completed)
 
-            if calledDone(in: completed) || pacing.shouldForceFinish(turnsTaken: userTurns) {
+            if commit != nil || pacing.shouldForceFinish(turnsTaken: userTurns) {
                 await finishOnboarding()
             }
         } catch {
@@ -224,6 +238,10 @@ struct OnboardingChat: View {
                 model: model
             ) else { return }
             lastAssessment = result
+            AppLogger.debug(
+                "Onboarding assessment: user \(public: result.knowsUser), identity \(public: result.knowsIdentity), pace \(public: result.pace.rawValue), readiness \(public: result.readiness)",
+                category: .onboarding
+            )
             withAnimation(Animations.gentle) { fillProgress = result.fillTarget }
         }
     }
@@ -264,7 +282,9 @@ struct OnboardingChat: View {
             spaceID: nil,
             title: Localized.Onboarding.Chat.firstChatTitle
         )
-        chat.titleOrigin = .seeded
+        // A title that stands, like one the chat generated for itself — so
+        // later turns never regenerate over it.
+        chat.titleOrigin = .generated
         modelContext.insert(chat)
         for message in displayedMessages {
             let persisted = Message.from(message)
@@ -340,43 +360,48 @@ struct OnboardingChat: View {
         )
     }
 
-    private func calledDone(in messages: [ChatMessage]) -> Bool {
-        messages.contains { message in
-            message.toolCalls?.contains { $0.function.name == DoneTool().name } ?? false
-        }
-    }
-
     // MARK: - Completion
 
+    /// The turn budget ran out before the agent committed: commit with what it has.
     @MainActor
     private func finishOnboarding() async {
         guard !isFinishing else { return }
         isFinishing = true
 
-        if agent.soulCore.isEmpty {
-            agent.soulCore = Prompt.Onboarding.Partials.soulTemplate
+        if commit == nil {
+            let fallback = OnboardingCommit(
+                name: agent.name,
+                emoji: agent.emoji,
+                identity: agent.identityCore,
+                user: agent.userCore,
+                soul: "",
+                introduction: Localized.Onboarding.Reveal.fallbackIntroduction
+            )
+            await FinishOnboardingTool(
+                userName: seedName,
+                knowledgeService: knowledgeService,
+                onCommit: nil
+            )
+            .write(fallback, to: agent)
+            commit = fallback
         }
+
         // Carry over the initiative choice the user made during setup; the
         // agent is created reactive by default.
         agent.proactivity = proactivity
         agent.bootstrapComplete = true
         modelContext.insert(agent)
 
-        await seedActorEntries()
-
-        let heroModel = await routedModel(for: routingContext(model), fallback: model)
-        let heroCall = HeroTextGenerationCall(chatService: chatService)
-        let heroText = try? await heroCall.run(
-            identityCore: agent.identityCore,
-            userCore: agent.userCore,
-            soulCore: agent.soulCore,
-            language: languageManager.currentLanguage,
-            baseURL: provider.baseURL,
-            providerID: provider.id,
-            model: heroModel
+        // The reveal takes the whole screen; the keyboard must not sit over it.
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
         )
+        revealCommit()
+    }
 
-        revealDigest = heroText ?? Localized.Onboarding.Welcome.description
+    /// Shows the hero reveal once the commit is in.
+    private func revealCommit() {
+        withAnimation(Animations.gentle) { didReveal = true }
     }
 
     /// The user tapped Continue on the reveal: persist the conversation and hand
@@ -384,51 +409,6 @@ struct OnboardingChat: View {
     private func handoff() {
         persistConversation()
         onComplete()
-    }
-
-    private func seedActorEntries() async {
-        let now = LocalDateFormatter.iso8601String(from: Date())
-
-        let userActor = FirmEntity(
-            id: BundledKnowledge.userActorID,
-            entityType: "actor",
-            fields: [
-                FirmField(name: "name", value: .string(value: seedName)),
-                FirmField(name: "type", value: .enum(value: "human")),
-                FirmField(name: "created_at", value: .dateTime(value: now)),
-            ]
-        )
-
-        let agentActor = FirmEntity(
-            id: BundledKnowledge.agentActorID,
-            entityType: "actor",
-            fields: [
-                FirmField(name: "name", value: .string(value: agent.name)),
-                FirmField(name: "type", value: .enum(value: "ai")),
-                FirmField(name: "created_at", value: .dateTime(value: now)),
-                FirmField(name: "relates_to", value: .list(items: [
-                    .entityReference(entityId: BundledKnowledge.userActorID),
-                ])),
-                FirmField(name: "uses", value: .list(items: [
-                    .entityReference(entityId: BundledKnowledge.eiginThingID),
-                ])),
-            ]
-        )
-
-        do {
-            try await knowledgeService.addEntity(userActor, spaceID: nil, agentID: nil, chatID: nil)
-            try await knowledgeService.addEntity(
-                agentActor,
-                spaceID: nil,
-                agentID: nil,
-                chatID: nil
-            )
-        } catch {
-            AppLogger.error(
-                "Failed to seed actor entries: \(private: error.localizedDescription)",
-                category: .onboarding
-            )
-        }
     }
 
     // MARK: - Helpers

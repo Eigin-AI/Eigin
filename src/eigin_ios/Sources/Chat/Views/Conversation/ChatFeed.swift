@@ -196,18 +196,18 @@ struct ChatFeed: View {
             && messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// True when the conversation opens with an agent-initiated message (no
-    /// user message first). `ChatFeed` applies the same `minHeight` +
+    /// True while the conversation is only an agent-initiated opening, with
+    /// no user message yet. `ChatFeed` applies the same `minHeight` +
     /// `.topLeading` frame as the pinned-turn block, and the scroll anchor
-    /// uses `.top` so a long opening summary shows from its top.
-    /// A windowed feed starts mid-conversation — its first item's role says
-    /// nothing about how the conversation opened — so it never counts.
+    /// uses `.top` so a long opening summary shows from its top. Once the user
+    /// has replied it is a normal conversation, resting at the latest reply.
+    /// A windowed feed starts mid-conversation, so it never counts.
     private var isAgentOpened: Bool {
         if pagination.hasOlderMessages { return false }
-        if case .message(_, let role, _, _) = items.first {
-            return role != "user"
+        return !items.contains {
+            if case .message(_, "user", _, _) = $0 { return true }
+            return false
         }
-        return true
     }
 
     /// The flat item list used when no user turn has been pinned yet.

@@ -105,6 +105,35 @@ struct MorphTimeline: Equatable {
         }
     }
 
+    /// The design gallery's choreography for `seed`, step for step, for moments
+    /// designed there. The gallery shuffles with its own Fisher–Yates, so the
+    /// same seed gives a different order than
+    /// ``init(seed:formCount:breathScaleAmplitude:breathPeriod:)``.
+    init(gallerySeed seed: UInt64, formCount: Int = MorphForm.all.count) {
+        self.seed = seed
+        breathScaleAmplitude = Self.breathScaleAmplitude
+        breathPeriod = Self.breathPeriod
+        sequence = []
+        segments = []
+
+        var state = seed &+ 0x9E37_79B9_7F4A_7C15
+        func next() -> UInt64 {
+            state ^= state << 13
+            state ^= state >> 7
+            state ^= state << 17
+            return state
+        }
+        sequence = [0] + Array(1 ..< formCount) + [0]
+        fisherYatesShuffle(&sequence[1 ..< sequence.count - 1], using: next)
+        for _ in 0 ..< sequence.count - 1 {
+            let rhythm = weightedRhythm(Double(next() >> 11) / Double(1 << 53))
+            let span = rhythm.travel.upperBound - rhythm.travel.lowerBound
+            segments.append(Segment(
+                travel: rhythm.travel.lowerBound + Double(next() >> 11) / Double(1 << 53) * span
+            ))
+        }
+    }
+
     /// Picks a rhythm by weight; `roll` is uniform in [0, 1).
     private func weightedRhythm(_ roll: Double) -> Rhythm {
         var cumulative = 0.0
@@ -116,6 +145,15 @@ struct MorphTimeline: Equatable {
     }
 
     private let seed: UInt64
+
+    /// Fisher–Yates: shuffles `items` in place, drawing each step from `next`, so
+    /// the same seed always gives the same order.
+    private func fisherYatesShuffle(_ items: inout ArraySlice<Int>, using next: () -> UInt64) {
+        for i in stride(from: items.count - 1, to: 0, by: -1) {
+            let j = Int(next() % UInt64(i + 1))
+            items.swapAt(items.startIndex + i, items.startIndex + j)
+        }
+    }
 
     /// The blob's library position at `t` seconds after it appeared.
     func pose(at t: TimeInterval) -> Pose {

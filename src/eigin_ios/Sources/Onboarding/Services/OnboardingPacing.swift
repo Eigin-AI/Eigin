@@ -6,12 +6,21 @@ import Foundation
 /// conversation can't run forever.
 struct OnboardingPacing {
     /// User exchanges allowed before the wrap-up is forced. Leaves room for the
-    /// agent to ask permission and then seal on the following turn.
+    /// agent to ask permission and then commit on the following turn.
     var maxTurns: Int = 10
 
-    /// Minimum exchanges before an eager or reluctant pace can seal things.
+    /// Minimum exchanges before an eager or reluctant pace can commit.
     /// Guards against wrapping up in error after a single message.
     var minTurns: Int = 2
+
+    /// User exchanges before the agent is given the means to commit at all, so no
+    /// early read of the pace can end the meeting after a single answer.
+    var commitFloor: Int = 3
+
+    /// Whether the agent may commit on this turn.
+    func canCommit(turnsTaken: Int) -> Bool {
+        turnsTaken >= commitFloor || shouldForceFinish(turnsTaken: turnsTaken)
+    }
 
     func turnsRemaining(turnsTaken: Int) -> Int {
         max(0, maxTurns - turnsTaken)

@@ -186,7 +186,10 @@
           >
             {#if screen}
               {@const Screen = screen}
-              <Screen />
+              <!-- Keyed, so pages sharing a component each start fresh. -->
+              {#key entry?.id}
+                <Screen {...entry?.props} />
+              {/key}
             {:else}
               <ScreenPlaceholder id={route.id} />
             {/if}

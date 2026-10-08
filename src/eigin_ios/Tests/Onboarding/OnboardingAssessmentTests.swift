@@ -96,7 +96,7 @@ struct OnboardingPacingTests {
     func lastMessageHint() {
         let hint = pacing.hint(result: .empty, turnsTaken: 6, language: language)
         #expect(hint.contains("last message"))
-        #expect(hint.contains("done"))
+        #expect(hint.contains("finish_onboarding"))
     }
 
     @Test("Eager pace below the turn floor asks for one more exchange first")
@@ -109,10 +109,10 @@ struct OnboardingPacingTests {
         )
         let hint = pacing.hint(result: result, turnsTaken: 1, language: language)
         #expect(hint.lowercased().contains("brief"))
-        #expect(!hint.lowercased().contains("seal"))
+        #expect(!hint.contains("finish_onboarding"))
     }
 
-    @Test("Eager pace past the turn floor converges and seals without permission")
+    @Test("Eager pace past the turn floor checks in before sealing")
     func eagerPastFloor() {
         let result = OnboardingAssessment.Result(
             knowsUser: true,
@@ -121,11 +121,11 @@ struct OnboardingPacingTests {
             readiness: 0.5
         )
         let hint = pacing.hint(result: result, turnsTaken: 2, language: language)
-        #expect(hint.lowercased().contains("seal"))
-        #expect(hint.lowercased().contains("change it anytime"))
+        #expect(hint.contains("check in"))
+        #expect(!hint.contains("finish_onboarding"))
     }
 
-    @Test("Reluctant pace past the turn floor also converges")
+    @Test("Reluctant pace past the turn floor also checks in")
     func reluctantPastFloor() {
         let result = OnboardingAssessment.Result(
             knowsUser: true,
@@ -134,7 +134,15 @@ struct OnboardingPacingTests {
             readiness: 0.5
         )
         let hint = pacing.hint(result: result, turnsTaken: 3, language: language)
-        #expect(hint.lowercased().contains("seal"))
+        #expect(hint.contains("check in"))
+    }
+
+    @Test("The agent can only seal from the third exchange, or when the budget is spent")
+    func sealFloor() {
+        #expect(!pacing.canCommit(turnsTaken: 1))
+        #expect(!pacing.canCommit(turnsTaken: 2))
+        #expect(pacing.canCommit(turnsTaken: 3))
+        #expect(OnboardingPacing(maxTurns: 2, minTurns: 1).canCommit(turnsTaken: 2))
     }
 
     @Test("Steady pace with high readiness nudges toward converging")

@@ -89,6 +89,20 @@ struct ChatView: View {
         supportsVision = await Container.shared.modelRouter().canSatisfy(request)
     }
 
+    /// Lets the agent speak first when the history ends on something it should
+    /// answer, like the onboarding commit once the user has seen the reveal.
+    private func replyFirstIfAwaited() {
+        guard let agent, let provider = activeProvider else { return }
+        viewModel.continueTurnIfAgentOwesReply(
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers,
+            integrations: integrations
+        )
+    }
+
     /// Prewarms the loaded history's markdown before the feed is revealed. Only assistant
     /// messages, and only the blocks the library draws: code, dividers and tables have
     /// their own views.
@@ -299,6 +313,7 @@ struct ChatView: View {
         }
         .task(id: visionGateKey) { await refreshVisionSupport() }
         .task(id: viewModel.window.isPreloaded) { await prewarmMarkdown() }
+        .task(id: viewModel.window.isPreloaded) { replyFirstIfAwaited() }
         // Attempts are what change model health, so re-ask once each turn settles:
         // the last vision-capable model may have been quarantined mid-conversation.
         .onChange(of: viewModel.isTurnInProgress) { _, inProgress in

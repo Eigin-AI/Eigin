@@ -1,5 +1,6 @@
 <script lang="ts">
   import VisualCard from "./VisualCard.svelte";
+  import type { IconName } from "../../generated/icons";
   import type { OptionChoice, VisualCardVariant } from "./types";
 
   let {
@@ -13,7 +14,7 @@
   }: {
     options: OptionChoice[];
     /** Trailing neutral card — the way out when none of the options fit. */
-    somethingElse?: { label: string; description: string };
+    somethingElse?: { label: string; description: string; symbol?: IconName };
     /** Horizontal room around the run, so cards can scroll clear of the edge. */
     inset?: string;
     /** Space between cards. The chat feed uses n12, onboarding n16. */
@@ -121,7 +122,7 @@
         <VisualCard
           headline={somethingElse.label}
           explainer={somethingElse.description}
-          symbol="functional/asterix"
+          symbol={somethingElse.symbol ?? "functional/asterix"}
           variant="neutral"
           action={onSomethingElse}
         />
