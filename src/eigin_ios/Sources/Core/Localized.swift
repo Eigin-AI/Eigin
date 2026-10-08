@@ -2995,6 +2995,12 @@ enum Localized {
         }
 
         enum Reveal {
+            /// Fallback reveal line when the turn limit ran out before the agent sealed: neutral,
+            /// and written in the agent's own voice.
+            static var fallbackIntroduction: String {
+                Localized.get("onboarding.reveal.fallbackIntroduction")
+            }
+
             /// Avatar speech title in the reveal overlay. %@ is the agent’s name.
             static func title(_ p1: String) -> String {
                 String(format: Localized.get("onboarding.reveal.title"), p1)
@@ -5316,6 +5322,12 @@ enum Localized {
                 Localized.get("tools.description.emailSend")
             }
 
+            /// One-sentence description of the finish onboarding tool, shown in the tool detail
+            /// sheet
+            static var finishOnboarding: String {
+                Localized.get("tools.description.finishOnboarding")
+            }
+
             /// One-sentence description of the forget_knowledge tool, shown in the tool detail
             /// sheet
             static var forgetKnowledge: String {
@@ -5927,6 +5939,11 @@ enum Localized {
             /// Display name for the done/finish system tool
             static var done: String {
                 Localized.get("tools.system.done")
+            }
+
+            /// Display name for the tool the agent calls to seal onboarding
+            static var finishOnboarding: String {
+                Localized.get("tools.system.finishOnboarding")
             }
 
             /// Display name for the get-directions system tool

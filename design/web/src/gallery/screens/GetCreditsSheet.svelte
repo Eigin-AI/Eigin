@@ -1,7 +1,14 @@
 <script lang="ts">
   import { ContentGroup, Icon, Row, Sheet } from "@lib";
 
-  let { open = $bindable(false) }: { open?: boolean } = $props();
+  let {
+    open = $bindable(false),
+    onPurchase = () => {},
+  }: {
+    open?: boolean;
+    /** A pack was bought. */
+    onPurchase?: () => void;
+  } = $props();
 
   /* Each row buys a pack; the relay grants the credits and stores the wallet. */
   const packs = [
@@ -26,7 +33,7 @@
            to compare, not three separate offers. -->
       <ContentGroup>
         {#each packs as pack (pack.credits)}
-          <Row title="{pack.credits} credits" onclick={() => {}}>
+          <Row title="{pack.credits} credits" onclick={onPurchase}>
             {#snippet trailing()}
               <span class="t-buttonSmall price">{pack.price}</span>
             {/snippet}

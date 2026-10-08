@@ -76,6 +76,37 @@ final class ChatViewModel {
         return items
     }
 
+    /// Whether the agent still owes the chat its first word: the history ends on
+    /// an onboarding commit nothing has answered yet. Checked over the tail of
+    /// the persisted history, which always holds the commit's call and result
+    /// as an adjacent pair.
+    var awaitsAgentReply: Bool {
+        window.isPreloaded
+            && FinishOnboardingTool
+            .isUnansweredCommit(window.allPersisted.suffix(8).map { $0.toChatMessage() })
+    }
+
+    /// Lets the agent speak first when the history ends on a commit it hasn't
+    /// answered: a turn on the history as it stands, with no new user message.
+    func continueTurnIfAgentOwesReply(
+        agent: Agent,
+        provider: Provider,
+        space: Space?,
+        spaces: [Space],
+        mcpServers: [MCPServer],
+        integrations: [Integration] = []
+    ) {
+        guard awaitsAgentReply else { return }
+        continueTurn(
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers,
+            integrations: integrations
+        )
+    }
+
     // MARK: - Staged attachments
 
     /// Stages `attachment` for the next sent message if under
@@ -187,6 +218,57 @@ final class ChatViewModel {
         if !text.isEmpty { seedTitle(from: text) }
         messageText = ""
         stagedAttachments = []
+
+        runTurn(
+            userMessage: userMessage,
+            context: context,
+            sentAt: sentAt,
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers,
+            integrations: integrations
+        )
+    }
+
+    /// Lets the agent speak first: runs a turn on the history as it stands, with
+    /// no new user message. Halt the turn after a commit, then resume when the
+    /// time is right — such as right after the reveal.
+    func continueTurn(
+        agent: Agent,
+        provider: Provider,
+        space: Space?,
+        spaces: [Space],
+        mcpServers: [MCPServer],
+        integrations: [Integration] = []
+    ) {
+        guard !isTurnInProgress else { return }
+        runTurn(
+            userMessage: nil,
+            context: .text,
+            sentAt: ContinuousClock.now,
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers,
+            integrations: integrations
+        )
+    }
+
+    /// One agent turn, after `userMessage` when there is one.
+    private func runTurn(
+        userMessage: ChatMessage?,
+        context: InteractionMode,
+        sentAt: ContinuousClock.Instant,
+        agent: Agent,
+        provider: Provider,
+        space: Space?,
+        spaces: [Space],
+        mcpServers: [MCPServer],
+        integrations: [Integration]
+    ) {
         chatError = nil
 
         let hasSpaces = spaces.contains(where: { $0.agentID == agent.id })
@@ -201,7 +283,7 @@ final class ChatViewModel {
 
         guard let gatekeeper else {
             AppLogger.warning(
-                "ChatViewModel.send called before gatekeeper was constructed", category: .chat
+                "ChatViewModel turn started before gatekeeper was constructed", category: .chat
             )
             return
         }
@@ -215,6 +297,7 @@ final class ChatViewModel {
             let msgs =
                 self.window.isPreloaded
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
+                    .compactMap(\.self)
                     : self.window.messages
             // Route before the turn is built: the prompt budget and tool registry are
             // sized from the model that ends up running.
@@ -253,7 +336,7 @@ final class ChatViewModel {
             // Persist the user message before compaction: the summary row lands
             // right after the latest user message, and the retained count equals
             // the rows kept before it — payload and store stay aligned.
-            persistMessage(userMessage)
+            if let userMessage { persistMessage(userMessage) }
 
             let apiMessages = await applyCompactionIfNeeded(
                 turn: turn, provider: provider, model: routedModel, agent: agent

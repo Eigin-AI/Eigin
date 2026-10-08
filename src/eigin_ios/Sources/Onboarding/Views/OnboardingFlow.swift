@@ -45,9 +45,9 @@ struct OnboardingFlow: View {
             if step.isSetupScreen {
                 OnboardingScaffold(
                     progress: step.avatarProgress,
-                    // Welcome is a moment: the avatar makes a pronounced entrance
-                    // at full power with no ring, holds a beat, then speaks. The
-                    // ring appears from the next step on.
+                    // Welcome is a moment: the avatar is there, centred, as the
+                    // app opens, at full power with no ring; it holds a beat,
+                    // then rises and speaks. The ring appears from the next step on.
                     showsProgress: step != .welcome,
                     entrance: step == .welcome,
                     title: speech.title,

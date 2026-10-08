@@ -30,7 +30,11 @@ extension ToolRegistry {
     static let allKitCapabilities: [ToolCapability] =
         allKits.flatMap { $0.capabilities }
             + integrationCapabilities
-            + [DoneTool.capability, BackgroundNotifyTool.capability]
+            + [
+                DoneTool.capability,
+                BackgroundNotifyTool.capability,
+                FinishOnboardingTool.capability,
+            ]
 
     private static var integrationCapabilities: [ToolCapability] {
         var seenKeys = Set<String>()
@@ -161,25 +165,18 @@ extension ToolRegistry {
 
     /// Onboarding conversation tool set.
     ///
-    /// The agent gets to know the user, records what it learns into its core
-    /// documents, proposes its own identity, and signals completion. Restricted:
-    /// no web, skills, intents, spaces, or scheduling.
+    /// Pure conversation: the agent can look up how Eigin works to answer
+    /// questions, and commits everything it settled on in one final call. The
+    /// commit is only offered once `canCommit`.
     @MainActor
     static func onboarding(
         agentID: UUID,
-        onDone: (@Sendable () -> Void)? = nil
+        userName: String,
+        canCommit: Bool = true,
+        onCommit: (@MainActor @Sendable (OnboardingCommit) -> Void)? = nil
     ) -> ToolRegistry {
-        let voiceService = Container.shared.voiceService()
         let knowledgeService = Container.shared.knowledgeService()
-        let tools: [any Tool] = [
-            ReadCoreTool(),
-            EditCoreTool(),
-            SetPresentationTool(
-                voiceService: voiceService,
-                voiceNames: [],
-                knowledgeService: knowledgeService,
-                agentID: agentID
-            ),
+        var tools: [any Tool] = [
             SearchKnowledgeTool(
                 knowledgeService: knowledgeService,
                 spaceID: nil,
@@ -190,8 +187,14 @@ extension ToolRegistry {
                 spaceID: nil,
                 agentID: agentID
             ),
-            DoneTool(onDone: onDone),
         ]
+        if canCommit {
+            tools.append(FinishOnboardingTool(
+                userName: userName,
+                knowledgeService: knowledgeService,
+                onCommit: onCommit
+            ))
+        }
         return ToolRegistry(tools: tools)
     }
 

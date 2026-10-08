@@ -8807,6 +8807,23 @@
         }
       }
     },
+    "onboarding.reveal.fallbackIntroduction" : {
+      "comment" : "Fallback reveal line when the turn limit ran out before the agent sealed: neutral, and written in the agent's own voice.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg er her, sat op som din personlige AI."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I'm here, set up as your personal AI."
+          }
+        }
+      }
+    },
     "onboarding.reveal.title" : {
       "comment" : "Avatar speech title in the reveal overlay. %@ is the agent’s name.",
       "localizations" : {
@@ -15824,6 +15841,23 @@
         }
       }
     },
+    "tools.description.finishOnboarding" : {
+      "comment" : "One-sentence description of the finish onboarding tool, shown in the tool detail sheet",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemmer agentens navn, udseende og kernetekster, når opsætningen er færdig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saves the agent's name, look and core texts at the end of onboarding."
+          }
+        }
+      }
+    },
     "tools.description.forgetKnowledge" : {
       "comment" : "One-sentence description of the forget_knowledge tool, shown in the tool detail sheet",
       "localizations" : {
@@ -17588,6 +17622,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Done"
+          }
+        }
+      }
+    },
+    "tools.system.finishOnboarding" : {
+      "comment" : "Display name for the tool the agent calls to seal onboarding",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Færdig med opsætningen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finished setting up"
           }
         }
       }

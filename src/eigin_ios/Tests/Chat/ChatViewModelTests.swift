@@ -307,6 +307,46 @@ struct ChatViewModelTests {
         #expect(vm.messageText.isEmpty)
     }
 
+    // MARK: - continueTurn
+
+    @Test("continueTurn lets the agent answer a seal without a user message")
+    @MainActor
+    func continueTurnAnswersCommit() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta("Want me to set up that morning rundown now?"),
+            .finished(.stop),
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.messageText = ""
+
+        let commit = ToolCall(
+            id: "commit", type: "function",
+            function: .init(name: "finish_onboarding", arguments: "{}")
+        )
+        let history = [
+            ChatMessage(role: "user", content: "Ford it is"),
+            ChatMessage(role: "assistant", content: nil, toolCalls: [commit]),
+            ChatMessage(
+                role: "tool",
+                content: "{\"result\":{\"status\":\"committed\"}}",
+                toolCallID: "commit"
+            ),
+        ]
+        vm.window.messages = history
+        vm.window.allPersisted = history.map { Message.from($0) }
+        vm.window.isPreloaded = true
+        #expect(vm.awaitsAgentReply)
+
+        vm.continueTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+
+        #expect(vm.window.messages.count(where: { $0.role == "user" }) == 1)
+        #expect(vm.window.messages.last?.content == "Want me to set up that morning rundown now?")
+        #expect(service.capturedEventMessages.last?.role == "tool")
+    }
+
     @Test("retryLastTurn is a no-op when the last message is from the assistant")
     @MainActor
     func retryLastTurnNoOpWhenAssistantLast() throws {

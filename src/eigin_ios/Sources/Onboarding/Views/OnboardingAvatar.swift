@@ -16,22 +16,21 @@ struct OnboardingAvatar: View {
     var progress: Double
     var emoji: String?
     var showsProgress: Bool
-    /// When true, the avatar makes a pronounced entrance — landing larger and
-    /// lower, then settling up to its place. Used once, for the welcome moment.
-    var entrance: Bool
+    /// Fades in on appear. Off when it should already be there, like at launch.
+    var animatesIn: Bool
     var size: CGFloat
 
     init(
         progress: Double,
         emoji: String? = nil,
         showsProgress: Bool = true,
-        entrance: Bool = false,
+        animatesIn: Bool = true,
         size: CGFloat = 96
     ) {
         self.progress = progress
         self.emoji = emoji
         self.showsProgress = showsProgress
-        self.entrance = entrance
+        self.animatesIn = animatesIn
         self.size = size
     }
 
@@ -97,19 +96,14 @@ struct OnboardingAvatar: View {
                 .opacity(markOpacity)
                 .saturation(markSaturation)
         }
-        // Entrance: a pronounced "pop up bigger then settle" for welcome, or a
-        // gentle fade-in otherwise.
-        .scaleEffect(appeared ? 1 : (entrance ? 1.7 : 0.85))
-        .offset(y: appeared ? 0 : (entrance ? 110 : 0))
-        .opacity(appeared ? 1 : 0)
+        // A gentle fade-in, unless it is simply there from the start.
+        .scaleEffect(appeared || !animatesIn ? 1 : 0.85)
+        .opacity(appeared || !animatesIn ? 1 : 0)
         .animation(.easeOut(duration: 0.15), value: fill)
         .animation(.easeOut(duration: 0.5), value: showsProgress)
         .onAppear {
             chaser.setTarget(Float(progress))
-            let landing: Animation = entrance
-                ? .spring(duration: 0.9, bounce: 0.3)
-                : .spring(duration: 0.6, bounce: 0.2)
-            withAnimation(landing) { appeared = true }
+            withAnimation(.spring(duration: 0.6, bounce: 0.2)) { appeared = true }
         }
         .onChange(of: progress) { _, new in chaser.setTarget(Float(new)) }
     }

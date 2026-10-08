@@ -61,19 +61,16 @@
 
   const collapsedText = $derived(overlayText ?? value);
 
-  /** Grows with content, up to 10 lines. */
-  function autoGrow(node: HTMLTextAreaElement) {
-    const resize = () => {
-      node.style.height = "auto";
-      const line = Number.parseFloat(getComputedStyle(node).lineHeight);
-      node.style.height = `${Math.min(node.scrollHeight, line * 10)}px`;
-    };
-    node.addEventListener("input", resize);
-    resize();
-    return {
-      destroy: () => node.removeEventListener("input", resize),
-    };
-  }
+  /* Grows with content, up to 10 lines, while open. Collapsed it is one line:
+     the field sits invisibly in the pill, so its height is the pill's. Tracks
+     the value, so text set from outside resizes it too. */
+  $effect(() => {
+    void value;
+    if (!field) return;
+    const line = Number.parseFloat(getComputedStyle(field).lineHeight);
+    field.style.height = "auto";
+    field.style.height = expanded ? `${Math.min(field.scrollHeight, line * 10)}px` : `${line}px`;
+  });
 </script>
 
 <!--
@@ -89,7 +86,6 @@
         <textarea
           bind:this={field}
           bind:value
-          use:autoGrow
           rows="1"
           class="t-chatMessageUser"
           class:visible={expanded}

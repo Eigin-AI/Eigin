@@ -55,7 +55,9 @@ struct OnboardingScaffold<Content: View>: View {
             OnboardingAvatar(
                 progress: progress,
                 emoji: emoji,
-                showsProgress: showsProgress
+                showsProgress: showsProgress,
+                // On the welcome moment it is there as the app opens, centred.
+                animatesIn: !entrance
             )
             // Big and centered while landing (the only child, so the stack
             // centers it), then settling to its normal size at the top once the

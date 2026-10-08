@@ -21,6 +21,7 @@ import ProviderSelectScreen from "@gallery/screens/ProviderSelectScreen.svelte";
 import SettingsScreen from "@gallery/screens/SettingsScreen.svelte";
 import ToolDetailScreen from "@gallery/screens/ToolDetailScreen.svelte";
 import WatchScreen from "@gallery/screens/WatchScreen.svelte";
+import OnboardingFlow from "@gallery/screens/onboarding/OnboardingFlow.svelte";
 
 export interface ScreenEntry {
   id: string;
@@ -29,6 +30,8 @@ export interface ScreenEntry {
   section: string;
   /** The screen itself, so this list is also the routing table. */
   component: Component;
+  /** Props for the component, so one screen can be entered at several points. */
+  props?: Record<string, unknown>;
   /** What this screen is for, in a sentence or two, shown under the phone. */
   about?: string;
   /**
@@ -49,6 +52,7 @@ export interface ScreenEntry {
  */
 export const screenSections: { id: string; title: string }[] = [
   { id: "primary", title: "Main screens" },
+  { id: "onboarding", title: "Onboarding" },
   { id: "connections", title: "Connections" },
   { id: "sheets", title: "Sheets" },
   { id: "watch", title: "Watch" },
@@ -95,6 +99,72 @@ export const screenEntries: ScreenEntry[] = [
     section: "primary",
     component: SettingsScreen,
     about: "Everything about the app itself, and the way through to connections.",
+  },
+
+  /* Onboarding is one flow entered at each step: every page plays on from
+     where it starts, with the avatar carried across the setup steps. */
+  {
+    id: "onboarding-welcome",
+    title: "Welcome",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "welcome" },
+    about:
+      "First launch. The avatar lands big and centred at full power, holds a beat, then settles and speaks. Play on from here to walk the whole flow.",
+  },
+  {
+    id: "onboarding-name",
+    title: "Name",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "name" },
+    about:
+      "Asks what to call you, and answers why a private app wants to know. The ring appears from here on and fills a little with each step.",
+  },
+  {
+    id: "onboarding-priority",
+    title: "Priority",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "priority" },
+    about:
+      "What you are hoping for, as a carousel of cards. The choice is seeded into the first conversation so the agent can shape itself around it.",
+  },
+  {
+    id: "onboarding-inference",
+    title: "Inference",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "inference" },
+    about:
+      "Gives the agent a brain. Eigin's cloud is the default and asks for credits first if you have none; your own provider is second; the offline model downloads in the background.",
+  },
+  {
+    id: "onboarding-initiative",
+    title: "Initiative",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "initiative" },
+    about:
+      "Whether the agent may work in the background and reach out. Choosing it asks for notification permission in context.",
+  },
+  {
+    id: "onboarding-conversation",
+    title: "Conversation",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "conversation" },
+    about:
+      "The agent gets to know you and writes what it learns into its core, while the header avatar fills. Scripted here: your next reply waits in the composer. It ends when the agent calls done.",
+  },
+  {
+    id: "onboarding-reveal",
+    title: "Agent reveal",
+    section: "onboarding",
+    component: OnboardingFlow,
+    props: { start: "reveal" },
+    about:
+      "The hero moment: the Eigin mark blooms into the agent's face, then it names itself and says what it is for. Tapping through hands off to the first chat.",
   },
 
   {
