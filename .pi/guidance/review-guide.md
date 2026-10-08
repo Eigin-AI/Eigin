@@ -35,6 +35,25 @@ Explain what and why, not the tour.
 ### Comments and docs should say what a thing is, not what it isn't.
 Flag "not X, but Y" framing and negative definitions.
 
+## Design
+
+### Check UI values against the design tokens.
+Flag hard-coded colours, type, spacing, radius — these come from `design/tokens.json` via the generated accessors. New UI should also match the web gallery (`design/web/`).
+
+### Check new UI concepts against the design system.
+A component, pattern, or token worth reusing gets flagged for promotion to `design/`. Ask the user before promoting; one-off judgment calls need no action.
+
+### Check accessibility.
+Flag low contrast, small hit targets, unlabeled controls, animations that ignore reduced motion.
+
+### Check the interaction, not just the code.
+Does the flow make sense, are error and empty states handled, does the copy match `design/brand-voice.md`?
+
+## Platform and compatibility
+
+### Check persisted and protocol changes for backward compatibility.
+Flag schema, store, or wire-format changes with no migration path for existing data.
+
 ## Docs
 
 ### Docs should match the style and tone of nearby docs.
@@ -47,6 +66,9 @@ Flag statements that aren't apparent in the code diff.
 The key is to make each doc feel immediately scannable by mixing media and using good spacing instead of long blocks of prose.
 
 ### Docs should state requirements concretely: which version, via which tool.
+
+### Docs should reflect the change.
+Affected `docs/src/` pages update on the same branch; a new concept may need its own page.
 
 ## Code
 
@@ -76,6 +98,25 @@ Not inline in the code. This applies to app prompts — the jinja templates
 compiled into Swift. Kickoff and guidance text for the pi extension is its own
 kind of prompt: compositions live in `workflow/*-handoff.ts`, guidance in
 `.pi/guidance/`.
+
+## Security and privacy
+
+### Check the change fits local-first, privacy-preserving architecture.
+Flag off-device data, telemetry, or centralization that `docs/src/philosophy.md` and `privacy.md` don't cover.
+
+### Check security basics.
+Secret storage, platform TLS, no home-rolled crypto, input validated on the way in.
+
+### Check new dependencies are vetted before they merge.
+A license we can ship, no known vulnerabilities.
+
+## Compliance
+
+### Check new dependencies are recorded.
+Row in `LICENSES/`, and the matching entry in the app's licenses view (`LicenseEntry.swift` mirrors `LICENSES/swift-packages.md`).
+
+### Check the change against `docs/src/compliance/`.
+If it contradicts a claim (GDPR, AI Act, App Store, CASA), the change gets fixed. If the claim is stale, flag the doc for human review.
 
 ## Tests
 
