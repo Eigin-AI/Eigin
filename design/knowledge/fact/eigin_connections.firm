@@ -1,0 +1,10 @@
+fact eigin_connections {
+    name = "Connections"
+    claim = "Connections, found in the Settings tab, is where you hook the agent up to the outside world. You can add AI providers and set up a local model, and get credits for Eigin Relay. You can also add integrations for things like email, and MCP servers. For providers and integrations, pick from the presets or add your own by address. A custom AI provider needs to be OpenAI-compatible and reachable from your device."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_settings_tab, fact.eigin_ai_providers, fact.eigin_integrations, fact.eigin_local_model, fact.eigin_relay_credits]
+    tags = ["connections", "settings", "providers", "ai providers", "integrations", "mcp", "local model", "credits", "relay", "presets", "custom", "address", "openai-compatible", "add"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

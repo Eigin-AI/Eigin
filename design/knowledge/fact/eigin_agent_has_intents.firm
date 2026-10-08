@@ -6,4 +6,5 @@ fact eigin_agent_has_intents {
     relates_to = [fact.eigin_agent_has_initiative, fact.eigin_agent_has_knowledge]
     tags = ["intents", "goals", "tasks", "reminders", "schedules", "events", "initiative", "proactive", "tracking", "follow-up"]
     created_at = 2026-07-03
+    last_verified = 2026-10-08
 }

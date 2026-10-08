@@ -1,0 +1,10 @@
+fact eigin_model_routing {
+    name = "Automatic Model Selection"
+    claim = "By default the agent uses automatic model selection: Eigin picks a good model for each turn from the ones your provider offers. Simple messages go to a fast model, and heavier ones that need reasoning go to a more capable one. If a model errors out or is slow, Eigin moves on to the next best. If you're offline and have a local model downloaded, the turn runs on that instead. Picking a specific model in the Agent tab turns automatic selection off."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_tab, fact.eigin_ai_providers, fact.eigin_local_model]
+    tags = ["automatic", "routing", "model selection", "models", "reasoning", "fast", "failover", "offline", "default", "pick a model"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

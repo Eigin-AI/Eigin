@@ -1,9 +1,10 @@
 fact eigin_respects_os_security {
     name = "iOS Security Model"
-    claim = "Eigin respects the iOS security model. It only uses capabilities allowed by the platform, and explicitly asks for user consent before accessing sensitive resources like the microphone, speech recognition, or notifications."
+    claim = "Eigin respects your OS security model. It only uses capabilities the platform allows. When a feature needs something protected by the operating system, such as the microphone, speech recognition, notifications, calendar, reminders or health data, the OS asks you whether to allow it. If you're not comfortable, you can say no, and the agent simply won't be able to use that. Eigin also asks your permission before the agent takes actions that need your input."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_is_private_ai]
-    tags = ["security", "privacy", "permissions", "consent", "ios", "microphone", "notifications", "trust", "sandbox"]
+    relates_to = [fact.eigin_is_private_ai, fact.eigin_tool_permissions]
+    tags = ["security", "privacy", "permissions", "consent", "ios", "microphone", "speech", "notifications", "calendar", "reminders", "health", "trust", "sandbox"]
     created_at = 2025-03-11
+    last_verified = 2026-10-08
 }

@@ -8,7 +8,7 @@ Web search queries go to the relay, which forwards them to [Staan](https://staan
 
 ## Inference
 
-The relay forwards inference to a vetted upstream provider, so users can run capable models without their own key. Prompt and response content is never logged or stored; the relay reads only the token counts it needs to compute cost.
+The relay forwards inference to vetted upstream providers, so users can run capable models without their own key. Prompt and response content is never logged or stored; the relay reads only the token counts it needs to compute cost.
 
 Inference is gated by credits, tied to a purchase or grant rather than an identity:
 

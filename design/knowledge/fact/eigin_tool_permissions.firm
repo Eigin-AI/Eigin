@@ -1,10 +1,10 @@
 fact eigin_tool_permissions {
     name = "Tool Permissions"
-    claim = "You control what the agent can do through tool permissions: Always (no confirmation), Ask (confirm each time), or Never (disabled). You set them in the Settings tab, either globally or per chat."
+    claim = "You control what the agent can do through tool permissions. When the agent wants to use a tool that needs your approval, you can allow it once or deny it once, or allow that tool for the whole chat. For a lasting setting, open Permissions under the agent section of the Settings tab: choose Always to let a tool run without asking, or Never to make the tool unavailable to the agent altogether."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_settings_tab]
-    tags = ["permissions", "tools", "privacy", "security", "control", "confirmation", "settings", "trust"]
+    relates_to = [fact.eigin_settings_tab, fact.eigin_background_permissions, fact.eigin_respects_os_security]
+    tags = ["permissions", "tools", "privacy", "security", "control", "confirmation", "allow", "deny", "always", "never", "ask", "settings", "trust"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

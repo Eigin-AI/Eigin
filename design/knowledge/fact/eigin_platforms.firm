@@ -1,8 +1,9 @@
 fact eigin_platforms {
     name = "Platform Availability"
-    claim = "Eigin is currently available on iOS only. It is not available on macOS, Android, or any other platform yet. More platforms are planned for the future."
+    claim = "Eigin is available on iOS and Apple Watch. There is also a widget you can put on your home screen, and Siri Shortcuts. It is not available on macOS, Android, or other platforms yet, but we're working on expanding Eigin to more platforms in the future."
     source = enum"stated"
     describes = [thing.eigin]
-    tags = ["platform", "ios", "macos", "android", "availability", "devices", "iphone", "ipad"]
+    tags = ["platform", "ios", "apple watch", "watch", "widget", "siri", "shortcuts", "macos", "android", "availability", "devices", "iphone", "ipad"]
     created_at = 2025-03-11
+    last_verified = 2026-10-08
 }

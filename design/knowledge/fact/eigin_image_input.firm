@@ -6,4 +6,5 @@ fact eigin_image_input {
     relates_to = [fact.eigin_on_device_processing, fact.eigin_chat_actions]
     tags = ["image", "images", "vision", "photo", "camera", "attach", "picture", "multimodal", "on-device", "privacy"]
     created_at = 2026-07-03
+    last_verified = 2026-10-08
 }

@@ -1,9 +1,10 @@
 fact eigin_relay_credit_pricing {
     name = "Relay Credit Pricing"
-    claim = "An Eigin Relay credit is worth roughly one euro cent of AI inference at cost — the real price the providers charge. Eigin's cloud AI draws on several European providers, hosted by European-owned companies, so you get a good catalogue of models. The packs cost a little more than the inference inside them: a fee is added when you buy, most of which is the app store's cut on the in-app purchase, plus a small margin to help Eigin cover running the infrastructure. You pay that once, up front — from then on each credit spends at cost."
+    claim = "An Eigin Relay credit is worth roughly one euro cent of AI inference at cost, so 100 credits is about one euro of usage at the real price the providers charge. How many credits a request uses depends on the model you pick. Eigin's cloud AI draws on European providers, hosted by European-owned companies. The packs cost a little more than the inference inside them: a fee is added when you buy, most of which is the app store's cut on the in-app purchase, plus a small margin to help Eigin cover running the infrastructure. You pay that once, up front — from then on each credit spends at cost."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_relay_credits, fact.eigin_relay, fact.eigin_cost_model]
-    tags = ["credits", "pricing", "cost", "euro", "inference", "european", "providers", "fee", "app store", "in-app purchase", "margin", "transparency"]
+    relates_to = [fact.eigin_relay_credits, fact.eigin_relay, fact.eigin_cost_model, fact.eigin_relay_models]
+    tags = ["credits", "pricing", "cost", "euro", "inference", "european", "providers", "fee", "app store", "in-app purchase", "margin", "transparency", "model"]
     created_at = 2026-07-03
+    last_verified = 2026-10-08
 }

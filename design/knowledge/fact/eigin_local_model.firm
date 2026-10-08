@@ -1,9 +1,10 @@
 fact eigin_local_model {
     name = "Local Model"
-    claim = "You can run the agent on a model that lives entirely on your device. You download it first from the Settings tab, under Connections. A local model gives you solid conversational ability and general knowledge, and it can still draw on web search and your knowledge base to look things up, so it can carry any conversation. But it works with a limited set of tools, and a smaller context window means it may lose track of earlier details as a chat goes on. Think of it as a stand-in: best when you're offline or want completely guaranteed privacy, with nothing leaving your device at all. Local AI is improving quickly, and we expect this to get much better over time."
+    claim = "You can run the agent on a model that lives entirely on your device: Gemma 4 E2B, which requires an iPhone 15 or later. Download it from Connections in the Settings tab, or from Local Assets under Settings, Advanced. It gives you solid conversation and general knowledge, and can still draw on web search and your knowledge to look things up. But it works with a limited set of tools, and a smaller context window means it may lose track of earlier details as a chat goes on. Best when you're offline or want guaranteed privacy, with nothing leaving your device at all."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_ai_providers, fact.eigin_on_device_processing, fact.eigin_is_private_ai, fact.eigin_settings_tab]
-    tags = ["local", "local model", "on-device", "offline", "privacy", "download", "settings", "connections", "tools", "context window", "forget", "fallback", "stand-in", "conversational", "web search", "knowledge"]
+    relates_to = [fact.eigin_ai_providers, fact.eigin_on_device_processing, fact.eigin_is_private_ai, fact.eigin_connections, fact.eigin_model_routing]
+    tags = ["local", "local model", "gemma", "iphone 15", "on-device", "offline", "privacy", "download", "settings", "connections", "local assets", "tools", "context window", "forget", "fallback", "stand-in"]
     created_at = 2026-07-04
+    last_verified = 2026-10-08
 }

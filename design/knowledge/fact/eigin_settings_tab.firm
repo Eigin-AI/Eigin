@@ -1,10 +1,10 @@
 fact eigin_settings_tab {
     name = "Settings Tab"
-    claim = "The Settings tab holds the configuration only you can change. From here you can change the language, set tool permissions for each tool, add connections such as AI providers and MCP servers, and open advanced settings for things like logging, troubleshooting, and managing local models."
+    claim = "The Settings tab holds the configuration only you can change. From here you can change the language, send us feedback, set the agent's tool permissions, and manage its connections. Advanced settings cover things like logging and managing local models, and there's an About page too."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_app_tabs, fact.eigin_tool_permissions, fact.eigin_ai_providers, fact.eigin_extends_with_mcp, fact.eigin_language_support, fact.eigin_feedback]
-    tags = ["navigation", "settings", "tab", "language", "permissions", "connections", "providers", "mcp", "local models", "advanced", "logging", "feedback"]
+    relates_to = [fact.eigin_app_tabs, fact.eigin_tool_permissions, fact.eigin_connections, fact.eigin_language_support, fact.eigin_feedback, fact.eigin_local_model, fact.eigin_local_voice]
+    tags = ["navigation", "settings", "tab", "language", "feedback", "permissions", "connections", "local models", "local assets", "advanced", "logging", "about"]
     created_at = 2025-03-12
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

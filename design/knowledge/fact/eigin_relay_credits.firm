@@ -1,9 +1,10 @@
 fact eigin_relay_credits {
     name = "Relay Credits"
-    claim = "When you use Eigin Relay's cloud AI, you pay with credits instead of a subscription. You buy credit packs right in the app, and each request only draws down what the AI inference actually costs. Credits are tied to the purchase itself, so you don't need an Eigin account to use them."
+    claim = "When you use Eigin Relay's cloud AI, you pay with credits instead of a subscription. You buy credit packs right in the app, and each request only draws down what the AI inference actually costs. Credits don't expire, and if you reinstall the app you can recover the credits you bought. They're tied to the purchase receipt itself, so you don't need an Eigin account to use them."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_relay, fact.eigin_cost_model]
-    tags = ["credits", "relay", "payment", "subscription", "packs", "non-expiring", "purchase", "anonymous", "cost", "pay-as-you-go"]
+    relates_to = [fact.eigin_relay, fact.eigin_cost_model, fact.eigin_relay_credit_pricing]
+    tags = ["credits", "relay", "payment", "subscription", "packs", "non-expiring", "recover", "reinstall", "purchase", "anonymous", "cost", "pay-as-you-go"]
     created_at = 2026-07-03
+    last_verified = 2026-10-08
 }

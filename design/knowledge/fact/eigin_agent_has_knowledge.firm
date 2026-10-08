@@ -1,10 +1,10 @@
 fact eigin_agent_has_knowledge {
     name = "Knowledge Base"
-    claim = "The agent has a knowledge base for everything it learns about you over time. It's a single place for the people, things, and facts of your life, along with notes it keeps and outputs you've made together. Knowledge is structured and linked, so the agent can search it and follow connections to related things. As you talk, the system automatically surfaces the knowledge that looks relevant to what you're saying, and the agent can also search it directly whenever it wants to find something."
+    claim = "The agent has knowledge. Some comes bundled with the app, so it knows about Eigin and how the system works. Over time it also collects knowledge about you and what you're working on, organised as a linked graph of people, things, facts, notes and outputs, so it can search it and follow connections. Knowledge works like memory: the most relevant pieces are surfaced as you talk, ranked by how much they're used, so what matters stays within reach. If initiative is turned on, the agent will occasionally tidy up and reflect on what it has learned to keep its knowledge consistent."
     source = enum"stated"
     describes = [thing.eigin]
-    relates_to = [fact.eigin_spaces_organize_context]
-    tags = ["knowledge", "knowledge base", "facts", "notes", "memory", "people", "things", "outputs", "learning", "search", "related", "relevant"]
+    relates_to = [fact.eigin_spaces_organize_context, fact.eigin_agent_has_initiative]
+    tags = ["knowledge", "knowledge base", "facts", "notes", "memory", "graph", "people", "things", "outputs", "learning", "search", "relevant", "ranking", "bundled", "consistent"]
     created_at = 2025-03-11
-    last_verified = 2026-07-03
+    last_verified = 2026-10-08
 }

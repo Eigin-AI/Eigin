@@ -2,7 +2,7 @@ import Foundation
 import NaturalLanguage
 
 /// Shared word-tokenisation for lightweight, language-agnostic message matching
-/// (knowledge name-mentions, skill trigger keywords).
+/// (knowledge name-mentions).
 enum MessageTokenizer {
     /// Default minimum token length — filters tiny function words and punctuation
     /// artefacts while still catching short names ("Bob", "Ada").

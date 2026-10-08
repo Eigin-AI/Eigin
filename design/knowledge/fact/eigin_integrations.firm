@@ -1,0 +1,10 @@
+fact eigin_integrations {
+    name = "Integrations"
+    claim = "Integrations let the agent work with outside services, such as your email. They come in two kinds: direct integrations that Eigin provides, and MCP (Model Context Protocol) servers, which you can connect by address. To connect something like Gmail, go to Connections in the Settings tab, add an integration, and choose it from the list. Once you've added one, the agent discovers it automatically and can activate it through its skills when it's needed."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_connections, fact.eigin_agent_has_skills, fact.eigin_tool_permissions, fact.eigin_settings_tab]
+    tags = ["integrations", "mcp", "tools", "extensions", "plugins", "gmail", "email", "services", "connections", "settings", "servers", "skills", "discover"]
+    created_at = 2026-10-08
+    last_verified = 2026-10-08
+}

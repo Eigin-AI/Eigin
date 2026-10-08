@@ -1,9 +1,10 @@
 fact eigin_vs_chatgpt_claude_gemini {
     name = "Eigin vs. ChatGPT, Claude, Gemini"
-    claim = "Eigin does many of the same things as ChatGPT, Claude, and Gemini — and in fact lets you use all of them under the hood. The difference is that Eigin is not tied to any one vendor. You can switch providers tomorrow and everything feels the same. It is free and open source, and does not carry the weight of delivering on a venture-capital promise of hypergrowth. It just tries to be a good tool for you to use AI in a way that is secure and responsible."
+    claim = "Eigin does many of the same things as ChatGPT, Claude, and Gemini — and in fact lets you use all of them under the hood, even through a subscription you already have. The difference is that Eigin is not tied to any one vendor. You can switch providers tomorrow and everything feels the same. It is free and open source, European, and built responsibly on a social mission rather than a hypergrowth venture. It just tries to be a good tool for you to use AI in a way that is secure and responsible."
     source = enum"stated"
     describes = [thing.eigin]
     relates_to = [fact.eigin_bring_your_own_key, fact.eigin_ai_providers, fact.eigin_free_and_open]
     tags = ["comparison", "chatgpt", "claude", "gemini", "vendor", "independent", "open source", "free", "responsible"]
     created_at = 2025-03-11
+    last_verified = 2026-10-08
 }
