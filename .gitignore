@@ -130,3 +130,6 @@ src/eigin_ios/DeviceDerivedData
 
 ## Web test-runner artifacts (design/web)
 test-results/
+
+# Showcase PNGs are one-off exports; the repo keeps the JPEGs.
+design/assets/showcase/**/*.png

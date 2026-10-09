@@ -10,10 +10,12 @@
  */
 export function overflowFade(node: HTMLElement) {
   const update = () => {
-    const first = node.firstElementChild;
-    const last = node.lastElementChild;
+    const first = node.firstElementChild as HTMLElement | null;
+    const last = node.lastElementChild as HTMLElement | null;
     if (!first || !last) return;
-    const contentHeight = last.getBoundingClientRect().bottom - first.getBoundingClientRect().top;
+    // Layout offsets, not client rects: a transformed ancestor (a tilted
+    // phone) inflates rects but not clientHeight, which read as overflow.
+    const contentHeight = last.offsetTop + last.offsetHeight - first.offsetTop;
     node.classList.toggle("is-scrollable", contentHeight > node.clientHeight + 1);
   };
 

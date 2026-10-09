@@ -7,15 +7,24 @@
   import { catalogEntries } from "@gallery/catalog/index";
   import { screenEntries, screenSections } from "@gallery/screens/index";
   import { stageControls } from "@gallery/screens/stageControls.svelte";
+  import RenderView from "@gallery/showcase/RenderView.svelte";
+  import ShowcaseStage from "@gallery/showcase/ShowcaseStage.svelte";
+  import { decodeShot } from "@gallery/showcase/shotUrl";
+  import { shotEntries } from "@gallery/showcase/shots";
 
   type Route =
-    { kind: "home" } | { kind: "component"; id: string } | { kind: "screen"; id: string };
+    | { kind: "home" }
+    | { kind: "component"; id: string }
+    | { kind: "screen"; id: string }
+    | { kind: "showcase"; id: string; params: URLSearchParams };
 
   function parseHash(): Route {
-    const hash = location.hash.replace(/^#\/?/, "");
-    const [kind, id] = hash.split("/");
+    const [path, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
+    const [kind, id] = path.split("/");
     if (kind === "components" && id) return { kind: "component", id };
     if (kind === "screens" && id) return { kind: "screen", id };
+    if (kind === "showcase" && id)
+      return { kind: "showcase", id, params: new URLSearchParams(query) };
     return { kind: "home" };
   }
 
@@ -42,6 +51,12 @@
       entries: screenEntries,
       group: section.id,
     })),
+    {
+      title: "Showcase",
+      href: "showcase",
+      entries: shotEntries.map((shot) => ({ ...shot, section: "showcase" })),
+      group: "showcase",
+    },
   ]
     .map(({ title, href, entries, group }) => ({
       title,
@@ -64,6 +79,12 @@
   });
 
   const screen = $derived(entry?.component);
+
+  const shotEntry = $derived.by(() => {
+    const here = route;
+    if (here.kind !== "showcase") return undefined;
+    return shotEntries.find((candidate) => candidate.id === here.id);
+  });
 
   /* A screen belongs to one form factor — the watch companion is not a small
      iPhone — so the stage offers only the device that screen runs on. */
@@ -101,7 +122,9 @@
       ? `#/components/${route.id}`
       : route.kind === "screen"
         ? `#/screens/${route.id}`
-        : "",
+        : route.kind === "showcase"
+          ? `#/showcase/${route.id}`
+          : "",
   );
 
   onMount(() => {
@@ -111,106 +134,120 @@
   });
 </script>
 
-<EiginRoot {colorScheme}>
-  <div class="gallery">
-    <nav class="sidebar">
-      <h1 class="t-titleS">Eigin design gallery</h1>
+<!-- Render mode draws one shot alone at its pixel size, for export. -->
+{#if route.kind === "showcase" && route.params.has("render") && shotEntry}
+  <EiginRoot colorScheme="light">
+    <RenderView
+      shot={decodeShot(route.params, shotEntry)}
+      time={Number(route.params.get("t") ?? 0)}
+    />
+  </EiginRoot>
+{:else}
+  <EiginRoot {colorScheme}>
+    <div class="gallery">
+      <nav class="sidebar">
+        <h1 class="t-titleS">Eigin design gallery</h1>
 
-      <SegmentedControl
-        segments={schemes}
-        selection={colorScheme}
-        onSelect={(next) => (colorScheme = next as typeof colorScheme)}
-      />
-
-      <!-- The sidebar is a set of pickers: each section folds out its pages,
-           and the header names the one you are on. -->
-      {#each sections as section, index (section.title)}
-        <OptionPicker
-          title={section.title}
-          options={section.options}
-          selection={currentHref}
-          initiallyExpanded={section.options.some((option) => option.value === currentHref) ||
-            (currentHref === "" && index === 0)}
-          onSelect={(href) => (location.hash = href)}
+        <SegmentedControl
+          segments={schemes}
+          selection={colorScheme}
+          onSelect={(next) => (colorScheme = next as typeof colorScheme)}
         />
-      {/each}
-    </nav>
 
-    <main class="content">
-      {#if route.kind === "component"}
-        {#if page}
-          {@const Page = page}
-          <Page />
-        {/if}
-      {:else if route.kind === "screen"}
-        <div class="stage">
-          <!-- The grid rides in the corner, out of the picker column. -->
-          <div class="stage-tools">
-            <ActionButton
-              icon="functional/grid"
-              variant={grid ? "spot" : "secondary"}
-              size="medium"
-              label={grid ? "Hide the grid" : "Show the grid"}
-              onclick={() => (grid = !grid)}
-            />
-          </div>
+        <!-- The sidebar is a set of pickers: each section folds out its pages,
+           and the header names the one you are on. -->
+        {#each sections as section, index (section.title)}
+          <OptionPicker
+            title={section.title}
+            options={section.options}
+            selection={currentHref}
+            initiallyExpanded={section.options.some((option) => option.value === currentHref) ||
+              (currentHref === "" && index === 0)}
+            onSelect={(href) => (location.hash = href)}
+          />
+        {/each}
+      </nav>
 
-          <div class="device-picker">
-            <SegmentedControl
-              segments={deviceSegments}
-              selection={deviceId}
-              onSelect={(next) => (deviceId = next)}
-            />
-            <SegmentedControl
-              segments={configurationSegments}
-              selection={configuration.id}
-              onSelect={(next) => (configurationId = next)}
-            />
+      <main class="content">
+        {#if route.kind === "component"}
+          {#if page}
+            {@const Page = page}
+            <Page />
+          {/if}
+        {:else if route.kind === "screen"}
+          <div class="stage">
+            <!-- The grid rides in the corner, out of the picker column. -->
+            <div class="stage-tools">
+              <ActionButton
+                icon="functional/grid"
+                variant={grid ? "spot" : "secondary"}
+                size="medium"
+                label={grid ? "Hide the grid" : "Show the grid"}
+                onclick={() => (grid = !grid)}
+              />
+            </div>
 
-            <!-- Whatever the screen itself wants to drive, kept off the phone. -->
-            {#if controls.controls}
-              {@render controls.controls()}
-            {/if}
-          </div>
+            <div class="device-picker">
+              <SegmentedControl
+                segments={deviceSegments}
+                selection={deviceId}
+                onSelect={(next) => (deviceId = next)}
+              />
+              <SegmentedControl
+                segments={configurationSegments}
+                selection={configuration.id}
+                onSelect={(next) => (configurationId = next)}
+              />
 
-          <DeviceFrame
-            colorScheme={isWatch ? "dark" : colorScheme}
-            width={configuration.width}
-            height={configuration.height}
-            safeAreaTop={configuration.safeAreaTop}
-            safeAreaBottom={configuration.safeAreaBottom}
-            safeAreaLeft={configuration.safeAreaLeft}
-            safeAreaRight={configuration.safeAreaRight}
-            shape={configuration.shape ?? "phone"}
-            {grid}
-          >
-            {#if screen}
-              {@const Screen = screen}
-              <!-- Keyed, so pages sharing a component each start fresh. -->
-              {#key entry?.id}
-                <Screen {...entry?.props} />
-              {/key}
-            {:else}
-              <ScreenPlaceholder id={route.id} />
-            {/if}
-          </DeviceFrame>
+              <!-- Whatever the screen itself wants to drive, kept off the phone. -->
+              {#if controls.controls}
+                {@render controls.controls()}
+              {/if}
+            </div>
 
-          <!-- What the screen is for, in a sentence or two. It sits under the
+            <DeviceFrame
+              colorScheme={isWatch ? "dark" : colorScheme}
+              width={configuration.width}
+              height={configuration.height}
+              safeAreaTop={configuration.safeAreaTop}
+              safeAreaBottom={configuration.safeAreaBottom}
+              safeAreaLeft={configuration.safeAreaLeft}
+              safeAreaRight={configuration.safeAreaRight}
+              shape={configuration.shape ?? "phone"}
+              {grid}
+            >
+              {#if screen}
+                {@const Screen = screen}
+                <!-- Keyed, so pages sharing a component each start fresh. -->
+                {#key entry?.id}
+                  <Screen {...entry?.props} />
+                {/key}
+              {:else}
+                <ScreenPlaceholder id={route.id} />
+              {/if}
+            </DeviceFrame>
+
+            <!-- What the screen is for, in a sentence or two. It sits under the
                phone rather than in the sidebar: you read it while looking at
                the thing it describes. -->
-          {#if entry?.about}
-            <p class="t-description stage-about">{entry.about}</p>
-          {/if}
-        </div>
-      {:else}
-        <div class="doc">
-          <h2 class="t-titleM">Eigin design gallery</h2>
-          <p class="lede t-description">
-            Pick a component or a screen from the sidebar. Tokens come from
-            <code>design/tokens.json</code> via <code>just generate</code>.
-          </p>
-        </div>
-      {/if}
-    </main>
-  </div>
-</EiginRoot>
+            {#if entry?.about}
+              <p class="t-description stage-about">{entry.about}</p>
+            {/if}
+          </div>
+        {:else if route.kind === "showcase" && shotEntry}
+          {#key shotEntry.id}
+            <ShowcaseStage entry={shotEntry} initial={decodeShot(route.params, shotEntry)} />
+          {/key}
+        {:else}
+          <div class="doc">
+            <h2 class="t-titleM">Eigin design gallery</h2>
+            <p class="lede t-description">
+              Pick a component or a screen from the sidebar. Tokens come from
+              <code>design/tokens.json</code> via <code>just generate</code>.
+            </p>
+          </div>
+        {/if}
+      </main>
+    </div>
+  </EiginRoot>
+{/if}

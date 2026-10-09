@@ -1,8 +1,9 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { showcaseExport } from "./scripts/showcase/plugin.mjs";
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), showcaseExport()],
   resolve: {
     alias: {
       "@lib": new URL("./src/lib", import.meta.url).pathname,

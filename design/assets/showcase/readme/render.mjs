@@ -1,5 +1,5 @@
 // Renders each slide of deck.md to a PNG in docs/src/images/ via www.eigin.ai/present/render.
-// Usage: node design/assets/readme/deck/render.mjs
+// Usage: node design/assets/showcase/readme/render.mjs
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";

@@ -4,10 +4,10 @@ test("the sidebar folds its sections and opens the one you are in", async ({ pag
   await page.goto("/#/components/rows");
 
   const sections = page.locator(".sidebar .header");
-  await expect(sections).toHaveCount(6);
 
   // The section holding the current page opens itself; the others stay folded.
   await expect(sections.filter({ hasText: "Components" })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator('.sidebar .header[aria-expanded="true"]')).toHaveCount(1);
   await expect(sections.filter({ hasText: "Main screens" })).toHaveAttribute(
     "aria-expanded",
     "false",
