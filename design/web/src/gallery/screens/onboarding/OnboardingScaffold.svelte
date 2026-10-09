@@ -1,13 +1,19 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import OnboardingAvatar from "@gallery/screens/onboarding/OnboardingAvatar.svelte";
-  import OnboardingSpeech from "@gallery/screens/onboarding/OnboardingSpeech.svelte";
-  import { spring } from "@gallery/screens/onboarding/spring";
+  import { fade } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
+  import { driveFrames } from "@lib";
+  import OnboardingAvatar, {
+    vesselSize as avatarVesselSize,
+  } from "@gallery/screens/onboarding/OnboardingAvatar.svelte";
+  import OnboardingTurn from "@gallery/screens/onboarding/OnboardingTurn.svelte";
+  import { OPENED, TURN_FADE_MS, launchScale, opening } from "@gallery/screens/onboarding/opening";
 
   let {
     progress,
     showsProgress = true,
     entrance = false,
+    turnId = "",
     title,
     text,
     titleDelay = 0,
@@ -15,8 +21,10 @@
   }: {
     progress: number;
     showsProgress?: boolean;
-    /** Opens on the avatar already centred, holding a beat before it moves up. */
+    /** Opens where the launch screen left the mark, then bounces up to its place. */
     entrance?: boolean;
+    /** Identifies the current screen. A new value plays the screen change. */
+    turnId?: string;
     title: string;
     text: string;
     titleDelay?: number;
@@ -24,25 +32,36 @@
   } = $props();
 
   const AVATAR = 96;
-  const settle = spring(0.4, 0.2);
+  const SETTLED = { rise: 1, scale: 1, breath: 0, stretch: 0 };
+  const LAUNCH_SCALE = launchScale(avatarVesselSize(AVATAR));
 
+  /* Only the first screen opens; later ones keep the avatar in place. */
   // svelte-ignore state_referenced_locally
-  let landed = $state(!entrance);
-  let spoken = $state("");
+  const opens = entrance;
+  let pose = $state(opens ? opening(0, LAUNCH_SCALE) : SETTLED);
   let height = $state(0);
-
-  /* Content waits until the line on screen has been said. */
-  const revealed = $derived(spoken === text);
+  let slot = $state<HTMLElement>();
 
   $effect(() => {
-    if (landed) return;
-    const timer = setTimeout(() => (landed = true), 1500);
-    return () => clearTimeout(timer);
+    if (!opens) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      pose = SETTLED;
+      return;
+    }
+    let start = 0;
+    let t = 0;
+    return driveFrames(
+      (now) => {
+        start ||= now;
+        t = now - start;
+        pose = t < OPENED ? opening(t, LAUNCH_SCALE) : SETTLED;
+      },
+      () => t < OPENED,
+    );
   });
 
-  /* While landing the avatar is the only thing on screen, so it sits centred:
-     the distance from its resting place to the middle. */
-  let slot = $state<HTMLElement>();
+  /* From the avatar's place to the middle of the screen, where the launch
+     screen left the mark. */
   const toCentre = $derived(height / 2 - (slot?.offsetTop ?? 0) - AVATAR / 2);
 </script>
 
@@ -50,31 +69,39 @@
   Shared chrome for the setup screens: the avatar at the top, its spoken line
   beneath, then the step's own content. One scaffold stays mounted across
   steps, so the avatar and its fill are continuous and each line reads as the
-  same presence speaking.
+  same presence speaking. The layout is final from the first frame; only the
+  avatar moves. A new `turnId` fades the old turn out over the new one, which
+  is already laid out and waiting to speak.
 -->
 <div class="scaffold" bind:clientHeight={height}>
   <div
     class="avatar-slot"
-    class:landed
-    style:translate={landed ? "0 0" : `0 ${toCentre}px`}
-    style:scale={landed ? 1 : 1.5}
-    style:visibility={landed || height > 0 ? "visible" : "hidden"}
-    style:--settle-easing={settle.easing}
-    style:--settle-ms="{settle.ms}ms"
+    style:translate="0 {toCentre * (1 - pose.rise)}px"
+    style:scale={pose.scale}
+    style:visibility={pose.rise === 1 || height > 0 ? "visible" : "hidden"}
     bind:this={slot}
   >
-    <OnboardingAvatar {progress} {showsProgress} animatesIn={!entrance} size={AVATAR} />
+    <OnboardingAvatar
+      {progress}
+      {showsProgress}
+      animatesIn={!entrance}
+      breath={pose.breath}
+      stretch={pose.stretch}
+      size={AVATAR}
+    />
   </div>
 
-  {#if landed}
-    <div class="speech">
-      <OnboardingSpeech {title} {text} {titleDelay} onFinished={(line) => (spoken = line)} />
-    </div>
-
-    <div class="content" class:revealed inert={!revealed}>
-      {@render children()}
-    </div>
-  {/if}
+  <!-- Stacked, so the outgoing and incoming turns overlap for one fade
+       without moving anything. -->
+  <div class="turns">
+    {#key turnId}
+      <div class="layer" out:fade={{ duration: TURN_FADE_MS, easing: cubicOut }}>
+        <OnboardingTurn {title} {text} {titleDelay}>
+          {@render children()}
+        </OnboardingTurn>
+      </div>
+    {/key}
+  </div>
 </div>
 
 <style>
@@ -93,46 +120,23 @@
     overflow: hidden;
   }
 
-  .avatar-slot.landed {
-    transition:
-      translate var(--settle-ms) var(--settle-easing),
-      scale var(--settle-ms) var(--settle-easing);
+  /* Above the turns, so the rising avatar never passes behind a title. */
+  .avatar-slot {
+    position: relative;
+    z-index: 1;
   }
 
-  .speech {
-    width: 100%;
-    animation: fade-in var(--motion-slow) ease-out both;
-  }
-
-  /* Bleeds to the screen edges so wide content, like the priority
-     carousel's peeking cards, isn't clipped at the padding line. Moves by
-     margin rather than transform: a transform would trap a step's sheets
-     inside the content area. */
-  .content {
-    display: flex;
-    flex-direction: column;
+  .turns {
+    display: grid;
     flex: 1;
     min-height: 0;
     align-self: stretch;
-    margin: 0 calc(-1 * var(--spacing-n24));
-    padding: 0 var(--spacing-n24);
-    overflow-y: auto;
-    margin-top: 8px;
-    opacity: 0;
   }
 
-  /* Only the reveal animates: a step change hides the old content at once. */
-  .content.revealed {
-    margin-top: 0;
-    opacity: 1;
-    transition:
-      opacity var(--motion-normal) ease-out,
-      margin-top var(--motion-normal) ease-out;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
+  .layer {
+    display: flex;
+    flex-direction: column;
+    grid-area: 1 / 1;
+    min-height: 0;
   }
 </style>

@@ -10,14 +10,16 @@ import SwiftUI
 /// from the brand mark to the agent's face.
 ///
 /// Set `showsProgress` to `false` for the opening welcome moment: the avatar
-/// lands at full power with no ring. Flipping it to `true` on the next step
+/// shows at full power with no ring. Flipping it to `true` on the next step
 /// fades the ring in and dims the mark to its progress level.
 struct OnboardingAvatar: View {
     var progress: Double
     var emoji: String?
     var showsProgress: Bool
-    /// Fades in on appear. Off when it should already be there, like at launch.
-    var animatesIn: Bool
+    /// How far through the opening's breath the green circle is, 0–1.
+    var breath: Double
+    /// Pulls the green circle tall (above 0) or wide (below) in the opening.
+    var stretch: Double
     var size: CGFloat
 
     init(
@@ -25,30 +27,47 @@ struct OnboardingAvatar: View {
         emoji: String? = nil,
         showsProgress: Bool = true,
         animatesIn: Bool = true,
+        breath: Double = 0,
+        stretch: Double = 0,
         size: CGFloat = 96
     ) {
         self.progress = progress
         self.emoji = emoji
         self.showsProgress = showsProgress
-        self.animatesIn = animatesIn
+        self.breath = breath
+        self.stretch = stretch
         self.size = size
+        _appeared = State(initialValue: !animatesIn)
+        _ringShown = State(initialValue: showsProgress)
+    }
+
+    /// The diameter of the green circle inside the ring, for an avatar of `size`.
+    static func vesselSize(for size: CGFloat) -> CGFloat {
+        size - ringWidth(for: size) * 2.4
+    }
+
+    private static func ringWidth(for size: CGFloat) -> CGFloat {
+        max(3, size * 0.045)
     }
 
     @Environment(\.colors) private var colors
     @State private var chaser = ChasingProgress()
-    @State private var appeared = false
+    /// Starts true when the avatar shouldn't fade in, e.g. picking up from launch.
+    @State private var appeared: Bool
+    /// Follows `showsProgress`, easing the ring in rather than snapping it.
+    @State private var ringShown: Bool
 
     private var fill: CGFloat {
         CGFloat(chaser.value)
     }
 
     private var ringWidth: CGFloat {
-        max(3, size * 0.045)
+        Self.ringWidth(for: size)
     }
 
     /// The diameter of the green circle the mark or face sits in, inside the ring.
     private var vesselSize: CGFloat {
-        size - ringWidth * 2.4
+        Self.vesselSize(for: size)
     }
 
     /// The brand mark's diameter, kept at the same proportion of its circle as
@@ -59,15 +78,15 @@ struct OnboardingAvatar: View {
     }
 
     private var ringOpacity: Double {
-        showsProgress ? 1 : 0
+        ringShown ? 1 : 0
     }
 
     private var markOpacity: Double {
-        showsProgress ? 0.5 + 0.5 * Double(fill) : 1
+        ringShown ? 0.5 + 0.5 * Double(fill) : 1
     }
 
     private var markSaturation: Double {
-        showsProgress ? 0.4 + 0.6 * Double(fill) : 1
+        ringShown ? 0.4 + 0.6 * Double(fill) : 1
     }
 
     var body: some View {
@@ -96,23 +115,30 @@ struct OnboardingAvatar: View {
                 .opacity(markOpacity)
                 .saturation(markSaturation)
         }
-        // A gentle fade-in, unless it is simply there from the start.
-        .scaleEffect(appeared || !animatesIn ? 1 : 0.85)
-        .opacity(appeared || !animatesIn ? 1 : 0)
+        // A gentle fade-in, unless it starts already shown.
+        .scaleEffect(appeared ? 1 : 0.85)
+        .opacity(appeared ? 1 : 0)
         .animation(.easeOut(duration: 0.15), value: fill)
-        .animation(.easeOut(duration: 0.5), value: showsProgress)
         .onAppear {
             chaser.setTarget(Float(progress))
+            guard !appeared else { return }
             withAnimation(.spring(duration: 0.6, bounce: 0.2)) { appeared = true }
         }
         .onChange(of: progress) { _, new in chaser.setTarget(Float(new)) }
+        .onChange(of: showsProgress) { _, new in
+            withAnimation(.easeOut(duration: 0.5)) { ringShown = new }
+        }
+    }
+
+    private var markScale: Double {
+        OpeningTimeline.markScale(breath)
     }
 
     private var vessel: some View {
         ZStack {
             // The brand mark sits on the green spot; once the agent has a face,
             // the circle softens to a neutral secondary surface behind the emoji.
-            Circle()
+            BreathingCircle(breath: breath, stretch: stretch)
                 .fill(emoji == nil ? colors.surface.impact.base : colors.surface.standard
                     .elevated)
 
@@ -126,9 +152,14 @@ struct OnboardingAvatar: View {
                     .aspectRatio(contentMode: .fit)
                     .foregroundStyle(colors.text.standard.base)
                     .frame(width: brandMarkSize, height: brandMarkSize)
+                    // Pressed and carried by the breath, giving half as much.
+                    .scaleEffect(
+                        x: markScale / (1 + stretch / 2),
+                        y: markScale * (1 + stretch / 2)
+                    )
             }
         }
-        .clipShape(Circle())
+        .clipShape(BreathingCircle(breath: breath, stretch: stretch))
         .animation(Animations.gentle, value: emoji)
     }
 }

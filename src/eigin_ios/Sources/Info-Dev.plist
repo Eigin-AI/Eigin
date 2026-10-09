@@ -41,12 +41,12 @@
 	<string>$(EIGIN_GOOGLE_OAUTH_CLIENT_ID)</string>
 	<key>EiginMicrosoftOAuthClientID</key>
 	<string>$(EIGIN_MICROSOFT_OAUTH_CLIENT_ID)</string>
+	<key>EiginPrivacyURL</key>
+	<string>$(EIGIN_PRIVACY_URL)</string>
 	<key>EiginRelayKey</key>
 	<string>$(EIGIN_RELAY_PRIMARY_KEY)</string>
 	<key>EiginRelayURL</key>
 	<string>$(EIGIN_RELAY_URL)</string>
-	<key>EiginPrivacyURL</key>
-	<string>$(EIGIN_PRIVACY_URL)</string>
 	<key>EiginSupportEmail</key>
 	<string>$(EIGIN_SUPPORT_EMAIL)</string>
 	<key>EiginTermsURL</key>
@@ -67,5 +67,12 @@
 		<string>voip</string>
 		<string>processing</string>
 	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchMark</string>
+	</dict>
 </dict>
 </plist>

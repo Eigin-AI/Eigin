@@ -1,12 +1,13 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import { pause, speak } from "@gallery/screens/onboarding/speak";
+  import { CONTENT_DELAY_MS, STREAM_DELAY_MS } from "@gallery/screens/onboarding/opening";
 
   let {
     title,
     text,
     titleDelay = 0,
-    streamDelay = 600,
+    streamDelay = STREAM_DELAY_MS,
     onFinished,
   }: {
     title: string;
@@ -42,7 +43,7 @@
       await pause(streamDelay, signal);
       await speak(said, (next) => (shown = next), signal);
       // A beat after the line lands before the screen's content appears.
-      await pause(900, signal);
+      await pause(CONTENT_DELAY_MS, signal);
       if (!signal.aborted) onFinished?.(said);
     })();
 

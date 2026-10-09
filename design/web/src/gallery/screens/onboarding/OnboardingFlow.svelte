@@ -6,6 +6,7 @@
   import NameStep from "@gallery/screens/onboarding/NameStep.svelte";
   import OnboardingChat from "@gallery/screens/onboarding/OnboardingChat.svelte";
   import OnboardingScaffold from "@gallery/screens/onboarding/OnboardingScaffold.svelte";
+  import { TURN_TITLE_DELAY_MS, WELCOME_TITLE_DELAY_MS } from "@gallery/screens/onboarding/opening";
   import {
     avatarProgress,
     isSetupStep,
@@ -74,9 +75,10 @@
       progress={avatarProgress[step]}
       showsProgress={step !== "welcome"}
       entrance={step === "welcome"}
+      turnId={step}
       title={line.title}
       text={line.text}
-      titleDelay={step === "welcome" ? 500 : 0}
+      titleDelay={step === "welcome" ? WELCOME_TITLE_DELAY_MS : TURN_TITLE_DELAY_MS}
     >
       {#if step === "welcome"}
         <div class="actions">

@@ -1,5 +1,15 @@
+<script module lang="ts">
+  /** The green circle's size inside the ring, for an avatar `size` across.
+     Matches `OnboardingAvatar.vesselSize(for:)` on iOS. */
+  export function vesselSize(size: number): number {
+    return size - Math.max(3, size * 0.045) * 2.4;
+  }
+</script>
+
 <script lang="ts">
   import { ChasingProgress, Icon, driveFrames } from "@lib";
+  import { splinePath } from "@lib/components/morph/figure";
+  import { outline } from "@gallery/screens/onboarding/opening";
   import { gentle, spring } from "@gallery/screens/onboarding/spring";
 
   let {
@@ -7,6 +17,8 @@
     emoji,
     showsProgress = true,
     animatesIn = true,
+    breath = 0,
+    stretch = 0,
     size = 96,
   }: {
     /** How far the agent has come together, 0–1. Chased, never snapped. */
@@ -17,6 +29,10 @@
     showsProgress?: boolean;
     /** Fades in on appear. Off when it should already be there, like at launch. */
     animatesIn?: boolean;
+    /** How far through the opening's breath the green circle is, 0–1. */
+    breath?: number;
+    /** Pulls the green circle tall (above 0) or wide (below), keeping its area. */
+    stretch?: number;
     size?: number;
   } = $props();
 
@@ -55,8 +71,18 @@
   const radius = $derived((size - ringWidth) / 2);
   const circumference = $derived(2 * Math.PI * radius);
   /* The green circle inside the ring, and the mark at BrandAvatar's proportion. */
-  const vesselSize = $derived(size - ringWidth * 2.4);
-  const markSize = $derived((vesselSize * (56 - 16)) / 56);
+  const vessel = $derived(vesselSize(size));
+  const markSize = $derived((vessel * (56 - 16)) / 56);
+  /* The green circle, breathing through the opening, and the mark it presses. */
+  const opening = $derived(outline(breath));
+  const blob = $derived(
+    splinePath(
+      opening.points.map((p) => ({
+        x: (1 + p.x / (1 + stretch)) * (vessel / 2),
+        y: (1 + p.y * (1 + stretch)) * (vessel / 2),
+      })),
+    ),
+  );
 
   const markOpacity = $derived(showsProgress ? 0.5 + 0.5 * fill : 1);
   const markSaturation = $derived(showsProgress ? 0.4 + 0.6 * fill : 1);
@@ -92,12 +118,22 @@
   <div
     class="vessel"
     class:has-face={emoji}
-    style:width="{vesselSize}px"
-    style:height="{vesselSize}px"
+    style:width="{vessel}px"
+    style:height="{vessel}px"
     style:opacity={markOpacity}
     style:filter="saturate({markSaturation})"
   >
-    <span class="mark" class:hidden={emoji} style:width="{markSize}px" style:height="{markSize}px">
+    <svg class="blob" viewBox="0 0 {vessel} {vessel}" aria-hidden="true">
+      <path d={blob} />
+    </svg>
+    <span
+      class="mark"
+      class:hidden={emoji}
+      style:width="{markSize}px"
+      style:height="{markSize}px"
+      style:transform="scale({opening.mark / (1 + stretch / 2)}, {opening.mark *
+        (1 + stretch / 2)})"
+    >
       <Icon name="brand/avatar" size="fill" />
     </span>
     {#if emoji}
@@ -154,22 +190,31 @@
     position: relative;
     display: grid;
     place-items: center;
-    border-radius: var(--radius-full);
-    background: var(--color-surface-impact-base);
-    overflow: hidden;
     transition:
       opacity 500ms ease-out,
-      filter 500ms ease-out,
-      background-color var(--gentle-ms) var(--gentle-easing);
+      filter 500ms ease-out;
+  }
+
+  /* Drawn from the breath's outline, not a rounded box, so the breath can
+     reach past the avatar's edge. */
+  .blob {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: var(--color-surface-impact-base);
+    transition: fill var(--gentle-ms) var(--gentle-easing);
   }
 
   /* Once the agent has a face, the circle softens to a neutral surface. */
-  .vessel.has-face {
-    background: var(--color-surface-standard-elevated);
+  .vessel.has-face .blob {
+    fill: var(--color-surface-standard-elevated);
   }
 
   .mark,
   .face {
+    position: relative;
     grid-area: 1 / 1;
   }
 
