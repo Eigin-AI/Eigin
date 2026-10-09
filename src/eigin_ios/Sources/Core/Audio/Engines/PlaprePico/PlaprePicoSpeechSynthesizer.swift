@@ -41,6 +41,14 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
 
     private nonisolated static let outputSampleRate: Double = 48000
     private nonisolated static let modelSampleRate: Double = PlaprePicoConfig.sampleRate
+
+    /// Output processing for this engine: loudness makeup and top-end presence.
+    /// Values are placeholders — tuned by ear across the speaker list.
+    private nonisolated static let dspConfig = SpeechDSPConfig(
+        makeupGainDecibels: 0,
+        highShelf: .init(cornerFrequency: 5000, gainDecibels: 1)
+    )
+
     private var converter: AVAudioConverter?
 
     init(
@@ -193,6 +201,20 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                 self.playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
             }
 
+            // Per-session DSP state: fresh every generation run.
+            let dsp = SpeechDSPProcessor(
+                config: Self.dspConfig,
+                sampleRate: Self.outputSampleRate
+            )
+            // Faded boundary mode: Plapre paces utterances with its own
+            // inter-utterance silence, so crossing a boundary with a
+            // voice-to-voice crossfade would mix the silence into the seam.
+            // Fade out/in around the silence instead.
+            let fade = SpeechFade(
+                sampleRate: Self.outputSampleRate,
+                crossfadeAtBoundary: false
+            )
+
             do {
                 try await modelManager.load()
             } catch {
@@ -243,31 +265,48 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
 
                     let uttIdx = frame.utteranceIndex ?? max(previousUtteranceIndex, 0)
 
+                    // Utterance boundary — the previous utterance's finish
+                    // marker and inter-utterance silence are queued AFTER the
+                    // boundary audio below, so they follow the held tail.
+                    var pendingFinishText: String?
                     if uttIdx != previousUtteranceIndex {
                         if previousUtteranceIndex >= 0,
                            !finishedUtterances.contains(previousUtteranceIndex)
                         {
                             finishedUtterances.insert(previousUtteranceIndex)
-                            let prevText = await MainActor
+                            pendingFinishText = await MainActor
                                 .run { self.utteranceTexts[previousUtteranceIndex] }
-                            if let prevText {
-                                await MainActor.run {
-                                    self.scheduleFinishMarker(for: prevText)
-                                    self.scheduleInterUtteranceSilence()
-                                }
-                            }
                         }
                         previousUtteranceIndex = uttIdx
                     }
 
+                    // Buffer audio frames; start playback once enough headroom
+                    // has accumulated to mask transient generation stalls.
+                    let samples = frame.samples
+                    if !samples.isEmpty, let converter {
+                        if var resampled = Self.resample(samples, using: converter) {
+                            dsp.process(&resampled)
+                            let chunks = fade.append(samples: resampled, utteranceIndex: uttIdx)
+                            for chunk in chunks {
+                                await MainActor.run { self.appendAndSchedule(chunk) }
+                            }
+                        }
+                    }
+
+                    if let prevText = pendingFinishText {
+                        await MainActor.run {
+                            self.scheduleFinishMarker(for: prevText)
+                            self.scheduleInterUtteranceSilence()
+                        }
+                    }
+
                     // Schedule the text marker BEFORE the first audio buffer of
-                    // each utterance. `AVAudioPlayerNode` fires completion
-                    // callbacks when a buffer *finishes* — if we scheduled the
-                    // marker after the audio, its callback would fire several
-                    // seconds after the utterance's audio already started
-                    // playing. By scheduling the 1-sample marker first, its
-                    // completion fires immediately before the audio begins, so
-                    // the text appears on screen in sync with the voice.
+                    // each utterance (playback order: faded tail, silence, this
+                    // marker, then the held head chunk released next frame).
+                    // `AVAudioPlayerNode` fires completion callbacks when a
+                    // buffer *finishes*, so a marker scheduled before its
+                    // utterance's audio makes the text appear on screen exactly
+                    // when the voice begins.
                     if !willSpeakFired.contains(uttIdx) {
                         willSpeakFired.insert(uttIdx)
                         let text = await MainActor.run { self.utteranceTexts[uttIdx] }
@@ -277,31 +316,17 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
                             }
                         }
                     }
-
-                    // Buffer audio frames; start playback once enough headroom
-                    // has accumulated to mask transient generation stalls.
-                    let samples = frame.samples
-                    if !samples.isEmpty, let converter {
-                        if let resampled = Self.resample(samples, using: converter) {
-                            let frames = await MainActor.run {
-                                self.playbackBuffer?.append(samples: resampled)
-                            }
-                            if let frames {
-                                for frame in frames {
-                                    if let buffer = Self.createBuffer(from: frame) {
-                                        await MainActor.run {
-                                            self.resumablePlayer?.schedule(buffer)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             } catch is CancellationError {
                 return
             } catch {
                 guard await MainActor.run(body: { self.generationID == myID }) else { return }
+            }
+
+            // Release the held utterance tail (faded out) before draining
+            // the playback buffer so play order is preserved.
+            for chunk in fade.flush() {
+                await MainActor.run { self.appendAndSchedule(chunk) }
             }
 
             // Flush any remaining buffered frames so the tail isn't dropped.
@@ -350,6 +375,17 @@ final class PlaprePicoSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable
     }
 
     // MARK: - Audio processing (nonisolated)
+
+    /// Appends a resampled chunk to the playback buffer and schedules any
+    /// frames it released onto the player node.
+    private func appendAndSchedule(_ chunk: [Float]) {
+        let frames = playbackBuffer?.append(samples: chunk) ?? []
+        for frame in frames {
+            if let buffer = Self.createBuffer(from: frame) {
+                resumablePlayer?.schedule(buffer)
+            }
+        }
+    }
 
     private nonisolated static func createBuffer(from samples: [Float]) -> AVAudioPCMBuffer? {
         guard !samples.isEmpty else { return nil }

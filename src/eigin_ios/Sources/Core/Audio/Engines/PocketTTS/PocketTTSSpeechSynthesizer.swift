@@ -52,6 +52,14 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     // Engine runs at system rate (48kHz); model outputs at 24kHz.
     private nonisolated static let outputSampleRate: Double = 48000
     private nonisolated static let modelSampleRate: Double = 24000
+
+    /// Output processing for this engine: loudness makeup and top-end presence.
+    /// Values are placeholders — tuned by ear across the voice catalog.
+    private nonisolated static let dspConfig = SpeechDSPConfig(
+        makeupGainDecibels: 3,
+        highShelf: .init(cornerFrequency: 5000, gainDecibels: 3)
+    )
+
     private var converter: AVAudioConverter?
 
     init(modelManager: PocketTTSModelManager, voiceName: String = "alba") {
@@ -211,6 +219,13 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                 self.playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
             }
 
+            // Per-session DSP state: fresh every generation run.
+            let dsp = SpeechDSPProcessor(
+                config: Self.dspConfig,
+                sampleRate: Self.outputSampleRate
+            )
+            let fade = SpeechFade(sampleRate: Self.outputSampleRate)
+
             // Load model into memory (idempotent — no-op if already loaded, cancels pending
             // unload).
             do {
@@ -269,19 +284,17 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
 
                     let uttIdx = frame.utteranceIndex ?? max(previousUtteranceIndex, 0)
 
-                    // Utterance boundary — schedule finish for previous, willSpeak for new
+                    // Utterance boundary — the previous utterance's finish
+                    // marker is queued AFTER the boundary audio below, so it
+                    // fires only after the held tail has been scheduled.
+                    var pendingFinishText: String?
                     if uttIdx != previousUtteranceIndex {
                         if previousUtteranceIndex >= 0,
                            !finishedUtterances.contains(previousUtteranceIndex)
                         {
                             finishedUtterances.insert(previousUtteranceIndex)
-                            let prevText = await MainActor
+                            pendingFinishText = await MainActor
                                 .run { self.utteranceTexts[previousUtteranceIndex] }
-                            if let prevText {
-                                await MainActor.run {
-                                    self.scheduleFinishMarker(for: prevText)
-                                }
-                            }
                         }
                         previousUtteranceIndex = uttIdx
                     }
@@ -290,19 +303,18 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                     // has accumulated to mask transient generation stalls.
                     let samples = frame.samples
                     if !samples.isEmpty, let converter {
-                        if let resampled = Self.resample(samples, using: converter) {
-                            let frames = await MainActor.run {
-                                self.playbackBuffer?.append(samples: resampled)
+                        if var resampled = Self.resample(samples, using: converter) {
+                            dsp.process(&resampled)
+                            let chunks = fade.append(samples: resampled, utteranceIndex: uttIdx)
+                            for chunk in chunks {
+                                await MainActor.run { self.appendAndSchedule(chunk) }
                             }
-                            if let frames {
-                                for frame in frames {
-                                    if let buffer = Self.createBuffer(from: frame) {
-                                        await MainActor.run {
-                                            self.resumablePlayer?.schedule(buffer)
-                                        }
-                                    }
-                                }
-                            }
+                        }
+                    }
+
+                    if let prevText = pendingFinishText {
+                        await MainActor.run {
+                            self.scheduleFinishMarker(for: prevText)
                         }
                     }
 
@@ -321,6 +333,12 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                 return
             } catch {
                 guard await MainActor.run(body: { self.generationID == myID }) else { return }
+            }
+
+            // Release the held utterance tail (faded out) before draining
+            // the playback buffer so play order is preserved.
+            for chunk in fade.flush() {
+                await MainActor.run { self.appendAndSchedule(chunk) }
             }
 
             // Flush any remaining buffered frames so the tail isn't dropped.
@@ -368,6 +386,17 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     }
 
     // MARK: - Audio Processing (nonisolated — runs off main actor)
+
+    /// Appends a resampled chunk to the playback buffer and schedules any
+    /// frames it released onto the player node.
+    private func appendAndSchedule(_ chunk: [Float]) {
+        let frames = playbackBuffer?.append(samples: chunk) ?? []
+        for frame in frames {
+            if let buffer = Self.createBuffer(from: frame) {
+                resumablePlayer?.schedule(buffer)
+            }
+        }
+    }
 
     private nonisolated static func createBuffer(from samples: [Float]) -> AVAudioPCMBuffer? {
         guard !samples.isEmpty else { return nil }
