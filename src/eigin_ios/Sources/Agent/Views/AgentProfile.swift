@@ -78,6 +78,7 @@ struct AgentProfile: View {
         }
         .onChange(of: agent.proactivity) { _, newValue in
             agent.updatedAt = .now
+            ProactivityDecision.markDecided()
             BackgroundPromptScheduler.reschedule(for: newValue)
             if newValue.isBackgroundEnabled {
                 Task {

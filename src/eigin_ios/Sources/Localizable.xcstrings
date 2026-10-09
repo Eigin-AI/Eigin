@@ -7889,40 +7889,6 @@
         }
       }
     },
-    "onboarding.flow.initiative.text" : {
-      "comment" : "Avatar speech body on the initiative screen.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeg kan blive ved med at arbejde, når du er væk, lede efter ting der er din opmærksomhed værd og række ud af og til.\n\nEller kan jeg være stille og kun hjælpe, når du spørger. Det er op til dig."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I can keep working when you’re away, and reach out when something’s worth your attention.\n\nOr I can stay quiet and only help when you ask. Your call."
-          }
-        }
-      }
-    },
-    "onboarding.flow.initiative.title" : {
-      "comment" : "Avatar speech title on the initiative screen.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En sidste ting."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One more thing."
-          }
-        }
-      }
-    },
     "onboarding.flow.name.text" : {
       "comment" : "Avatar speech body on the name screen.",
       "localizations" : {
@@ -8157,40 +8123,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Use Eigin"
-          }
-        }
-      }
-    },
-    "onboarding.initiative.backgroundButton" : {
-      "comment" : "Button to allow the agent to work in the background.",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arbejd i baggrunden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Work in the background"
-          }
-        }
-      }
-    },
-    "onboarding.initiative.reactiveButton" : {
-      "comment" : "Button to keep the agent reactive (only responds when asked).",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kun når jeg spørger"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only when I ask"
           }
         }
       }

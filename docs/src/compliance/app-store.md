@@ -212,7 +212,7 @@ The App is free. Hosted AI through Eigin is paid with prepaid credits bought as 
 |---|---|---|
 | 4.5.1, 4.5.2, 4.5.5 | N/A | No scraping of Apple sites, no Apple Music, no Game Center |
 | 4.5.3 | Met | Notifications are local, scheduled on the device, and contain the AI's own message to its user. There is no push notification infrastructure |
-| 4.5.4 | Met | Notifications are not required. The user chooses in onboarding whether the AI may be proactive and can change it in Settings, including off ([initiative](../agents/initiative.md)). No marketing content. Notifications appear with the AI as sender through the Communication Notifications capability |
+| 4.5.4 | Met | Notifications are not required. Proactivity is off by default; the agent offers to enable it in conversation, and the user can change it in Settings, including off ([initiative](../agents/initiative.md)). No marketing content. Notifications appear with the AI as sender through the Communication Notifications capability |
 | 4.5.6 | Met | Apple emoji are rendered by the system. None are embedded in the App |
 
 ### 4.7 Mini apps, chatbots, plug-ins

@@ -19,8 +19,6 @@ struct OnboardingFlow: View {
     @AppStorage(StorageKey.onboardingComplete) private var onboardingComplete = false
     @AppStorage(StorageKey.onboardingUserName) private var userName = ""
     @AppStorage(StorageKey.onboardingPriority) private var priorityRaw = ""
-    @AppStorage(StorageKey.onboardingProactivity)
-    private var proactivityRaw = ProactivityLevel.balanced.rawValue
 
     @Query(sort: \Provider.createdAt) private var providers: [Provider]
     @Query private var agents: [Agent]
@@ -38,10 +36,6 @@ struct OnboardingFlow: View {
 
     private var priority: OnboardingPriority? {
         OnboardingPriority(rawValue: priorityRaw)
-    }
-
-    private var proactivity: ProactivityLevel {
-        ProactivityLevel(rawValue: proactivityRaw) ?? .reactive
     }
 
     var body: some View {
@@ -71,7 +65,6 @@ struct OnboardingFlow: View {
                     model: conversationModel,
                     name: userName,
                     priority: priority,
-                    proactivity: proactivity,
                     onComplete: { onboardingComplete = true },
                     onBack: { advanceTo(.inference) }
                 )
@@ -113,27 +106,8 @@ struct OnboardingFlow: View {
                 onConnectOwn: { provider in startWithProvider(provider) }
             )
 
-        case .initiative:
-            OnboardingInitiativeScreen { enabled in chooseInitiative(enabled) }
-
         case .conversation:
             EmptyView()
-        }
-    }
-
-    /// Persists the proactivity choice. When background work is enabled, requests
-    /// notification permission before advancing so the prompt appears in context.
-    private func chooseInitiative(_ enabled: Bool) {
-        let level: ProactivityLevel = enabled ? .balanced : .reactive
-        proactivityRaw = level.rawValue
-
-        guard enabled else {
-            advanceTo(.conversation)
-            return
-        }
-        Task {
-            _ = await NotificationPermission.requestIfNeeded()
-            advanceTo(.conversation)
         }
     }
 
@@ -190,11 +164,6 @@ struct OnboardingFlow: View {
                 Localized.Onboarding.Flow.Inference.title,
                 Localized.Onboarding.Flow.Inference.text
             )
-        case .initiative:
-            return (
-                Localized.Onboarding.Flow.Initiative.title,
-                Localized.Onboarding.Flow.Initiative.text
-            )
         case .conversation:
             return ("", "")
         }
@@ -218,7 +187,7 @@ struct OnboardingFlow: View {
             }
             conversationModel = KnownModelCatalog.bestModel(from: provider.enabledModels)
                 ?? provider.availableModels.first ?? ""
-            advanceTo(.initiative)
+            advanceTo(.conversation)
         }
     }
 
@@ -226,7 +195,7 @@ struct OnboardingFlow: View {
         conversationProvider = provider
         conversationModel = KnownModelCatalog.bestModel(from: provider.enabledModels)
             ?? provider.availableModels.first ?? ""
-        advanceTo(.initiative)
+        advanceTo(.conversation)
     }
 
     /// Returns the existing Eigin relay provider or creates one. Mirrors
@@ -251,7 +220,7 @@ struct OnboardingFlow: View {
         }
 
         switch step {
-        case .welcome, .name, .priority, .inference, .initiative:
+        case .welcome, .name, .priority, .inference:
             break
         case .conversation:
             if conversationProvider == nil {

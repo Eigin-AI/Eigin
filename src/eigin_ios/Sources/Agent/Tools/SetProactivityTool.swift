@@ -1,5 +1,16 @@
 import Foundation
-import UserNotifications
+
+/// Asks for notification authorization when the agent gains background access.
+/// Injectable so tests can install a stub instead of the system authorizer.
+protocol NotificationAuthorizing: Sendable {
+    func requestIfNeeded() async -> Bool
+}
+
+struct SystemNotificationAuthorizer: NotificationAuthorizing {
+    func requestIfNeeded() async -> Bool {
+        await NotificationPermission.requestIfNeeded()
+    }
+}
 
 struct SetProactivityTool: Tool {
     static let capability = ToolCapability(
@@ -11,6 +22,12 @@ struct SetProactivityTool: Tool {
 
     let name = "set_proactivity"
     var isSmallContext: Bool = false
+    var notificationAuthorizer: any NotificationAuthorizing
+
+    init(notificationAuthorizer: any NotificationAuthorizing = SystemNotificationAuthorizer()) {
+        self.notificationAuthorizer = notificationAuthorizer
+    }
+
     var displayName: String {
         Self.capability.displayName
     }
@@ -91,15 +108,12 @@ struct SetProactivityTool: Tool {
 
         agent.proactivity = level
         agent.updatedAt = .now
+        ProactivityDecision.markDecided()
 
         BackgroundPromptScheduler.reschedule(for: level)
 
         if level.isBackgroundEnabled {
-            let center = UNUserNotificationCenter.current()
-            let settings = await center.notificationSettings()
-            if settings.authorizationStatus == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
-            }
+            _ = await notificationAuthorizer.requestIfNeeded()
         }
 
         return ToolResult(

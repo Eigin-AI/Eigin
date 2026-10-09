@@ -2684,18 +2684,6 @@ enum Localized {
                 }
             }
 
-            enum Initiative {
-                /// Avatar speech body on the initiative screen.
-                static var text: String {
-                    Localized.get("onboarding.flow.initiative.text")
-                }
-
-                /// Avatar speech title on the initiative screen.
-                static var title: String {
-                    Localized.get("onboarding.flow.initiative.title")
-                }
-            }
-
             enum Name {
                 /// Avatar speech body on the name screen.
                 static var text: String {
@@ -2773,18 +2761,6 @@ enum Localized {
             /// Primary button label to use the Eigin cloud provider.
             static var useEiginButton: String {
                 Localized.get("onboarding.inference.useEiginButton")
-            }
-        }
-
-        enum Initiative {
-            /// Button to allow the agent to work in the background.
-            static var backgroundButton: String {
-                Localized.get("onboarding.initiative.backgroundButton")
-            }
-
-            /// Button to keep the agent reactive (only responds when asked).
-            static var reactiveButton: String {
-                Localized.get("onboarding.initiative.reactiveButton")
             }
         }
 
