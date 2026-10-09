@@ -1,5 +1,5 @@
 // Renders banner.html to docs/src/images/banner.gif, one seamless loop.
-// Usage: node design/assets/readme/deck/render-gif.mjs  (needs ffmpeg on PATH)
+// Usage: node design/assets/showcase/readme/render-gif.mjs  (needs ffmpeg on PATH)
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";

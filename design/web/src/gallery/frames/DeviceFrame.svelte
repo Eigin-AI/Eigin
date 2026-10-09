@@ -15,6 +15,7 @@
     shape = "phone",
     grid = false,
     colorScheme = "system",
+    fit = true,
     children,
   }: {
     /** Frame inner size in px. Phone is 393×852 (iPhone 17 Pro points); add
@@ -34,6 +35,8 @@
     /** Lays the active breakpoint's grid over the screen. */
     grid?: boolean;
     colorScheme?: "light" | "dark" | "system" | "inherit";
+    /** Scales the frame down to fit its container. */
+    fit?: boolean;
     children?: import("svelte").Snippet;
   } = $props();
 
@@ -47,7 +50,7 @@
   const isWatch = $derived(shape === "watch");
 </script>
 
-<div class="device-fit" use:fitToWidth>
+<div class="device-fit" use:fitToWidth={fit}>
   <div
     class="device-frame"
     class:bare={!isDevice}

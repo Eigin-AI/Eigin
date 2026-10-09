@@ -3,7 +3,7 @@
 Eigin is a capable personal agent that belongs to you.
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-2F2D2B)](LICENSE)
-[![Platform: iOS 26](https://img.shields.io/badge/platform-iOS%2026-2F2D2B)](#get-eigin)
+[![Platform: iOS 26](https://img.shields.io/badge/platform-iOS%2026-2F2D2B)](https://apps.apple.com/app/eigin/id6801064030)
 [![Matrix](https://img.shields.io/badge/chat-Matrix-2F2D2B)](https://chat.eigin.ai)
 
 <img src="docs/src/images/banner.gif" alt="The Eigin blob, surrounded by things people tell it and ask of it: Plan my week around the kids. I feel tired today. Move my 3pm and let Anna know. Why do I always get anxious on Sundays?">
@@ -18,11 +18,9 @@ People send more than *50 million personal messages to AI agents every day.* Tho
 
 Because it's yours, you can tell it anything. That's how Eigin becomes an AI made for just one person: **you**.
 
-## Get Eigin
+![Get your hands on a hands off AI.](docs/src/images/get-eigin.jpg)
 
 [![App Store](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/app/eigin/id6801064030)
-
-Free for iPhone today, with more platforms on the way.
 
 We're early and moving fast, so see what's new in the [changelog](CHANGELOG.md).
 

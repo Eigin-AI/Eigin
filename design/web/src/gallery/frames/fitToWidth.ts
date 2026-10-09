@@ -8,8 +8,10 @@
  *
  * Applied to a wrapper, which takes the scaled size as its own layout size —
  * a transform alone would leave the old box behind and throw off centering.
+ * Pass `false` to keep the frame at its true size whatever the room.
  */
-export function fitToWidth(node: HTMLElement) {
+export function fitToWidth(node: HTMLElement, enabled = true) {
+  if (!enabled) return;
   const frame = node.firstElementChild as HTMLElement | null;
 
   const measure = () => {

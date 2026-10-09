@@ -1,11 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
+/* Overridable so a second worktree can test beside a gallery already running. */
+const port = Number(process.env.GALLERY_PORT ?? 5173);
+
 export default defineConfig({
   testDir: "tests",
   // Keep output terse — this is an agent-facing check, not a QA suite.
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: `http://localhost:${port}`,
     trace: "on-first-retry",
   },
   /* Two engines: WebKit catches the Safari-only layout and animation bugs
@@ -16,8 +19,8 @@ export default defineConfig({
     { name: "webkit", use: devices["Desktop Safari"] },
   ],
   webServer: {
-    command: "npm run dev -- --port 5173 --strictPort",
-    url: "http://localhost:5173",
+    command: `npm run dev -- --port ${port} --strictPort`,
+    url: `http://localhost:${port}`,
     reuseExistingServer: true,
     timeout: 60_000,
   },

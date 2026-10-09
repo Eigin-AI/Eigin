@@ -17,9 +17,10 @@ body {
   background: inherit;
 }
 
+/* Held to the window, so the content pane scrolls and sticky parts stick. */
 .gallery {
   display: flex;
-  height: 100%;
+  height: 100dvh;
 }
 
 .sidebar {
@@ -127,4 +128,16 @@ body {
 
 .device-picker > *::-webkit-scrollbar {
   display: none;
+}
+
+/* Showcase text boxes: a headline or a turn of a made-up conversation. */
+.showcase-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: var(--spacing-n12) var(--spacing-n16);
+  border: none;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-standard-base);
+  color: var(--color-text-standard-base);
 }

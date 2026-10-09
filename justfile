@@ -241,6 +241,10 @@ logs target="relay" mode="" value="" env="" since="" follow="false":
     @{{ tools }} logs {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }} \
         --since {{ quote(since) }} {{ if follow == "true" { "--follow" } else { "" } }}
 
+[doc('Render showcase shots from the design gallery to design/assets/showcase (all, or the ids given)')]
+showcase *ids:
+    cd design/web && node scripts/showcase/cli.mjs {{ ids }}
+
 [doc('Clean the iOS build and derived data')]
 clean env="staging":
     #!/usr/bin/env bash

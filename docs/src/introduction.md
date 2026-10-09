@@ -24,6 +24,8 @@ Eigin lives on your device and answers only to you. You choose the model and how
 | **It's built for people** | A fixed set of declared tools and no shell. It asks before changing your data or acting on your behalf. See [Permissions](./tools/permissions.md). |
 | **It's open and compliant** | AGPL v3, compliant with GDPR and the EU AI Act, with a CASA-validated relay. See [Compliance](./compliance/README.md). |
 
+![Get your hands on a hands off AI.](images/get-eigin.jpg)
+
 ## Where to start
 
 New to the codebase? Read in order:
