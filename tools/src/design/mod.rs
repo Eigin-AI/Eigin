@@ -11,6 +11,7 @@ pub fn generate_all(repo_root: &str) -> anyhow::Result<()> {
     let installed = ios::fonts::install(repo_root, &tokens)?;
     ios::style::generate(repo_root, &tokens, installed.as_ref())?;
     ios::assets::generate(repo_root, &tokens)?;
+    ios::launch::generate(repo_root, &tokens)?;
     ios::icons::generate(repo_root)?;
     web::generate(repo_root, &tokens, installed.as_ref())
 }

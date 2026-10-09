@@ -27,6 +27,10 @@ struct OnboardingFlow: View {
 
     @State private var conversationProvider: Provider?
     @State private var conversationModel = ""
+    /// Up from when the keyboard starts showing until it has fully hidden.
+    @State private var keyboardShown = false
+    /// A step waiting for the keyboard to leave.
+    @State private var pendingStep: OnboardingStep?
 
     private var step: OnboardingStep {
         OnboardingStep(rawValue: stepRaw) ?? .welcome
@@ -45,14 +49,17 @@ struct OnboardingFlow: View {
             if step.isSetupScreen {
                 OnboardingScaffold(
                     progress: step.avatarProgress,
-                    // Welcome is a moment: the avatar is there, centred, as the
-                    // app opens, at full power with no ring; it holds a beat,
-                    // then rises and speaks. The ring appears from the next step on.
+                    // Welcome is a moment: the avatar picks up from the launch
+                    // screen at full power with no ring, rises, then speaks. The
+                    // ring appears from the next step on.
                     showsProgress: step != .welcome,
                     entrance: step == .welcome,
+                    turnID: step.rawValue,
                     title: speech.title,
                     text: speech.text,
-                    titleDelay: step == .welcome ? .milliseconds(500) : .zero
+                    titleDelay: step == .welcome
+                        ? OnboardingTiming.welcomeTitleDelay
+                        : OnboardingTiming.turnTitleDelay
                 ) {
                     setupContent
                 }
@@ -71,6 +78,17 @@ struct OnboardingFlow: View {
             }
         }
         .task { validateStep() }
+        .onReceive(NotificationCenter.default
+            .publisher(for: UIResponder.keyboardWillShowNotification))
+        { _ in
+            keyboardShown = true
+        }
+        .onReceive(NotificationCenter.default
+            .publisher(for: UIResponder.keyboardDidHideNotification))
+        { _ in
+            keyboardShown = false
+            applyPendingStep()
+        }
     }
 
     // MARK: - Setup content
@@ -121,8 +139,28 @@ struct OnboardingFlow: View {
 
     // MARK: - Navigation
 
+    /// Moves to `next`. With the keyboard up, it leaves first, so the screen has
+    /// settled before it fades out.
     private func advanceTo(_ next: OnboardingStep) {
-        stepRaw = next.rawValue
+        guard keyboardShown else {
+            stepRaw = next.rawValue
+            return
+        }
+        pendingStep = next
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+        )
+        // Fallback in case the keyboard never reports hiding.
+        Task {
+            try? await Task.sleep(for: OnboardingTiming.keyboardSettleLimit)
+            applyPendingStep()
+        }
+    }
+
+    private func applyPendingStep() {
+        guard let pendingStep else { return }
+        self.pendingStep = nil
+        stepRaw = pendingStep.rawValue
     }
 
     // MARK: - Agent speech

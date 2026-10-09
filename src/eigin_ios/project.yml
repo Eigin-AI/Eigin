@@ -186,6 +186,11 @@ targets:
         # Transaction.all excludes finished consumables and reinstall recovery (#216) has
         # nothing to re-redeem.
         SKIncludeConsumableInAppPurchaseHistory: true
+        # Mirrors the first onboarding frame: the mark centered on the app
+        # background. Assets are generated from tokens by `eigin-tools generate`.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
     settings:
       configs:
         Release:
@@ -198,7 +203,6 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         TARGETED_DEVICE_FAMILY: 1
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}
@@ -408,6 +412,11 @@ targets:
         # Transaction.all excludes finished consumables and reinstall recovery (#216) has
         # nothing to re-redeem.
         SKIncludeConsumableInAppPurchaseHistory: true
+        # Mirrors the first onboarding frame: the mark centered on the app
+        # background. Assets are generated from tokens by `eigin-tools generate`.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
     settings:
       base:
         SWIFT_VERSION: "6.0"
@@ -421,7 +430,6 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev

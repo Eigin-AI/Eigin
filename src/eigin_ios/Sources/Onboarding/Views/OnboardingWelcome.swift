@@ -20,7 +20,7 @@ struct OnboardingWelcome: View {
         entrance: true,
         title: Localized.Onboarding.Flow.Welcome.title,
         text: Localized.Onboarding.Flow.Welcome.text,
-        titleDelay: .seconds(1)
+        titleDelay: OnboardingTiming.welcomeTitleDelay
     ) {
         OnboardingWelcome(onBegin: {})
     }

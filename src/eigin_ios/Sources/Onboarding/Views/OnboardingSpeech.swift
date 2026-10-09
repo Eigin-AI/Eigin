@@ -18,7 +18,7 @@ struct OnboardingSpeech: View {
     /// Beat before the title appears, letting the avatar land first.
     var titleDelay: Duration = .zero
     /// Beat between the title appearing and the body streaming.
-    var streamDelay: Duration = .milliseconds(600)
+    var streamDelay: Duration = OnboardingTiming.streamDelay
 
     @Environment(\.colors) private var colors
     @State private var throttler = StreamThrottler()
@@ -77,7 +77,7 @@ struct OnboardingSpeech: View {
         throttler.start()
         for chunk in Self.streamChunks(text) {
             throttler.feed(chunk)
-            try? await Task.sleep(for: .milliseconds(45))
+            try? await Task.sleep(for: OnboardingTiming.wordInterval)
         }
         throttler.finish()
 
@@ -85,11 +85,8 @@ struct OnboardingSpeech: View {
         while throttler.phase != .done, !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(16))
         }
-        // A beat after the line lands before the screen's content appears.
-        // The reveal animates here, at its source: keeping the animation out of
-        // the scaffold means a screen change never inherits it — the swap, reflow
-        // and hide all stay instant, and only this fade eases in.
-        try? await Task.sleep(for: .milliseconds(900))
+        // A beat after the line lands, then the screen's content eases in.
+        try? await Task.sleep(for: OnboardingTiming.contentDelay)
         withAnimation(.easeOut(duration: Animations.normal)) {
             finished.wrappedValue = text
         }

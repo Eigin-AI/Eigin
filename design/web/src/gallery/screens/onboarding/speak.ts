@@ -1,4 +1,5 @@
 import { StreamThrottler, driveFrames } from "@lib";
+import { WORD_INTERVAL_MS } from "@gallery/screens/onboarding/opening";
 
 /** Resolves after `ms`, or as soon as `signal` aborts. */
 export function pause(ms: number, signal: AbortSignal): Promise<void> {
@@ -37,7 +38,7 @@ export async function speak(
         () => throttler.isRunning && !signal.aborted,
       );
     }
-    await pause(45, signal);
+    await pause(WORD_INTERVAL_MS, signal);
   }
   throttler.finish();
 

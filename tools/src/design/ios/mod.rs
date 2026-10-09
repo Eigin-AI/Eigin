@@ -4,6 +4,7 @@
 pub mod assets;
 pub mod fonts;
 pub mod icons;
+pub mod launch;
 mod model;
 pub mod style;
 mod swift_mappings;

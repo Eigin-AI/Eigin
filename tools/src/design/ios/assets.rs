@@ -205,7 +205,7 @@ fn save_rgb(img: &image::RgbaImage, path: &str) -> Result<()> {
 
 /// Saves artwork that needs its alpha channel — template-rendered glyphs.
 /// Never use for an app icon.
-fn save_rgba(img: &image::RgbaImage, path: &str) -> Result<()> {
+pub(super) fn save_rgba(img: &image::RgbaImage, path: &str) -> Result<()> {
     image::DynamicImage::ImageRgba8(img.clone())
         .save(path)
         .with_context(|| format!("saving {path}"))
@@ -233,13 +233,13 @@ fn make_icon(
     Ok(canvas)
 }
 
-fn colorize_svg(svg: &str, color: &str) -> String {
+pub(super) fn colorize_svg(svg: &str, color: &str) -> String {
     let re = Regex::new(r##"fill="#[0-9A-Fa-f]{3,8}""##).unwrap();
     re.replace_all(svg, format!("fill=\"{color}\"").as_str())
         .into_owned()
 }
 
-fn render_svg(svg_data: &str, max_size: u32) -> Result<image::RgbaImage> {
+pub(super) fn render_svg(svg_data: &str, max_size: u32) -> Result<image::RgbaImage> {
     use resvg::{tiny_skia, usvg};
 
     let options = usvg::Options::default();
@@ -263,7 +263,7 @@ fn render_svg(svg_data: &str, max_size: u32) -> Result<image::RgbaImage> {
 }
 
 /// Resolves a token path (e.g. `"palette.brand.primary"`) to a hex string for the given mode.
-fn token_hex(tokens: &Value, path: &str, mode: &str) -> Result<String> {
+pub(super) fn token_hex(tokens: &Value, path: &str, mode: &str) -> Result<String> {
     let alias = format!("{{{path}}}");
     let hex = resolve_alias(tokens, &alias, mode, 0)
         .with_context(|| format!("resolving '{path}' in {mode} mode"))?;
@@ -276,7 +276,7 @@ fn token_rgb(tokens: &Value, path: &str, mode: &str) -> Result<[u8; 3]> {
     parse_hex_rgb(&hex).with_context(|| format!("parsing colour '{hex}' for token '{path}'"))
 }
 
-fn parse_hex_rgb(hex: &str) -> Option<[u8; 3]> {
+pub(super) fn parse_hex_rgb(hex: &str) -> Option<[u8; 3]> {
     let h = hex.strip_prefix('#')?;
     if h.len() != 6 {
         return None;

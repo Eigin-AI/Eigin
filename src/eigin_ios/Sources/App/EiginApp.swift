@@ -63,6 +63,8 @@ struct EiginApp: App {
     private let notificationDelegate: NotificationDelegate
 
     @AppStorage(StorageKey.onboardingComplete) private var onboardingComplete = false
+    /// Cleared once the launch screen has been handed off, or onboarding takes it.
+    @State private var showsLaunchHandoff = true
 
     var body: some Scene {
         WindowGroup {
@@ -91,8 +93,15 @@ struct EiginApp: App {
     private var defaultRoot: some View {
         if onboardingComplete {
             ContentView()
+                .overlay {
+                    if showsLaunchHandoff {
+                        LaunchHandoff { showsLaunchHandoff = false }
+                    }
+                }
         } else {
+            // Onboarding picks the launch mark up itself.
             OnboardingFlow()
+                .onAppear { showsLaunchHandoff = false }
         }
     }
 

@@ -6,27 +6,40 @@ import SwiftUI
 ///
 /// The coordinator wraps this once around the changing screens so the avatar
 /// instance — and its fill — stays continuous, and so each new line reads as the
-/// same presence speaking.
+/// same presence speaking. Each screen's line and content form an
+/// ``OnboardingTurn``: a new `turnID` fades the old turn out over the new one,
+/// which is already laid out and waiting to speak.
+///
+/// With `entrance`, the avatar opens where the launch screen left the mark —
+/// centered at ``LaunchMark/diameter`` — then plays ``OpeningTimeline``: it
+/// works up the energy to jump and bounces up to its place. The layout is
+/// final from the first frame; only the avatar moves.
 struct OnboardingScaffold<Content: View>: View {
     let progress: Double
     var emoji: String?
     var showsProgress: Bool
     var entrance: Bool
+    /// Identifies the current screen. A new value plays the screen change.
+    var turnID: String
     let title: String
     let text: String
     var titleDelay: Duration
     @ViewBuilder var content: () -> Content
 
     @Environment(\.colors) private var colors
-    @State private var spokenText = ""
-    /// Whether the opening avatar has settled from its big, centered entrance up
-    /// to its place at the top. Starts already settled on every screen but the
-    /// welcome moment.
-    @State private var landed: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Whether the line currently on screen has finished being spoken.
-    private var revealed: Bool {
-        spokenText == text
+    /// When the opening started playing; nil holds it on its first frame.
+    @State private var openedAt: Date?
+    /// The opening is over, or never played: the avatar sits in its slot.
+    @State private var settled: Bool
+    @State private var avatarOpacity: Double = 1
+    /// Centers in global space of the avatar's slot and of the full screen.
+    @State private var slotCenter: CGPoint?
+    @State private var screenCenter: CGPoint?
+
+    private static var avatarSize: CGFloat {
+        96
     }
 
     init(
@@ -34,6 +47,7 @@ struct OnboardingScaffold<Content: View>: View {
         emoji: String? = nil,
         showsProgress: Bool = true,
         entrance: Bool = false,
+        turnID: String = "",
         title: String,
         text: String,
         titleDelay: Duration = .zero,
@@ -43,84 +57,117 @@ struct OnboardingScaffold<Content: View>: View {
         self.emoji = emoji
         self.showsProgress = showsProgress
         self.entrance = entrance
+        self.turnID = turnID
         self.title = title
         self.text = text
         self.titleDelay = titleDelay
         self.content = content
-        _landed = State(initialValue: !entrance)
+        _settled = State(initialValue: !entrance)
+    }
+
+    /// The avatar's scale at which its circle matches the launch screen's mark.
+    private static var launchScale: CGFloat {
+        LaunchMark.diameter / OnboardingAvatar.vesselSize(for: avatarSize)
+    }
+
+    /// Where the avatar is at `date`.
+    private func pose(at date: Date) -> OpeningTimeline.Pose {
+        if settled { return .settled }
+        let t = openedAt.map { date.timeIntervalSince($0) } ?? 0
+        return OpeningTimeline.pose(at: t, launchScale: Self.launchScale)
+    }
+
+    /// From screen center to the slot, scaled by how far the avatar has risen.
+    private func travel(_ rise: Double) -> CGSize {
+        guard let slotCenter, let screenCenter else { return .zero }
+        return CGSize(
+            width: (slotCenter.x - screenCenter.x) * rise,
+            height: (slotCenter.y - screenCenter.y) * rise
+        )
+    }
+
+    /// Off center, the avatar can't be placed until both centers are known.
+    private var placed: Bool {
+        slotCenter != nil && screenCenter != nil
     }
 
     var body: some View {
         VStack(spacing: Spacing.n24) {
-            OnboardingAvatar(
-                progress: progress,
-                emoji: emoji,
-                showsProgress: showsProgress,
-                // On the welcome moment it is there as the app opens, centred.
-                animatesIn: !entrance
-            )
-            // Big and centered while landing (the only child, so the stack
-            // centers it), then settling to its normal size at the top once the
-            // speech and content come in.
-            .scaleEffect(landed ? 1 : 1.5)
-            .padding(.top, Spacing.n32)
+            // Holds the avatar's place in the layout; the avatar renders in
+            // the overlay above.
+            Color.clear
+                .frame(width: Self.avatarSize, height: Self.avatarSize)
+                .onGeometryChange(for: CGPoint.self) { proxy in
+                    let frame = proxy.frame(in: .global)
+                    return CGPoint(x: frame.midX, y: frame.midY)
+                } action: { slotCenter = $0 }
+                .padding(.top, Spacing.n32)
 
-            // Held back until the avatar has landed, so it can hold the screen on
-            // its own first. Adding the expanding content lifts the avatar to the
-            // top.
-            if landed {
-                OnboardingSpeech(
+            // Overlay: during a screen change the outgoing and incoming
+            // turns coexist for one fade without moving anything.
+            ZStack {
+                OnboardingTurn(
                     title: title,
                     text: text,
-                    finished: $spokenText,
-                    titleDelay: titleDelay
+                    titleDelay: titleDelay,
+                    content: content()
                 )
-                .transition(.opacity)
-
-                // The content area scrolls when a screen is taller than the
-                // space left under the speech — the avatar and line stay put.
-                // Short content still fills the viewport, keeping the
-                // Spacer-centered layouts of screens that fit.
-                // Overlay, not stack: during a screen change the outgoing and
-                // incoming content coexist for one fade — overlapping them
-                // keeps the layout above from jumping while they cross.
-                ZStack {
-                    GeometryReader { viewport in
-                        ScrollView {
-                            content()
-                                // The scroll area itself runs edge to edge so
-                                // wide content (the priority carousel's peeking
-                                // cards) isn't clipped at the padding line.
-                                .padding(.horizontal, Spacing.n24)
-                                .frame(maxWidth: .infinity, minHeight: viewport.size.height)
-                        }
-                        .scrollBounceBehavior(.basedOnSize)
-                        .scrollIndicators(.hidden)
-                    }
-                    .opacity(revealed ? 1 : 0)
-                    .offset(y: revealed ? 0 : 8)
-                    .allowsHitTesting(revealed)
-                    .transition(.opacity)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // The scroll view escapes the scaffold's horizontal padding;
-                // its content pads itself instead.
-                .padding(.horizontal, -Spacing.n24)
+                .id(turnID)
+                .transition(.asymmetric(insertion: .identity, removal: .opacity))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeOut(duration: OnboardingTiming.turnFade), value: turnID)
         }
         .padding(.horizontal, Spacing.n24)
         .padding(.bottom, Spacing.n32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
-        .task { await landAvatar() }
+        .overlay { avatarLayer.ignoresSafeArea() }
+        .task { await playOpening() }
     }
 
-    /// On the welcome moment, lets the avatar hold the centre of the screen for a
-    /// beat before settling to the top and revealing the rest.
-    private func landAvatar() async {
-        guard !landed else { return }
-        try? await Task.sleep(for: .milliseconds(1500))
-        withAnimation(.spring(duration: Animations.slow, bounce: 0.2)) { landed = true }
+    /// The avatar, centered on the full screen like the launch screen's mark,
+    /// and offset up into its slot as it rises.
+    private var avatarLayer: some View {
+        TimelineView(.animation(paused: settled || openedAt == nil)) { context in
+            let pose = pose(at: context.date)
+            OnboardingAvatar(
+                progress: progress,
+                emoji: emoji,
+                showsProgress: showsProgress,
+                animatesIn: !entrance,
+                breath: pose.breath,
+                stretch: pose.stretch
+            )
+            .scaleEffect(pose.scale)
+            .offset(travel(pose.rise))
+            .opacity(pose.rise == 0 || placed ? avatarOpacity : 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGPoint.self) { proxy in
+            let frame = proxy.frame(in: .global)
+            return CGPoint(x: frame.midX, y: frame.midY)
+        } action: { screenCenter = $0 }
+        .allowsHitTesting(false)
+    }
+
+    /// Plays the opening on the timeline's clock, then settles for good so
+    /// the clock stops. Reduce Motion cross-fades the mark to its slot instead.
+    private func playOpening() async {
+        guard !settled else { return }
+
+        if reduceMotion {
+            try? await Task.sleep(for: .seconds(OpeningTimeline.hold))
+            withAnimation(.easeOut(duration: Animations.normal)) { avatarOpacity = 0 }
+            try? await Task.sleep(for: .seconds(Animations.normal))
+            settled = true
+            withAnimation(.easeIn(duration: Animations.slow)) { avatarOpacity = 1 }
+            return
+        }
+
+        openedAt = .now
+        try? await Task.sleep(for: .seconds(OpeningTimeline.opened))
+        settled = true
     }
 }
 
