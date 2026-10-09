@@ -10,8 +10,6 @@ enum StorageKey {
     static let onboardingUserName = "onboardingUserName"
     /// The user's selected ``OnboardingPriority`` raw value, persisted for later use.
     static let onboardingPriority = "onboardingPriority"
-    /// The user's chosen ``ProactivityLevel`` raw value, applied to the agent on creation.
-    static let onboardingProactivity = "onboardingProactivity"
     /// The chat the onboarding conversation became, opened once when the app first
     /// loads — superseded by `PendingDestination.chat`; remapped at launch, not written
     /// anymore.

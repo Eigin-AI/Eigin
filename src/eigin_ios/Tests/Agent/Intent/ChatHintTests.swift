@@ -72,4 +72,110 @@ struct ChatHintTests {
         #expect(result != nil)
         #expect(result?.contains("summarised soon") == true)
     }
+
+    // MARK: - introduceInitiative
+
+    /// Fires for a fresh (undecided) reactive agent — this is the
+    /// post-onboarding proactivity offer path.
+    @Test func introduceInitiativeFiresWhenReactiveAndUndecided() {
+        let id = UUID() // fresh — no cooldown history, no decision recorded
+        let result = ChatHint.evaluate(
+            agentID: id,
+            bootstrapComplete: true,
+            messages: [
+                ChatMessage(role: "user", content: "I keep forgetting to check the news"),
+                ChatMessage(role: "assistant", content: "I could keep an eye on that for you."),
+            ],
+            hasSpaces: true,
+            needsCompaction: false,
+            initiative: .reactive
+        )
+        #expect(result?.contains("proactiv") == true)
+    }
+
+    /// An explicit choice — any level, including staying reactive — ends
+    /// the offers.
+    @Test func introduceInitiativeSuppressedOnceDecided() {
+        ProactivityDecision.markDecided()
+        defer { ProactivityDecision.removeDecision() }
+
+        let result = ChatHint.evaluate(
+            agentID: UUID(),
+            bootstrapComplete: true,
+            messages: [
+                ChatMessage(role: "user", content: "Hi"),
+                ChatMessage(role: "assistant", content: "Hello!"),
+            ],
+            hasSpaces: true,
+            needsCompaction: false,
+            initiative: .reactive
+        )
+        #expect(result?.contains("proactiv") != true, "hint fires despite decision")
+    }
+
+    @Test func introduceInitiativeSuppressedForBackgroundLevels() {
+        for level in [ProactivityLevel.balanced, .proactive] {
+            let id = UUID() // fresh — undecided, but initiative is on
+            let result = ChatHint.evaluate(
+                agentID: id,
+                bootstrapComplete: true,
+                messages: [
+                    ChatMessage(role: "user", content: "Hi"),
+                    ChatMessage(role: "assistant", content: "Hello!"),
+                ],
+                hasSpaces: true,
+                needsCompaction: false,
+                initiative: level
+            )
+            #expect(result?.contains("proactiv") != true, "hint fired at \(level)")
+        }
+    }
+
+    /// The initiative offer outranks routine hints so it lands in the first
+    /// exchanges after onboarding.
+    @Test func introduceInitiativeOutranksRoutineHints() {
+        let initiative = HintCatalog.introduceInitiative
+        #expect(initiative.priority > HintCatalog.revisitCoreDocs.priority)
+        #expect(initiative.priority > HintCatalog.collectKnowledge.priority)
+        #expect(initiative.priority < HintCatalog.compactionWarning.priority)
+    }
+
+    /// Stays present on every eligible turn within its burst — the right
+    /// moment to act on it may arrive several turns after its first
+    /// appearance — then goes on cooldown.
+    @Test func introduceInitiativeFiresThroughItsBurstThenCoolsDown() {
+        let id = UUID() // fresh — no cooldown history, no decision recorded
+        defer { ProactivityDecision.removeDecision() }
+
+        func evaluate() -> String? {
+            ChatHint.evaluate(
+                agentID: id,
+                bootstrapComplete: true,
+                messages: [
+                    ChatMessage(role: "user", content: "Hi"),
+                    ChatMessage(role: "assistant", content: "Hello!"),
+                ],
+                hasSpaces: true,
+                needsCompaction: false,
+                initiative: .reactive
+            )
+        }
+
+        let burst = HintCatalog.introduceInitiative.burst
+        for turn in 1 ... burst {
+            #expect(evaluate()?.contains("proactiv") == true, "expected on burst turn \(turn)")
+        }
+        #expect(evaluate()?.contains("proactiv") != true, "cooldown after burst")
+    }
+
+    /// Hint burst settings: the proactivity offer runs longest — it needs to
+    /// be present when a reason to enable it shows up — and the rhythm hints
+    /// get shorter windows so they don't dominate a conversation.
+    @Test func burstConfiguration() {
+        #expect(HintCatalog.introduceInitiative.burst == 8)
+        #expect(HintCatalog.collectKnowledge.burst == 4)
+        #expect(HintCatalog.revisitCoreDocs.burst == 8)
+        #expect(HintCatalog.selfConfigure.burst == 8)
+        #expect(HintCatalog.capabilitySpaces.burst == 8)
+    }
 }

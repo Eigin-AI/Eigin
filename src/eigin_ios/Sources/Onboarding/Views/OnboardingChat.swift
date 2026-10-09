@@ -23,7 +23,6 @@ struct OnboardingChat: View {
     let model: String
     let name: String
     let priority: OnboardingPriority?
-    let proactivity: ProactivityLevel
     let onComplete: () -> Void
     let onBack: () -> Void
 
@@ -36,7 +35,7 @@ struct OnboardingChat: View {
     @State private var chatError: ConnectionError?
 
     @State private var userTurns = 0
-    @State private var fillProgress = OnboardingStep.initiative.avatarProgress
+    @State private var fillProgress = OnboardingStep.conversation.avatarProgress
     @State private var lastAssessment = OnboardingAssessment.Result.empty
     @State private var commit: OnboardingCommit?
     @State private var didReveal = false
@@ -48,7 +47,6 @@ struct OnboardingChat: View {
         model: String,
         name: String,
         priority: OnboardingPriority?,
-        proactivity: ProactivityLevel,
         onComplete: @escaping () -> Void,
         onBack: @escaping () -> Void
     ) {
@@ -56,7 +54,6 @@ struct OnboardingChat: View {
         self.model = model
         self.name = name
         self.priority = priority
-        self.proactivity = proactivity
         self.onComplete = onComplete
         self.onBack = onBack
         _agent = State(initialValue: Agent(name: "Eigin", providerID: provider.id, model: model))
@@ -385,10 +382,8 @@ struct OnboardingChat: View {
             .write(fallback, to: agent)
             commit = fallback
         }
-
-        // Carry over the initiative choice the user made during setup; the
-        // agent is created reactive by default.
-        agent.proactivity = proactivity
+        // Fresh agents keep the reactive default; proactivity is offered in
+        // conversation once there's a concrete reason to.
         agent.bootstrapComplete = true
         modelContext.insert(agent)
 
