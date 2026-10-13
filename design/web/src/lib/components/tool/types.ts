@@ -8,7 +8,12 @@ export interface ToolCall {
   result?: string;
 }
 
-export type ToolStatus = "executing" | "awaitingPermission" | "completed" | "denied" | "error";
+/**
+ * Where a call stands. Denied is a permission refused; declined is the person
+ * saying not now to something the call needed, which is a choice, not a fault.
+ */
+export type ToolStatus =
+  "executing" | "awaitingPermission" | "completed" | "denied" | "declined" | "error";
 
 /** Suffix appended to the name, or null when the status speaks for itself. */
 export function statusSuffix(status: ToolStatus): string | null {
@@ -17,6 +22,8 @@ export function statusSuffix(status: ToolStatus): string | null {
       return "awaiting permission";
     case "denied":
       return "denied";
+    case "declined":
+      return "declined";
     case "error":
       return "failed";
     default:

@@ -27,8 +27,11 @@
     transition: color var(--motion-normal) var(--motion-easing-smooth);
   }
 
-  /* A finished tool recedes; one waiting on the user asks for attention. */
-  .tool-row.completed {
+  /* A finished tool recedes; one waiting on the user asks for attention.
+     Declining is the person's own answer, so it recedes too rather than
+     reading as a failure. */
+  .tool-row.completed,
+  .tool-row.declined {
     opacity: 0.6;
   }
 

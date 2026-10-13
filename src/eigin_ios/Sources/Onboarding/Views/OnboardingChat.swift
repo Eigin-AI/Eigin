@@ -307,7 +307,7 @@ struct OnboardingChat: View {
             chatID: chatID,
             tasks: [
                 IntentTask(
-                    content: "Introduce the idea of skills — specialized capabilities I can activate, like scheduling, web, health, food tracking, and location awareness"
+                    content: "Introduce the idea of skills that aren't always on — specialized capabilities I can activate when a request needs them, like calendar, reminders, email, and health"
                 ),
                 IntentTask(
                     content: "Introduce spaces — a way to keep different parts of life separate"

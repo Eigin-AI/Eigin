@@ -39,6 +39,8 @@ struct SystemHintInput {
     let availableSkills: [Skill]
     /// Capabilities provided by at least one connected, enabled integration.
     var connectedCapabilities: Set<Capability> = []
+    /// Capabilities the person said no to connecting (``DeclinedCapabilities``).
+    var declinedCapabilities: Set<Capability> = []
     let activeFlow: FlowState?
     /// Notes for active MCP server skills whose server couldn't be reached
     /// this turn (e.g. token expired, server down) — surfaced so the agent

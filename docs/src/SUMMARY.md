@@ -56,6 +56,7 @@
 - [Microsoft](./integrations/microsoft.md)
 - [IMAP](./integrations/imap.md)
 - [Aula](./integrations/aula.md)
+- [Platform integrations](./integrations/platform.md)
 
 # Voice
 

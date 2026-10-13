@@ -5,6 +5,8 @@ import Foundation
 
 protocol ReminderService: Sendable {
     func authorize(canPromptUser: Bool) async -> EventKitAuthResult
+    /// What iOS lets Eigin do with reminders, without asking.
+    func access() -> EventKitAccess
     func fetchReminders(
         listID: String?,
         from startDate: Date?,

@@ -12,7 +12,8 @@ enum BundledSkill {
         selfModification,
         email,
         organization,
-        scheduling,
+        calendar,
+        reminders,
         planning,
         health,
         cooking,
@@ -167,21 +168,28 @@ enum BundledSkill {
         customDescriptor: "Organize chats into spaces and folders, archive conversations, and look up past chat transcripts."
     )
 
-    static let scheduling = Skill(
-        id: "scheduling",
-        displayName: Localized.Ui.scheduling,
-        description: "Read and manage calendar events and reminders.",
-        instruction: Prompt.Skills.Scheduling.instruction,
-        smallInstruction: Prompt.Skills.Scheduling.small,
-        requiredTools: [
-            GetCalendarEventsTool.capability,
-            CreateCalendarEventTool.capability,
-            ManageCalendarEventTool.capability,
-            GetRemindersTool.capability,
-            ManageReminderTool.capability,
-        ],
+    static let calendar = Skill(
+        id: "calendar",
+        displayName: Localized.Ui.Skill.calendar,
+        description: "Read and manage calendar events.",
+        instruction: Prompt.Skills.Calendar.instruction,
+        smallInstruction: Prompt.Skills.Calendar.small,
+        requiredTools: [],
+        requiredCapabilities: [.calendar],
         alwaysActive: false,
-        customDescriptor: "Check, create, and change calendar events, meetings, appointments, and reminders."
+        customDescriptor: "Check, create, and change calendar events, meetings, and appointments."
+    )
+
+    static let reminders = Skill(
+        id: "reminders",
+        displayName: Localized.Ui.Skill.reminders,
+        description: "Read and manage reminders.",
+        instruction: Prompt.Skills.Reminders.instruction,
+        smallInstruction: Prompt.Skills.Reminders.small,
+        requiredTools: [],
+        requiredCapabilities: [.reminders],
+        alwaysActive: false,
+        customDescriptor: "Check, create, and change reminders, and organize reminder lists."
     )
 
     static let planning = Skill(
@@ -193,12 +201,8 @@ enum BundledSkill {
         requiredTools: [
             StartFlowTool.capability,
             AdvanceFlowTool.capability,
-            GetCalendarEventsTool.capability,
-            CreateCalendarEventTool.capability,
-            ManageCalendarEventTool.capability,
-            GetRemindersTool.capability,
-            ManageReminderTool.capability,
         ],
+        optionalCapabilities: [.calendar, .reminders],
         alwaysActive: false,
         customDescriptor: "Help plan an upcoming trip, event, day out, gathering, festival, or conference; build an itinerary."
     )
@@ -209,14 +213,8 @@ enum BundledSkill {
         description: "Understand and look after your health: nutrition, activity, sleep, and vitals.",
         instruction: Prompt.Skills.Health.instruction,
         smallInstruction: Prompt.Skills.Health.small,
-        requiredTools: [
-            SearchFoodTool.capability,
-            GetFoodDetailsTool.capability,
-            LogFoodTool.capability,
-            LogBodyMeasurementTool.capability,
-            LogSleepTool.capability,
-            GetHealthLogTool.capability,
-        ],
+        requiredTools: [],
+        requiredCapabilities: [.health],
         alwaysActive: false,
         customDescriptor: "Track nutrition, calories, workouts, sleep, weight, steps, and other health measurements; log food and body data."
     )

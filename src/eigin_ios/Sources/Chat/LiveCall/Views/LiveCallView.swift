@@ -93,6 +93,10 @@ struct LiveCallView: View {
             if newPhase == .background, service.chatLoop.pendingPermission != nil {
                 service.chatLoop.resolvePermission(.deny)
             }
+            // Leaving the call isn't an answer to a connect request.
+            if newPhase == .background, service.chatLoop.pendingConnection != nil {
+                service.chatLoop.resolveConnection(.cancelled)
+            }
         }
         .onChange(of: service.chatLoop.pendingPermission) { _, request in
             if let request {
@@ -101,6 +105,15 @@ struct LiveCallView: View {
             } else {
                 presentedPermission = nil
             }
+        }
+        .sheet(item: Binding(
+            get: { service.chatLoop.pendingConnection },
+            set: { if $0 == nil { service.chatLoop.resolveConnection(.declined) } }
+        )) { request in
+            ConnectCapabilitySheet(request: request) { result in
+                service.chatLoop.resolveConnection(result)
+            }
+            .interactiveDismissDisabled()
         }
         .appSheet(
             isPresented: Binding(

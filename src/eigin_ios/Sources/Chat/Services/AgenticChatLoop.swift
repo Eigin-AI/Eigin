@@ -76,6 +76,7 @@ final class AgenticChatLoop {
     private(set) var toolEvents: [ToolEvent] = []
     private(set) var pendingPermission: PermissionRequest?
     private(set) var pendingBrowsing: BrowsingRequest?
+    private(set) var pendingConnection: CapabilityRequest?
 
     /// True while an interactive tool is executing (e.g. presenting options to the user).
     /// When true the view layer re-enables the input bar and hides the stop button.
@@ -104,6 +105,7 @@ final class AgenticChatLoop {
     private var permissionContinuation: CheckedContinuation<PermissionResponse, Never>?
     private var browsingContinuation: CheckedContinuation<BrowsingResult, Never>?
     private var optionsContinuation: CheckedContinuation<OptionSelection, Never>?
+    private var connectionContinuation: CheckedContinuation<CapabilityConnectResult, Never>?
 
     /// Active option set presented to the user while a tool is suspended.
     private(set) var pendingOptions: OptionSet?
@@ -537,6 +539,7 @@ final class AgenticChatLoop {
         shouldStop = false
         pendingBrowsing = nil
         pendingOptions = nil
+        pendingConnection = nil
         isAwaitingUserInteraction = false
         currentMessageID = ""
         didRefreshCatalog = false
@@ -563,6 +566,23 @@ final class AgenticChatLoop {
         browsingContinuation?.resume(returning: result)
         browsingContinuation = nil
         pendingBrowsing = nil
+    }
+
+    /// Asks the user to connect what a skill needs and suspends until the UI
+    /// resolves it.
+    func requestConnection(_ request: CapabilityRequest) async -> CapabilityConnectResult {
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<CapabilityConnectResult, Never>) in
+            self.connectionContinuation = continuation
+            self.pendingConnection = request
+        }
+    }
+
+    /// Resolves a pending connection request from the UI.
+    func resolveConnection(_ result: CapabilityConnectResult) {
+        connectionContinuation?.resume(returning: result)
+        connectionContinuation = nil
+        pendingConnection = nil
     }
 
     /// Presents options to the user and suspends until the UI resolves it.
@@ -602,6 +622,10 @@ final class AgenticChatLoop {
         browsingContinuation?.resume(returning: .cancelled)
         browsingContinuation = nil
         pendingBrowsing = nil
+        // Cancel any pending connection: stopping isn't an answer
+        connectionContinuation?.resume(returning: .cancelled)
+        connectionContinuation = nil
+        pendingConnection = nil
         // Cancel any pending interactive tool
         optionsContinuation?.resume(returning: .dismissed)
         optionsContinuation = nil

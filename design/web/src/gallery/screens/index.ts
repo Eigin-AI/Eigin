@@ -22,6 +22,9 @@ import SettingsScreen from "@gallery/screens/SettingsScreen.svelte";
 import ToolDetailScreen from "@gallery/screens/ToolDetailScreen.svelte";
 import WatchScreen from "@gallery/screens/WatchScreen.svelte";
 import OnboardingFlow from "@gallery/screens/onboarding/OnboardingFlow.svelte";
+import IntegrationInChatScreen from "@gallery/screens/IntegrationInChatScreen.svelte";
+import ConnectPlatformScreen from "@gallery/screens/platform/ConnectPlatformScreen.svelte";
+import PlatformIntegrationScreen from "@gallery/screens/platform/PlatformIntegrationScreen.svelte";
 
 export interface ScreenEntry {
   id: string;
@@ -277,6 +280,30 @@ export const screenEntries: ScreenEntry[] = [
     component: ConnectIntegrationScreen,
     about:
       "Connect one integration, whichever way it lets you in: a sign-in, a key, mail settings, or a server that has to be asked what it needs.",
+  },
+  {
+    id: "integration-in-chat",
+    title: "Integration · In chat",
+    section: "connections",
+    component: IntegrationInChatScreen,
+    about:
+      "The agent activates a skill whose integration isn't connected. The call waits and a connect sheet opens over the chat, like a permission request: one integration goes straight to its own sheet, several are offered to pick from. It asks once; after a no, the agent says where to connect instead.",
+  },
+  {
+    id: "platform-integration",
+    title: "Platform integration",
+    section: "connections",
+    component: PlatformIntegrationScreen,
+    about:
+      "An integration iOS gives permission for: Apple Health, Calendar, Reminders or Location. What Eigin reads and saves, kind by kind. Switches narrow what Eigin uses; the link out changes what iOS allows, since only iOS can take a permission back.",
+  },
+  {
+    id: "connect-platform-integration",
+    title: "Platform integration · Connect",
+    section: "connections",
+    component: ConnectPlatformScreen,
+    about:
+      "Says what Eigin will read and save before iOS asks. The only way in, whether it opens from the catalogue or from a chat.",
   },
 
   {

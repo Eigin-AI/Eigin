@@ -4,7 +4,7 @@ Integrations connect external services so the agent can use them directly. A **c
 
 This differs from [MCP](../tools/mcp.md): MCP tools are opaque and injected into every turn once connected. Integration capabilities are known in advance, so they route through the same skill-activation mechanism as built-in tools instead of flooding context.
 
-Manage integrations in **Settings → Connections → Integrations**. Connecting one runs its authorization flow and records which capabilities were actually granted, since a user can approve some and deny others — only granted capabilities' tools appear. Only one connected integration can provide a given capability at a time.
+Manage integrations in **Settings → Connections → Integrations**. [Platform integrations](./platform.md) (Apple Health, Calendar, Reminders, Location) connect through an iOS permission instead of an account. Connecting one runs its authorization flow and records which capabilities were actually granted, since a user can approve some and deny others — only granted capabilities' tools appear. Only one connected integration can provide a given capability at a time.
 
 When a connection expires (a revoked OAuth refresh token, an expired Aula session, a rotated mail password), the agent's tool errors say the user can fix it themselves, and the Connections list flags the integration with a warning icon. The fix is **Reconnect** on the integration's detail screen: it re-runs the same connect flow under the *existing* integration id, refreshing credentials and granted capabilities in place. Capability-provider selections and tool permissions keep pointing at the same integration, unlike a remove and re-add, which mints a new one.
 
@@ -18,3 +18,11 @@ Integration tools appear in the normal [permissions](../tools/permissions.md) sc
 | [Microsoft](./microsoft.md) | `email` | OAuth |
 | [IMAP](./imap.md) | `email` | Manual server credentials |
 | [Aula](./aula.md) | `aula` | Web-session login (UniLogin/MitID in a WKWebView) |
+| [Apple Health](./platform.md) | `health` | iOS permission (platform) |
+| [Apple Calendar](./platform.md) | `calendar` | iOS permission (platform) |
+| [Apple Reminders](./platform.md) | `reminders` | iOS permission (platform) |
+| [Location](./platform.md) | `location` | iOS permission (platform) |
+
+## Connecting from a chat
+
+A skill that needs a capability nothing provides can still be found and activated. Activating it opens a connect sheet over the chat and waits for the answer, then carries on with the skill or without it. It asks once per capability. See [platform integrations](./platform.md#connecting-from-a-chat).

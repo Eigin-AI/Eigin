@@ -517,6 +517,9 @@ struct IntegrationScreen: View {
                 return
             }
             showingAulaReconnect = true
+        case .platform:
+            // Platform types open PlatformIntegrationScreen, which has no reconnect.
+            break
         }
     }
 

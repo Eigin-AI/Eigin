@@ -2,9 +2,10 @@ import Foundation
 
 /// A packaged capability the agent can activate on demand.
 ///
-/// Skills bundle instructions (injected into the system prompt when active)
-/// with the tools they require. The active tool set is the union of all
-/// active skills' ``requiredTools``.
+/// A skill bundles instructions (injected into the system prompt when
+/// active) with what it needs to run: required tools, and required
+/// capabilities — all of them must be connected to fulfil the skill.
+/// Optional capabilities below only join when connected.
 struct Skill: Identifiable {
     let id: String
     let displayName: String
@@ -14,8 +15,13 @@ struct Skill: Identifiable {
     var smallInstruction: String = ""
     let requiredTools: Set<ToolCapability>
     /// Capabilities this skill needs from a connected integration (e.g. `.email`).
-    /// Empty for skills that only use built-in tools.
+    /// It needs all of them: its instructions describe tools each capability
+    /// provides, so it only advertises when complete. Empty for skills that
+    /// only use built-in tools.
     var requiredCapabilities: Set<Capability> = []
+    /// Capabilities whose tools join when connected, but which the skill works
+    /// without and never asks for.
+    var optionalCapabilities: Set<Capability> = []
     let alwaysActive: Bool
     /// Authored, retrieval-optimized semantic description (English) — written to
     /// match the phrasing users actually use. `nil` falls back to ``description``.

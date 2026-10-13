@@ -28,16 +28,54 @@ struct SkillTests {
         #expect(Set(ids).count == ids.count)
     }
 
+    // MARK: - Capability requirements
+
+    /// A skill needs all of its required capabilities: the instructions
+    /// describe tools each one provides, so it only advertises when complete.
+    @Test func aSkillNeedsAllOfItsRequiredCapabilities() {
+        let skill = Skill(
+            id: "test-capability-skill",
+            displayName: "Test",
+            description: "",
+            instruction: "",
+            requiredTools: [],
+            requiredCapabilities: [.calendar, .reminders],
+            alwaysActive: false
+        )
+        #expect(SkillCatalog.missingCapabilities(of: skill, connected: []) == [
+            .calendar,
+            .reminders,
+        ])
+        #expect(SkillCatalog.missingCapabilities(of: skill, connected: [.calendar]) == [.reminders])
+        #expect(SkillCatalog.missingCapabilities(of: skill, connected: [.calendar, .reminders])
+            .isEmpty)
+    }
+
+    @Test func providerNamesJoinProvidersWithOrAndCapabilitiesWithAnd() {
+        #expect(SkillCatalog.providerNames(for: [.calendar]) == "Apple Calendar")
+        #expect(SkillCatalog
+            .providerNames(for: [.calendar, .reminders]) == "Apple Calendar and Apple Reminders")
+        #expect(SkillCatalog
+            .providerNames(for: [.email]) == "Google or Microsoft or Other email (IMAP)")
+    }
+
     @Test @MainActor func sharedToolsAreDeduplicatedAcrossSkills() async {
-        // A skill may reuse tools owned by another skill — planning reuses the
-        // scheduling skill's calendar and reminder tools. The active tool set is
-        // a union, so activating both must yield each shared tool exactly once,
-        // not a duplicate per skill that requires it.
+        // Skills may share a capability's tools — planning uses the
+        // calendar and reminders tools the calendar and reminders skills
+        // need. The active tool set is a union, so activating both must
+        // yield each shared tool exactly once, not a duplicate per skill
+        // that wants it.
+        Container.shared.calendarService.register { FakeCalendarService() }
+        Container.shared.reminderService.register { FakeReminderService() }
         let policy = AlwaysAllowPolicy()
         let registry = await ToolRegistry.chat(
             permissionPolicy: policy,
             activeSkills: BundledSkill.alwaysActive
-                + [BundledSkill.scheduling, BundledSkill.planning]
+                + [BundledSkill.calendar, BundledSkill.reminders, BundledSkill.planning],
+            integrationToolsByCapability: [
+                .calendar: CalendarToolKit.tools(context: ToolContext()),
+                .reminders: ReminderToolKit.tools(context: ToolContext()),
+            ]
         )
         let names = registry.definitions.map(\.function.name)
 

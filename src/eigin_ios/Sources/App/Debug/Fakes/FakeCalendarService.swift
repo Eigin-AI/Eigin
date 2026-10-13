@@ -3,6 +3,7 @@ import Foundation
 
 final class FakeCalendarService: CalendarService, @unchecked Sendable {
     var authResult: EventKitAuthResult = .authorized
+    var accessLevel: EventKitAccess = .full
     var events: [CalendarEvent] = []
     var calendars: [CalendarInfo] = []
     var createdEvents: [NewCalendarEvent] = []
@@ -12,6 +13,10 @@ final class FakeCalendarService: CalendarService, @unchecked Sendable {
 
     func authorize(canPromptUser: Bool) async -> EventKitAuthResult {
         authResult
+    }
+
+    func access() -> EventKitAccess {
+        accessLevel
     }
 
     func fetchEvents(

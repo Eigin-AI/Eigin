@@ -117,10 +117,15 @@ struct AddIntegrationSheetContent: View {
     /// anything already connected, because the sheet connects one account
     /// per type and offering it again would be offering a thing you cannot do.
     private var listedTypes: [IntegrationType] {
-        let scope = selectedCategory?.integrationTypes ?? BundledIntegrationType.all
-        let types = searchText.isEmpty
-            ? scope
-            : IntegrationSearch.matching(searchText, in: scope)
+        let types = if let selectedCategory {
+            searchText.isEmpty
+                ? selectedCategory.integrationTypes
+                : IntegrationSearch.matching(searchText, in: selectedCategory.integrationTypes)
+        } else {
+            searchText.isEmpty
+                ? BundledIntegrationType.recommended
+                : IntegrationSearch.matching(searchText, in: BundledIntegrationType.all)
+        }
         return types.filter { !isConnected($0) }
     }
 
@@ -172,8 +177,9 @@ struct AddIntegrationSheetContent: View {
 
     private func categoryIcon(_ category: IntegrationCategory) -> Image? {
         switch category {
-        case .email, .health, .music: Iconography.Functional.mail
+        case .email, .music: Iconography.Functional.mail
         case .familyAndSchool: Iconography.Functional.school
+        case .platform: Iconography.Functional.lock
         }
     }
 

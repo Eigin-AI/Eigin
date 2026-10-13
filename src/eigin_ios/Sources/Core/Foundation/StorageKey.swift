@@ -22,4 +22,10 @@ enum StorageKey {
     /// Lives in `UserDefaults` rather than the SwiftData schema, so the watch
     /// context carries across taps without a migration.
     static let watchChat = "watchChat"
+
+    /// Whether the person said no to connecting a ``Capability``, by raw value
+    /// (``DeclinedCapabilities``).
+    static func capabilityDeclined(_ capability: String) -> String {
+        "capabilityDeclined.\(capability)"
+    }
 }

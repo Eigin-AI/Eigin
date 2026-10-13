@@ -45,7 +45,9 @@ struct SearchSkillsTool: Tool {
             name: name,
             description: """
             Search the skill catalog for skills matching a need. Returns matching \
-            skill IDs — activate one with `activate_skill`.
+            skill IDs — activate one with `activate_skill`. A match with `needs` \
+            asks the user to connect that integration when activated, so activate \
+            it only when their request depends on it.
             """,
             parameters: JSONSchema(
                 type: "object",
@@ -98,14 +100,19 @@ struct SearchSkillsTool: Tool {
             )
         }
 
+        let connected = connectedCapabilities(agent: agent)
         let matches: [[String: any Sendable]] = skillIndexResult.map { scored in
-            [
+            var match: [String: any Sendable] = [
                 "skill_id": scored.skill.id,
                 "name": scored.skill.displayName,
                 // Capped: MCP instructions can be long, and this lands in the
                 // agent's context every time it searches.
                 "description": scored.skill.summaryLine,
             ]
+            if let needed = SkillCatalog.connectionNeeded(for: scored.skill, connected: connected) {
+                match["needs"] = needed
+            }
+            return match
         }
         return ToolResult(
             toolCallID: id,
@@ -114,8 +121,9 @@ struct SearchSkillsTool: Tool {
         )
     }
 
-    /// Activatable candidates: bundled + MCP skills, minus already-active,
-    /// minus skills whose required capabilities aren't connected.
+    /// Activatable candidates: bundled + MCP skills, minus already-active.
+    /// Skills that need connecting are included, declined or not: searching
+    /// is asking, so the agent can find them and activation answers for them.
     @MainActor private func activatableSkills(agent: Agent) -> [Skill] {
         guard let chatID, let context = agent.modelContext else {
             return SkillCatalog.activatable(
@@ -140,6 +148,11 @@ struct SearchSkillsTool: Tool {
             activeIDs: activeIDs,
             connectedCapabilities: connectedCapabilities(context: context)
         )
+    }
+
+    /// Capabilities connected for the agent's store; none without one.
+    @MainActor private func connectedCapabilities(agent: Agent) -> Set<Capability> {
+        agent.modelContext.map(connectedCapabilities(context:)) ?? []
     }
 
     /// Capabilities provided by at least one connected, enabled integration.

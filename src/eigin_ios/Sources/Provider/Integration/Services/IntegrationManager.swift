@@ -13,15 +13,18 @@ final class IntegrationManager {
     private let oauthService: any IntegrationOAuthService
     private let imapCredentialStore: any IMAPCredentialStore
     private let aulaCredentialStore: any AulaCredentialStore
+    private let declines: DeclinedCapabilities
 
     init(
         oauthService: any IntegrationOAuthService,
         imapCredentialStore: any IMAPCredentialStore,
-        aulaCredentialStore: any AulaCredentialStore
+        aulaCredentialStore: any AulaCredentialStore,
+        declines: DeclinedCapabilities = DeclinedCapabilities()
     ) {
         self.oauthService = oauthService
         self.imapCredentialStore = imapCredentialStore
         self.aulaCredentialStore = aulaCredentialStore
+        self.declines = declines
     }
 
     /// Builds the capability → tools map for all connected, enabled integrations,
@@ -111,6 +114,28 @@ final class IntegrationManager {
         oauthService.clearTokens(for: integration.id)
         imapCredentialStore.clear(for: integration.id)
         aulaCredentialStore.clear(for: integration.id)
+        // Removing is a no to what it provided: a chat won't ask to put it back.
+        for capability in integration.grantedCapabilities.compactMap(Capability.init(rawValue:)) {
+            declines.decline(capability)
+        }
+    }
+
+    /// Records a platform integration as connected: one row per type, and any
+    /// earlier no to what it provides cleared. Connecting twice is harmless.
+    func connectPlatform(_ type: IntegrationType, in context: ModelContext) {
+        for capability in type.providedCapabilities {
+            declines.clear(capability)
+        }
+        let typeID = type.id
+        let existing = (try? context.fetch(FetchDescriptor<Integration>(
+            predicate: #Predicate { $0.typeID == typeID }
+        ))) ?? []
+        guard existing.isEmpty else { return }
+        context.insert(Integration(
+            typeID: type.id,
+            accountLabel: "",
+            grantedCapabilities: type.providedCapabilities.map(\.rawValue)
+        ))
     }
 
     /// Marks `integration` as the active provider for `capability`, upserting

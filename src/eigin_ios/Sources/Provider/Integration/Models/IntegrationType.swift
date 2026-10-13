@@ -85,7 +85,17 @@ struct IntegrationType: Sendable {
 
 /// Built-in integration types that ship with the app.
 enum BundledIntegrationType {
-    static let all: [IntegrationType] = [google, microsoft, imap, aula]
+    static let all: [IntegrationType] = [google, microsoft, imap, aula] + platform
+
+    /// What the catalogue suggests first. Of what iOS gives permission for,
+    /// calendar and reminders: health waits under On this phone.
+    static let recommended: [IntegrationType] = [
+        google,
+        microsoft,
+        imap,
+        appleCalendar,
+        appleReminders,
+    ]
 
     static func type(forID id: String) -> IntegrationType? {
         all.first { $0.id == id }

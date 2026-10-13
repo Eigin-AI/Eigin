@@ -13,12 +13,20 @@ import Foundation
 enum Capability: String, Codable, CaseIterable, Sendable {
     case email
     case aula
+    case health
+    case calendar
+    case reminders
+    case location
 
     /// The user-facing name, from the string catalog.
     var displayName: String {
         switch self {
         case .email: Localized.Capability.email
         case .aula: Localized.Capability.aula
+        case .health: Localized.Capability.health
+        case .calendar: Localized.Capability.calendar
+        case .reminders: Localized.Capability.reminders
+        case .location: Localized.Capability.location
         }
     }
 
@@ -30,6 +38,11 @@ enum Capability: String, Codable, CaseIterable, Sendable {
         switch self {
         case .email: .email
         case .aula: .familyAndSchool
+        case .health: .health
+        case .calendar: .calendar
+        case .reminders: .reminders
+        // The awareness tools that use it show in permissions regardless.
+        case .location: nil
         }
     }
 }

@@ -28,9 +28,17 @@ struct ActivateSkillTool: Tool {
     }
 
     private let chatID: UUID?
+    private let onConnectCapability: ConnectCapabilityHandler?
+    private let capabilityDeclines: DeclinedCapabilities
 
-    init(chatID: UUID? = nil) {
+    init(
+        chatID: UUID? = nil,
+        onConnectCapability: ConnectCapabilityHandler? = nil,
+        capabilityDeclines: DeclinedCapabilities = DeclinedCapabilities()
+    ) {
         self.chatID = chatID
+        self.onConnectCapability = onConnectCapability
+        self.capabilityDeclines = capabilityDeclines
     }
 
     func definition() -> ToolDefinition {
@@ -91,25 +99,38 @@ struct ActivateSkillTool: Tool {
         }
 
         if chat.isSkillActive(skillID) {
-            return await reactivate(skillID: skillID, context: context, chat: chat, toolCallID: id)
+            return await reactivate(
+                skillID: skillID,
+                context: context,
+                chat: chat,
+                agent: agent,
+                toolCallID: id
+            )
         }
 
         // Bundled and MCP server skills are checked directly (rather than
         // through ``SkillCatalog``, which would collapse the distinction)
         // because only MCP skills need a connection attempt before activating.
         if let skill = BundledSkill.skill(forID: skillID) {
-            return activateBundled(skill, on: chat, toolCallID: id)
+            return await activateBundled(
+                skill,
+                on: chat,
+                agent: agent,
+                context: context,
+                toolCallID: id
+            )
         }
         return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
     }
 
     /// Idempotent re-activation: re-resolves the skill against currently
-    /// connected providers and re-registers tools. Drops the entry when its
-    /// capability is no longer connected, so a later activation can succeed.
+    /// connected providers and re-registers tools. When its capability is no
+    /// longer connected, activates afresh, which asks to connect it.
     @MainActor private func reactivate(
         skillID: String,
         context: ModelContext,
         chat: Chat,
+        agent: Agent,
         toolCallID id: String
     ) async -> ToolResult {
         if let skill = BundledSkill.skill(forID: skillID) {
@@ -120,18 +141,16 @@ struct ActivateSkillTool: Tool {
                     isError: true
                 )
             }
-            let missing = missingCapabilities(of: skill, context: context)
-            guard missing.isEmpty else {
-                // Stale entry: the backing capability is gone. Drop it so a
-                // later activation isn't blocked, and tell the agent why.
+            guard missingCapabilities(of: skill, context: context).isEmpty else {
+                // Stale entry: the backing capability is gone. Drop it and
+                // activate afresh, which asks to connect it like the first time.
                 chat.activeSkillEntries.removeAll { $0.skillID == skillID }
-                let names = missing.map(\.displayName).sorted().joined(separator: ", ")
-                return ToolResult(
-                    toolCallID: id,
-                    content: ToolHelpers.output(errors: [
-                        "Skill '\(skillID)' was active but no connected provider supplies \(names) anymore. Connect one in Settings, then activate again.",
-                    ]),
-                    isError: true
+                return await activateBundled(
+                    skill,
+                    on: chat,
+                    agent: agent,
+                    context: context,
+                    toolCallID: id
                 )
             }
             SkillActivation.activate(
@@ -157,7 +176,7 @@ struct ActivateSkillTool: Tool {
             .filter(\.isEnabled)
         let connected = Container.shared.integrationManager()
             .connectedCapabilities(integrations: integrations)
-        return skill.requiredCapabilities.subtracting(connected)
+        return SkillCatalog.missingCapabilities(of: skill, connected: connected)
     }
 
     /// The shared success payload for (re)activating a bundled skill.
@@ -181,8 +200,10 @@ struct ActivateSkillTool: Tool {
     @MainActor private func activateBundled(
         _ skill: Skill,
         on chat: Chat,
+        agent: Agent,
+        context: ModelContext,
         toolCallID id: String
-    ) -> ToolResult {
+    ) async -> ToolResult {
         if skill.alwaysActive {
             return ToolResult(
                 toolCallID: id,
@@ -190,12 +211,116 @@ struct ActivateSkillTool: Tool {
                 isError: true
             )
         }
+        let missing = missingCapabilities(of: skill, context: context)
+        if !missing.isEmpty,
+           let unconnected = await connect(missing, agent: agent, context: context, toolCallID: id)
+        {
+            return unconnected
+        }
         SkillActivation.activate(
             skillID: skill.id,
             on: chat,
             activatingToolCallID: id
         )
         return activationResult(skill: skill, toolCallID: id)
+    }
+
+    // MARK: - Connecting what a skill needs
+
+    /// Asks the person to connect what a skill needs, once. Returns `nil` when
+    /// it is now connected, or what to tell the agent when it isn't. None of
+    /// these are errors: a no is an answer, and the agent carries on without.
+    @MainActor private func connect(
+        _ missing: Set<Capability>,
+        agent: Agent,
+        context: ModelContext,
+        toolCallID id: String
+    ) async -> ToolResult? {
+        let providers = SkillCatalog.providers(for: missing)
+        // Within a capability any provider is enough ("or"); a skill needs
+        // all of its capabilities ("and").
+        let names = SkillCatalog.providerNames(for: missing)
+
+        if missing.allSatisfy(capabilityDeclines.isDeclined) {
+            return notConnected(
+                "The user declined to connect \(names). Don't activate this skill again; if it would help, tell them they can add it in Settings → Connections.",
+                toolCallID: id
+            )
+        }
+        guard let onConnectCapability else {
+            return notConnected(
+                "Using this skill needs \(names) connected, and the user can't be asked right now. Answer without it; they can add it in Settings → Connections.",
+                toolCallID: id
+            )
+        }
+        if await isRefusedByIOS(providers) {
+            return notConnected(
+                "iOS has \(names) turned off for Eigin, so it can't be connected. Answer without it, and tell them they can allow Eigin in the iOS Settings app, then add it in this app's Settings → Connections.",
+                toolCallID: id
+            )
+        }
+
+        let request = CapabilityRequest(
+            capabilities: missing,
+            providerIDs: providers.map(\.id),
+            agentName: agent.name
+        )
+        switch await onConnectCapability(request) {
+        case .connected:
+            missing.forEach(capabilityDeclines.clear)
+            // A skill needs all of its capabilities. If the person stopped
+            // part way (one provider of several), name what's left — the
+            // next activation asks for it.
+            if let remaining = notConnectedAfterConnect(missing, context: context) {
+                return notConnected(
+                    "\(remaining) still need to be connected to use this skill. Activate it again to ask for them.",
+                    toolCallID: id
+                )
+            }
+            return nil
+        case .declined:
+            missing.forEach(capabilityDeclines.decline)
+            return notConnected(
+                "The user chose not to connect \(names). Don't activate this skill again; answer without it. If it would help later, they can add it in Settings → Connections.",
+                toolCallID: id
+            )
+        case .cancelled:
+            return notConnected("The user stopped before connecting \(names).", toolCallID: id)
+        }
+    }
+
+    /// Capabilities from the request that no integration ended up
+    /// connecting — the sheet lets the person stop after one of several.
+    @MainActor private func notConnectedAfterConnect(
+        _ missing: Set<Capability>,
+        context: ModelContext
+    ) -> String? {
+        let integrations = ((try? context.fetch(FetchDescriptor<Integration>())) ?? [])
+            .filter(\.isEnabled)
+        let connected = Container.shared.integrationManager()
+            .connectedCapabilities(integrations: integrations)
+        let remaining = missing.subtracting(connected)
+        guard !remaining.isEmpty else { return nil }
+        return ListFormatter.localizedString(byJoining: remaining.map(\.displayName))
+    }
+
+    /// Whether iOS has already refused every provider, so there is nothing
+    /// left to ask. Only platform integrations can be refused like this.
+    @MainActor private func isRefusedByIOS(_ providers: [IntegrationType]) async -> Bool {
+        for provider in providers {
+            guard let source = provider.authKind.platform,
+                  await source.permission().access() == .refused
+            else { return false }
+        }
+        return !providers.isEmpty
+    }
+
+    @MainActor private func notConnected(_ reason: String, toolCallID id: String) -> ToolResult {
+        ToolResult(
+            toolCallID: id,
+            content: ToolHelpers.output(result: ["activated": false, "reason": reason]),
+            isError: false
+        )
     }
 
     // MARK: - MCP server skills

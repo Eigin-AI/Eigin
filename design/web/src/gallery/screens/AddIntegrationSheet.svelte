@@ -21,6 +21,11 @@
     { name: "Google", description: "Gmail, Calendar and Contacts", icon: "service/google" },
     { name: "Microsoft", description: "Outlook mail and calendar", icon: "service/microsoft" },
     { name: "iCloud", description: "Mail, calendar and contacts", icon: "service/icloud" },
+    {
+      name: "Apple Health",
+      description: "Activity, sleep and nutrition",
+      icon: "functional/heart",
+    },
     { name: "Notion", description: "Notes and databases", letter: "N" },
     { name: "Other email", description: "Any account with IMAP", icon: "functional/mail" },
   ];
@@ -40,6 +45,30 @@
         { name: "Proton", description: "Mail and calendar", icon: "service/proton" },
         { name: "Fastmail", description: "Mail and calendar", letter: "F" },
         { name: "Other email", description: "Any account with IMAP", icon: "functional/mail" },
+      ],
+    },
+    {
+      /* Things iOS keeps behind a permission. They connect with a disclosure
+         and a system prompt rather than a sign-in, and say so on the way. */
+      name: "On this phone",
+      icon: "functional/lock",
+      services: [
+        {
+          name: "Apple Health",
+          description: "Activity, sleep and nutrition",
+          icon: "functional/heart",
+        },
+        { name: "Apple Calendar", description: "Events on this phone", icon: "brand/calendar" },
+        {
+          name: "Apple Reminders",
+          description: "Lists on this phone",
+          icon: "functional/check_circle",
+        },
+        {
+          name: "Location",
+          description: "Where you are, while you use Eigin",
+          icon: "functional/location",
+        },
       ],
     },
     {

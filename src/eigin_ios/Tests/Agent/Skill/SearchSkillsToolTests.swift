@@ -44,17 +44,17 @@ struct SearchSkillsToolTests {
         #expect(!result.content.contains("email"))
     }
 
-    @Test func capabilityGatedSkillsAreExcludedWithoutConnections() async {
-        // No connected integrations: email/aula stay out of the results even
-        // when the embedder "matches" everything.
+    @Test func skillsThatNeedConnectingAreFoundAndSayWhatTheyNeed() async {
+        // Nothing connected: email is still found, so the agent can activate it
+        // and be asked to connect, and it says what it needs.
         let tool = SearchSkillsTool(skillIndex: SkillIndex(embed: { _ in [1.0] }))
         let result = await tool.execute(
             makeCall(arguments: #"{"query": "send her a message"}"#),
             agent: makeAgent()
         )
         #expect(!result.isError)
-        #expect(!result.content.contains("email"))
-        #expect(!result.content.contains("aula"))
+        #expect(result.content.contains("email"))
+        #expect(result.content.contains("needs"))
     }
 
     @Test func reportsNoMatchesAsSuccess() async {

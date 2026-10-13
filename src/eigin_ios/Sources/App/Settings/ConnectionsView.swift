@@ -130,7 +130,16 @@ struct ConnectionsView: View {
             get: { connectTarget != nil },
             set: { if !$0 { connectTarget = nil } }
         )) {
-            if let target = connectTarget {
+            if case .type(let type) = connectTarget, type.authKind.platform != nil {
+                ConnectPlatformSheet(
+                    type: type,
+                    onConnected: { connectTarget = nil },
+                    onDeclined: {
+                        connectTarget = nil
+                        showAddIntegration = true
+                    }
+                )
+            } else if let target = connectTarget {
                 ConnectIntegrationSheet(
                     target: target,
                     onConnected: {
@@ -230,7 +239,7 @@ struct ConnectionsView: View {
                     RowHairline()
                 }
                 NavigationLink {
-                    IntegrationScreen(subject: subject)
+                    integrationDestination(subject)
                         .hidesTabBar()
                 } label: {
                     AppRow(integrationRowSpec(subject))
@@ -253,6 +262,18 @@ struct ConnectionsView: View {
         }
     }
 
+    /// Integrations iOS gives permission for have a screen of their own.
+    @ViewBuilder
+    private func integrationDestination(_ subject: IntegrationScreen.Subject) -> some View {
+        if case .builtin(let integration) = subject,
+           BundledIntegrationType.type(forID: integration.typeID)?.authKind.platform != nil
+        {
+            PlatformIntegrationScreen(integration: integration)
+        } else {
+            IntegrationScreen(subject: subject)
+        }
+    }
+
     private var integrationSubjects: [IntegrationScreen.Subject] {
         var subjects: [IntegrationScreen.Subject] = integrations
             .filter(\.isEnabled)
@@ -269,10 +290,13 @@ struct ConnectionsView: View {
                 integration,
                 oauthService: oauthService
             )
+            // A platform integration has no account; it says what it gives.
             return AppRowSpec(
                 id: integration.id.uuidString,
                 title: type?.displayName ?? integration.typeID,
-                description: integration.accountLabel,
+                description: integration.accountLabel.isEmpty
+                    ? type?.description
+                    : integration.accountLabel,
                 trailing: needsReconnect
                     ? .status(.attention, Localized.Integrations.Status.reconnectNeeded)
                     : nil

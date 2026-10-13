@@ -50,18 +50,45 @@ final class DefaultHealthService: HealthService, @unchecked Sendable {
             }
         }
 
-        // In background, check if we can write (HealthKit only reveals write auth status)
-        let energyType = HKQuantityType(.dietaryEnergyConsumed)
-        let status = store.authorizationStatus(for: energyType)
-        switch status {
-        case .sharingAuthorized:
-            return .authorized
-        case .sharingDenied:
-            return .denied("Health access was denied. Enable it in Settings.")
-        case .notDetermined:
-            return .denied("Health access cannot be requested while in the background.")
-        @unknown default:
-            return .denied("Health access is unavailable.")
+        // Apple Health never says what it lets Eigin read, so having been
+        // asked is as far as access can be checked without prompting.
+        return await hasAsked()
+            ? .authorized
+            :
+            .denied(
+                "Apple Health isn't connected. The user can add it in Settings → Connections."
+            )
+    }
+
+    func isAvailable() -> Bool {
+        HKHealthStore.isHealthDataAvailable()
+    }
+
+    func hasAsked() async -> Bool {
+        guard isAvailable() else { return false }
+        let status = try? await store.statusForAuthorizationRequest(
+            toShare: Self.writeTypes,
+            read: Self.readTypes
+        )
+        return status == .unnecessary
+    }
+
+    func notAllowedSaves() -> Set<HealthSave> {
+        Set(HealthSave.allCases.filter { save in
+            Self.types(for: save).contains { store.authorizationStatus(for: $0) == .sharingDenied }
+        })
+    }
+
+    private static func types(for save: HealthSave) -> [HKSampleType] {
+        switch save {
+        case .meals: [
+                HKQuantityType(.dietaryEnergyConsumed),
+                HKQuantityType(.dietaryProtein),
+                HKQuantityType(.dietaryFatTotal),
+                HKQuantityType(.dietaryCarbohydrates),
+            ]
+        case .sleep: [HKCategoryType(.sleepAnalysis)]
+        case .bodyMeasurements: [HKQuantityType(.bodyMass)]
         }
     }
 

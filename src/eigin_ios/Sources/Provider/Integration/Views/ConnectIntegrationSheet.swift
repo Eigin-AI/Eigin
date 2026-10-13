@@ -19,6 +19,8 @@ enum ConnectTarget {
 /// a fact about the wiring, not about the step.
 struct ConnectIntegrationSheet: View {
     let target: ConnectTarget
+    /// The last step's button. A chat waiting on the answer says Continue.
+    var doneLabel: String = Localized.Common.Actions.done
     var onConnected: () -> Void = {}
     var onCancelled: () -> Void = {}
 
@@ -156,6 +158,8 @@ struct ConnectIntegrationSheet: View {
                 Localized.Integration.Connect.Description.browserSignIn(type.displayName)
             case .imap:
                 Localized.Integration.Connect.Description.mailAccount
+            case .platform:
+                type.description
             }
         case .address:
             Localized.Integration.Connect.addressDescription
@@ -219,6 +223,10 @@ struct ConnectIntegrationSheet: View {
                     AppButton(Localized.Ui.connect) { connectIMAP() }
                         .disabled(!isIMAPFormValid)
                 }
+
+            case .platform:
+                // Platform types connect through ConnectPlatformSheet instead.
+                EmptyView()
             }
 
         case .address:
@@ -344,7 +352,7 @@ struct ConnectIntegrationSheet: View {
         switch target {
         case .type(let type):
             switch type.authKind {
-            case .oauth, .webSession: Localized.Integration.Connect.Failed.signInTitle
+            case .oauth, .webSession, .platform: Localized.Integration.Connect.Failed.signInTitle
             case .imap: Localized.Integration.Connect.Failed.mailTitle
             }
         case .address:
@@ -356,7 +364,7 @@ struct ConnectIntegrationSheet: View {
         switch target {
         case .type(let type):
             switch type.authKind {
-            case .oauth, .webSession:
+            case .oauth, .webSession, .platform:
                 Localized.Integration.Connect.Failed.signInBody(type.displayName)
             case .imap:
                 Localized.Integration.Connect.Failed.mailBody
@@ -385,7 +393,7 @@ struct ConnectIntegrationSheet: View {
                 AppTextInput(label: Localized.Integration.Connect.nameField, text: $chosenName)
             }
 
-            AppButton(Localized.Common.Actions.done) {
+            AppButton(doneLabel) {
                 if case .address = target {
                     saveServer()
                 }
@@ -414,6 +422,9 @@ struct ConnectIntegrationSheet: View {
         case .imap:
             // The form itself is the start step; verification is below.
             connectIMAP()
+        case .platform:
+            // Platform types connect through ConnectPlatformSheet instead.
+            break
         }
     }
 
@@ -708,7 +719,7 @@ extension IntegrationAuthKind {
     var isBrowserSignIn: Bool {
         switch self {
         case .oauth, .webSession: true
-        case .imap: false
+        case .imap, .platform: false
         }
     }
 }

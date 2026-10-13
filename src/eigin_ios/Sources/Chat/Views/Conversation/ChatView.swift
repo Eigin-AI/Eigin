@@ -199,6 +199,10 @@ struct ChatView: View {
                         },
                         onOptionDismissed: {
                             viewModel.chatLoop.resolveOptions(.dismissed)
+                        },
+                        connectionRequest: viewModel.chatLoop.pendingConnection,
+                        onConnectionResolved: { result in
+                            viewModel.chatLoop.resolveConnection(result)
                         }
                     ),
                     context: FeedContext(

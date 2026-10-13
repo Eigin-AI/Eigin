@@ -130,6 +130,17 @@ final class LiveCallService: @unchecked Sendable {
 
     // MARK: - Chat
 
+    /// Asks to connect what a skill needs over the call, but only while the
+    /// call is on screen: in the background there is no one to ask, so
+    /// activation says so rather than recording a no.
+    private var connectHandler: ConnectCapabilityHandler? {
+        guard isForegrounded else { return nil }
+        return { [weak self] request in
+            guard let self else { return .cancelled }
+            return await chatLoop.requestConnection(request)
+        }
+    }
+
     private(set) var chatLoop = AgenticChatLoop(
         isBootstrap: false, throttler: PassthroughThrottler()
     )
@@ -695,7 +706,8 @@ final class LiveCallService: @unchecked Sendable {
                 gatekeeper: gatekeeper,
                 mode: .liveCall,
                 hasSpaces: false,
-                needsCompaction: false
+                needsCompaction: false,
+                onConnectCapability: connectHandler
             )
 
             // Auto-compact if approaching context limits (silent, no progress UI)
@@ -745,7 +757,8 @@ final class LiveCallService: @unchecked Sendable {
                         + updatedSkills.filter { !$0.alwaysActive },
                     mcpTools: mcpTools,
                     mcpSkills: turn.mcpSkills,
-                    integrationToolsByCapability: integrationToolsByCapability
+                    integrationToolsByCapability: integrationToolsByCapability,
+                    onConnectCapability: connectHandler
                 )
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)
             }

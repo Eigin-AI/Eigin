@@ -3,6 +3,7 @@ import Foundation
 
 final class FakeReminderService: ReminderService, @unchecked Sendable {
     var authResult: EventKitAuthResult = .authorized
+    var accessLevel: EventKitAccess = .full
     var reminders: [ReminderItem] = []
     var lists: [ReminderListInfo] = []
     var createdReminders: [NewReminder] = []
@@ -13,6 +14,10 @@ final class FakeReminderService: ReminderService, @unchecked Sendable {
 
     func authorize(canPromptUser: Bool) async -> EventKitAuthResult {
         authResult
+    }
+
+    func access() -> EventKitAccess {
+        accessLevel
     }
 
     func fetchReminders(
