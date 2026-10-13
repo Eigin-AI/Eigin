@@ -79,6 +79,17 @@ struct ChatFeedSheets: ViewModifier {
                     )
                 }
             }
+            // Only its own buttons answer it: a swipe can't tell Not now from
+            // closing a sheet that just connected.
+            .sheet(item: Binding(
+                get: { interactions.connectionRequest },
+                set: { if $0 == nil { interactions.onConnectionResolved?(.declined) } }
+            )) { request in
+                ConnectCapabilitySheet(request: request) { result in
+                    interactions.onConnectionResolved?(result)
+                }
+                .interactiveDismissDisabled()
+            }
             .appSheet(
                 isPresented: Binding(
                     get: { state.browsingRequest != nil },

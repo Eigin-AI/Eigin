@@ -91,6 +91,7 @@ struct LiveCallStatus: View {
     private var isStreaming: Bool {
         service.error == nil
             && service.chatLoop.pendingPermission == nil
+            && service.chatLoop.pendingConnection == nil
             && (service.phase == .listening || service.phase == .speaking)
     }
 

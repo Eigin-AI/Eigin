@@ -30,6 +30,10 @@ final class DefaultCalendarService: CalendarService, @unchecked Sendable {
         }
     }
 
+    func access() -> EventKitAccess {
+        EventKitAccess(EKEventStore.authorizationStatus(for: .event))
+    }
+
     // MARK: - Read
 
     func fetchEvents(

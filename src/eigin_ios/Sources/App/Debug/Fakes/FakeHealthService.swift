@@ -3,6 +3,8 @@ import Foundation
 
 final class FakeHealthService: HealthService, @unchecked Sendable {
     var authResult: HealthAuthResult = .authorized
+    var asked = true
+    var refusedSaves: Set<HealthSave> = []
     var weight: Double?
     var dietaryEnergy: Double = 0
     var activeEnergy: Double = 0
@@ -27,6 +29,18 @@ final class FakeHealthService: HealthService, @unchecked Sendable {
 
     func authorize(canPromptUser: Bool) async -> HealthAuthResult {
         authResult
+    }
+
+    func isAvailable() -> Bool {
+        true
+    }
+
+    func hasAsked() async -> Bool {
+        asked
+    }
+
+    func notAllowedSaves() -> Set<HealthSave> {
+        refusedSaves
     }
 
     func readWeight(for date: Date) async throws -> Double? {

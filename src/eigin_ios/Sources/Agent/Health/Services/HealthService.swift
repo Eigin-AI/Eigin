@@ -4,6 +4,12 @@ import Foundation
 
 protocol HealthService: Sendable {
     func authorize(canPromptUser: Bool) async -> HealthAuthResult
+    /// Whether this device has Apple Health at all.
+    func isAvailable() -> Bool
+    /// Whether Apple Health has already asked about everything Eigin uses.
+    func hasAsked() async -> Bool
+    /// What Apple Health won't let Eigin save. It never says what Eigin may read.
+    func notAllowedSaves() -> Set<HealthSave>
 
     // Nutrition & energy
     func readDietaryEnergy(for date: Date) async throws -> Double
@@ -43,6 +49,13 @@ protocol HealthService: Sendable {
 enum HealthAuthResult {
     case authorized
     case denied(String)
+}
+
+/// A kind of data Eigin saves to Apple Health, as a person names it.
+enum HealthSave: String, CaseIterable, Sendable {
+    case meals
+    case sleep
+    case bodyMeasurements
 }
 
 struct DietarySample {

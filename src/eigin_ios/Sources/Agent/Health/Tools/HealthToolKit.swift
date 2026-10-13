@@ -1,6 +1,7 @@
 import Factory
 import Foundation
 
+/// Health tools, built for a connected Apple Health integration.
 enum HealthToolKit: ToolKit {
     static let capabilities: [ToolCapability] = [
         SearchFoodTool.capability,

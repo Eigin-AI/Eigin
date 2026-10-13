@@ -1,18 +1,16 @@
 import Factory
 import Foundation
 
-enum ScheduleToolKit: ToolKit {
+/// Calendar tools, built for a connected Apple Calendar integration.
+enum CalendarToolKit: ToolKit {
     static let capabilities: [ToolCapability] = [
         GetCalendarEventsTool.capability,
         CreateCalendarEventTool.capability,
         ManageCalendarEventTool.capability,
-        GetRemindersTool.capability,
-        ManageReminderTool.capability,
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
         let calendarService = Container.shared.calendarService()
-        let reminderService = Container.shared.reminderService()
 
         return [
             GetCalendarEventsTool(
@@ -25,14 +23,6 @@ enum ScheduleToolKit: ToolKit {
             ),
             ManageCalendarEventTool(
                 calendarService: calendarService,
-                canPromptUser: context.canPromptUser
-            ),
-            GetRemindersTool(
-                reminderService: reminderService,
-                canPromptUser: context.canPromptUser
-            ),
-            ManageReminderTool(
-                reminderService: reminderService,
                 canPromptUser: context.canPromptUser
             ),
         ]

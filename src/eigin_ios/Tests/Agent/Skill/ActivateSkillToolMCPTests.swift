@@ -146,25 +146,28 @@ struct ActivateSkillToolMCPTests {
         #expect(chat.activeSkillEntries.count(where: { $0.skillID == "email" }) == 1)
     }
 
-    @Test @MainActor func staleEntryWithMissingCapabilityIsClearedWithActionableError(
+    @Test @MainActor func staleEntryWithMissingCapabilityIsClearedAndSaysWhatItNeeds(
     ) async throws {
         // #262: skill says active, but no connected provider supplies the
         // capability anymore — the stale entry must be dropped so a later
-        // activation can succeed, and the error must name the capability.
+        // activation can succeed, and the answer must name what it needs.
         let (agent, chat, container) = try makeFixture()
         _ = container
         chat.activeSkillEntries.append(
             ActiveSkillEntry(skillID: "email", activatedAt: .now, activatingToolCallID: "earlier")
         )
 
-        let tool = ActivateSkillTool(chatID: chat.id)
+        let tool = ActivateSkillTool(
+            chatID: chat.id,
+            capabilityDeclines: DeclinedCapabilities(defaults: .isolated())
+        )
         let result = await tool.execute(
             makeCall(arguments: #"{"skill_id": "email"}"#),
             agent: agent
         )
 
-        #expect(result.isError)
-        #expect(result.content.contains("no connected provider"))
+        #expect(result.content.contains("\"activated\":false"))
+        #expect(result.content.contains("Google"))
         #expect(!chat.isSkillActive("email"))
     }
 
@@ -183,12 +186,16 @@ struct ActivateSkillToolMCPTests {
             ActiveSkillEntry(skillID: "email", activatedAt: .now, activatingToolCallID: "earlier")
         )
 
-        let tool = ActivateSkillTool(chatID: chat.id)
+        let tool = ActivateSkillTool(
+            chatID: chat.id,
+            capabilityDeclines: DeclinedCapabilities(defaults: .isolated())
+        )
         let result = await tool.execute(
             makeCall(arguments: #"{"skill_id": "email"}"#),
             agent: agent
         )
-        #expect(result.isError)
+        #expect(!chat.isSkillActive("email"))
+        #expect(result.content.contains("\"activated\":false"))
 
         // User re-enables the provider: reactivation now succeeds.
         integration.isEnabled = true

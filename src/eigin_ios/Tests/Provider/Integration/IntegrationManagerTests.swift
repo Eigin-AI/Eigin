@@ -338,7 +338,8 @@ struct IntegrationManagerTests {
         let manager = IntegrationManager(
             oauthService: oauthService,
             imapCredentialStore: imapCredentialStore,
-            aulaCredentialStore: FakeAulaCredentialStore()
+            aulaCredentialStore: FakeAulaCredentialStore(),
+            declines: DeclinedCapabilities(defaults: .isolated())
         )
         let integration = Integration(
             typeID: "imap", accountLabel: "me@example.com",
@@ -349,5 +350,45 @@ struct IntegrationManagerTests {
 
         #expect(oauthService.clearedIDs == [integration.id])
         #expect(imapCredentialStore.clearedIDs == [integration.id])
+    }
+
+    @Test @MainActor func removingAnIntegrationDeclinesWhatItProvided() {
+        let declines = DeclinedCapabilities(defaults: .isolated())
+        let manager = IntegrationManager(
+            oauthService: FakeIntegrationOAuthService(),
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore(),
+            declines: declines
+        )
+        let integration = Integration(
+            typeID: "apple-health", accountLabel: "",
+            grantedCapabilities: [Capability.health.rawValue]
+        )
+
+        manager.disconnect(integration)
+
+        #expect(declines.isDeclined(.health))
+        #expect(!declines.isDeclined(.email))
+    }
+
+    @Test @MainActor func connectingAPlatformIntegrationRecordsItOnceAndClearsANo() throws {
+        let (context, container) = try makeContext()
+        _ = container
+        let declines = DeclinedCapabilities(defaults: .isolated())
+        declines.decline(.health)
+        let manager = IntegrationManager(
+            oauthService: FakeIntegrationOAuthService(),
+            imapCredentialStore: FakeIMAPCredentialStore(),
+            aulaCredentialStore: FakeAulaCredentialStore(),
+            declines: declines
+        )
+
+        manager.connectPlatform(BundledIntegrationType.appleHealth, in: context)
+        manager.connectPlatform(BundledIntegrationType.appleHealth, in: context)
+
+        let rows = try context.fetch(FetchDescriptor<Integration>())
+        #expect(rows.count == 1)
+        #expect(manager.isConnected(.health, integrations: rows))
+        #expect(!declines.isDeclined(.health))
     }
 }

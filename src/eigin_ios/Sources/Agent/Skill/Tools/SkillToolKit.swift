@@ -10,7 +10,10 @@ enum SkillToolKit: ToolKit {
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
         [
-            ActivateSkillTool(chatID: context.chatID),
+            ActivateSkillTool(
+                chatID: context.chatID,
+                onConnectCapability: context.onConnectCapability
+            ),
             SearchSkillsTool(chatID: context.chatID),
             StartFlowTool(chatID: context.chatID),
             AdvanceFlowTool(chatID: context.chatID),

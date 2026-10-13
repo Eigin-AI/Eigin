@@ -825,6 +825,23 @@
         }
       }
     },
+    "capability.calendar" : {
+      "comment" : "The calendar capability, provided by Apple Calendar.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalender"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar"
+          }
+        }
+      }
+    },
     "capability.email" : {
       "comment" : "The email capability, e.g. a connected Google or IMAP account.",
       "localizations" : {
@@ -838,6 +855,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Email"
+          }
+        }
+      }
+    },
+    "capability.health" : {
+      "comment" : "The health capability, provided by Apple Health.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sundhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health"
+          }
+        }
+      }
+    },
+    "capability.location" : {
+      "comment" : "The location capability: where the person is, from iOS.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokation"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location"
+          }
+        }
+      }
+    },
+    "capability.reminders" : {
+      "comment" : "The reminders capability, provided by Apple Reminders.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Påmindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminders"
           }
         }
       }
@@ -5163,7 +5231,7 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigin kan ikke nå %@, før du logger ind igen."
+            "value" : "Eigin kan ikke bruge %@, før du logger ind igen."
           }
         },
         "en" : {
@@ -5180,7 +5248,7 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Loginet udløb"
+            "value" : "Login er udløbet"
           }
         },
         "en" : {
@@ -5435,13 +5503,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Søg efter en tjeneste, eller find den ud fra hvad du har brug for."
+            "value" : "Søg efter en tjeneste, eller udforsk mulighederne."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Search for a service, or browse by what you need it to do."
+            "value" : "Search for a service, or explore the options."
           }
         }
       }
@@ -5452,13 +5520,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbindelsen kan ikke logge ind automatisk længere — sessionen eller loginoplysningerne er udløbet. Genopret forbindelsen for at gendanne adgangen."
+            "value" : "Automatisk login er udløbet. Genopret forbindelsen for at gendanne adgangen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The connection can't sign in automatically anymore — its session or credentials expired. Reconnect to restore access."
+            "value" : "Automatic sign-in has expired. Reconnect to restore access."
           }
         }
       }
@@ -5486,7 +5554,7 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Forbind Aula for at få dine børns skoleopdateringer."
+            "value" : "Forbind Aula for at følge med i dine børns institution."
           }
         },
         "en" : {
@@ -5548,23 +5616,6 @@
         }
       }
     },
-    "integrations.category.health.displayName" : {
-      "comment" : "Display name for the Health integration category (browse grid) — no provider yet",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sundhed"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health"
-          }
-        }
-      }
-    },
     "integrations.category.music.displayName" : {
       "comment" : "Display name for the Music integration category (browse grid) — no provider yet",
       "localizations" : {
@@ -5578,6 +5629,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Music"
+          }
+        }
+      }
+    },
+    "integrations.category.platform.displayName" : {
+      "comment" : "Catalogue category for integrations iOS gives permission for (Apple Health, Calendar, Reminders, Location).",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På din telefon"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On this phone"
+          }
+        }
+      }
+    },
+    "integrations.chat.chooseDescription" : {
+      "comment" : "Under the title of the sheet a chat opens to connect something a skill needs. Arguments: the agent's name, what is needed (lowercased, e.g. 'email').",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ vil gerne bruge din %2$@. Vælg én at forbinde."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wants to use your %2$@. Choose one to connect."
+          }
+        }
+      }
+    },
+    "integrations.chat.chooseTitle" : {
+      "comment" : "Title of the sheet a chat opens when more than one integration could provide what a skill needs. The argument is what is needed, lowercased, e.g. 'email'.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbind %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect %@"
           }
         }
       }
@@ -5816,6 +5918,652 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Connect a Microsoft account to read and send email."
+          }
+        }
+      }
+    },
+    "integrations.platform.appleCalendar.description" : {
+      "comment" : "What the Apple Calendar integration gives the agent, shown under its name in lists.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begivenheder på denne telefon"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events on this phone"
+          }
+        }
+      }
+    },
+    "integrations.platform.appleCalendar.displayName" : {
+      "comment" : "Name of the Apple Calendar integration.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Kalender"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Calendar"
+          }
+        }
+      }
+    },
+    "integrations.platform.appleHealth.description" : {
+      "comment" : "What the Apple Health integration gives the agent, shown under its name in lists.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitet, søvn og ernæring"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity, sleep and nutrition"
+          }
+        }
+      }
+    },
+    "integrations.platform.appleHealth.displayName" : {
+      "comment" : "Name of the Apple Health integration.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Sundhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Health"
+          }
+        }
+      }
+    },
+    "integrations.platform.appleReminders.description" : {
+      "comment" : "What the Apple Reminders integration gives the agent, shown under its name in lists.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lister på denne telefon"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lists on this phone"
+          }
+        }
+      }
+    },
+    "integrations.platform.appleReminders.displayName" : {
+      "comment" : "Name of the Apple Reminders integration.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Påmindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Reminders"
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.description" : {
+      "comment" : "Under the title of a platform integration's connect sheet: the system prompt comes after Continue.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS spørger herefter, hvad du vil tillade."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS asks what to allow next."
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.refusedBody" : {
+      "comment" : "Explains that iOS won't ask again. The argument is where to change it: 'Settings' or 'Apple Health'.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS spørger ikke igen. Giv Eigin adgang i %@, og kom så tilbage."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS won't ask again. Allow Eigin in %@, then come back."
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.refusedTitle" : {
+      "comment" : "Shown when iOS has already refused a platform integration. The argument is its name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ er slået fra for Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is off for Eigin"
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.requestedDescription" : {
+      "comment" : "Under the title of a platform integration's connect sheet opened from a chat. Arguments: the agent's name, the integration's name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ vil gerne bruge %2$@. iOS spørger herefter, hvad du vil tillade."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wants to use %2$@. iOS asks what to allow next."
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.title" : {
+      "comment" : "Title of the sheet that connects a platform integration. The argument is its name, e.g. 'Apple Health'.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbind %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect %@"
+          }
+        }
+      }
+    },
+    "integrations.platform.connect.waitingBody" : {
+      "comment" : "Shown while the system permission prompt is up. The argument is who asks: 'iOS' or 'Apple Health'.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vælg, hvad du vil tillade i %@, så fortsætter det af sig selv."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose what to allow in %@, and this will continue by itself."
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.activity" : {
+      "comment" : "A kind of health data Eigin reads: steps, exercise and workouts.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.bodyMeasurements" : {
+      "comment" : "A kind of health data Eigin reads and saves, such as weight.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kropsmål"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Body measurements"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.events" : {
+      "comment" : "Calendar data Eigin reads and saves.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begivenheder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.heart" : {
+      "comment" : "A kind of health data Eigin reads: resting heart rate and variability.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hjerte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heart"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.location" : {
+      "comment" : "Location data Eigin reads.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokation"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.meals" : {
+      "comment" : "A kind of health data Eigin saves: what the person ate.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Måltider"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meals"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.nutrition" : {
+      "comment" : "A kind of health data Eigin reads: energy and macronutrients.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ernæring"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutrition"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.reminders" : {
+      "comment" : "Reminders data Eigin reads and saves.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Påmindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminders"
+          }
+        }
+      }
+    },
+    "integrations.platform.kind.sleep" : {
+      "comment" : "A kind of health data Eigin reads and saves.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søvn"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep"
+          }
+        }
+      }
+    },
+    "integrations.platform.kindLabel" : {
+      "comment" : "Under the name of a platform integration: it lives on the device rather than in an account.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På din telefon"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On this phone"
+          }
+        }
+      }
+    },
+    "integrations.platform.location.description" : {
+      "comment" : "What the Location integration gives the agent, shown under its name in lists.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor du er, mens du bruger Eigin"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where you are, while you use Eigin"
+          }
+        }
+      }
+    },
+    "integrations.platform.location.displayName" : {
+      "comment" : "Name of the Location integration.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokation"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location"
+          }
+        }
+      }
+    },
+    "integrations.platform.notAllowed" : {
+      "comment" : "On a kind of data iOS has turned off for Eigin, and the status of a platform integration iOS refused.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke tilladt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not allowed"
+          }
+        }
+      }
+    },
+    "integrations.platform.place.health" : {
+      "comment" : "Who asks for Health access: the Health app shows its own prompt. Names the asker on the connect sheet.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Sundhed"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Health"
+          }
+        }
+      }
+    },
+    "integrations.platform.place.settings" : {
+      "comment" : "Where a platform permission is changed: the iOS Settings app. Completes 'Change access in …'.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indstillinger"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "integrations.platform.reads" : {
+      "comment" : "Label for the kinds of data a platform integration lets Eigin read.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin læser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin reads"
+          }
+        }
+      }
+    },
+    "integrations.platform.readsAndSaves" : {
+      "comment" : "Label when Eigin reads and saves the same kinds of data, e.g. calendar events.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin læser og gemmer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin reads and saves"
+          }
+        }
+      }
+    },
+    "integrations.platform.saves" : {
+      "comment" : "Label for the kinds of data a platform integration lets Eigin save.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin gemmer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin saves"
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.changeAccess" : {
+      "comment" : "Row that opens where a platform permission is changed. The argument is where: Settings.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skift adgang i %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change access in %@"
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.changeFootnote" : {
+      "comment" : "Under the row that opens where a platform permission is changed. The argument is where: Settings.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skift, hvad Eigin har adgang til, i %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change what Eigin can access in %@."
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.notAskedBody" : {
+      "comment" : "Under the warning that iOS hasn't been asked for a connected platform integration's access; tapping asks.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS er ikke blevet spurgt om denne adgang endnu. Tryk for at tillade den."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS hasn't been asked for this access yet. Tap to allow it."
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.notAskedTitle" : {
+      "comment" : "Warning on a connected platform integration iOS hasn't been asked about, e.g. after the access Eigin needs changed. The argument is its name.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Færdiggør forbindelsen til %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish connecting %@"
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.offBody" : {
+      "comment" : "Under the warning that iOS has turned a platform integration off. The argument is where to change it.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giv Eigin adgang i %@ for at bruge det her."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow Eigin in %@ to use it here."
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.offTitle" : {
+      "comment" : "Warning on a platform integration iOS has turned off. Arguments: its name, where to change it.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ er slået fra i %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is off in %2$@"
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.removeWarning" : {
+      "comment" : "Explains removing a platform integration: Eigin stops, iOS permissions are untouched.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin holder op med at bruge det og spørger ikke efter det i chats. Det, iOS tillader, forbliver uændret."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigin stops using it and won't ask for it in chats. What iOS allows stays as it is."
+          }
+        }
+      }
+    },
+    "integrations.platform.screen.someOff" : {
+      "comment" : "Under the data a platform integration uses, when iOS has turned some of it off.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS har slået noget adgang fra for Eigin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS has turned off some access for Eigin."
           }
         }
       }
@@ -19054,19 +19802,36 @@
         }
       }
     },
-    "ui.scheduling" : {
-      "comment" : "Section label for scheduling/calendar features",
+    "ui.skill.calendar" : {
+      "comment" : "Name of the calendar skill.",
       "localizations" : {
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Planlægning"
+            "value" : "Kalender"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scheduling"
+            "value" : "Calendar"
+          }
+        }
+      }
+    },
+    "ui.skill.reminders" : {
+      "comment" : "Name of the reminders skill.",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Påmindelser"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminders"
           }
         }
       }

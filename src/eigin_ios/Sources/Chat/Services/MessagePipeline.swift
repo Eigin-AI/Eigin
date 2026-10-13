@@ -102,7 +102,8 @@ enum MessagePipeline {
         hasSpaces: Bool,
         needsCompaction: Bool,
         onBrowse: BrowseHandler? = nil,
-        onPresentOptions: OptionsHandler? = nil
+        onPresentOptions: OptionsHandler? = nil,
+        onConnectCapability: ConnectCapabilityHandler? = nil
     ) async -> TurnInputs {
         // 1. Cache-driven MCP catalog: `mcpSkills` is a projection of persisted
         // server data, no connection needed. Only servers backing an active
@@ -220,7 +221,8 @@ enum MessagePipeline {
                 mcpSkills: mcpSkills,
                 integrationToolsByCapability: integrationToolsByCapability,
                 onBrowse: onBrowse,
-                onPresentOptions: onPresentOptions
+                onPresentOptions: onPresentOptions,
+                onConnectCapability: onConnectCapability
             )
         }
 
@@ -255,6 +257,7 @@ enum MessagePipeline {
             availableSkills: BundledSkill.all + mcpSkills,
             connectedCapabilities: integrationManager
                 .connectedCapabilities(integrations: integrations),
+            declinedCapabilities: DeclinedCapabilities().declined,
             activeFlow: activeFlow,
             unavailableSkillNotes: unavailableMCPNotes,
             provider: provider,

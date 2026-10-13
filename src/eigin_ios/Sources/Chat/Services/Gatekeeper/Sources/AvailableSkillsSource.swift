@@ -30,7 +30,8 @@ final class AvailableSkillsSource: SystemHintSource {
         let activatable = SkillCatalog.activatable(
             from: input.availableSkills,
             activeIDs: Set(input.activeSkills.map(\.id)),
-            connectedCapabilities: input.connectedCapabilities
+            connectedCapabilities: input.connectedCapabilities,
+            declined: input.declinedCapabilities
         )
         guard !activatable.isEmpty else { return nil }
 
@@ -47,12 +48,12 @@ final class AvailableSkillsSource: SystemHintSource {
         let skills: String
         if let matches, !context.isEmpty, !matches.isEmpty {
             skills = matches
-                .map { "- \($0.skill.displayName) (`\($0.skill.id)`): \($0.skill.summaryLine)" }
+                .map { line(for: $0.skill, connected: input.connectedCapabilities) }
                 .joined(separator: "\n")
         } else if matches != nil {
             return nil
         } else {
-            skills = fallbackList(activatable)
+            skills = fallbackList(activatable, connected: input.connectedCapabilities)
         }
 
         return Prompt.Hints.availableSkills(skills: skills)
@@ -79,10 +80,19 @@ final class AvailableSkillsSource: SystemHintSource {
         return parts.isEmpty ? [context] : Array(parts)
     }
 
+    /// One hint line. A skill that needs connecting says so, because
+    /// activating it asks the person.
+    private func line(for skill: Skill, connected: Set<Capability>) -> String {
+        let base = "- \(skill.displayName) (`\(skill.id)`): \(skill.summaryLine)"
+        guard let needed = SkillCatalog.connectionNeeded(for: skill, connected: connected)
+        else { return base }
+        return "\(base) (needs \(needed) connected)"
+    }
+
     /// The capped full list, with a pointer to `search_skills` for overflow.
-    private func fallbackList(_ activatable: [Skill]) -> String {
+    private func fallbackList(_ activatable: [Skill], connected: Set<Capability>) -> String {
         let shown = activatable.prefix(fallbackLimit)
-        var lines = shown.map { "- \($0.displayName) (`\($0.id)`): \($0.summaryLine)" }
+        var lines = shown.map { line(for: $0, connected: connected) }
         let remaining = activatable.count - shown.count
         if remaining > 0 {
             lines.append("…\(remaining) more skills available — call `search_skills` to find one.")

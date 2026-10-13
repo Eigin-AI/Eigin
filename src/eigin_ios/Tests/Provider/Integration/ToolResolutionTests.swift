@@ -67,4 +67,57 @@ struct ToolResolutionTests {
         let names = Set(registry.definitions.map(\.function.name))
         #expect(!names.contains("email_list"))
     }
+
+    // MARK: - Platform integrations
+
+    @Test @MainActor func healthToolsOnlyWithAppleHealthConnected() {
+        Container.shared.healthService.register { FakeHealthService() }
+        let health = BundledIntegrationType.appleHealth.makeTools(
+            .health,
+            connected("apple-health"),
+            ToolContext()
+        )
+
+        let without = ToolRegistry.chat(
+            permissionPolicy: AlwaysAllowPolicy(),
+            activeSkills: [BundledSkill.health]
+        )
+        let with = ToolRegistry.chat(
+            permissionPolicy: AlwaysAllowPolicy(),
+            activeSkills: [BundledSkill.health],
+            integrationToolsByCapability: [.health: health]
+        )
+
+        #expect(!names(without).contains("get_health_log"))
+        #expect(names(with).contains("get_health_log"))
+        #expect(names(with).contains("log_food"))
+    }
+
+    @Test @MainActor func planningGetsCalendarToolsOnlyWhenConnected() {
+        Container.shared.calendarService.register { FakeCalendarService() }
+        let calendar = BundledIntegrationType.appleCalendar
+            .makeTools(.calendar, connected("apple-calendar"), ToolContext())
+
+        let without = ToolRegistry.chat(
+            permissionPolicy: AlwaysAllowPolicy(),
+            activeSkills: [BundledSkill.planning]
+        )
+        let with = ToolRegistry.chat(
+            permissionPolicy: AlwaysAllowPolicy(),
+            activeSkills: [BundledSkill.planning],
+            integrationToolsByCapability: [.calendar: calendar]
+        )
+
+        #expect(names(without).contains("start_flow"))
+        #expect(!names(without).contains("get_calendar_events"))
+        #expect(names(with).contains("get_calendar_events"))
+    }
+
+    private func connected(_ typeID: String) -> Integration {
+        Integration(typeID: typeID, accountLabel: "", grantedCapabilities: [])
+    }
+
+    private func names(_ registry: ToolRegistry) -> Set<String> {
+        Set(registry.definitions.map(\.function.name))
+    }
 }

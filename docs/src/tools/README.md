@@ -8,7 +8,7 @@ Every tool declares its name, permission requirements, a JSON schema (sent to th
 
 ## Built-in tools
 
-Built-in tools cover the agent's core capabilities: knowledge management, web search and fetch, space management, self-modification, scheduling, email, and awareness of time and location. Some are context-specific and appear only in certain session types. All tools return a JSON envelope with optional `result`, `errors`, and `warnings`.
+Built-in tools cover the agent's core capabilities: knowledge management, web search and fetch, space management, self-modification, and awareness of time and location. Integration tools divide into account integrations, like email, and platform integrations — the phone permissions for Apple Health, Calendar, Reminders and Location. Some are context-specific and appear only in certain session types. All tools return a JSON envelope with optional `result`, `errors`, and `warnings`.
 
 ## Adding a tool
 

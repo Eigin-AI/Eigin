@@ -16,15 +16,20 @@ struct IntegrationCategoryTests {
         #expect(types == ["aula"])
     }
 
+    @Test func platformTypesDeclareThePlatformCategory() {
+        let types = IntegrationCategory.platform.integrationTypes
+        #expect(!types.isEmpty)
+        #expect(types.allSatisfy { $0.category == .platform })
+    }
+
     @Test func placeholderCategoriesHaveNoProviders() {
-        #expect(IntegrationCategory.health.integrationTypes.isEmpty)
         #expect(IntegrationCategory.music.integrationTypes.isEmpty)
     }
 
     @Test func isAvailableReflectsWhetherAProviderExists() {
         #expect(IntegrationCategory.email.isAvailable)
         #expect(IntegrationCategory.familyAndSchool.isAvailable)
-        #expect(!IntegrationCategory.health.isAvailable)
+        #expect(IntegrationCategory.platform.isAvailable)
         #expect(!IntegrationCategory.music.isAvailable)
     }
 
@@ -37,5 +42,6 @@ struct IntegrationCategoryTests {
     @Test func categoryForCapabilityResolvesToTheOwningType() {
         #expect(IntegrationCategory.category(for: .email) == .email)
         #expect(IntegrationCategory.category(for: .aula) == .familyAndSchool)
+        #expect(IntegrationCategory.category(for: .health) == .platform)
     }
 }

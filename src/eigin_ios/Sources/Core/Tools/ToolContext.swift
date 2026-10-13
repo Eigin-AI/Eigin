@@ -13,4 +13,5 @@ struct ToolContext {
     var canPromptUser: Bool = true
     var onBrowse: BrowseHandler?
     var onPresentOptions: OptionsHandler?
+    var onConnectCapability: ConnectCapabilityHandler?
 }

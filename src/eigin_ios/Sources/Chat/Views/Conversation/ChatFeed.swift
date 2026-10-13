@@ -36,6 +36,8 @@ struct FeedInteractions {
     var onBrowsingComplete: ((BrowsingResult) -> Void)?
     var onOptionSelected: ((String) -> Void)?
     var onOptionDismissed: (() -> Void)?
+    var connectionRequest: CapabilityRequest?
+    var onConnectionResolved: ((CapabilityConnectResult) -> Void)?
 }
 
 /// A shared scrollable chat feed with input bar.
@@ -502,6 +504,7 @@ struct ChatFeed: View {
         if case .options = items.last { return true }
         return interactions.permissionRequest != nil
             || interactions.browsingRequest != nil
+            || interactions.connectionRequest != nil
     }
 
     /// Whether a thinking indicator belongs on screen: the turn is

@@ -14,8 +14,6 @@ extension ToolRegistry {
         SpaceToolKit.self,
         ChatToolKit.self,
         WebToolKit.self,
-        ScheduleToolKit.self,
-        HealthToolKit.self,
         SystemToolKit.self,
     ]
 
@@ -64,7 +62,8 @@ extension ToolRegistry {
         mcpSkills: [Skill] = [],
         integrationToolsByCapability: [Capability: [any Tool]] = [:],
         onBrowse: BrowseHandler? = nil,
-        onPresentOptions: OptionsHandler? = nil
+        onPresentOptions: OptionsHandler? = nil,
+        onConnectCapability: ConnectCapabilityHandler? = nil
     ) -> ToolRegistry {
         let context = ToolContext(
             voiceNames: voiceNames,
@@ -72,7 +71,8 @@ extension ToolRegistry {
             spaceID: spaceID, chatID: chatID, agentID: agentID,
             canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
             onBrowse: onBrowse,
-            onPresentOptions: onPresentOptions
+            onPresentOptions: onPresentOptions,
+            onConnectCapability: onConnectCapability
         )
         var tools = allChatTools(context: context)
         tools += mcpTools
@@ -94,7 +94,9 @@ extension ToolRegistry {
         // Integration tools are gated by capability rather than the requiredTools key
         // filter above (an integration's tool set can vary by which provider is
         // selected, so it isn't a fixed key list like a skill's).
-        let activeCapabilities = Set(activeSkills.flatMap(\.requiredCapabilities))
+        let activeCapabilities = Set(activeSkills.flatMap {
+            $0.requiredCapabilities.union($0.optionalCapabilities)
+        })
         for capability in activeCapabilities {
             tools += integrationToolsByCapability[capability] ?? []
         }

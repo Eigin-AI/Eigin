@@ -139,7 +139,7 @@ Eigin ships no content of its own. Text in the App is written by the user or gen
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 2.5.1 | Met | Public APIs only. HealthKit is used for health and fitness: reading and logging nutrition, sleep, and body measurements to the Health app |
+| 2.5.1 | Met | Public APIs only. HealthKit is used for health and fitness: reading and logging nutrition, sleep, and body measurements to the Health app. Apple Health is a named integration in Settings → Connections. Before the HealthKit prompt, a sheet lists what Eigin reads and saves. Its screen shows what it reads and saves, marks what Apple Health has turned off, links out to Settings, and removes it in-app ([platform integrations](../integrations/platform.md)) |
 | 2.5.2 | Met | The App can optionally download an AI model to run on-device. Model files are data read by the App's built-in runtime, not code, and add no features beyond the on-device AI described in the listing ([local model](../ios/local-model.md)). Downloads are checksum-verified and stay in the App's container |
 | 2.5.3 | Met | No malicious payloads |
 | 2.5.4 | Met | Background modes: audio, VoIP and processing. The live voice call ([live call](../voice/live-call.md)) runs on the native call screen through CallKit, which requires the VoIP mode. Audio keeps the call speaking and listening while the App is backgrounded or the screen is locked. Processing covers the scheduled proactive check-in ([initiative](../agents/initiative.md)). Each mode is declared for the feature that uses it, in its intended purpose |
@@ -243,7 +243,7 @@ This guideline covers software a host app offers that is not part of its binary.
 | Req | Verdict | Evidence |
 |---|---|---|
 | (i) Privacy policy | Met | Linked in App Store Connect and from Settings in the App. The policy states what data Eigin's service processes, which third parties receive it, how long it is kept, and how to request deletion ([GDPR](./gdpr.md)) |
-| (ii) Permission | Met | Permissions are requested progressively: the OS prompt appears the first time a feature needs it, never up front, with a purpose string. No analytics or usage data is collected; no analytics, crash, or telemetry SDK is included. Paid functionality does not depend on any data grant. Consent is withdrawn in iOS Settings |
+| (ii) Permission | Met | Permissions are requested progressively: the OS prompt appears the first time a feature needs it, never up front, with a purpose string. Health, calendar and reminders are connected as integrations: a sheet says what Eigin will read and save before the OS prompt, whether opened from Settings or from a chat that needs it, and a declined connection isn't asked for again. No analytics or usage data is collected; no analytics, crash, or telemetry SDK is included. Paid functionality does not depend on any data grant. Consent is withdrawn in iOS Settings |
 | (iii) Data minimisation | Met | Photos use the system picker. Calendar and reminders need full access because the AI reads and creates entries on request. Health read types are limited to what the health features use. No Contacts access |
 | (iv) Access | Met | Every permission is optional. If declined, only the feature that needs it is unavailable |
 | (v) Account sign-in | Met | No login exists and the App works fully without one, so account deletion does not arise. Connected accounts can be disconnected in-app, which deletes their credentials from the device. Credentials are stored only on the device and used only to call that service directly from the App ([integrations](../integrations/README.md)) |
@@ -280,7 +280,7 @@ SwiftPM dependencies that call required-reason APIs either ship their own manife
 
 ### 5.1.3 Health and health research
 
-The AI can read and write Health data when the user asks. Each health action asks for approval before it runs.
+The AI can read and write Health data when the user asks, once the user has connected Apple Health. Connecting shows what is read and saved before the HealthKit prompt. Each health action asks for approval before it runs.
 
 | Req | Verdict | Evidence |
 |---|---|---|

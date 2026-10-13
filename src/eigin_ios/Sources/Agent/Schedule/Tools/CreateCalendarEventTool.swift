@@ -131,8 +131,9 @@ struct CreateCalendarEventTool: Tool {
             )
         }
 
+        // Adding needs no read access, so a calendar shared add-only still works.
         let auth = await service.authorize(canPromptUser: canPromptUser)
-        if case .denied(let reason) = auth {
+        if case .denied(let reason) = auth, service.access() != .addOnly {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: [reason]),

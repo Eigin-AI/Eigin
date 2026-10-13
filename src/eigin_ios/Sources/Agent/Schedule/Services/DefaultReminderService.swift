@@ -29,6 +29,10 @@ final class DefaultReminderService: ReminderService, @unchecked Sendable {
         }
     }
 
+    func access() -> EventKitAccess {
+        EventKitAccess(EKEventStore.authorizationStatus(for: .reminder))
+    }
+
     // MARK: - Read
 
     func fetchReminders(

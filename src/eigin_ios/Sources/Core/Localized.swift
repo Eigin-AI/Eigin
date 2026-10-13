@@ -272,9 +272,29 @@ enum Localized {
             Localized.get("capability.aula")
         }
 
+        /// The calendar capability, provided by Apple Calendar.
+        static var calendar: String {
+            Localized.get("capability.calendar")
+        }
+
         /// The email capability, e.g. a connected Google or IMAP account.
         static var email: String {
             Localized.get("capability.email")
+        }
+
+        /// The health capability, provided by Apple Health.
+        static var health: String {
+            Localized.get("capability.health")
+        }
+
+        /// The location capability: where the person is, from iOS.
+        static var location: String {
+            Localized.get("capability.location")
+        }
+
+        /// The reminders capability, provided by Apple Reminders.
+        static var reminders: String {
+            Localized.get("capability.reminders")
         }
     }
 
@@ -1889,18 +1909,33 @@ enum Localized {
                 }
             }
 
-            enum Health {
-                /// Display name for the Health integration category (browse grid) — no provider yet
-                static var displayName: String {
-                    Localized.get("integrations.category.health.displayName")
-                }
-            }
-
             enum Music {
                 /// Display name for the Music integration category (browse grid) — no provider yet
                 static var displayName: String {
                     Localized.get("integrations.category.music.displayName")
                 }
+            }
+
+            enum Platform {
+                /// Catalogue category for integrations iOS gives permission for (Apple Health,
+                /// Calendar, Reminders, Location).
+                static var displayName: String {
+                    Localized.get("integrations.category.platform.displayName")
+                }
+            }
+        }
+
+        enum Chat {
+            /// Under the title of the sheet a chat opens to connect something a skill needs.
+            /// Arguments: the agent's name, what is needed (lowercased, e.g. 'email').
+            static func chooseDescription(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("integrations.chat.chooseDescription"), p1, p2)
+            }
+
+            /// Title of the sheet a chat opens when more than one integration could provide what a
+            /// skill needs. The argument is what is needed, lowercased, e.g. 'email'.
+            static func chooseTitle(_ p1: String) -> String {
+                String(format: Localized.get("integrations.chat.chooseTitle"), p1)
             }
         }
 
@@ -1981,6 +2016,238 @@ enum Localized {
             /// Subtitle for the Microsoft integration type in the connect picker
             static var description: String {
                 Localized.get("integrations.microsoft.description")
+            }
+        }
+
+        enum Platform {
+            /// Under the name of a platform integration: it lives on the device rather than in an
+            /// account.
+            static var kindLabel: String {
+                Localized.get("integrations.platform.kindLabel")
+            }
+
+            /// On a kind of data iOS has turned off for Eigin, and the status of a platform
+            /// integration iOS refused.
+            static var notAllowed: String {
+                Localized.get("integrations.platform.notAllowed")
+            }
+
+            /// Label for the kinds of data a platform integration lets Eigin read.
+            static var reads: String {
+                Localized.get("integrations.platform.reads")
+            }
+
+            /// Label when Eigin reads and saves the same kinds of data, e.g. calendar events.
+            static var readsAndSaves: String {
+                Localized.get("integrations.platform.readsAndSaves")
+            }
+
+            /// Label for the kinds of data a platform integration lets Eigin save.
+            static var saves: String {
+                Localized.get("integrations.platform.saves")
+            }
+
+            enum AppleCalendar {
+                /// What the Apple Calendar integration gives the agent, shown under its name in
+                /// lists.
+                static var description: String {
+                    Localized.get("integrations.platform.appleCalendar.description")
+                }
+
+                /// Name of the Apple Calendar integration.
+                static var displayName: String {
+                    Localized.get("integrations.platform.appleCalendar.displayName")
+                }
+            }
+
+            enum AppleHealth {
+                /// What the Apple Health integration gives the agent, shown under its name in
+                /// lists.
+                static var description: String {
+                    Localized.get("integrations.platform.appleHealth.description")
+                }
+
+                /// Name of the Apple Health integration.
+                static var displayName: String {
+                    Localized.get("integrations.platform.appleHealth.displayName")
+                }
+            }
+
+            enum AppleReminders {
+                /// What the Apple Reminders integration gives the agent, shown under its name in
+                /// lists.
+                static var description: String {
+                    Localized.get("integrations.platform.appleReminders.description")
+                }
+
+                /// Name of the Apple Reminders integration.
+                static var displayName: String {
+                    Localized.get("integrations.platform.appleReminders.displayName")
+                }
+            }
+
+            enum Connect {
+                /// Under the title of a platform integration's connect sheet: the system prompt
+                /// comes after Continue.
+                static var description: String {
+                    Localized.get("integrations.platform.connect.description")
+                }
+
+                /// Explains that iOS won't ask again. The argument is where to change it:
+                /// 'Settings' or 'Apple Health'.
+                static func refusedBody(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.connect.refusedBody"), p1)
+                }
+
+                /// Shown when iOS has already refused a platform integration. The argument is its
+                /// name.
+                static func refusedTitle(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.connect.refusedTitle"), p1)
+                }
+
+                /// Under the title of a platform integration's connect sheet opened from a chat.
+                /// Arguments: the agent's name, the integration's name.
+                static func requestedDescription(_ p1: String, _ p2: String) -> String {
+                    String(
+                        format: Localized.get("integrations.platform.connect.requestedDescription"),
+                        p1,
+                        p2
+                    )
+                }
+
+                /// Title of the sheet that connects a platform integration. The argument is its
+                /// name, e.g. 'Apple Health'.
+                static func title(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.connect.title"), p1)
+                }
+
+                /// Shown while the system permission prompt is up. The argument is who asks: 'iOS'
+                /// or 'Apple Health'.
+                static func waitingBody(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.connect.waitingBody"), p1)
+                }
+            }
+
+            enum Kind {
+                /// A kind of health data Eigin reads: steps, exercise and workouts.
+                static var activity: String {
+                    Localized.get("integrations.platform.kind.activity")
+                }
+
+                /// A kind of health data Eigin reads and saves, such as weight.
+                static var bodyMeasurements: String {
+                    Localized.get("integrations.platform.kind.bodyMeasurements")
+                }
+
+                /// Calendar data Eigin reads and saves.
+                static var events: String {
+                    Localized.get("integrations.platform.kind.events")
+                }
+
+                /// A kind of health data Eigin reads: resting heart rate and variability.
+                static var heart: String {
+                    Localized.get("integrations.platform.kind.heart")
+                }
+
+                /// Location data Eigin reads.
+                static var location: String {
+                    Localized.get("integrations.platform.kind.location")
+                }
+
+                /// A kind of health data Eigin saves: what the person ate.
+                static var meals: String {
+                    Localized.get("integrations.platform.kind.meals")
+                }
+
+                /// A kind of health data Eigin reads: energy and macronutrients.
+                static var nutrition: String {
+                    Localized.get("integrations.platform.kind.nutrition")
+                }
+
+                /// Reminders data Eigin reads and saves.
+                static var reminders: String {
+                    Localized.get("integrations.platform.kind.reminders")
+                }
+
+                /// A kind of health data Eigin reads and saves.
+                static var sleep: String {
+                    Localized.get("integrations.platform.kind.sleep")
+                }
+            }
+
+            enum Location {
+                /// What the Location integration gives the agent, shown under its name in lists.
+                static var description: String {
+                    Localized.get("integrations.platform.location.description")
+                }
+
+                /// Name of the Location integration.
+                static var displayName: String {
+                    Localized.get("integrations.platform.location.displayName")
+                }
+            }
+
+            enum Place {
+                /// Who asks for Health access: the Health app shows its own prompt. Names the asker
+                /// on the connect sheet.
+                static var health: String {
+                    Localized.get("integrations.platform.place.health")
+                }
+
+                /// Where a platform permission is changed: the iOS Settings app. Completes 'Change
+                /// access in …'.
+                static var settings: String {
+                    Localized.get("integrations.platform.place.settings")
+                }
+            }
+
+            enum Screen {
+                /// Row that opens where a platform permission is changed. The argument is where:
+                /// Settings.
+                static func changeAccess(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.screen.changeAccess"), p1)
+                }
+
+                /// Under the row that opens where a platform permission is changed. The argument is
+                /// where: Settings.
+                static func changeFootnote(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.screen.changeFootnote"), p1)
+                }
+
+                /// Under the warning that iOS hasn't been asked for a connected platform
+                /// integration's access; tapping asks.
+                static var notAskedBody: String {
+                    Localized.get("integrations.platform.screen.notAskedBody")
+                }
+
+                /// Warning on a connected platform integration iOS hasn't been asked about, e.g.
+                /// after the access Eigin needs changed. The argument is its name.
+                static func notAskedTitle(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.screen.notAskedTitle"), p1)
+                }
+
+                /// Under the warning that iOS has turned a platform integration off. The argument
+                /// is where to change it.
+                static func offBody(_ p1: String) -> String {
+                    String(format: Localized.get("integrations.platform.screen.offBody"), p1)
+                }
+
+                /// Warning on a platform integration iOS has turned off. Arguments: its name, where
+                /// to change it.
+                static func offTitle(_ p1: String, _ p2: String) -> String {
+                    String(format: Localized.get("integrations.platform.screen.offTitle"), p1, p2)
+                }
+
+                /// Explains removing a platform integration: Eigin stops, iOS permissions are
+                /// untouched.
+                static var removeWarning: String {
+                    Localized.get("integrations.platform.screen.removeWarning")
+                }
+
+                /// Under the data a platform integration uses, when iOS has turned some of it off.
+                static var someOff: String {
+                    Localized.get("integrations.platform.screen.someOff")
+                }
             }
         }
 
@@ -6373,11 +6640,6 @@ enum Localized {
             Localized.get("ui.scanning")
         }
 
-        /// Section label for scheduling/calendar features
-        static var scheduling: String {
-            Localized.get("ui.scheduling")
-        }
-
         /// Placeholder text for the model search field
         static var searchModels: String {
             Localized.get("ui.search-models")
@@ -6546,6 +6808,18 @@ enum Localized {
         /// Generic 'Yes' confirmation label
         static var yes: String {
             Localized.get("ui.yes")
+        }
+
+        enum Skill {
+            /// Name of the calendar skill.
+            static var calendar: String {
+                Localized.get("ui.skill.calendar")
+            }
+
+            /// Name of the reminders skill.
+            static var reminders: String {
+                Localized.get("ui.skill.reminders")
+            }
         }
     }
 

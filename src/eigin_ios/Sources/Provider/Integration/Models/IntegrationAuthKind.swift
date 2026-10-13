@@ -24,4 +24,17 @@ enum IntegrationAuthKind {
     /// ``PKCEOAuthFlow``. Like `.oauth`, the config is built lazily so the
     /// client id isn't read until a connection is attempted.
     case webSession(configFactory: @Sendable () -> PKCEOAuthConfig)
+
+    /// A permission iOS holds rather than an account: Apple Health, Calendar,
+    /// Reminders, Location. Connecting says what Eigin will touch, then asks
+    /// iOS; there are no credentials to store. These connect through
+    /// ``ConnectPlatformSheet`` and open ``PlatformIntegrationScreen``, never
+    /// the account flows.
+    case platform(PlatformAccessSource)
+
+    /// The iOS permission source, for a platform integration.
+    var platform: PlatformAccessSource? {
+        if case .platform(let source) = self { return source }
+        return nil
+    }
 }

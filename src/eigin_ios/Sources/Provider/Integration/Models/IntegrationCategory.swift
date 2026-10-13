@@ -8,7 +8,8 @@ import Foundation
 enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
     case email
     case familyAndSchool
-    case health
+    /// What iOS gives permission for: Apple Health, Calendar, Reminders, Location.
+    case platform
     case music
 
     var id: String {
@@ -19,7 +20,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .email: Localized.Integrations.Category.Email.displayName
         case .familyAndSchool: Localized.Integrations.Category.FamilyAndSchool.displayName
-        case .health: Localized.Integrations.Category.Health.displayName
+        case .platform: Localized.Integrations.Category.Platform.displayName
         case .music: Localized.Integrations.Category.Music.displayName
         }
     }
@@ -30,7 +31,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .email: "envelope.fill"
         case .familyAndSchool: "figure.child"
-        case .health: "heart.fill"
+        case .platform: "iphone"
         case .music: "music.note"
         }
     }

@@ -48,6 +48,7 @@ struct SystemHintSourcesTests {
         activeSkills: [Skill] = [],
         availableSkills: [Skill] = [],
         connectedCapabilities: Set<Capability> = [],
+        declinedCapabilities: Set<Capability> = [],
         activeFlow: FlowState? = nil,
         unavailableSkillNotes: [String] = [],
         provider: ProviderSnapshot = ProviderSnapshot(
@@ -71,6 +72,7 @@ struct SystemHintSourcesTests {
             activeSkills: activeSkills,
             availableSkills: availableSkills,
             connectedCapabilities: connectedCapabilities,
+            declinedCapabilities: declinedCapabilities,
             activeFlow: activeFlow,
             unavailableSkillNotes: unavailableSkillNotes,
             provider: provider,
@@ -374,13 +376,27 @@ struct SystemHintSourcesTests {
         #expect(result == nil)
     }
 
-    @Test func availableSkillsHidesToollessSkillWithoutConnectedCapability() async {
+    @Test func availableSkillsMarksSkillThatNeedsConnecting() async {
         let source = AvailableSkillsSource()
         let email = skill(
             id: "email", displayName: "Email", description: "d",
             requiredCapabilities: [.email]
         )
-        let result = await source.render(input(availableSkills: [email]))
+        let body = await source.render(input(availableSkills: [email])) ?? ""
+        #expect(body.contains("Email"))
+        #expect(body.contains("needs"))
+    }
+
+    @Test func availableSkillsLeavesOutWhatThePersonDeclined() async {
+        let source = AvailableSkillsSource()
+        let email = skill(
+            id: "email", displayName: "Email", description: "d",
+            requiredCapabilities: [.email]
+        )
+        let result = await source.render(input(
+            availableSkills: [email],
+            declinedCapabilities: [.email]
+        ))
         #expect(result == nil)
     }
 

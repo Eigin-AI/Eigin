@@ -310,6 +310,12 @@ final class ChatViewModel {
                 mcpServers: servers
             )
 
+            // A chat on screen can ask the person to connect what a skill needs.
+            let connectHandler: ConnectCapabilityHandler = { [weak self] request in
+                guard let self else { return .cancelled }
+                return await chatLoop.requestConnection(request)
+            }
+
             let turn = await MessagePipeline.prepareTurn(
                 messages: msgs,
                 agent: agent, model: routedModel, space: space,
@@ -330,7 +336,8 @@ final class ChatViewModel {
                 onPresentOptions: { [weak self] optionSet in
                     guard let self else { return .dismissed }
                     return await chatLoop.presentOptions(optionSet)
-                }
+                },
+                onConnectCapability: connectHandler
             )
 
             // Persist the user message before compaction: the summary row lands
@@ -408,7 +415,8 @@ final class ChatViewModel {
                         mcpSkills: turn.mcpSkills,
                         integrationToolsByCapability: integrationToolsByCapability,
                         onBrowse: browseHandler,
-                        onPresentOptions: optionsHandler
+                        onPresentOptions: optionsHandler,
+                        onConnectCapability: connectHandler
                     )
                 }
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)

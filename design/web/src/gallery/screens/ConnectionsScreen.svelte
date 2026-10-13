@@ -34,6 +34,12 @@
           <StatusLine state="attention" label="Reconnect" />
         {/snippet}
       </Row>
+      <Row
+        title="Apple Health"
+        description="Activity, sleep and nutrition"
+        onclick={() => (location.hash = "#/screens/platform-integration")}
+      />
+      <Row title="Apple Calendar" description="Events on this phone" onclick={() => {}} />
       <Row title="iCloud mail" description="you@icloud.com" onclick={() => {}} />
       <Row title="Home Assistant" description="Lights, heating and sensors" onclick={() => {}} />
       <Row title="Linear" description="Issues and projects" onclick={() => {}} />
