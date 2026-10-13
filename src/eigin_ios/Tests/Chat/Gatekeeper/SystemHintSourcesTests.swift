@@ -384,7 +384,7 @@ struct SystemHintSourcesTests {
         )
         let body = await source.render(input(availableSkills: [email])) ?? ""
         #expect(body.contains("Email"))
-        #expect(body.contains("needs"))
+        #expect(body.contains("activating asks to connect"))
     }
 
     @Test func availableSkillsLeavesOutWhatThePersonDeclined() async {

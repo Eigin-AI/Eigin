@@ -80,13 +80,13 @@ final class AvailableSkillsSource: SystemHintSource {
         return parts.isEmpty ? [context] : Array(parts)
     }
 
-    /// One hint line. A skill that needs connecting says so, because
-    /// activating it asks the person.
+    /// One hint line. A skill that needs connecting is phrased as what
+    /// activation does, so the model offers it rather than reports it.
     private func line(for skill: Skill, connected: Set<Capability>) -> String {
         let base = "- \(skill.displayName) (`\(skill.id)`): \(skill.summaryLine)"
         guard let needed = SkillCatalog.connectionNeeded(for: skill, connected: connected)
         else { return base }
-        return "\(base) (needs \(needed) connected)"
+        return "\(base) (activating asks to connect \(needed))"
     }
 
     /// The capped full list, with a pointer to `search_skills` for overflow.

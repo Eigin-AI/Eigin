@@ -120,7 +120,9 @@ struct ActivateSkillTool: Tool {
                 toolCallID: id
             )
         }
-        return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
+        return await activateMCPServer(
+            skillID: skillID, context: context, agent: agent, on: chat, toolCallID: id
+        )
     }
 
     /// Idempotent re-activation: re-resolves the skill against currently
@@ -158,11 +160,13 @@ struct ActivateSkillTool: Tool {
                 on: chat,
                 activatingToolCallID: id
             )
-            return activationResult(skill: skill, toolCallID: id)
+            return activationResult(skill: skill, agent: agent, context: context, toolCallID: id)
         }
         // MCP-backed skill: reconnects before re-activating, healing a
         // dropped server connection.
-        return await activateMCPServer(skillID: skillID, context: context, on: chat, toolCallID: id)
+        return await activateMCPServer(
+            skillID: skillID, context: context, agent: agent, on: chat, toolCallID: id
+        )
     }
 
     /// Capabilities the skill needs that no connected, enabled integration
@@ -179,20 +183,58 @@ struct ActivateSkillTool: Tool {
         return SkillCatalog.missingCapabilities(of: skill, connected: connected)
     }
 
-    /// The shared success payload for (re)activating a bundled skill.
-    @MainActor private func activationResult(skill: Skill, toolCallID id: String) -> ToolResult {
+    /// The shared success payload for (re)activating a skill — bundled or MCP.
+    /// `instruction` is included inline so the model has it this turn: the
+    /// Gatekeeper's per-turn hint (which also carries it on every subsequent
+    /// turn) isn't recomputed mid-turn after a tool call.
+    @MainActor private func activationResult(
+        skill: Skill,
+        agent: Agent,
+        context: ModelContext,
+        toolCallID id: String
+    ) -> ToolResult {
         ToolResult(
             toolCallID: id,
             content: ToolHelpers.output(result: [
                 "activated": skill.id,
-                "tools_available": skill.requiredTools.map(\.key).sorted(),
-                // Included inline so the model has it this turn — the Gatekeeper's
-                // per-turn hint (which also carries this instruction on every
-                // subsequent turn) isn't recomputed mid-turn after a tool call.
+                "tools_available": availableToolKeys(skill: skill, agent: agent, context: context),
                 "instruction": skill.instruction,
             ]),
             isError: false
         )
+    }
+
+    /// The tool keys activating this skill actually puts in the registry: its
+    /// required tools plus the tools of the integrations now serving its
+    /// capabilities, minus anything the user's permission policy excludes.
+    /// Capability-gated skills (calendar, health, …) have no `requiredTools`,
+    /// so the integration tools here are the whole story.
+    @MainActor private func availableToolKeys(
+        skill: Skill,
+        agent: Agent,
+        context: ModelContext
+    ) -> [String] {
+        var keys = Set(skill.requiredTools.map(\.key))
+        let capabilities = skill.requiredCapabilities.union(skill.optionalCapabilities)
+        if !capabilities.isEmpty {
+            let integrations = ((try? context.fetch(FetchDescriptor<Integration>())) ?? [])
+                .filter(\.isEnabled)
+            let selections =
+                ((try? context.fetch(FetchDescriptor<CapabilityProviderSelection>())) ?? [])
+            let toolContext = ToolContext(chatID: chatID, agentID: agent.id)
+            let tools = Container.shared.integrationManager().toolsByCapability(
+                integrations: integrations,
+                selections: selections,
+                context: toolContext
+            )
+            for capability in capabilities {
+                keys.formUnion((tools[capability] ?? []).map(\.name))
+            }
+        }
+        let policy = PermissionPolicyLoader.load(
+            for: agent, chatID: chatID, modelContext: context
+        )
+        return keys.filter { policy.permissionLevel(for: $0) != .never }.sorted()
     }
 
     // MARK: - Bundled skills
@@ -222,7 +264,7 @@ struct ActivateSkillTool: Tool {
             on: chat,
             activatingToolCallID: id
         )
-        return activationResult(skill: skill, toolCallID: id)
+        return activationResult(skill: skill, agent: agent, context: context, toolCallID: id)
     }
 
     // MARK: - Connecting what a skill needs
@@ -331,6 +373,7 @@ struct ActivateSkillTool: Tool {
     @MainActor private func activateMCPServer(
         skillID: String,
         context: ModelContext,
+        agent: Agent,
         on chat: Chat,
         toolCallID id: String
     ) async -> ToolResult {
@@ -380,14 +423,6 @@ struct ActivateSkillTool: Tool {
             activatingToolCallID: id
         )
 
-        return ToolResult(
-            toolCallID: id,
-            content: ToolHelpers.output(result: [
-                "activated": skillID,
-                "tools_available": skill.requiredTools.map(\.key).sorted(),
-                "instruction": skill.instruction,
-            ]),
-            isError: false
-        )
+        return activationResult(skill: skill, agent: agent, context: context, toolCallID: id)
     }
 }
