@@ -89,6 +89,86 @@ struct ActivateSkillToolConnectTests {
         #expect(asks.requests.first?.agentName == "Wren")
     }
 
+    /// Health gates on capability, not requiredTools — the result must name
+    /// the tools the integration actually provides, not an empty list the
+    /// model would read as the activation failing (#296).
+    @Test func activationReportsTheToolsTheSkillUnlocks() async throws {
+        let (agent, chat, container) = try makeFixture()
+
+        let result = await activate("health", chat: chat, agent: agent) { _ in
+            container.mainContext.insert(Integration(
+                typeID: "apple-health",
+                accountLabel: "",
+                grantedCapabilities: [Capability.health.rawValue]
+            ))
+            return .connected
+        }
+
+        let available = try #require(activationResult(of: result)?["tools_available"] as? [String])
+        #expect(Set(available) == Set(HealthToolKit.tools(context: ToolContext()).map(\.name)))
+    }
+
+    /// An optional capability contributes its tools only when something
+    /// actually provides it: planning's connected calendar adds calendar
+    /// tools, its unconnected reminders add none.
+    @Test func optionalCapabilityToolsFollowTheConnection() async throws {
+        let (agent, chat, container) = try makeFixture()
+        container.mainContext.insert(Integration(
+            typeID: "apple-calendar",
+            accountLabel: "",
+            grantedCapabilities: [Capability.calendar.rawValue]
+        ))
+
+        let result = await activate("planning", chat: chat, agent: agent, handler: nil)
+
+        let available = try #require(activationResult(of: result)?["tools_available"] as? [String])
+        #expect(available.contains("start_flow"))
+        #expect(available.contains("get_calendar_events"))
+        #expect(!available.contains("get_reminders"))
+    }
+
+    /// A tool the user set to "never" must not be reported as available —
+    /// the registry excludes it, so calling it would fail.
+    @Test func neverPermissionedToolsAreNotReported() async throws {
+        let (agent, chat, container) = try makeFixture()
+        container.mainContext.insert(AgentToolGrant(
+            agentID: agent.id,
+            capability: LogFoodTool.capability,
+            level: .never
+        ))
+        container.mainContext.insert(Integration(
+            typeID: "apple-health",
+            accountLabel: "",
+            grantedCapabilities: [Capability.health.rawValue]
+        ))
+
+        let result = await activate("health", chat: chat, agent: agent, handler: nil)
+
+        let available = try #require(activationResult(of: result)?["tools_available"] as? [String])
+        #expect(!available.contains("log_food"))
+        #expect(available.contains("get_health_log"))
+    }
+
+    /// Same for an already-connected capability — no ask, straight activate.
+    @Test func connectedSkillActivationReportsItsTools() async throws {
+        let (agent, chat, container) = try makeFixture()
+        container.mainContext.insert(Integration(
+            typeID: "apple-health",
+            accountLabel: "",
+            grantedCapabilities: [Capability.health.rawValue]
+        ))
+
+        let result = await activate("health", chat: chat, agent: agent) { _ in .connected }
+
+        let available = try #require(activationResult(of: result)?["tools_available"] as? [String])
+        #expect(available.contains("search_food"))
+    }
+
+    /// The JSON `result` dictionary of a successful activation, or nil.
+    private func activationResult(of result: ToolResult) -> [String: Any]? {
+        ToolHelpers.parseArguments(result.content)?["result"] as? [String: Any]
+    }
+
     @Test func aConnectedCapabilityActivatesWithoutAsking() async throws {
         let (agent, chat, container) = try makeFixture()
         container.mainContext.insert(Integration(

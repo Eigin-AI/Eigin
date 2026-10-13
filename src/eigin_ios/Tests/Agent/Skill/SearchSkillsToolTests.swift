@@ -54,7 +54,7 @@ struct SearchSkillsToolTests {
         )
         #expect(!result.isError)
         #expect(result.content.contains("email"))
-        #expect(result.content.contains("needs"))
+        #expect(result.content.contains("asks the user to connect"))
     }
 
     @Test func reportsNoMatchesAsSuccess() async {

@@ -110,7 +110,8 @@ struct SearchSkillsTool: Tool {
                 "description": scored.skill.summaryLine,
             ]
             if let needed = SkillCatalog.connectionNeeded(for: scored.skill, connected: connected) {
-                match["needs"] = needed
+                // Offer-framing: see AvailableSkillsSource.line.
+                match["connecting"] = "activating this skill asks the user to connect \(needed)"
             }
             return match
         }
