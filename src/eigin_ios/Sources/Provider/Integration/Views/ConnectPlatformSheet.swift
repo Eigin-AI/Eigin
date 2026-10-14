@@ -175,7 +175,9 @@ struct ConnectPlatformSheet: View {
             case .refused:
                 step = .refused
             case .notAsked:
-                step = .disclosure
+                // Prompt still unresolved — wait; dismissing the sheet and
+                // continuing again re-asks iOS.
+                break
             }
         }
     }

@@ -14,11 +14,8 @@ final class DefaultReminderService: ReminderService, @unchecked Sendable {
             return .authorized
         case .notDetermined:
             if canPromptUser {
-                let granted = await withTimeout {
-                    await (try? self.store.requestFullAccessToReminders()) ?? false
-                }
-                return (granted == true) ? .authorized :
-                    .denied("Reminders access was denied by the user.")
+                let granted = await (try? store.requestFullAccessToReminders()) ?? false
+                return granted ? .authorized : .denied("Reminders access was denied by the user.")
             } else {
                 return .denied("Reminders access cannot be requested while in the background.")
             }

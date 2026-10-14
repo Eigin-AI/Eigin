@@ -62,7 +62,13 @@ struct HealthPermission: PlatformPermission {
     }
 
     func request() async -> PlatformAccess {
-        _ = await service.authorize(canPromptUser: true)
+        let result = await service.authorize(canPromptUser: true)
+        if case .denied(let reason) = result {
+            AppLogger.warning(
+                "Apple Health authorization failed: \(public: reason)",
+                category: .general
+            )
+        }
         return await access()
     }
 }
@@ -97,7 +103,13 @@ struct CalendarPermission: PlatformPermission {
     }
 
     func request() async -> PlatformAccess {
-        _ = await service.authorize(canPromptUser: true)
+        let result = await service.authorize(canPromptUser: true)
+        if case .denied(let reason) = result {
+            AppLogger.warning(
+                "Calendar authorization failed: \(public: reason)",
+                category: .general
+            )
+        }
         return await access()
     }
 }
@@ -130,7 +142,13 @@ struct RemindersPermission: PlatformPermission {
     }
 
     func request() async -> PlatformAccess {
-        _ = await service.authorize(canPromptUser: true)
+        let result = await service.authorize(canPromptUser: true)
+        if case .denied(let reason) = result {
+            AppLogger.warning(
+                "Reminders authorization failed: \(public: reason)",
+                category: .general
+            )
+        }
         return await access()
     }
 }

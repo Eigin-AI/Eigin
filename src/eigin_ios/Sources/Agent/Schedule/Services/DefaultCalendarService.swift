@@ -15,11 +15,8 @@ final class DefaultCalendarService: CalendarService, @unchecked Sendable {
             return .authorized
         case .notDetermined:
             if canPromptUser {
-                let granted = await withTimeout {
-                    await (try? self.store.requestFullAccessToEvents()) ?? false
-                }
-                return (granted == true) ? .authorized :
-                    .denied("Calendar access was denied by the user.")
+                let granted = await (try? store.requestFullAccessToEvents()) ?? false
+                return granted ? .authorized : .denied("Calendar access was denied by the user.")
             } else {
                 return .denied("Calendar access cannot be requested while in the background.")
             }
