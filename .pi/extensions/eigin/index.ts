@@ -42,6 +42,12 @@
  * - Provides an `explore` sub-agent (isolated `pi` subprocess) for recon; its
  *   own eigin process runs stripped-down via EIGIN_SUBAGENT (see tools/subagent/
  *   and registerSubagentModeGuards below).
+ * - Stretchtext replies (see stretchtext/): the model writes `{{short|long}}`
+ *   markup, the transcript renders short forms underlined in accent by
+ *   default with footnote digits marking the openable stretches, and
+ *   Ctrl+Alt+E arms 1-9 digit toggles on the latest reply's stretches so the
+ *   reader can open/collapse them from the keyboard. The model is told which
+ *   stretches were opened on the next turn. Guidance: .pi/guidance/stretchtext.md
  * - Offers to compact context at Plan→Build (only past
  *   COMPACTION_THRESHOLD_PERCENT), then kicks off Build with the plan inlined
  *   (see offerBuildHandoff below and workflow/build-handoff.ts).
@@ -58,6 +64,8 @@
  *   /eigin:stage <name>      switch to a stage within the current workflow
  *   /eigin:stage next|back   step along the current workflow's sequence
  *   Ctrl+Alt+S               pick a stage from a menu
+ *   Ctrl+Alt+E               stretchtext: overlay 1-9 numbers on the latest reply's stretches
+ *   /eigin:stretch           same toggle, for terminals that eat ctrl+alt+e
  *   /eigin:role              pick a role, then a model, interactively
  *   /eigin:role <role>       pick a model for that role (planner|builder|explorer)
  *   /eigin:role <role> <id>  set a role's model directly ("provider/id" if ambiguous)
@@ -122,6 +130,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ringBell } from "./observability/bell.ts";
+import { registerStretchtext } from "./stretchtext/controller.ts";
 import { withHerdrBlocked } from "./observability/herdr.ts";
 import { gatePromptLog, recordGatePrompts } from "./observability/gate-log.ts";
 import { emptyAfk, isAfk, setAfk, toggleAfk, type AfkState } from "./workflow/afk-mode.ts";
@@ -254,6 +263,10 @@ export default function stageExtension(pi: ExtensionAPI): void {
   let afkState: AfkState = emptyAfk();
   let sessionCwd = process.cwd();
   let hasAutoNamed = false;
+
+  // Stretchtext replies: {{short|long}} markup rendered short by default,
+  // keyboard-expandable on the latest reply (see stretchtext/).
+  registerStretchtext(pi);
 
   // --- Workflow/stage lookups ---------------------------------------------
 
@@ -909,8 +922,10 @@ export default function stageExtension(pi: ExtensionAPI): void {
   // every stage change.
   pi.on("before_agent_start", async (event) => {
     const policy = await loadGuidanceFile(sessionCwd, "git-policy");
-    if (!policy) return;
-    return { systemPrompt: `${event.systemPrompt}\n\n${policy}` };
+    const stretchtextGuide = await loadGuidanceFile(sessionCwd, "stretchtext");
+    const additions = [policy, stretchtextGuide].filter(Boolean);
+    if (additions.length === 0) return;
+    return { systemPrompt: `${event.systemPrompt}\n\n${additions.join("\n\n")}` };
   });
 
   pi.on("context", async (event) => {
