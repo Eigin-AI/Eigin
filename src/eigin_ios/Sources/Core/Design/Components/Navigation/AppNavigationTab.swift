@@ -2,9 +2,11 @@ import SwiftUI
 
 /// An individual tab item for the bottom navigation bar.
 ///
-/// Displays an icon above a label in a 64×64 centered frame. Active and inactive
-/// states use token-based colors. There is no separate pressed state beyond
-/// the selection change.
+/// Displays an icon above a label in a 64pt-tall centered frame. The width
+/// follows the label, from 64pt up to a 128pt ceiling — longer localizations
+/// such as "Indstillinger" fit without truncation; anything wider than the
+/// ceiling truncates. Active and inactive states use token-based colors.
+/// There is no separate pressed state beyond the selection change.
 struct AppNavigationTab: View {
     let icon: Image
     let label: String
@@ -25,8 +27,10 @@ struct AppNavigationTab: View {
                 Text(label)
                     .typography(Typography.navTab)
                     .foregroundStyle(labelColor)
+                    .lineLimit(1)
             }
-            .frame(width: 64, height: 64, alignment: .center)
+            .frame(minWidth: 64, maxWidth: 128)
+            .frame(height: 64, alignment: .center)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
