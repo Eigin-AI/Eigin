@@ -289,27 +289,23 @@ export function blob(
 }
 
 /**
- * The radiating ripples: wobbly rings spreading from the release, like a
- * drop landing in water.
+ * The radiating ripples: wobbly surfaces spreading from the release, like a
+ * drop landing in water. Filled rather than outlined, each a little fainter
+ * than the one inside it, and each pulsing as it spreads.
  */
-export function ripples(
-  t: number,
-  radius: number,
-): { path: string; opacity: number; width: number }[] {
+export function ripples(t: number, radius: number): { path: string; opacity: number }[] {
+  /* The outer a surface, the fainter: layered depth rather than a line. */
+  const depths = [0.5, 0.3, 0.16];
   return [0, 1, 2].flatMap((index) => {
     const start = RELEASE + index * 0.11;
-    const into = (t - start) / (1.1 + index * 0.15);
+    const into = (t - start) / (0.9 + index * 0.12);
     if (into <= 0 || into >= 1) return [];
     const spread = easeOut(into);
     const size = radius * (1.05 + (1.6 - index * 0.3) * spread);
     const lobes = [{ k: 3, amount: 0.035 * (1 - into), phase: index * 2 + t * 2 }];
-    return [
-      {
-        path: outline(size, lobes),
-        opacity: 0.85 * (1 - into) ** 1.5,
-        width: 5 * (1 - spread) + 1,
-      },
-    ];
+    /* Each surface breathes on its own clock, a beat out of step. */
+    const pulse = 0.7 + 0.3 * Math.sin(t * 9 + index * 2.1);
+    return [{ path: outline(size, lobes), opacity: depths[index] * pulse * (1 - into) }];
   });
 }
 

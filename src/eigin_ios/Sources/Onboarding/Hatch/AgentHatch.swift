@@ -117,10 +117,9 @@ struct AgentHatchFrame: View {
         let place = CGAffineTransform(translationX: centre.x, y: centre.y)
 
         for ring in HatchTimeline.ripples(t, radius: radius) {
-            context.stroke(
+            context.fill(
                 SplineOutline.path(through: ring.points).applying(place),
-                with: .color(brand.opacity(ring.opacity)),
-                lineWidth: ring.width
+                with: .color(brand.opacity(ring.opacity))
             )
         }
 

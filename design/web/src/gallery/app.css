@@ -34,6 +34,12 @@ body {
   overflow-y: auto;
 }
 
+/* Flex children shrink by default, squishing the pickers once the list
+   outgrows the window. Fixed heights: the overflow scrolls instead. */
+.sidebar > * {
+  flex: none;
+}
+
 .sidebar h1 {
   margin: 0;
 }

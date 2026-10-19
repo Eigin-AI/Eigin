@@ -176,16 +176,18 @@ enum HatchTimeline {
         }
     }
 
-    /// The radiating ripples: wobbly rings spreading from the release, like a
-    /// drop landing in water.
+    /// The radiating ripples: wobbly surfaces spreading from the release,
+    /// like a drop landing in water. Filled rather than outlined, each a
+    /// little fainter than the one inside it, and each pulsing as it spreads.
     static func ripples(_ t: TimeInterval, radius: Double) -> [(
         points: [CGPoint],
-        opacity: Double,
-        width: Double
+        opacity: Double
     )] {
-        (0 ..< 3).compactMap { index in
+        // The outer a surface, the fainter: layered depth, not a line.
+        let depths = [0.5, 0.3, 0.16]
+        return (0 ..< 3).compactMap { index in
             let i = Double(index)
-            let into = (t - release - i * 0.11) / (1.1 + i * 0.15)
+            let into = (t - release - i * 0.11) / (0.9 + i * 0.12)
             guard into > 0, into < 1 else { return nil }
             let spread = easeOut(into)
             let size = radius * (1.05 + (1.6 - i * 0.3) * spread)
@@ -196,7 +198,9 @@ enum HatchTimeline {
                 let r = size * (1 + wobble * cos(3 * theta + phase))
                 return CGPoint(x: r * cos(theta), y: r * sin(theta))
             }
-            return (points, 0.85 * pow(1 - into, 1.5), 5 * (1 - spread) + 1)
+            // Each surface breathes on its own clock, a beat out of step.
+            let pulse = 0.7 + 0.3 * sin(t * 9 + i * 2.1)
+            return (points, depths[index] * pulse * (1 - into))
         }
     }
 

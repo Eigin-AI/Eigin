@@ -79,7 +79,7 @@
     aria-hidden="true"
   >
     {#each ripples(t, radius) as ring, index (index)}
-      <path class="ripple" d={ring.path} opacity={ring.opacity} stroke-width={ring.width} />
+      <path class="ripple" d={ring.path} opacity={ring.opacity} />
     {/each}
     {#each droplets as drop, index (index)}
       <ellipse
@@ -156,8 +156,7 @@
   }
 
   .ripple {
-    fill: none;
-    stroke: var(--color-surface-impact-base);
+    fill: var(--color-surface-impact-base);
   }
 
   .mark,
