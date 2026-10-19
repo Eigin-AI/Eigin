@@ -37,14 +37,10 @@ struct RenderableDocument: Equatable, Sendable {
     /// with `config.paragraphStyle`. Useful for showing non-markdown text in a
     /// `MarkdownView` without round-tripping through the parser.
     init(plainText: String, config: MarkdownRenderConfig) {
-        var attributes: [NSAttributedString.Key: Any] = [
-            .font: config.paragraphStyle.textFonts.normal,
-            .foregroundColor: MDColor(config.paragraphStyle.textColor),
-        ]
-        if let kern = config.paragraphStyle.textFonts.preferredLetterSpacing {
-            attributes[.kern] = kern
-        }
-        let content = NSMutableAttributedString(string: plainText, attributes: attributes)
+        let content = NSMutableAttributedString(
+            string: plainText,
+            attributes: config.paragraphStyle.plainTextAttributes
+        )
         self.init(renderables: [.paragraph(id: UUID().uuidString, content: content)])
     }
 

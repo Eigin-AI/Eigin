@@ -1,5 +1,10 @@
 import Foundation
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Styling applied to the markdown renderer: fonts and colors for the block and
 /// inline runs Eigin renders through this pipeline. Built from design tokens by
@@ -35,6 +40,20 @@ struct MarkdownRenderConfig: Hashable, Sendable {
         init(textFonts: TextFonts, textColor: Color) {
             self.textFonts = textFonts
             self.textColor = textColor
+        }
+
+        /// Attributes for a plain run of this style. Carries `.typography` so the
+        /// renderer can read the line box back from the attributed string.
+        var plainTextAttributes: [NSAttributedString.Key: Any] {
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: textFonts.normal,
+                .foregroundColor: MDColor(textColor),
+                .typography: textFonts,
+            ]
+            if let kern = textFonts.preferredLetterSpacing {
+                attributes[.kern] = kern
+            }
+            return attributes
         }
     }
 

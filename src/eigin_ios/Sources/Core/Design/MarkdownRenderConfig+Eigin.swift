@@ -60,7 +60,7 @@ private extension TypographyStyle {
             bold: sibling("Bold"),
             boldItalic: sibling("BoldItalic"),
             preferredLetterSpacing: tracking == 0 ? nil : tracking,
-            preferredLineHeight: lineSpacing.map { uiFont.lineHeight + $0 }
+            preferredLineHeight: lineHeight
         )
     }
 

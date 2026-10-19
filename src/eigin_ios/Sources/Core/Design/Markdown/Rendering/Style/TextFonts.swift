@@ -15,8 +15,8 @@ struct TextFonts: Hashable, Sendable {
     let boldItalic: MDFont?
     /// Optional kerning override applied via `NSAttributedString.Key.kern`.
     let preferredLetterSpacing: CGFloat?
-    /// Optional preferred line height in points. When greater than the font's
-    /// natural line height, the renderer adds the difference as line spacing.
+    /// Optional full line box in points, with the text centred in it. Nil keeps
+    /// the font's natural line height.
     let preferredLineHeight: CGFloat?
 
     /// Create a font set with explicit variants and optional spacing overrides.
@@ -65,12 +65,9 @@ extension View {
             font.normal
         }
         let letterSpacing = font.preferredLetterSpacing
-        let extraLineSpacing: CGFloat? = font.preferredLineHeight.flatMap { lineHeight in
-            lineHeight > font.normal.lineHeight ? lineHeight - font.normal.lineHeight : nil
-        }
         return self
             .font(Font(fontToUse ?? font.normal))
             .if(letterSpacing != nil, content: { $0.kerning(letterSpacing ?? 0) })
-            .if(extraLineSpacing != nil, content: { $0.lineSpacing(extraLineSpacing ?? 0) })
+            .lineBox(font.preferredLineHeight, font: fontToUse ?? font.normal)
     }
 }

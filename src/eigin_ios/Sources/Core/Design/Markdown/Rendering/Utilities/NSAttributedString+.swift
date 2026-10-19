@@ -6,6 +6,12 @@ import AppKit
 #endif
 
 extension NSAttributedString {
+    /// The typography of the first run, which sets the block's line box.
+    var leadingTextFonts: TextFonts? {
+        guard length > 0 else { return nil }
+        return attribute(.typography, at: 0, effectiveRange: nil) as? TextFonts
+    }
+
     func splitIntoWords(withIn range: NSRange) -> [NSRange] {
         var words: [NSRange] = []
         let string = string as NSString

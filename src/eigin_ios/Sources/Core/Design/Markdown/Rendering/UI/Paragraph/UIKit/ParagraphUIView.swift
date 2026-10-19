@@ -10,7 +10,7 @@ private struct CachedParagraphUIViewSize {
 
 class ParagraphUIView: UITextView {
     private(set) var paragraphContents: NSMutableAttributedString = .init()
-    private(set) var lineSpacing: CGFloat?
+    private(set) var lineBox: ParagraphLineBox?
     private var cachedSize: CachedParagraphUIViewSize?
 
     /// To override the behaviour of this property, do so on ParagraphView's SwiftUI wrapper.
@@ -77,18 +77,18 @@ class ParagraphUIView: UITextView {
 
     func setParagraphContents(
         _ newContents: NSMutableAttributedString,
-        lineSpacing: CGFloat? = nil,
+        lineBox: ParagraphLineBox? = nil,
         animatedByWord: Bool
     ) {
-        guard paragraphContents != newContents || self.lineSpacing != lineSpacing else {
+        guard paragraphContents != newContents || self.lineBox != lineBox else {
             return
         }
         paragraphContents = newContents
-        self.lineSpacing = lineSpacing
+        self.lineBox = lineBox
 
         let oldAttributedString: NSAttributedString = attributedText
-        let finalString: NSMutableAttributedString = if lineSpacing != nil {
-            applyLineSpacing(to: newContents, lineSpacing: lineSpacing)
+        let finalString: NSMutableAttributedString = if let lineBox {
+            applyLineBox(lineBox, to: newContents)
         } else {
             newContents
         }
@@ -105,14 +105,12 @@ class ParagraphUIView: UITextView {
         invalidateIntrinsicContentSize()
     }
 
-    private func applyLineSpacing(
-        to attributedString: NSMutableAttributedString,
-        lineSpacing: CGFloat?
+    private func applyLineBox(
+        _ lineBox: ParagraphLineBox,
+        to attributedString: NSMutableAttributedString
     ) -> NSMutableAttributedString {
         let result = NSMutableAttributedString(attributedString: attributedString)
-        if let lineSpacing {
-            result.setLineSpacing(lineSpacing)
-        }
+        result.setLineBox(lineBox)
         return result
     }
 
@@ -186,9 +184,8 @@ extension ParagraphUIView: UITextViewDelegate {
 }
 
 fileprivate extension NSMutableAttributedString {
-    func setLineSpacing(_ lineSpacing: CGFloat) {
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = lineSpacing
+    func setLineBox(_ lineBox: ParagraphLineBox) {
+        let paragraphStyle = lineBox.font.paragraphStyle(lineHeight: lineBox.lineHeight)
         paragraphStyle.alignment = .left
         addAttribute(
             .paragraphStyle,

@@ -95,21 +95,21 @@ struct TypographyStyle {
     let uiFont: UIFont
     let textCase: Text.Case?
     let tracking: CGFloat
-    /// Extra line spacing in points added on top of the font's intrinsic
-    /// line height (`lineHeight - fontSize`). Nil when not specified.
-    let lineSpacing: CGFloat?
+    /// Full line box in points, with the text centred in it as in Figma and CSS.
+    /// Nil keeps the font's natural line height.
+    let lineHeight: CGFloat?
 
     init(
         _ spec: FontSpec,
         textCase: Text.Case? = nil,
         tracking: CGFloat = 0,
-        lineSpacing: CGFloat? = nil
+        lineHeight: CGFloat? = nil
     ) {
         font = spec.font
         uiFont = spec.uiFont
         self.textCase = textCase
         self.tracking = tracking
-        self.lineSpacing = lineSpacing
+        self.lineHeight = lineHeight
     }
 }
 
@@ -118,19 +118,36 @@ extension TypographyStyle {
     /// carries space above the cap and below the baseline that makes equal padding look
     /// vertically heavier; this is roughly half that difference.
     var lineBoxInset: CGFloat {
-        max((uiFont.lineHeight - uiFont.capHeight) / 2, 0)
+        max(((lineHeight ?? uiFont.lineHeight) - uiFont.capHeight) / 2, 0)
+    }
+}
+
+extension TypographyStyle {
+    /// Attributes that draw this style in UIKit text with the same line box as SwiftUI.
+    var textAttributes: [NSAttributedString.Key: Any] {
+        var attributes: [NSAttributedString.Key: Any] = [.font: uiFont]
+        if tracking != 0 {
+            attributes[.kern] = tracking
+        }
+        if let lineHeight {
+            attributes[.paragraphStyle] = uiFont.paragraphStyle(lineHeight: lineHeight)
+        }
+        return attributes
+    }
+
+    /// Vertical offset that centres the glyphs of a UIKit text view drawn with
+    /// `textAttributes` the way SwiftUI and CSS do; negative values move up.
+    var textKitShift: CGFloat {
+        lineHeight.map { uiFont.textKitShift(lineHeight: $0) } ?? 0
     }
 }
 
 extension View {
     func typography(_ style: TypographyStyle) -> some View {
-        let base = font(style.font)
+        font(style.font)
             .textCase(style.textCase)
             .tracking(style.tracking)
-        if let spacing = style.lineSpacing {
-            return AnyView(base.lineSpacing(max(0, spacing)))
-        }
-        return AnyView(base)
+            .lineBox(style.lineHeight, font: style.uiFont)
     }
 
     func navigationTitle(_ title: String, style: TypographyStyle) -> some View {
