@@ -59,7 +59,8 @@ enum PlaprePicoConfig {
     // MARK: - Voices
 
     /// The five Danish speakers shipped in `speakers.json`.
-    static let speakers = ["tor", "ida", "liv", "ask", "kaj"]
-    static let defaultSpeaker = "tor"
+    /// Ordered by preference: the first entry is the default.
+    static let speakers = ["ida", "kaj", "liv", "tor", "ask"]
+    static let defaultSpeaker = speakers[0]
 }
 #endif
