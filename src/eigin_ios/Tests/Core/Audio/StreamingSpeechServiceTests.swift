@@ -459,6 +459,16 @@ struct SanitizeForSpeechTests {
         #expect(result.contains("Hybrid architecture"))
     }
 
+    @Test func degreeSignSurvivesSanitizationAndIsSpoken() {
+        // Previously the symbol filter dropped "°" before the normalizer ran,
+        // turning "18°C" into "18C" — read as "one eight C".
+        let celsius = DefaultSpeechService.sanitizeForSpeech("It's 18°C today", language: .english)
+        #expect(celsius.contains("eighteen degrees Celsius"))
+
+        let danish = DefaultSpeechService.sanitizeForSpeech("Det er 35° i dag", language: .danish)
+        #expect(danish.contains("grader"))
+    }
+
     @Test func horizontalRuleDividersAreStripped() {
         for divider in ["---", "***", "___", "- - -", "*****"] {
             let result = DefaultSpeechService.sanitizeForSpeech(

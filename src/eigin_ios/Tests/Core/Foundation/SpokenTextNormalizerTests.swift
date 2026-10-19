@@ -46,6 +46,62 @@ struct SpokenTextNormalizerTests {
         #expect(SpokenTextNormalizer.normalize("£99", locale: en) == "ninety-nine pounds")
     }
 
+    @Test func englishPercentages() {
+        #expect(SpokenTextNormalizer.normalize("50% off", locale: en) == "fifty percent off")
+        #expect(SpokenTextNormalizer
+            .normalize(" Accuracy is 98.5%", locale: en) ==
+            "Accuracy is ninety-eight point five percent")
+        #expect(SpokenTextNormalizer
+            .normalize("50 % discount", locale: en) == "fifty percent discount")
+        #expect(!SpokenTextNormalizer.normalize("Score: 100%", locale: en).contains("%"))
+    }
+
+    @Test func englishTextCurrencies() {
+        #expect(SpokenTextNormalizer
+            .normalize("The price is 5 kr.", locale: en) == "The price is five kroner")
+        #expect(SpokenTextNormalizer.normalize("100 DKK", locale: en) == "one hundred kroner")
+        #expect(SpokenTextNormalizer.normalize("200 EUR", locale: en) == "two hundred euros")
+        #expect(SpokenTextNormalizer.normalize("1 USD", locale: en) == "one dollar")
+        #expect(SpokenTextNormalizer.normalize("400 GBP", locale: en) == "four hundred pounds")
+
+        // Codes without a preceding number stay verbatim.
+        #expect(SpokenTextNormalizer.normalize("pay in DKK", locale: en) == "pay in DKK")
+    }
+
+    @Test func englishDegrees() {
+        #expect(SpokenTextNormalizer
+            .normalize("It's 20° outside", locale: en) == "It's twenty degrees outside")
+        #expect(SpokenTextNormalizer.normalize("1°", locale: en) == "one degree")
+
+        // °C/°F keep their named-unit path.
+        #expect(SpokenTextNormalizer.normalize("20°C", locale: en) == "twenty degrees Celsius")
+        #expect(SpokenTextNormalizer
+            .normalize("68°F", locale: en) == "sixty-eight degrees Fahrenheit")
+    }
+
+    @Test func englishRates() {
+        #expect(SpokenTextNormalizer
+            .normalize("It costs $24/month", locale: en) == "It costs twenty-four dollars a month")
+        #expect(SpokenTextNormalizer
+            .normalize("The gym is $10 an hour... wait, $40/week", locale: en)
+            .contains("forty dollars a week"))
+
+        // Non-rate slashes are untouched (they keep today's spelled-number form).
+        #expect(SpokenTextNormalizer
+            .normalize("24/7 support", locale: en) == "twenty-four seven support")
+    }
+
+    @Test func englishSymbols() {
+        #expect(SpokenTextNormalizer.normalize("Issue #5", locale: en) == "Issue number five")
+        let email = SpokenTextNormalizer.normalize("me@example.com", locale: en)
+        #expect(email.contains("at example dot com"))
+        #expect(SpokenTextNormalizer
+            .normalize("cats & dogs", locale: en) == "cats and dogs")
+
+        // A stray # with no digit is still stripped.
+        #expect(!SpokenTextNormalizer.normalize("has #tag", locale: en).contains("#"))
+    }
+
     @Test func englishClockTimes() {
         #expect(SpokenTextNormalizer
             .normalize("Meet at 3:00", locale: en) == "Meet at three o'clock")
@@ -282,6 +338,56 @@ struct SpokenTextNormalizerTests {
     @Test func danishCurrencies() {
         let result = SpokenTextNormalizer.normalize("Det koster $5", locale: da)
         #expect(result.contains("dollar"))
+    }
+
+    @Test func danishPercentages() {
+        let result = SpokenTextNormalizer.normalize("Rabatten er 50%", locale: da)
+        #expect(result.contains("halvtreds"))
+        #expect(result.contains("procent"))
+        #expect(!result.contains("%"))
+    }
+
+    @Test func danishTextCurrencies() {
+        let kr = SpokenTextNormalizer.normalize("Det koster 50 kr.", locale: da)
+        #expect(kr.contains("halvtreds kroner"))
+
+        let tight = SpokenTextNormalizer.normalize("5kr i alt", locale: da)
+        #expect(tight.contains("fem kroner"))
+
+        #expect(SpokenTextNormalizer.normalize("100 DKK", locale: da) == "hundrede kroner")
+        #expect(SpokenTextNormalizer.normalize("200 EUR", locale: da) == "tohundrede euro")
+        #expect(SpokenTextNormalizer.normalize("1 USD", locale: da) == "et dollar")
+    }
+
+    @Test func danishDegrees() {
+        let result = SpokenTextNormalizer.normalize("Det er 20° ude", locale: da)
+        #expect(result.contains("grader"))
+        #expect(!result.contains("°"))
+
+        // °C keeps its named-unit path.
+        let celsius = SpokenTextNormalizer.normalize("20°C", locale: da)
+        #expect(celsius.contains("grader Celsius"))
+
+        // °F likewise.
+        let fahrenheit = SpokenTextNormalizer.normalize("68°F", locale: da)
+        #expect(fahrenheit.contains("grader Fahrenheit"))
+    }
+
+    @Test func danishSymbols() {
+        let hash = SpokenTextNormalizer.normalize("Punkt #5", locale: da)
+        #expect(hash.contains("nummer fem"))
+        let email = SpokenTextNormalizer.normalize("mig@example.dk", locale: da)
+        #expect(email == "mig snabel-a example punktum dk")
+
+        #expect(SpokenTextNormalizer.normalize("katte & hunde", locale: da) == "katte og hunde")
+    }
+
+    @Test func danishRates() {
+        let rate = SpokenTextNormalizer.normalize("24 kr./md.", locale: da)
+        #expect(rate == "fireogtyve kroner per måned")
+
+        let week = SpokenTextNormalizer.normalize("500 kr./uge", locale: da)
+        #expect(week == "femhundrede kroner per uge")
     }
 
     @Test func danishClockTimes() {

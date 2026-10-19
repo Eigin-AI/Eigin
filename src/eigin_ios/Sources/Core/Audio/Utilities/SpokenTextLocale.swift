@@ -14,12 +14,22 @@ struct SpokenTextLocale: @unchecked Sendable {
     let formatClockTime: @Sendable (Int, Int) -> String
     let currencies:
         [Character: (singular: String, plural: String, subSingular: String, subPlural: String)]
+    /// Written currency forms and codes matched after a number: "kr", "DKK", "EUR"...
+    let currencyWords: [String: (singular: String, plural: String)]
     let unitAbbreviations: [String: (singular: String, plural: String)]
     let commonAbbreviations: [String: String]
     let rangeWord: String
     let pointWord: String
     let dotWord: String // "dot" for domains/URLs
     let approximatelyWord: String
+    let percentWord: String
+    let degreeWord: (singular: String, plural: String)
+    let numberWord: String // spoken form of "#" before a digit
+    let atWord: String // spoken form of "@" (Danish: "snabel-a")
+    /// Slash-period rates: "$24/month" → "$24 a month" / "pr. måned".
+    /// Keyed by the lowercase token after the slash, dot stripped.
+    let ratePhrases: [String: String]
+    let hashtagWord: String // spoken form of a stray "#"
     let oClockPhrase: @Sendable (String) -> String // takes spelled hour, returns "X o'clock" etc.
     let andWord: String
     let digitWords: [String] // "zero" through "nine"
@@ -64,6 +74,13 @@ extension SpokenTextLocale {
                 "£": ("pound", "pounds", "pence", "pence"),
                 "€": ("euro", "euros", "cent", "cents"),
             ],
+            currencyWords: [
+                "kr": ("krone", "kroner"),
+                "dkk": ("krone", "kroner"),
+                "eur": ("euro", "euros"),
+                "usd": ("dollar", "dollars"),
+                "gbp": ("pound", "pounds"),
+            ],
             unitAbbreviations: englishUnits,
             commonAbbreviations: [
                 "vs": "versus", "vs.": "versus",
@@ -76,6 +93,20 @@ extension SpokenTextLocale {
             pointWord: "point",
             dotWord: "dot",
             approximatelyWord: "approximately",
+            percentWord: "percent",
+            degreeWord: ("degree", "degrees"),
+            numberWord: "number",
+            atWord: "at",
+            ratePhrases: [
+                "month": "a month", "months": "a month",
+                "year": "a year", "years": "a year",
+                "day": "a day", "days": "a day",
+                "week": "a week", "weeks": "a week",
+                "hour": "an hour", "hours": "an hour",
+                "minute": "a minute", "minutes": "a minute",
+                "second": "a second", "seconds": "a second",
+            ],
+            hashtagWord: "hashtag",
             oClockPhrase: { hourWord in "\(hourWord) o'clock" },
             andWord: "and",
             digitWords: [
@@ -219,7 +250,13 @@ extension SpokenTextLocale {
                 "$": ("dollar", "dollars", "cent", "cents"),
                 "£": ("pund", "pund", "pence", "pence"),
                 "€": ("euro", "euro", "cent", "cent"),
-                "k": ("krone", "kroner", "øre", "øre"),
+            ],
+            currencyWords: [
+                "kr": ("krone", "kroner"),
+                "dkk": ("krone", "kroner"),
+                "eur": ("euro", "euro"),
+                "usd": ("dollar", "dollar"),
+                "gbp": ("pund", "pund"),
             ],
             unitAbbreviations: danishUnits,
             commonAbbreviations: [
@@ -257,8 +294,22 @@ extension SpokenTextLocale {
             ],
             rangeWord: "til",
             pointWord: "komma",
-            dotWord: "punkt",
+            dotWord: "punktum", // the name of the "." character
             approximatelyWord: "cirka",
+            percentWord: "procent",
+            degreeWord: ("grad", "grader"),
+            numberWord: "nummer",
+            atWord: "snabel-a",
+            ratePhrases: [
+                "md": "per måned", "måned": "per måned", "måneder": "per måned",
+                "år": "per år",
+                "dag": "per dag", "dage": "per dag",
+                "uge": "per uge", "uger": "per uge",
+                "time": "per time", "timer": "per time",
+                "min": "per minut", "minut": "per minut",
+                "sek": "per sekund", "sekund": "per sekund",
+            ],
+            hashtagWord: "hashtag",
             oClockPhrase: { hourWord in hourWord },
             andWord: "og",
             digitWords: ["nul", "en", "to", "tre", "fire", "fem", "seks", "syv", "otte", "ni"],
