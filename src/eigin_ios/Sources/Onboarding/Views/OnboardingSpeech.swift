@@ -3,7 +3,8 @@ import SwiftUI
 /// The avatar's spoken line, centered beneath it: a title that drops in and
 /// fades (simulating the Markdown header the agent would use in chat), a short
 /// beat, then the body streamed in through the same ``StreamThrottler`` the chat
-/// uses, so it reads as the agent actually saying it.
+/// uses, so it reads as the agent actually saying it. Paragraphs wrap balanced
+/// in a narrow column, so lines come out even on every phone.
 ///
 /// Reports completion through `done`, which the scaffold uses to reveal the
 /// screen's content only once the agent has finished speaking. Re-plays whenever
@@ -19,6 +20,11 @@ struct OnboardingSpeech: View {
     var titleDelay: Duration = .zero
     /// Beat between the title appearing and the body streaming.
     var streamDelay: Duration = OnboardingTiming.streamDelay
+
+    /// Separates the paragraphs of `text`.
+    private static let paragraphBreak = "\n\n"
+    /// Widest the body runs: centred lines read best when they are short.
+    private static let measure: CGFloat = 320
 
     @Environment(\.colors) private var colors
     @State private var throttler = StreamThrottler()
@@ -42,10 +48,18 @@ struct OnboardingSpeech: View {
             // The full line is laid out from the start, with the unrevealed part
             // transparent. Line breaks are therefore fixed, so words pop into
             // their final positions instead of reflowing as they appear.
-            Text(attributedBody)
-                .typography(Typography.standfirst)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            // Paragraphs sit 28pt apart cap to baseline: about 16pt between line boxes.
+            VStack(spacing: Spacing.n28 - 2 * Typography.standfirst.lineBoxInset) {
+                ForEach(Array(attributedParagraphs.enumerated()), id: \.offset) { _, paragraph in
+                    BalancedLines {
+                        Text(paragraph)
+                            .typography(Typography.standfirst)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .frame(maxWidth: Self.measure)
         }
         .frame(maxWidth: .infinity)
         .task(id: title + "\u{1}" + text) {
@@ -53,16 +67,21 @@ struct OnboardingSpeech: View {
         }
     }
 
-    /// The body line with the revealed prefix coloured and the rest transparent.
-    private var attributedBody: AttributedString {
-        var attributed = AttributedString(text)
-        attributed.foregroundColor = colors.text.standard.muted
+    /// The body's paragraphs, each with the part revealed so far coloured and
+    /// the rest transparent.
+    private var attributedParagraphs: [AttributedString] {
+        var remaining = throttler.displayedText.count
+        return text.components(separatedBy: Self.paragraphBreak).map { paragraph in
+            var attributed = AttributedString(paragraph)
+            attributed.foregroundColor = colors.text.standard.muted
 
-        let characters = attributed.characters
-        let revealed = min(throttler.displayedText.count, characters.count)
-        let split = characters.index(characters.startIndex, offsetBy: revealed)
-        attributed[split...].foregroundColor = .clear
-        return attributed
+            let characters = attributed.characters
+            let revealed = min(max(remaining, 0), characters.count)
+            let split = characters.index(characters.startIndex, offsetBy: revealed)
+            attributed[split...].foregroundColor = .clear
+            remaining -= paragraph.count + Self.paragraphBreak.count
+            return attributed
+        }
     }
 
     private func play() async {
@@ -108,7 +127,7 @@ struct OnboardingSpeech: View {
 #Preview {
     OnboardingSpeech(
         title: "Let's make this yours.",
-        text: "I'm Eigin, your personal AI. I live on your device, and I answer to you."
+        text: "I'm Eigin, your personal AI.\n\nI live on your device, and I answer only to you."
     )
     .padding(Spacing.n24)
     .resolveTheme()

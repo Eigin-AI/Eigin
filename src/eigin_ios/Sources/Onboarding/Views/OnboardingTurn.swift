@@ -29,27 +29,11 @@ struct OnboardingTurn<Content: View>: View {
                 titleDelay: titleDelay
             )
 
-            // The content area scrolls when a screen is taller than the space
-            // left under the speech — the line stays put. Short content still
-            // fills the viewport, keeping the Spacer-centered layouts.
-            GeometryReader { viewport in
-                ScrollView {
-                    content
-                        // The scroll area itself runs edge to edge so wide
-                        // content (the priority carousel's peeking cards) isn't
-                        // clipped at the padding line.
-                        .padding(.horizontal, Spacing.n24)
-                        .frame(maxWidth: .infinity, minHeight: viewport.size.height)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollIndicators(.hidden)
-            }
-            .opacity(revealed ? 1 : 0)
-            .offset(y: revealed ? 0 : 8)
-            .allowsHitTesting(revealed)
-            // The scroll view escapes the scaffold's horizontal padding; its
-            // content pads itself instead.
-            .padding(.horizontal, -Spacing.n24)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .opacity(revealed ? 1 : 0)
+                .offset(y: revealed ? 0 : 8)
+                .allowsHitTesting(revealed)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }

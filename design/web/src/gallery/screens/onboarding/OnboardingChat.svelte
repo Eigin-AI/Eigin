@@ -23,6 +23,7 @@
     priority,
     revealing,
     speed = 1,
+    introduction,
     onFinish,
     onBack,
   }: {
@@ -32,6 +33,8 @@
     revealing: boolean;
     /** Plays the reveal slower, for inspecting it. */
     speed?: number;
+    /** What the agent says about itself on the reveal. */
+    introduction: string;
     onFinish: () => void;
     onBack: () => void;
   } = $props();
@@ -164,12 +167,7 @@
 
   {#if revealing}
     <div class="reveal">
-      <OnboardingReveal
-        agentName="Ford"
-        {speed}
-        emoji="🛰️"
-        digest="I’m here to keep your days in order without making a fuss about it: a short rundown each morning, and a nudge before the small things slip. Everything we do stays yours."
-      />
+      <OnboardingReveal agentName="Ford" {speed} emoji="🛰️" digest={introduction} />
     </div>
   {/if}
 </div>

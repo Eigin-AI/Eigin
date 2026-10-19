@@ -56,6 +56,59 @@ export const devices: Device[] = [
     ],
   },
   {
+    id: "iphone-se",
+    label: "iPhone SE",
+    configurations: [
+      {
+        id: "portrait",
+        label: "Portrait",
+        width: 375,
+        height: 667,
+        /* No island and no home indicator. */
+        safeAreaTop: 20,
+        safeAreaBottom: 0,
+        safeAreaLeft: 0,
+        safeAreaRight: 0,
+      },
+      {
+        id: "landscape",
+        label: "Landscape",
+        width: 667,
+        height: 375,
+        safeAreaTop: 0,
+        safeAreaBottom: 0,
+        safeAreaLeft: 0,
+        safeAreaRight: 0,
+      },
+    ],
+  },
+  {
+    id: "iphone-17-pro-max",
+    label: "iPhone 17 Pro Max",
+    configurations: [
+      {
+        id: "portrait",
+        label: "Portrait",
+        width: 440,
+        height: 956,
+        safeAreaTop: 62,
+        safeAreaBottom: 34,
+        safeAreaLeft: 0,
+        safeAreaRight: 0,
+      },
+      {
+        id: "landscape",
+        label: "Landscape",
+        width: 956,
+        height: 440,
+        safeAreaTop: 0,
+        safeAreaBottom: 21,
+        safeAreaLeft: 62,
+        safeAreaRight: 62,
+      },
+    ],
+  },
+  {
     id: "apple-watch",
     label: "Apple Watch",
     configurations: [

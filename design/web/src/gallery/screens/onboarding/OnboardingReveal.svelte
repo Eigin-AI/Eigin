@@ -47,7 +47,7 @@
   rises to the top, as the welcome avatar does, and only then does the agent
   name itself and say what it is for.
 -->
-<div class="reveal" bind:clientHeight={height}>
+<div class="reveal" class:landed bind:clientHeight={height}>
   <div
     class="slot"
     class:landed
@@ -88,10 +88,21 @@
       calc(var(--eigin-safe-area-bottom, 0px) + var(--spacing-n32));
     background: var(--color-surface-standard-base);
     /* The burst spills past the hatch; the screen edge is where it stops. */
-    overflow: hidden;
+    overflow: clip;
   }
 
+  /* Once landed, a short screen scrolls the whole reveal, so Continue stays
+     reachable. Not before: the hatch plays out alone, held still. */
+  .reveal.landed {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  /* The splash is over once it lands, so the canvas stops spilling: clipped,
+     it no longer stretches the scroll past Continue. */
   .slot.landed {
+    overflow: clip;
+    overflow-clip-margin: var(--spacing-n24);
     transition: translate var(--rise-ms) var(--rise-easing);
   }
 

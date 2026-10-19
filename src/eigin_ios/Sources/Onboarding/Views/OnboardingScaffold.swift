@@ -14,6 +14,9 @@ import SwiftUI
 /// centered at ``LaunchMark/diameter`` — then plays ``OpeningTimeline``: it
 /// works up the energy to jump and bounces up to its place. The layout is
 /// final from the first frame; only the avatar moves.
+///
+/// When a screen is too short for it all, as in landscape, the whole screen
+/// scrolls, avatar and line included, so the content stays reachable.
 struct OnboardingScaffold<Content: View>: View {
     let progress: Double
     var emoji: String?
@@ -92,35 +95,42 @@ struct OnboardingScaffold<Content: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.n24) {
-            // Holds the avatar's place in the layout; the avatar renders in
-            // the overlay above.
-            Color.clear
-                .frame(width: Self.avatarSize, height: Self.avatarSize)
-                .onGeometryChange(for: CGPoint.self) { proxy in
-                    let frame = proxy.frame(in: .global)
-                    return CGPoint(x: frame.midX, y: frame.midY)
-                } action: { slotCenter = $0 }
-                .padding(.top, Spacing.n32)
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(spacing: Spacing.n24) {
+                    // Holds the avatar's place in the layout; the avatar renders
+                    // in the overlay above, following the slot as it scrolls.
+                    Color.clear
+                        .frame(width: Self.avatarSize, height: Self.avatarSize)
+                        .onGeometryChange(for: CGPoint.self) { proxy in
+                            let frame = proxy.frame(in: .global)
+                            return CGPoint(x: frame.midX, y: frame.midY)
+                        } action: { slotCenter = $0 }
+                        .padding(.top, Spacing.n32)
 
-            // Overlay: during a screen change the outgoing and incoming
-            // turns coexist for one fade without moving anything.
-            ZStack {
-                OnboardingTurn(
-                    title: title,
-                    text: text,
-                    titleDelay: titleDelay,
-                    content: content()
-                )
-                .id(turnID)
-                .transition(.asymmetric(insertion: .identity, removal: .opacity))
+                    // Overlay: during a screen change the outgoing and incoming
+                    // turns coexist for one fade without moving anything.
+                    ZStack {
+                        OnboardingTurn(
+                            title: title,
+                            text: text,
+                            titleDelay: titleDelay,
+                            content: content()
+                        )
+                        .id(turnID)
+                        .transition(.asymmetric(insertion: .identity, removal: .opacity))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(.easeOut(duration: OnboardingTiming.turnFade), value: turnID)
+                }
+                .padding(.horizontal, Spacing.n24)
+                .padding(.bottom, Spacing.n32)
+                // Short screens still fill the viewport, keeping content at the bottom.
+                .frame(maxWidth: .infinity, minHeight: viewport.size.height)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeOut(duration: OnboardingTiming.turnFade), value: turnID)
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         }
-        .padding(.horizontal, Spacing.n24)
-        .padding(.bottom, Spacing.n32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())
         .overlay { avatarLayer.ignoresSafeArea() }
         .task { await playOpening() }

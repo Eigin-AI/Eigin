@@ -143,15 +143,6 @@ export const screenEntries: ScreenEntry[] = [
       "Gives the agent a brain. Eigin's cloud is the default and asks for credits first if you have none; your own provider is second; the offline model downloads in the background.",
   },
   {
-    id: "onboarding-initiative",
-    title: "Initiative",
-    section: "onboarding",
-    component: OnboardingFlow,
-    props: { start: "initiative" },
-    about:
-      "Whether the agent may work in the background and reach out. Choosing it asks for notification permission in context.",
-  },
-  {
     id: "onboarding-conversation",
     title: "Conversation",
     section: "onboarding",

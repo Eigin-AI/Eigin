@@ -2,7 +2,7 @@ import type { IconName, VisualCardVariant } from "@lib";
 
 /** Steps in the first-launch flow, in order. Mirrors `OnboardingStep`. */
 export type OnboardingStep =
-  "welcome" | "name" | "priority" | "inference" | "initiative" | "conversation" | "reveal";
+  "welcome" | "name" | "priority" | "inference" | "conversation" | "reveal";
 
 /** Coarse avatar fill per setup step. The conversation drives the rest. */
 export const avatarProgress: Record<OnboardingStep, number> = {
@@ -10,7 +10,6 @@ export const avatarProgress: Record<OnboardingStep, number> = {
   name: 0.18,
   priority: 0.3,
   inference: 0.4,
-  initiative: 0.5,
   conversation: 0.5,
   reveal: 1,
 };
@@ -25,24 +24,19 @@ export function speech(step: OnboardingStep, name: string): { title: string; tex
     case "welcome":
       return {
         title: "Hi there.",
-        text: "I’m Eigin, your personal AI.\n\nI live on your device, I answer to you, and no one else is listening.\n\nBefore we begin, I’d like to get to know you.",
+        text: "I’m Eigin, your personal AI.\n\nI live on your device, and I answer only to you.\n\nFirst, I’d like to get to know you.",
       };
     case "name":
       return { title: "First things first.", text: "What should I call you?" };
     case "priority":
       return {
         title: name ? `Nice to meet you, ${name}.` : "Nice to meet you.",
-        text: "What are you hoping to do with your personal AI?\n\nI can shape myself around that.",
+        text: "What would you like my help with?\n\nI’ll shape myself around it.",
       };
     case "inference":
       return {
-        title: "Now, let’s give me a brain.",
-        text: "I can think with powerful AI in the cloud, hosted in Europe.\n\nOr I can run on your device. You can change this anytime.",
-      };
-    case "initiative":
-      return {
-        title: "One more thing.",
-        text: "I can keep working when you’re away, and reach out when something’s worth your attention.\n\nOr I can stay quiet and only help when you ask. Your call.",
+        title: "Let’s give me a “brain”.",
+        text: "I can think in the cloud, on servers in Europe, or I can run right here on your device.\n\nYou can switch anytime.",
       };
     default:
       return { title: "", text: "" };
