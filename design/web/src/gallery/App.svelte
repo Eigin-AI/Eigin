@@ -87,9 +87,14 @@
   });
 
   /* A screen belongs to one form factor — the watch companion is not a small
-     iPhone — so the stage offers only the device that screen runs on. */
+     iPhone — so the stage offers only the device a screen names, or every
+     phone for the rest. */
   const availableDevices = $derived(
-    devices.filter((candidate) => candidate.id === (entry?.device ?? devices[0].id)),
+    devices.filter((candidate) =>
+      entry?.device
+        ? candidate.id === entry.device
+        : candidate.configurations.every((configuration) => configuration.shape !== "watch"),
+    ),
   );
   const device = $derived(
     availableDevices.find((candidate) => candidate.id === deviceId) ?? availableDevices[0],

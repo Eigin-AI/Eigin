@@ -8609,13 +8609,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeg kan tænke med kraftfuld AI i skyen, hostet i Europa.\n\nEller kan jeg køre på din enhed. Du kan ændre dette når som helst."
+            "value" : "Jeg kan tænke i skyen, på servere i Europa, eller jeg kan køre lige her på din enhed.\n\nDu kan skifte når som helst."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I can think with powerful AI in the cloud, hosted in Europe.\n\nOr I can run on your device. You can change this anytime."
+            "value" : "I can think in the cloud, on servers in Europe, or I can run right here on your device.\n\nYou can switch anytime."
           }
         }
       }
@@ -8626,13 +8626,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nu skal jeg have en hjerne."
+            "value" : "Jeg skal have en “hjerne”."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Now, let’s give me a brain."
+            "value" : "Let’s give me a “brain”."
           }
         }
       }
@@ -8677,13 +8677,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hvad vil du bruge din personlige AI til?\n\nJeg kan forme mig efter det."
+            "value" : "Hvad vil du gerne have hjælp til?\n\nJeg former mig efter det."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What are you hoping to do with your personal AI?\n\nI can shape myself around that."
+            "value" : "What would you like my help with?\n\nI’ll shape myself around it."
           }
         }
       }
@@ -8728,13 +8728,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeg er Eigin, din personlige AI.\n\nJeg bor på din enhed, jeg svarer kun til dig, og ingen andre lytter.\n\nFør vi begynder, vil jeg gerne lære dig at kende."
+            "value" : "Jeg er Eigin, din personlige AI.\n\nJeg bor på din enhed, og jeg svarer kun til dig.\n\nFørst vil jeg gerne lære dig at kende."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I’m Eigin, your personal AI.\n\nI live on your device, I answer to you, and no one else is listening.\n\nBefore we begin, I’d like to get to know you."
+            "value" : "I’m Eigin, your personal AI.\n\nI live on your device, and I answer only to you.\n\nFirst, I’d like to get to know you."
           }
         }
       }

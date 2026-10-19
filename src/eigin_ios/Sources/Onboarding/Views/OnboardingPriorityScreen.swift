@@ -69,7 +69,12 @@ private struct PriorityCarousel: View {
         // Bleed past the scaffold's horizontal padding so neighboring cards peek
         // in from the screen edges.
         .padding(.horizontal, -Spacing.n24)
+        // Where there is less room than this, as in landscape, the screen
+        // scrolls rather than squashing the cards.
+        .frame(minHeight: Self.minimumHeight)
     }
+
+    private static let minimumHeight: CGFloat = 300
 
     private func variant(for priority: OnboardingPriority) -> AppVisualCardVariant {
         switch priority {
@@ -86,9 +91,9 @@ private struct PriorityCarousel: View {
         progress: 0.2,
         title: "Nice to meet you, Alex.",
         text: """
-        What are you hoping to do with your personal AI?
+        What would you like my help with?
 
-        I can shape myself around that.
+        I'll shape myself around it.
         """
     ) {
         OnboardingPriorityScreen(onSelect: { _ in })

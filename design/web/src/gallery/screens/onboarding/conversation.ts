@@ -50,3 +50,17 @@ export function script(name: string, priority: string): Turn[] {
     },
   ];
 }
+
+/**
+ * Lines the agent might introduce itself with on the reveal, from barely a
+ * sentence to the longest the app accepts. In the app it writes its own.
+ */
+export const introductions = {
+  short: "I’m here to keep your days in order, without the fuss.",
+  typical:
+    "I’m here to keep your days in order without making a fuss about it.\n\nA short rundown each morning, and a nudge before things slip.",
+  longest:
+    "I’m here to keep your days in order without making a fuss: a rundown each morning, a nudge before the small things slip, and a quiet word whenever your week starts getting a little too full.",
+};
+
+export type IntroductionLength = keyof typeof introductions;

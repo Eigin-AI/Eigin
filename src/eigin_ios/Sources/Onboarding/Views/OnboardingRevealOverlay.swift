@@ -26,46 +26,58 @@ struct OnboardingRevealOverlay: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.n24) {
-            // While it hatches it is the only thing on screen and takes all of
-            // it, so it sits centred; once landed it shrinks to its own size at
-            // the top and the rest comes in under it.
-            AgentHatch(emoji: agent.emoji, size: Self.hatchSize)
-                .frame(maxHeight: landed ? nil : .infinity)
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(spacing: Spacing.n24) {
+                    // While it hatches it is the only thing on screen and takes all of
+                    // it, so it sits centred; once landed it shrinks to its own size at
+                    // the top and the rest comes in under it.
+                    AgentHatch(emoji: agent.emoji, size: Self.hatchSize)
+                        .frame(maxHeight: landed ? nil : .infinity)
 
-            if landed {
-                // The name once it has risen, then a longer beat before the line.
-                OnboardingSpeech(
-                    title: Localized.Onboarding.Reveal.title(agent.name),
-                    text: digest,
-                    finished: $spokenText,
-                    // Reduced motion: no waiting beats, the line is just there.
-                    titleDelay: reduceMotion ? .zero : .milliseconds(500),
-                    streamDelay: reduceMotion ? .zero : .milliseconds(1100)
-                )
+                    if landed {
+                        // The name once it has risen, then a longer beat before the line.
+                        OnboardingSpeech(
+                            title: Localized.Onboarding.Reveal.title(agent.name),
+                            text: digest,
+                            finished: $spokenText,
+                            // Reduced motion: no waiting beats, the line is just there.
+                            titleDelay: reduceMotion ? .zero : .milliseconds(500),
+                            streamDelay: reduceMotion ? .zero : .milliseconds(1100)
+                        )
 
-                VStack {
-                    Spacer()
-                    AppButton(Localized.Common.Actions.continue) {
-                        guard !continued else { return }
-                        continued = true
-                        onContinue()
+                        VStack {
+                            Spacer()
+                            AppButton(Localized.Common.Actions.continue) {
+                                guard !continued else { return }
+                                continued = true
+                                onContinue()
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(revealed ? 1 : 0)
+                        .offset(y: revealed ? 0 : 8)
+                        .allowsHitTesting(revealed)
+                        .animation(.easeOut(duration: Animations.slow), value: revealed)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(revealed ? 1 : 0)
-                .offset(y: revealed ? 0 : 8)
-                .allowsHitTesting(revealed)
-                .animation(.easeOut(duration: Animations.slow), value: revealed)
+                // Sides use the screen gutter. Top and bottom are even, so the
+                // hatch (sized against this frame) centres on the screen.
+                .padding(.horizontal, Spacing.n24)
+                .padding(.vertical, Spacing.n32)
+                // Fills the screen; on a short one, as in landscape, it scrolls
+                // so Continue stays reachable.
+                .frame(maxWidth: .infinity, minHeight: viewport.size.height)
             }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            // The hatch plays out alone, held still; only then can a short screen scroll.
+            .scrollDisabled(!landed)
+            // The burst spills past the hatch, unclipped: the screen edge is where it stops.
+            .scrollClipDisabled()
         }
-        // Even top and bottom, so the hatch centres on the screen.
-        .padding(.horizontal, Spacing.n24)
-        .padding(.vertical, Spacing.n32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         // The keyboard may still be up from the last message; the reveal ignores it.
         .ignoresSafeArea(.keyboard)
-        // The burst spills past the hatch, unclipped: the screen edge is where it stops.
         .background(colors.surface.standard.base.ignoresSafeArea())
         .task {
             guard !reduceMotion else {
@@ -86,7 +98,7 @@ struct OnboardingRevealOverlay: View {
     agent.emoji = "🛰️"
     return OnboardingRevealOverlay(
         agent: agent,
-        digest: "I'm here to keep your days in order without making a fuss about it.",
+        digest: "I'm here to keep your days in order without making a fuss about it.\n\nA short rundown each morning, and a nudge before things slip.",
         onContinue: {}
     )
     .resolveTheme()

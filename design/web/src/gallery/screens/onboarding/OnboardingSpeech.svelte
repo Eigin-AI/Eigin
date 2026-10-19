@@ -20,12 +20,24 @@
     onFinished?: (text: string) => void;
   } = $props();
 
+  const PARAGRAPH = "\n\n";
+
   let titleShown = $state(false);
   let shown = $state("");
 
   /* Replays only when the words change. A derived string settles on equal
      values, so a parent recomputing the same line doesn't restart it. */
   const line = $derived(`${title}\u0001${text}`);
+
+  /* Each paragraph with the slice of the stream that has reached it. */
+  const paragraphs = $derived.by(() => {
+    let offset = 0;
+    return text.split(PARAGRAPH).map((paragraph) => {
+      const said = shown.slice(offset, offset + paragraph.length);
+      offset += paragraph.length + PARAGRAPH.length;
+      return { said, unsaid: paragraph.slice(said.length) };
+    });
+  });
 
   $effect(() => {
     void line;
@@ -54,13 +66,18 @@
 <!--
   The avatar's spoken line: a title that drops in, then the body streamed as
   the chat streams. The whole line is laid out from the start with the unsaid
-  part transparent, so words land in place instead of reflowing.
+  part transparent, so words land in place instead of reflowing. Paragraphs
+  wrap balanced in a narrow column, so lines come out even on every phone.
 -->
 <div class="speech">
   <h2 class="t-titleM title" class:shown={titleShown}>{title}</h2>
-  <p class="t-standfirst body">
-    <span>{shown}</span><span class="unsaid">{text.slice(shown.length)}</span>
-  </p>
+  <div class="body">
+    {#each paragraphs as paragraph, index (index)}
+      <p class="t-standfirst">
+        <span>{paragraph.said}</span><span class="unsaid">{paragraph.unsaid}</span>
+      </p>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -87,10 +104,21 @@
       translate 450ms ease-out;
   }
 
+  /* Narrower than the screen: centred lines read best when they are short.
+     Measured cap to baseline, the gap leaves about 16px between line boxes. */
   .body {
-    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-n28);
+    align-self: center;
+    max-width: 320px;
     color: var(--color-text-standard-muted);
+  }
+
+  .body p {
+    margin: 0;
     white-space: pre-line;
+    text-wrap: balance;
   }
 
   .unsaid {

@@ -71,43 +71,53 @@
   steps, so the avatar and its fill are continuous and each line reads as the
   same presence speaking. The layout is final from the first frame; only the
   avatar moves. A new `turnId` fades the old turn out over the new one, which
-  is already laid out and waiting to speak.
+  is already laid out and waiting to speak. When a screen is too short for
+  it all, the whole screen scrolls, avatar and line included.
 -->
 <div class="scaffold" bind:clientHeight={height}>
-  <div
-    class="avatar-slot"
-    style:translate="0 {toCentre * (1 - pose.rise)}px"
-    style:scale={pose.scale}
-    style:visibility={pose.rise === 1 || height > 0 ? "visible" : "hidden"}
-    bind:this={slot}
-  >
-    <OnboardingAvatar
-      {progress}
-      {showsProgress}
-      animatesIn={!entrance}
-      breath={pose.breath}
-      stretch={pose.stretch}
-      size={AVATAR}
-    />
-  </div>
+  <div class="scroller">
+    <div
+      class="avatar-slot"
+      style:translate="0 {toCentre * (1 - pose.rise)}px"
+      style:scale={pose.scale}
+      style:visibility={pose.rise === 1 || height > 0 ? "visible" : "hidden"}
+      bind:this={slot}
+    >
+      <OnboardingAvatar
+        {progress}
+        {showsProgress}
+        animatesIn={!entrance}
+        breath={pose.breath}
+        stretch={pose.stretch}
+        size={AVATAR}
+      />
+    </div>
 
-  <!-- Stacked, so the outgoing and incoming turns overlap for one fade
+    <!-- Stacked, so the outgoing and incoming turns overlap for one fade
        without moving anything. -->
-  <div class="turns">
-    {#key turnId}
-      <div class="layer" out:fade={{ duration: TURN_FADE_MS, easing: cubicOut }}>
-        <OnboardingTurn {title} {text} {titleDelay}>
-          {@render children()}
-        </OnboardingTurn>
-      </div>
-    {/key}
+    <div class="turns">
+      {#key turnId}
+        <div class="layer" out:fade={{ duration: TURN_FADE_MS, easing: cubicOut }}>
+          <OnboardingTurn {title} {text} {titleDelay}>
+            {@render children()}
+          </OnboardingTurn>
+        </div>
+      {/key}
+    </div>
   </div>
 </div>
 
 <style>
-  /* Positioned, so a step's sheets present over the whole screen. */
+  /* Positioned, so a step's sheets present over the whole screen rather
+     than scrolling with it. */
   .scaffold {
     position: relative;
+    height: 100%;
+    background: var(--color-surface-standard-base);
+    overflow: hidden;
+  }
+
+  .scroller {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -116,8 +126,9 @@
     height: 100%;
     padding: calc(var(--eigin-safe-area-top, 0px) + var(--spacing-n32)) var(--spacing-n24)
       calc(var(--eigin-safe-area-bottom, 0px) + var(--spacing-n32));
-    background: var(--color-surface-standard-base);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
   }
 
   /* Above the turns, so the rising avatar never passes behind a title. */
@@ -126,10 +137,10 @@
     z-index: 1;
   }
 
+  /* Fills the room under the avatar, and grows past it when a turn needs more. */
   .turns {
     display: grid;
-    flex: 1;
-    min-height: 0;
+    flex: 1 0 auto;
     align-self: stretch;
   }
 
@@ -137,6 +148,5 @@
     display: flex;
     flex-direction: column;
     grid-area: 1 / 1;
-    min-height: 0;
   }
 </style>

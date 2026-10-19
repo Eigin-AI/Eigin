@@ -6,6 +6,7 @@
   import NameStep from "@gallery/screens/onboarding/NameStep.svelte";
   import OnboardingChat from "@gallery/screens/onboarding/OnboardingChat.svelte";
   import OnboardingScaffold from "@gallery/screens/onboarding/OnboardingScaffold.svelte";
+  import { introductions, type IntroductionLength } from "@gallery/screens/onboarding/conversation";
   import { TURN_TITLE_DELAY_MS, WELCOME_TITLE_DELAY_MS } from "@gallery/screens/onboarding/opening";
   import {
     avatarProgress,
@@ -22,7 +23,6 @@
     "name",
     "priority",
     "inference",
-    "initiative",
     "conversation",
     "reveal",
   ];
@@ -38,6 +38,7 @@
   let credits = $state<"has credits" | "no credits">("has credits");
   const speeds = { "1×": 1, "½×": 0.5, "¼×": 0.25 };
   let speed = $state<keyof typeof speeds>("1×");
+  let introduction = $state<IntroductionLength>("typical");
   /* Bumped to replay the flow from where this page starts it. */
   let run = $state(0);
 
@@ -57,6 +58,7 @@
   <Button label="Replay" variant="secondary" size="small" onclick={replay} />
   {#if step === "reveal"}
     <OptionSelector options={Object.keys(speeds)} bind:value={speed} />
+    <OptionSelector options={Object.keys(introductions)} bind:value={introduction} />
   {/if}
   {#if step === "inference"}
     <OptionSelector options={["has credits", "no credits"]} bind:value={credits} />
@@ -68,8 +70,8 @@
   avatar stays put and keeps filling as each line is spoken; the conversation
   takes over from there and ends in the agent's reveal.
 -->
-<!-- A new speed replays the reveal at it. -->
-{#key `${run}-${speed}`}
+<!-- A new speed or introduction replays the reveal with it. -->
+{#key `${run}-${speed}-${introduction}`}
   {#if isSetupStep(step)}
     <OnboardingScaffold
       progress={avatarProgress[step]}
@@ -114,17 +116,8 @@
       {:else if step === "inference"}
         <InferenceStep
           hasCredits={credits === "has credits"}
-          onUseCloud={() => (step = "initiative")}
+          onUseCloud={() => (step = "conversation")}
         />
-      {:else if step === "initiative"}
-        <div class="actions">
-          <Button label="Work in the background" onclick={() => (step = "conversation")} />
-          <Button
-            label="Only when I ask"
-            variant="secondary"
-            onclick={() => (step = "conversation")}
-          />
-        </div>
       {/if}
     </OnboardingScaffold>
   {:else}
@@ -133,6 +126,7 @@
       {priority}
       revealing={step === "reveal"}
       speed={speeds[speed]}
+      introduction={introductions[introduction]}
       onFinish={() => (step = "reveal")}
       onBack={() => (step = "inference")}
     />

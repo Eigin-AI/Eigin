@@ -19,7 +19,7 @@ struct OnboardingCommit: Equatable {
         "identity": 800,
         "user": 1200,
         "soul": 700,
-        "introduction": 300,
+        "introduction": 200,
     ]
 
     /// Words that mean a core text is talking about the machinery, not the person.

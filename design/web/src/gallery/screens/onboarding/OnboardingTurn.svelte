@@ -37,10 +37,9 @@
 <style>
   .turn {
     display: flex;
-    flex: 1;
+    flex: 1 0 auto;
     flex-direction: column;
     gap: var(--spacing-n24);
-    min-height: 0;
   }
 
   /* Bleeds to the screen edges so wide content, like the priority
@@ -50,11 +49,9 @@
   .content {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    flex: 1 0 auto;
     margin: 0 calc(-1 * var(--spacing-n24));
     padding: 0 var(--spacing-n24);
-    overflow-y: auto;
     margin-top: 8px;
     opacity: 0;
   }
