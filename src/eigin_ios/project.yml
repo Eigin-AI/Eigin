@@ -278,6 +278,7 @@ targets:
         buildPhase: resources
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Design/LineBox.swift
       - path: Sources/Core/Localized.swift
       - path: Sources/Core/Foundation/AppLanguage.swift
       - path: Sources/Core/Foundation/LanguageManager.swift
@@ -317,6 +318,7 @@ targets:
         buildPhase: resources
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Design/LineBox.swift
       - path: Sources/Core/Localized.swift
       - path: Sources/Core/Foundation/AppLanguage.swift
       - path: Sources/Core/Foundation/LanguageManager.swift
@@ -479,6 +481,7 @@ targets:
           - "FontRegistration.swift"
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Design/LineBox.swift
       - path: Sources/Core/Localized.swift
       # The blob is the screen.
       - Sources/Core/Design/Components/MorphBlob
@@ -535,6 +538,7 @@ targets:
           - "FontRegistration.swift"
       - path: Sources/Core/Design/Theme.swift
       - path: Sources/Core/Design/TypographyStyle.swift
+      - path: Sources/Core/Design/LineBox.swift
       - path: Sources/Core/Localized.swift
       - Sources/Core/Design/Components/MorphBlob
       - path: Sources/Core/Design/Animations.swift

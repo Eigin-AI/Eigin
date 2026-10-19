@@ -36,7 +36,7 @@ struct SingleBlockView: View {
                     .transition(.opacity)
                     .accessibilityAddTraits(.isHeader)
             case .paragraph(_, let contents):
-                ParagraphView(contents: contents, lineSpacing: 5)
+                ParagraphView(contents: contents)
                     .fixedSize(horizontal: false, vertical: true)
                     .transition(.opacity)
             case .latex(_, let latexString):
@@ -53,14 +53,14 @@ struct SingleBlockView: View {
             case .codeBlock(_, _, let code):
                 // Code blocks are split out to EiginCodeBlock upstream; this only
                 // fires on odd fallbacks, so render the raw text as a paragraph.
-                ParagraphView(contents: plainParagraph(code), lineSpacing: 5)
+                ParagraphView(contents: plainParagraph(code))
                     .fixedSize(horizontal: false, vertical: true)
             case .thematicBreak:
                 ThematicBreakView()
             case .table(_, _, _, let rawMarkdown):
                 // Tables are handled by MarkdownTableView upstream; a malformed table
                 // that falls back here degrades to its raw text rather than vanishing.
-                ParagraphView(contents: plainParagraph(rawMarkdown), lineSpacing: 5)
+                ParagraphView(contents: plainParagraph(rawMarkdown))
                     .fixedSize(horizontal: false, vertical: true)
             case .blockQuote(_, let children):
                 BlockQuoteView(children: children)
@@ -71,13 +71,9 @@ struct SingleBlockView: View {
     /// Builds a plain paragraph attributed string styled with the paragraph
     /// config, used for off-path block kinds that fall back to text.
     private func plainParagraph(_ text: String) -> NSMutableAttributedString {
-        var attributes: [NSAttributedString.Key: Any] = [
-            .font: config.paragraphStyle.textFonts.normal,
-            .foregroundColor: MDColor(config.paragraphStyle.textColor),
-        ]
-        if let kern = config.paragraphStyle.textFonts.preferredLetterSpacing {
-            attributes[.kern] = kern
-        }
-        return NSMutableAttributedString(string: text, attributes: attributes)
+        NSMutableAttributedString(
+            string: text,
+            attributes: config.paragraphStyle.plainTextAttributes
+        )
     }
 }

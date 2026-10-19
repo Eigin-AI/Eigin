@@ -49,9 +49,10 @@ struct ListItemContentWrapper<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        // Resolve the font on the main actor here so the alignment guide closure
+        // Resolve the line box on the main actor here so the alignment guide closure
         // captures only a plain CGFloat.
-        let firstLineCenter = extractFirstFont().lineHeight / 2.0
+        let lineHeight = paragraphContents.leadingTextFonts?.preferredLineHeight
+        let firstLineCenter = (lineHeight ?? extractFirstFont().lineHeight) / 2.0
         content()
             .alignmentGuide(.centerOfFirstLine) { _ in firstLineCenter }
     }

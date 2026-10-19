@@ -21,6 +21,7 @@ struct EiginCodeBlock: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             CodeTextView(attributedText: attributedCode, isSelectable: !isStreaming)
+                .offset(y: Typography.code.textKitShift)
                 // Horizontal gains the font's line-box inset so the padding reads as even.
                 .padding(.vertical, Spacing.n16)
                 .padding(.horizontal, Spacing.n16 + Typography.code.lineBoxInset)
@@ -33,18 +34,11 @@ struct EiginCodeBlock: View {
         .task(id: request) { await applyHighlighting() }
     }
 
-    /// Font, plain color and line spacing: the styling for unhighlighted code, and the
+    /// Font, plain color and line height: the styling for unhighlighted code, and the
     /// defaults filled in under the highlighter's token colors once it's sealed.
     private var defaultCodeAttributes: [NSAttributedString.Key: Any] {
-        var attributes: [NSAttributedString.Key: Any] = [
-            .font: Typography.code.uiFont,
-            .foregroundColor: UIColor(colors.code.plain),
-        ]
-        if let lineSpacing = Typography.code.lineSpacing {
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.lineSpacing = lineSpacing
-            attributes[.paragraphStyle] = paragraphStyle
-        }
+        var attributes = Typography.code.textAttributes
+        attributes[.foregroundColor] = UIColor(colors.code.plain)
         return attributes
     }
 

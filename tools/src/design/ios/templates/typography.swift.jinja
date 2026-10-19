@@ -7,6 +7,6 @@ enum Typography {
 {% if style.description %}
     /// {{ style.description }}
 {% endif %}
-    static let {{ style.name }} = TypographyStyle({{ style.font_expr }}{% if style.text_case %}, textCase: .{{ style.text_case }}{% endif %}{% if style.tracking != 0.0 %}, tracking: {{ style.tracking | fmt_cgfloat }}{% endif %}{% if style.line_spacing %}, lineSpacing: {{ style.line_spacing | fmt_cgfloat }}{% endif %})
+    static let {{ style.name }} = TypographyStyle({{ style.font_expr }}{% if style.text_case %}, textCase: .{{ style.text_case }}{% endif %}{% if style.tracking != 0.0 %}, tracking: {{ style.tracking | fmt_cgfloat }}{% endif %}{% if style.line_height %}, lineHeight: {{ style.line_height | fmt_cgfloat }}{% endif %})
 {% endfor %}
 }

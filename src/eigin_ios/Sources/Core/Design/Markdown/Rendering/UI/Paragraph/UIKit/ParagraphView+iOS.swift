@@ -1,12 +1,31 @@
 #if canImport(UIKit)
 import SwiftUI
 
-struct ParagraphView: UIViewRepresentable {
+/// A markdown block's text, laid out in the line boxes of the typography it carries.
+struct ParagraphView: View {
+    var contents: NSMutableAttributedString
+
+    var body: some View {
+        let fonts = contents.leadingTextFonts
+        let lineBox = fonts.flatMap { fonts in
+            fonts.preferredLineHeight.map { ParagraphLineBox(font: fonts.normal, lineHeight: $0) }
+        }
+        ParagraphTextView(contents: contents, lineBox: lineBox)
+            .offset(y: lineBox.map { $0.font.textKitShift(lineHeight: $0.lineHeight) } ?? 0)
+    }
+}
+
+/// Exact line height for a paragraph, with the font that centres glyphs in it.
+struct ParagraphLineBox: Equatable {
+    let font: MDFont
+    let lineHeight: CGFloat
+}
+
+private struct ParagraphTextView: UIViewRepresentable {
     @Environment(\.openURL) var openURL
-    @Environment(\.markdownConfig) var config: MarkdownRenderConfig
 
     var contents: NSMutableAttributedString
-    var lineSpacing: CGFloat?
+    var lineBox: ParagraphLineBox?
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -14,18 +33,15 @@ struct ParagraphView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> ParagraphUIView {
         let openUrlFunction = openURL.callAsFunction(_:)
-        let view = ParagraphViewCache.shared.createOrReuseView(
-            contents: contents,
-            lineSpacing: lineSpacing
-        )
+        let view = ParagraphViewCache.shared.createOrReuseView()
         view.onUrlTap = openUrlFunction
-        view.setParagraphContents(contents, lineSpacing: lineSpacing, animatedByWord: false)
+        view.setParagraphContents(contents, lineBox: lineBox, animatedByWord: false)
         return view
     }
 
     func updateUIView(_ view: ParagraphUIView, context: Context) {
-        if view.paragraphContents != contents || view.lineSpacing != lineSpacing {
-            view.setParagraphContents(contents, lineSpacing: lineSpacing, animatedByWord: false)
+        if view.paragraphContents != contents || view.lineBox != lineBox {
+            view.setParagraphContents(contents, lineBox: lineBox, animatedByWord: false)
         }
     }
 
@@ -41,13 +57,13 @@ struct ParagraphView: UIViewRepresentable {
             return nil
         }
 
-        // Check if content or lineSpacing changed - if so, clear the cache
-        if contents != context.coordinator.lastContents || lineSpacing != context.coordinator
-            .lastLineSpacing
+        // Check if content or line box changed - if so, clear the cache
+        if contents != context.coordinator.lastContents || lineBox != context.coordinator
+            .lastLineBox
         {
             context.coordinator.sizeCache.removeAll()
             context.coordinator.lastContents = contents
-            context.coordinator.lastLineSpacing = lineSpacing
+            context.coordinator.lastLineBox = lineBox
         }
 
         // Round width to avoid cache misses from floating point precision issues
@@ -72,7 +88,7 @@ struct ParagraphView: UIViewRepresentable {
         // Cache all calculated sizes keyed by width
         var sizeCache: [CGFloat: CGSize] = [:]
         var lastContents: NSMutableAttributedString?
-        var lastLineSpacing: CGFloat?
+        var lastLineBox: ParagraphLineBox?
     }
 }
 #endif

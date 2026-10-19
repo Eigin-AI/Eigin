@@ -12,10 +12,7 @@ final class ParagraphViewCache {
 
     static let shared = ParagraphViewCache()
 
-    func createOrReuseView(
-        contents: NSMutableAttributedString,
-        lineSpacing: CGFloat?
-    ) -> MDParagraphView {
+    func createOrReuseView() -> MDParagraphView {
         if let availableView = findAvailableCachedView() {
             return availableView
         }

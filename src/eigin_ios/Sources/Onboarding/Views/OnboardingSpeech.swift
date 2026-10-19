@@ -25,7 +25,11 @@ struct OnboardingSpeech: View {
     @State private var titleShown = false
 
     var body: some View {
-        VStack(spacing: Spacing.n12) {
+        // A header sits 16pt above body text, measured cap to baseline as on web.
+        VStack(
+            spacing: Spacing.n16 - Typography.titleM.lineBoxInset - Typography.standfirst
+                .lineBoxInset
+        ) {
             Text(verbatim: title)
                 .typography(Typography.titleM)
                 .foregroundStyle(colors.text.standard.base)

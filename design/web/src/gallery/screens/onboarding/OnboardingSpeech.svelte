@@ -67,7 +67,7 @@
   .speech {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-n12);
+    gap: var(--spacing-n16);
     width: 100%;
     text-align: center;
   }
