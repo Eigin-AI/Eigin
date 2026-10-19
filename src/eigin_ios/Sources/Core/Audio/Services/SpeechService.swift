@@ -408,9 +408,13 @@ final class DefaultSpeechService: SpeechService, @unchecked Sendable {
         cleaned = cleaned.replacing(/(?m)^[\t ]*\d+\.\s+/, with: "")
 
         // Strip emojis, arrows, and other symbol characters that TTS models try to pronounce.
+        // "°" is kept: the spoken-text normalizer speaks degrees ("18°C" →
+        // "eighteen degrees Celsius"), and dropping it here would turn
+        // "18°C" into "18C", which is then read as a code.
         cleaned = String(
             cleaned.unicodeScalars.filter { scalar in
-                !(scalar.properties.isEmoji && scalar.properties.isEmojiPresentation)
+                if scalar == "°" { return true }
+                return !(scalar.properties.isEmoji && scalar.properties.isEmojiPresentation)
                     && !scalar.properties.isEmojiModifier
                     && scalar.properties.generalCategory != .otherSymbol
                     && scalar.properties.generalCategory != .mathSymbol

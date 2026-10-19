@@ -14,7 +14,12 @@ enum SpokenTextNormalizer {
         result = removeCommasFromNumbers(result)
         result = processRanges(result, locale: locale)
         result = processCurrencies(result, locale: locale)
+        result = processPercentages(result, locale: locale)
+        result = processTextCurrencies(result, locale: locale)
         result = processTimes(result, locale: locale)
+        result = processSymbols(result, locale: locale)
+        result = processRates(result, locale: locale)
+        result = processDegrees(result, locale: locale)
         result = processUnitAbbreviations(result, locale: locale)
         result = processDecimalNumbers(result, locale: locale)
         result = processOrdinalDates(result, locale: locale)
@@ -314,6 +319,114 @@ enum SpokenTextNormalizer {
         )
     }
 
+    // MARK: - Percentages
+
+    /// Matches number + percent sign: 50%, 3.5%, "50 %" (with a space).
+    private static let percentRegex = try! NSRegularExpression(
+        pattern: #"\b(\d+(?:\.\d+)?)\s*%"#
+    )
+
+    /// "50%" → "50 percent", "3.5%" → "3.5 percent". The number keeps its
+    /// digits so the decimal and whole-number passes spell it later.
+    /// A percent sign with no number before it is left for the strip pass.
+    private static func processPercentages(_ text: String, locale: SpokenTextLocale) -> String {
+        percentRegex.stringByReplacingMatches(
+            in: text,
+            range: NSRange(location: 0, length: text.utf16.count),
+            withTemplate: "$1 \(locale.percentWord)"
+        )
+    }
+
+    // MARK: - Text Currencies
+
+    /// Matches a number followed by a written currency form or code:
+    /// "5 kr", "5 kr.", "5kr", "100 DKK", "200 EUR", "300 USD", "400 GBP".
+    /// The `(?=\W|$)` lookahead stops partial words: "5 kroner" and
+    /// "5 euros" don't match, while "kr." does.
+    private static let textCurrencyRegex = try! NSRegularExpression(
+        pattern: #"\b(\d+)\s*(kr\.|kr|DKK|EUR|USD|GBP)(?=\W|$)"#,
+        options: .caseInsensitive
+    )
+
+    /// "5 kr." → "5 kroner", "100 DKK" → "100 kroner". The number keeps its
+    /// digits so the whole-number pass spells it later.
+    private static func processTextCurrencies(_ text: String, locale: SpokenTextLocale) -> String {
+        let matches = textCurrencyRegex.matches(
+            in: text, range: NSRange(location: 0, length: text.utf16.count)
+        )
+
+        var result = text
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range, in: result),
+                  let numRange = Range(match.range(at: 1), in: result),
+                  let codeRange = Range(match.range(at: 2), in: result),
+                  let value = Int(result[numRange])
+            else { continue }
+
+            let code = String(result[codeRange]).lowercased()
+            let normalizedCode = code.hasSuffix(".") ? String(code.dropLast()) : code
+            guard let currency = locale.currencyWords[normalizedCode] else { continue }
+
+            let unit = value == 1 ? currency.singular : currency.plural
+            result.replaceSubrange(fullRange, with: "\(value) \(unit)")
+        }
+        return result
+    }
+
+    // MARK: - Symbols
+
+    /// Replace symbols with spoken words before the strip pass deletes what
+    /// remains. "#" is spoken only before a digit; "@" and "&" are replaced
+    /// everywhere they occur.
+    private static func processSymbols(_ text: String, locale: SpokenTextLocale) -> String {
+        var result = text
+
+        // "#5" → "number 5". A "#" not before a digit is stripped later.
+        result = result.replacingOccurrences(
+            of: "#(\\d+)",
+            with: "\(locale.numberWord) $1",
+            options: .regularExpression
+        )
+        // "name@example.com" → "name at example.com" (the domain pass then
+        // spells the domain). Danish reads @ as "snabel a".
+        result = result.replacingOccurrences(of: "@", with: " \(locale.atWord) ")
+        // "rock & roll" → "rock and roll" / "rock og roll".
+        result = result.replacingOccurrences(of: "&", with: " \(locale.andWord) ")
+        // A stray "#" (not before a digit, handled above) is spoken as "hashtag".
+        result = result.replacingOccurrences(of: "#", with: " \(locale.hashtagWord) ")
+
+        return result
+    }
+
+    // MARK: - Rates
+
+    /// Matches a slash-period token: "/month", "/ hour", Danish "/md.".
+    /// `[^\W\d_]` = unicode letters only (no digits, no underscore).
+    private static let rateRegex = try! NSRegularExpression(
+        pattern: #"\s*/\s*([^\W\d_]+)\.?"#
+    )
+
+    /// "$24/month" → "$24 a month", "24 kr./md." → "24 kroner pr. måned".
+    /// Only tokens in the locale's table fire; anything else ("and/or",
+    /// "24/7") keeps today's behavior (the slash becomes a space).
+    private static func processRates(_ text: String, locale: SpokenTextLocale) -> String {
+        let matches = rateRegex.matches(
+            in: text, range: NSRange(location: 0, length: text.utf16.count)
+        )
+
+        var result = text
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range, in: result),
+                  let tokenRange = Range(match.range(at: 1), in: result)
+            else { continue }
+
+            let token = result[tokenRange].lowercased()
+            guard let phrase = locale.ratePhrases[token] else { continue }
+            result.replaceSubrange(fullRange, with: " \(phrase)")
+        }
+        return result
+    }
+
     // MARK: - Currency Processing
 
     private static let currencyRegex = try! NSRegularExpression(
@@ -431,6 +544,35 @@ enum SpokenTextNormalizer {
                 fullRange,
                 with: "\(integerWord) \(locale.pointWord) \(decimalWords)"
             )
+        }
+        return result
+    }
+
+    // MARK: - Degrees
+
+    /// Matches number + bare degree sign, excluding °C/°F which the unit
+    /// pass handles with their full names.
+    private static let looseDegreeRegex = try! NSRegularExpression(
+        pattern: #"\b(\d+(?:\.\d+)?)\s*°(?![cCfF])"#
+    )
+
+    /// "20°" → "20 degrees" / "20 grader". Runs before the unit pass; the
+    /// `(?![cCfF])` lookahead leaves "20°C" and "20°F" for the named-unit
+    /// path ("degrees Celsius" etc.).
+    private static func processDegrees(_ text: String, locale: SpokenTextLocale) -> String {
+        let matches = looseDegreeRegex.matches(
+            in: text, range: NSRange(location: 0, length: text.utf16.count)
+        )
+
+        var result = text
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range, in: result),
+                  let numRange = Range(match.range(at: 1), in: result),
+                  let value = Double(result[numRange])
+            else { continue }
+
+            let unit = value == 1.0 ? locale.degreeWord.singular : locale.degreeWord.plural
+            result.replaceSubrange(fullRange, with: "\(result[numRange]) \(unit)")
         }
         return result
     }
