@@ -25,9 +25,7 @@ struct WatchAgentContext {
     static func resolve() throws -> WatchAgentContext {
         let context = Container.shared.modelContainer().mainContext
 
-        var agentDescriptor = Agent.primaryDescriptor
-        agentDescriptor.fetchLimit = 1
-        guard let agent = (try? context.fetch(agentDescriptor))?.first else {
+        guard let agent = try fetchPrimaryAgent(context) else {
             throw Failure.noAgent
         }
 
@@ -70,6 +68,20 @@ struct WatchAgentContext {
             )) ?? [],
             modelContext: context
         )
+    }
+
+    /// The primary agent's display name, or "" when none exists.
+    @MainActor
+    static func primaryAgentName() -> String {
+        let context = Container.shared.modelContainer().mainContext
+        return (try? fetchPrimaryAgent(context))?.name ?? ""
+    }
+
+    @MainActor
+    private static func fetchPrimaryAgent(_ context: ModelContext) throws -> Agent? {
+        var agentDescriptor = Agent.primaryDescriptor
+        agentDescriptor.fetchLimit = 1
+        return try context.fetch(agentDescriptor).first
     }
 
     /// The chat so far, oldest first, ready for the API.

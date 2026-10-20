@@ -14,12 +14,28 @@ enum AudioFileTranscriber {
     private static let chunkFrames: AVAudioFrameCount = 8192
 
     /// Reads the file in chunks and returns the joined final transcript.
-    /// Empty string when nothing was recognized.
-    static func transcribe(url: URL, locale: Locale) async throws -> String {
+    /// Empty string when nothing was recognized. `contextualStrings` biases
+    /// recognition toward the user's vocabulary (names, jargon).
+    static func transcribe(
+        url: URL, locale: Locale, contextualStrings: [String] = []
+    ) async throws -> String {
         let file = try AVAudioFile(forReading: url)
 
         let modules = try await speechModules(for: locale)
         let newAnalyzer = SpeechAnalyzer(modules: modules)
+
+        if !contextualStrings.isEmpty {
+            let context = AnalysisContext()
+            context.contextualStrings[.general] = contextualStrings
+            do {
+                try await newAnalyzer.setContext(context)
+            } catch {
+                AppLogger.warning(
+                    "Failed to set speech analysis context: \(private: error.localizedDescription)",
+                    category: .general
+                )
+            }
+        }
 
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: modules

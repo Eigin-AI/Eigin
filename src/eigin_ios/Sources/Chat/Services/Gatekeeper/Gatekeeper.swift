@@ -39,6 +39,8 @@ final class Gatekeeper {
     ///
     /// Minimal hint — just time/model info and truncated intents/skills.
     /// Each source checks ``SystemHintInput/isSmallContext`` and truncates.
+    /// The vocabulary hint stays in even here: it's tiny and directly
+    /// actionable.
     private let smallSources: [any SystemHintSource]
 
     // MARK: - Init
@@ -54,6 +56,7 @@ final class Gatekeeper {
             SpaceSource(),
             LanguageSource(),
             InteractionModeSource(),
+            VocabularyHintSource(),
             ActiveSkillsSource(),
             ActiveFlowSource(),
             AvailableSkillsSource(skillIndex: skillIndex),
@@ -66,6 +69,7 @@ final class Gatekeeper {
             LanguageSource(),
             SpaceSource(),
             InteractionModeSource(),
+            VocabularyHintSource(),
             ActiveIntentsSource(),
             RelevantKnowledgeSource(knowledgeService: knowledgeService),
         ]

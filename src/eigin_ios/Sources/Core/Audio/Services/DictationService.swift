@@ -78,6 +78,34 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
 
     func setContextualStrings(_ strings: [String]) {
         contextualStrings = strings
+        pushContextualStrings()
+    }
+
+    /// A context carrying the current vocabulary; empty list clears it.
+    private func makeAnalysisContext() -> AnalysisContext {
+        let context = AnalysisContext()
+        if !contextualStrings.isEmpty {
+            context.contextualStrings[.general] = contextualStrings
+        }
+        return context
+    }
+
+    /// Hands the vocabulary to a running analyzer so the recognizer biases
+    /// toward it even though it's not in the system vocabulary (iOS 26
+    /// `AnalysisContext`).
+    private func pushContextualStrings() {
+        guard let analyzer else { return }
+        let context = makeAnalysisContext()
+        Task {
+            do {
+                try await analyzer.setContext(context)
+            } catch {
+                AppLogger.warning(
+                    "Failed to set speech analysis context: \(private: error.localizedDescription)",
+                    category: .general
+                )
+            }
+        }
     }
 
     var isRecovering: Bool {
@@ -435,6 +463,17 @@ final class DefaultDictationService: NSObject, DictationService, @unchecked Send
 
         // Create analyzer (Apple pattern: create first, start later).
         let newAnalyzer = SpeechAnalyzer(modules: modules)
+
+        // Bias recognition toward the user's vocabulary: set the context before
+        // start so buffered audio from the first moment sees it.
+        do {
+            try await newAnalyzer.setContext(makeAnalysisContext())
+        } catch {
+            AppLogger.warning(
+                "Failed to set speech analysis context: \(private: error.localizedDescription)",
+                category: .general
+            )
+        }
 
         // Get the format the analyzer expects.
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(

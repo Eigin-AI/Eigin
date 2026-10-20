@@ -31,6 +31,9 @@ struct SystemHintInput {
     let language: AppLanguage?
     /// The user's current interaction mode with the agent.
     let mode: InteractionMode
+    /// Vocabulary entries (word + aliases) feeding ``VocabularyHintSource``.
+    /// Empty for typed turns.
+    var vocabulary: [VocabularyEntry] = []
 
     // MARK: Agent state
 

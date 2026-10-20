@@ -33,21 +33,37 @@ struct ManageVocabularyTool: Tool {
         ToolDefinition(
             name: name,
             description: """
-            Manage the speech recognition vocabulary. Adding words here improves
-            dictation accuracy for names, jargon, and specialized terms.
+            Manage the agent's custom vocabulary, used to correct likely speech \
+            misrecognitions: dictated words close to a vocabulary word surface as \
+            hints on the turn.
+            When you notice a spoken word was misrecognized (e.g. "eigen" for \
+            "Eigin"), add the intended word AND record the misheard word as its \
+            alias (action 'add_alias') so future turns hint the correction. \
+            Keep words current — remove ones that no longer matter.
             """,
             parameters: JSONSchema(
                 type: "object",
                 properties: [
                     "action": .init(
                         type: "string",
-                        description: "Use 'list' to see current words, 'add' to add new words, 'remove' to remove words.",
-                        enum: ["add", "remove", "list"]
+                        description: "'add' adds words, 'add_alias' records known mishearings, 'remove' removes words, 'list' shows everything.",
+                        enum: ["add", "add_alias", "remove", "list"]
                     ),
                     "words": .init(
                         type: "array",
                         description:
-                        "Words to add or remove. Required for add/remove, ignored for list.",
+                        "Words to add or remove. Required for add/remove, ignored for others.",
+                        items: .init(type: "string")
+                    ),
+                    "word": .init(
+                        type: "string",
+                        description:
+                        "The vocabulary word the variations belong to. Required for add_alias."
+                    ),
+                    "variations": .init(
+                        type: "array",
+                        description:
+                        "Words the transcriber is known to produce instead of 'word' (e.g. [\"eigen\", \"iGen\"] for \"Eigin\"). Required for add_alias.",
                         items: .init(type: "string")
                     ),
                 ],
@@ -93,7 +109,36 @@ struct ManageVocabularyTool: Tool {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(result: [
-                    "status": "OK", "added": words, "all_user_words": store.userWords(),
+                    "status": "OK", "added": words,
+                    "all_user_words": store.userEntries().map(\.word),
+                ]),
+                isError: false
+            )
+
+        case "add_alias":
+            guard let word = args["word"] as? String, !word.isEmpty else {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers.output(errors: ["Missing 'word' parameter"]),
+                    isError: true
+                )
+            }
+            guard let variations = args["variations"] as? [String], !variations.isEmpty else {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers.output(errors: ["Missing or empty 'variations' array"]),
+                    isError: true
+                )
+            }
+            for variation in variations {
+                store.addAlias(variation, for: word)
+            }
+            refreshDictation(store: store, agentName: agent.name)
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(result: [
+                    "status": "OK", "word": word, "variations": variations,
+                    "all_user_words": store.userEntries().map(\.word),
                 ]),
                 isError: false
             )
@@ -111,18 +156,23 @@ struct ManageVocabularyTool: Tool {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(result: [
-                    "status": "OK", "removed": words, "all_user_words": store.userWords(),
+                    "status": "OK", "removed": words,
+                    "all_user_words": store.userEntries().map(\.word),
                 ]),
                 isError: false
             )
 
         case "list":
-            let userWords = store.userWords()
-            let allWords = store.allWords(agentName: agent.name)
+            let userEntries = store.userEntries()
+            let allEntries = store.entries(agentName: agent.name)
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(result: [
-                    "user_words": userWords, "all_words": allWords,
+                    "user_words": userEntries.map(\.word),
+                    "user_aliases": Dictionary(
+                        uniqueKeysWithValues: userEntries.map { ($0.word, $0.aliases) }
+                    ).filter { !$0.value.isEmpty },
+                    "all_words": allEntries.map(\.word),
                 ]),
                 isError: false
             )
@@ -131,7 +181,7 @@ struct ManageVocabularyTool: Tool {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: [
-                    "Invalid action '\(action)'. Must be 'add', 'remove', or 'list'.",
+                    "Invalid action '\(action)'. Must be 'add', 'add_alias', 'remove', or 'list'.",
                 ]), isError: true
             )
         }

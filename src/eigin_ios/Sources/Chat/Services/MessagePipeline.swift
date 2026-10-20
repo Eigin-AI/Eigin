@@ -252,6 +252,9 @@ enum MessagePipeline {
             spaceID: spaceID,
             language: languageManager.currentLanguage,
             mode: mode,
+            vocabulary: mode == .text
+                ? []
+                : Container.shared.vocabularyStore().entries(agentName: agent.name),
             activeIntents: activeIntents,
             activeSkills: allActiveSkills,
             availableSkills: BundledSkill.all + mcpSkills,

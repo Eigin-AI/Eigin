@@ -16867,13 +16867,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Viser, tilføjer eller fjerner ord, der forbedrer nøjagtigheden af dikteringen."
+            "value" : "Viser, tilføjer eller fjerner ord, der bruges til at styre diktering og rette sandsynlige genkendelsesfejl."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lists, adds, or removes words that improve dictation accuracy."
+            "value" : "Lists, adds, or removes words used to correct likely misrecognitions."
           }
         }
       }
