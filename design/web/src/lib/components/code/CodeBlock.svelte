@@ -42,7 +42,10 @@
 
   pre {
     margin: 0;
-    padding: var(--spacing-n16);
+    /* Horizontal gains the code font's optical inset so equal padding reads even
+       against the vertical, the way iOS's EiginCodeBlock pads. */
+    padding-block: var(--spacing-n16);
+    padding-inline: calc(var(--spacing-n16) + var(--text-optical-inset-code, 0px));
     width: max-content;
     min-width: 100%;
     box-sizing: border-box;

@@ -16,6 +16,8 @@ pub struct InstalledFonts {
     scales: HashMap<String, f64>,
     /// OpenType feature settings keyed by fontFamily name.
     features: HashMap<String, Vec<FontFeature>>,
+    /// Cap height / units-per-em per PostScript name, parsed from the font files.
+    cap_ratios: HashMap<String, f64>,
     pub file_names: Vec<String>,
 }
 
@@ -25,6 +27,15 @@ impl InstalledFonts {
             .get(family)
             .and_then(|m| m.get(weight))
             .map(String::as_str)
+    }
+
+    /// Cap height as a ratio of the specified point size, for the family's weight.
+    /// Falls back to the family's regular weight; weights share cap heights in practice.
+    pub fn cap_ratio(&self, family: &str, weight: &str) -> Option<f64> {
+        let name = self
+            .postscript_name(family, weight)
+            .or_else(|| self.postscript_name(family, "regular"))?;
+        self.cap_ratios.get(name).copied()
     }
 
     pub fn scale(&self, family: &str) -> f64 {
@@ -79,6 +90,18 @@ pub fn install(repo_root: &str, tokens: &Value) -> Result<Option<InstalledFonts>
     }
     file_names.sort();
 
+    let cap_ratios = font_files
+        .iter()
+        .filter_map(|path| {
+            // Keyed by file stem, which must equal the font's PostScript name —
+            // the same convention the copy step relies on when mapping tokens'
+            // PostScript names below. A file renamed off that convention silently
+            // drops its metrics and consumers fall back to plain spacing.
+            let stem = path.file_stem()?.to_string_lossy().into_owned();
+            cap_ratio(path).map(|ratio| (stem, ratio))
+        })
+        .collect();
+
     let family_group = tokens
         .get("fontFamily")
         .context("tokens.json: missing 'fontFamily' group")?
@@ -105,8 +128,21 @@ pub fn install(repo_root: &str, tokens: &Value) -> Result<Option<InstalledFonts>
         families,
         scales,
         features,
+        cap_ratios,
         file_names,
     }))
+}
+
+/// Cap height as a ratio of units-per-em, from the font's OS/2 table.
+fn cap_ratio(path: &std::path::Path) -> Option<f64> {
+    let data = fs::read(path).ok()?;
+    let face = ttf_parser::Face::parse(&data, 0).ok()?;
+    let upm = face.units_per_em() as f64;
+    let cap = face.tables().os2?.capital_height()? as f64;
+    if upm <= 0.0 || cap <= 0.0 {
+        return None;
+    }
+    Some(cap / upm)
 }
 
 fn parse_weight_map(family_value: &Value, family_name: &str) -> Result<HashMap<String, String>> {

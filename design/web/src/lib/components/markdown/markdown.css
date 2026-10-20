@@ -54,6 +54,17 @@
   color: var(--color-text-standard-muted);
 }
 
+/*
+ * Hard-edged blocks carry the prose line box's optical air — the space above the cap
+ * and below the baseline that prose boxes hold invisibly. Without it a card reads
+ * tighter against a heading or paragraph than two text blocks read against each other.
+ * Matches iOS's `ContentBlockView.cardSpacing`; the variable is generated with the
+ * typography tokens (cap-height of the prose font).
+ */
+.markdown :is(.code-block, .table-card, .image-card) {
+  margin-block: var(--text-optical-inset-chatMessage, 0px);
+}
+
 .markdown ul,
 .markdown ol {
   padding-left: var(--spacing-n24);

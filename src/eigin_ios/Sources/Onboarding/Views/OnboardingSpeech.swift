@@ -32,12 +32,9 @@ struct OnboardingSpeech: View {
 
     var body: some View {
         // A header sits 16pt above body text, measured cap to baseline as on web.
-        VStack(
-            spacing: Spacing.n16 - Typography.titleM.lineBoxInset - Typography.standfirst
-                .lineBoxInset
-        ) {
+        VStack(spacing: Spacing.n16) {
             Text(verbatim: title)
-                .typography(Typography.titleM)
+                .textStyle(Typography.titleM)
                 .foregroundStyle(colors.text.standard.base)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -48,12 +45,12 @@ struct OnboardingSpeech: View {
             // The full line is laid out from the start, with the unrevealed part
             // transparent. Line breaks are therefore fixed, so words pop into
             // their final positions instead of reflowing as they appear.
-            // Paragraphs sit 28pt apart cap to baseline: about 16pt between line boxes.
-            VStack(spacing: Spacing.n28 - 2 * Typography.standfirst.lineBoxInset) {
+            // Paragraphs sit 28pt apart, measured cap to baseline as on web.
+            VStack(spacing: Spacing.n28) {
                 ForEach(Array(attributedParagraphs.enumerated()), id: \.offset) { _, paragraph in
                     BalancedLines {
                         Text(paragraph)
-                            .typography(Typography.standfirst)
+                            .textStyle(Typography.standfirst)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }

@@ -24,7 +24,7 @@ struct EiginCodeBlock: View {
                 .offset(y: Typography.code.textKitShift)
                 // Horizontal gains the font's line-box inset so the padding reads as even.
                 .padding(.vertical, Spacing.n16)
-                .padding(.horizontal, Spacing.n16 + Typography.code.lineBoxInset)
+                .padding(.horizontal, Spacing.n16 + Typography.code.opticalInset)
         }
         // Animating the scroll view's resize makes the card jitter as code streams in.
         .transaction { $0.animation = nil }

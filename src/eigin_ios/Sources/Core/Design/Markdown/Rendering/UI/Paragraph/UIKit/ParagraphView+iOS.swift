@@ -2,6 +2,9 @@
 import SwiftUI
 
 /// A markdown block's text, laid out in the line boxes of the typography it carries.
+/// Flowing prose is deliberately untrimmed, as on web (`text-box: normal`): block
+/// spacing is defined against untrimmed boxes, so trimming would pull every block
+/// ~12pt closer than the token intends.
 struct ParagraphView: View {
     var contents: NSMutableAttributedString
 

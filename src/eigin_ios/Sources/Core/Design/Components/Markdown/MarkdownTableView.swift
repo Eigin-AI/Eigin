@@ -42,7 +42,7 @@ struct MarkdownTableView: View {
     /// the standard spacing so it reads as even against the vertical padding. Derived from
     /// the body font so every row's left and right text edge lines up.
     private var outerColumnInset: CGFloat {
-        Spacing.n16 + Typography.chatMessage.lineBoxInset
+        Spacing.n16 + Typography.chatMessage.opticalInset
     }
 
     var body: some View {

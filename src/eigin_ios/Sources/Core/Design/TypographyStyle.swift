@@ -117,8 +117,15 @@ extension TypographyStyle {
     /// Extra horizontal padding that balances an equal vertical padding. A line's box
     /// carries space above the cap and below the baseline that makes equal padding look
     /// vertically heavier; this is roughly half that difference.
-    var lineBoxInset: CGFloat {
+    var opticalInset: CGFloat {
         max(((lineHeight ?? uiFont.lineHeight) - uiFont.capHeight) / 2, 0)
+    }
+
+    /// Negative padding that trims the line box to the cap top and last baseline, so
+    /// spacing next to the text is the Figma value with no maths. Nil when the style has
+    /// no explicit line height (nothing to trim against).
+    var capTrim: (top: CGFloat, bottom: CGFloat)? {
+        lineHeight.map { uiFont.capTrim(lineHeight: $0) }
     }
 }
 
@@ -150,7 +157,37 @@ extension View {
             .lineBox(style.lineHeight, font: style.uiFont)
     }
 
+    /// File-private on purpose: the trim is only ever applied through `Text.textStyle`.
+    /// Chaining it onto untrimmed containers would silently clip layouts against tokens
+    /// measured for trimmed boxes.
+    @ViewBuilder
+    fileprivate func capTrim(_ style: TypographyStyle) -> some View {
+        if let trim = style.capTrim {
+            padding(.top, -trim.top).padding(.bottom, -trim.bottom)
+        } else {
+            self
+        }
+    }
+
     func navigationTitle(_ title: String, style: TypographyStyle) -> some View {
         navigationTitle(style.textCase == .uppercase ? title.uppercased() : title)
+    }
+}
+
+extension Text {
+    /// Full typography token, trimmed to the cap top and last baseline, so adjacent
+    /// spacing is the Figma value with no maths — as on web's `.t-*` classes. Glyphs
+    /// taller than the cap and descenders draw outside the trimmed frame, so a parent
+    /// that clips (`.clipped()`, `clipShape`) can cut them.
+    ///
+    /// For buttons, labels, text fields and stacks with icons use `.typography()`
+    /// instead: it never trims, so it is safe on containers.
+    @MainActor
+    func textStyle(_ style: TypographyStyle) -> some View {
+        font(style.font)
+            .textCase(style.textCase)
+            .tracking(style.tracking)
+            .lineBox(style.lineHeight, font: style.uiFont)
+            .capTrim(style)
     }
 }

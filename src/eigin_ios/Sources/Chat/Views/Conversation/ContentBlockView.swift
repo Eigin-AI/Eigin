@@ -15,9 +15,10 @@ struct ContentBlockView: View, Equatable {
     /// Extra vertical margin on the hard-edged cards (code, tables) so they sit with the
     /// same visual rhythm as text blocks, which carry the font's line-box leading the cards
     /// don't. Without it a card reads tighter against a heading or paragraph than two text
-    /// blocks read against each other.
+    /// blocks read against each other. (Markdown prose is untrimmed, as on web — see
+    /// ``ParagraphView``.)
     private var cardSpacing: CGFloat {
-        Typography.chatMessage.lineBoxInset
+        Typography.chatMessage.opticalInset
     }
 
     var body: some View {
