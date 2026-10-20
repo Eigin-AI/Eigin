@@ -126,18 +126,23 @@ struct ChatFeedSheets: ViewModifier {
             .photosPicker(
                 isPresented: $state.showPhotoPicker,
                 selection: $state.selectedPhotoItems,
-                maxSelectionCount: 1,
+                maxSelectionCount: max(
+                    ChatViewModel.maxStagedAttachments - context.stagedAttachments.count, 1
+                ),
                 matching: .images
             )
             .onChange(of: state.selectedPhotoItems) { _, items in
-                guard let item = items.first else { return }
+                guard !items.isEmpty else { return }
+                // Clear before loading so a mid-load re-open can't re-stage the same images.
+                state.selectedPhotoItems = []
                 Task {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data)
-                    {
-                        context.onStageImage?(image)
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self),
+                           let image = UIImage(data: data)
+                        {
+                            context.onStageImage?(image)
+                        }
                     }
-                    state.selectedPhotoItems = []
                 }
             }
             .fullScreenCover(isPresented: $state.showCamera) {
