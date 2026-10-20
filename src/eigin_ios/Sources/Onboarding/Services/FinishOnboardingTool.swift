@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 
 /// Commits onboarding in one call: the agent's name and emoji, its core texts,
@@ -107,7 +108,16 @@ struct FinishOnboardingTool: Tool {
         agent.userCore = commit.user
         agent.soulCore = commit.composedSoul
         agent.updatedAt = .now
+        seedVocabulary(userName: userName)
         await seedActors(agentName: commit.name)
+    }
+
+    /// Seeds the user's name — said often, misrecognized often. The agent's
+    /// own name is always included by ``VocabularyStore/entries(agentName:)``.
+    private func seedVocabulary(userName: String) {
+        let trimmed = userName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        Container.shared.vocabularyStore().addWords([trimmed])
     }
 
     /// The user and the agent as actors, so knowledge has someone to be about.

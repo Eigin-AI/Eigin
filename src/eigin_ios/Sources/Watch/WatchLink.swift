@@ -44,10 +44,14 @@ final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
             Self.releaseTransferHold()
             defer { try? FileManager.default.removeItem(at: copy) }
             let language = Container.shared.languageManager().currentLanguage
+            let agentName = WatchAgentContext.primaryAgentName()
+            let contextualStrings = Container.shared.vocabularyStore()
+                .allWords(agentName: agentName)
             do {
                 let question = try await AudioFileTranscriber.transcribe(
                     url: copy,
-                    locale: Locale(identifier: language.speechLocaleIdentifier)
+                    locale: Locale(identifier: language.speechLocaleIdentifier),
+                    contextualStrings: contextualStrings
                 )
                 guard !question.isEmpty else {
                     AppLogger.info("Watch recording had no speech", category: .watch)

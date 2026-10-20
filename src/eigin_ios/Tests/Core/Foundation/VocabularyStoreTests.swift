@@ -19,7 +19,7 @@ struct VocabularyStoreTests {
         defer { cleanup() }
 
         store.addWords(["Hello", "World"])
-        let words = store.userWords()
+        let words = store.userEntries().map(\.word)
         #expect(words.contains("Hello"))
         #expect(words.contains("World"))
     }
@@ -30,7 +30,7 @@ struct VocabularyStoreTests {
 
         store.addWords(["Alpha", "Beta", "Gamma"])
         store.removeWords(["Beta"])
-        let words = store.userWords()
+        let words = store.userEntries().map(\.word)
         #expect(words.contains("Alpha"))
         #expect(!words.contains("Beta"))
         #expect(words.contains("Gamma"))
@@ -41,13 +41,13 @@ struct VocabularyStoreTests {
         defer { cleanup() }
 
         store.addWords(["Foo", "Foo", "Bar"])
-        let words = store.userWords()
+        let words = store.userEntries().map(\.word)
         #expect(words.count(where: { $0 == "Foo" }) == 1)
         #expect(words.contains("Bar"))
 
         // Adding again doesn't duplicate
         store.addWords(["Foo"])
-        #expect(store.userWords().count(where: { $0 == "Foo" }) == 1)
+        #expect(store.userEntries().map(\.word).count(where: { $0 == "Foo" }) == 1)
     }
 
     @Test func allWordsCombinesBuiltInAgentAndUser() {
@@ -85,7 +85,7 @@ struct VocabularyStoreTests {
         let store = makeStore()
         defer { cleanup() }
 
-        #expect(store.userWords().isEmpty)
+        #expect(store.userEntries().map(\.word).isEmpty)
     }
 
     @Test func trimWhitespace() {
@@ -93,9 +93,66 @@ struct VocabularyStoreTests {
         defer { cleanup() }
 
         store.addWords(["  Padded  ", ""])
-        let words = store.userWords()
+        let words = store.userEntries().map(\.word)
         #expect(words.contains("Padded"))
         #expect(!words.contains(""))
         #expect(!words.contains("  Padded  "))
+    }
+
+    @Test func addAliasCreatesAndAttaches() {
+        let store = makeStore()
+        defer { cleanup() }
+
+        store.addAlias("tackle", for: "Therkel")
+        let entries = store.userEntries()
+        #expect(entries.count == 1)
+        #expect(entries.first?.word == "Therkel")
+        #expect(entries.first?.aliases == ["tackle"])
+    }
+
+    @Test func addAliasAppendsToExistingEntry() {
+        let store = makeStore()
+        defer { cleanup() }
+
+        store.addWords(["Therkel"])
+        store.addAlias("tackle", for: "Therkel")
+        store.addAlias("taggle", for: "therkel") // case-insensitive word match
+        store.addAlias("tackle", for: "Therkel") // duplicate ignored
+
+        let entries = store.userEntries()
+        #expect(entries.count == 1)
+        #expect(entries.first?.aliases == ["tackle", "taggle"])
+    }
+
+    @Test func addAliasOnBuiltInMergesIntoBuiltInEntry() {
+        let store = makeStore()
+        defer { cleanup() }
+
+        // "Eigin" is built-in; a user alias on it must merge into the same
+        // entry rather than duplicate the word.
+        store.addAlias("eigenk", for: "Eigin")
+
+        let entries = store.entries(agentName: "Atlas")
+        #expect(entries.count(where: { $0.word == "Eigin" }) == 1)
+        let aliases = entries.first(where: { $0.word == "Eigin" })?.aliases
+        #expect(aliases?.contains("eigen") == true)
+        #expect(aliases?.contains("eigenk") == true)
+        #expect(aliases?.contains("iGen") == true)
+    }
+
+    @Test func legacyStringListMigratesToEntries() throws {
+        let store = makeStore()
+        defer { cleanup() }
+
+        // Write data in the old flat [String] format.
+        let legacy = try JSONEncoder().encode(["Therkel", "Infercom"])
+        UserDefaults(suiteName: suiteName)?.set(legacy, forKey: "vocabulary")
+
+        let entries = store.userEntries()
+        #expect(entries.map(\.word).sorted() == ["Infercom", "Therkel"])
+        #expect(entries.allSatisfy { $0.aliases.isEmpty })
+
+        // Re-reading finds the migrated entry format (encoded, not re-migrated).
+        #expect(store.userEntries().map(\.word).sorted() == ["Infercom", "Therkel"])
     }
 }
