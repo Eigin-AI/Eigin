@@ -23,6 +23,14 @@ extension UIFont {
     func textKitShift(lineHeight: CGFloat) -> CGFloat {
         centredBaseline(lineHeight: lineHeight) - (lineHeight - leading + descender)
     }
+
+    /// Space above the cap and below the last baseline in a centred line box. Trimming
+    /// it makes the frame's edges the cap top and last baseline, like CSS
+    /// `text-box: trim-both cap alphabetic`.
+    func capTrim(lineHeight: CGFloat) -> (top: CGFloat, bottom: CGFloat) {
+        let baseline = centredBaseline(lineHeight: lineHeight)
+        return (baseline - capHeight, lineHeight - baseline)
+    }
 }
 
 /// Draws SwiftUI text centred in its line boxes. With an exact line height SwiftUI puts

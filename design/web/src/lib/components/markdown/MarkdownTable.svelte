@@ -78,10 +78,12 @@
 
   .cell {
     /* Interior columns share a gutter around the rule; outer ones clear the
-       card edge. */
+       card edge. The gutter is the spacing token plus the prose font's optical
+       inset, so the text edge lines up with the card's vertical padding as it
+       does on iOS. Cells keep the prose's untrimmed line boxes. */
+    text-box: normal;
     padding: var(--spacing-n8) var(--spacing-n12);
     color: var(--color-text-standard-base);
-    text-box: normal;
     border-right: 1px solid color-mix(in srgb, var(--color-border-standard-base) 35%, transparent);
     border-bottom: 1px solid color-mix(in srgb, var(--color-border-standard-base) 35%, transparent);
   }
@@ -94,11 +96,11 @@
   }
 
   .first-column {
-    padding-left: var(--spacing-n16);
+    padding-left: calc(var(--spacing-n16) + var(--text-optical-inset-chatMessage, 0px));
   }
 
   .last-column {
-    padding-right: var(--spacing-n16);
+    padding-right: calc(var(--spacing-n16) + var(--text-optical-inset-chatMessage, 0px));
     border-right: none;
   }
 

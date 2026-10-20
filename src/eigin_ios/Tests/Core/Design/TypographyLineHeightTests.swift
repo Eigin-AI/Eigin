@@ -19,11 +19,11 @@ final class TypographyLineHeightTests: XCTestCase {
 
     func testSwiftUITextSitsCentredInTokenLineBoxes() throws {
         for style in styles {
-            let view = Text("H\nH").typography(style).foregroundStyle(.black).fixedSize()
-                .padding(margin)
-            let renderer = ImageRenderer(content: view)
-            renderer.scale = scale
-            let image = try XCTUnwrap(renderer.cgImage)
+            let image = try PixelRender.image(
+                Text("H\nH").typography(style),
+                margin: margin,
+                scale: scale
+            )
             try assertCentred(style, in: image)
         }
     }
@@ -77,7 +77,7 @@ final class TypographyLineHeightTests: XCTestCase {
         let lineHeight = try XCTUnwrap(style.lineHeight)
         let font = style.uiFont
         let baseline = (lineHeight - font.ascender + font.descender) / 2 + font.ascender
-        let ink = inkRows(image)
+        let ink = PixelRender.inkRows(image, scale: scale)
         let name = font.fontName
         XCTAssertEqual(
             CGFloat(image.height) / scale - 2 * margin,
@@ -107,24 +107,6 @@ final class TypographyLineHeightTests: XCTestCase {
 
     /// First and last rows with dark pixels, in points from the top.
     private func inkRows(_ image: CGImage) -> (top: CGFloat, bottom: CGFloat) {
-        let width = image.width, height = image.height
-        let context = CGContext(
-            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        let pixels = context.data!.assumingMemoryBound(to: UInt8.self)
-        var top = -1, bottom = -1
-        for row in 0 ..< height {
-            let hasInk = (0 ..< width).contains { pixels[(row * width + $0) * 4] < 128 }
-            if hasInk {
-                if top < 0 { top = row }
-                bottom = row + 1
-            }
-        }
-        return (CGFloat(top) / scale, CGFloat(bottom) / scale)
+        PixelRender.inkRows(image, scale: scale)
     }
 }

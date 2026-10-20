@@ -53,18 +53,13 @@ struct DataRows: View {
 // One level of the tree: the rows of a record or a structured array, plus the
 // "Show all" tail a long one carries. Recursion happens through ``DataNode``.
 
-/// Web rows are cap-trimmed (`text-box: trim-both cap alphabetic`), so its
-/// 16pt pitch is all visible air. An iOS line box carries the air the design
-/// system trims away — above the cap and below the baseline — and a vertical
-/// gap pays that at both ends. Derived from the fonts, so it self-corrects if
-/// the type changes.
-private let rowPitch = Spacing.n16 - 2 * Typography.descriptionSmall.lineBoxInset
+/// Rows are cap-trimmed (`.textStyle`), like web's
+/// `text-box: trim-both cap alphabetic`, so the token's 16pt pitch is all
+/// visible air.
+private let rowPitch = Spacing.n16
 
-/// The mid-air between a miniLabel and the paragraph that sits beneath it:
-/// the label's lower air and the paragraph's upper air both come out of the
-/// web token's 16.
-private let stackedGap =
-    Spacing.n16 - Typography.miniLabel.lineBoxInset - Typography.descriptionSmall.lineBoxInset
+/// The mid-air between a miniLabel and the paragraph that sits beneath it.
+private let stackedGap = Spacing.n16
 
 private struct DataLevelRows: View {
     let value: DataValue
@@ -246,10 +241,10 @@ private struct DataNode: View {
         HStack(alignment: .firstTextBaseline, spacing: Spacing.n4) {
             caret
             Text(DataFormat.label(label))
-                .typography(Typography.miniLabel)
+                .textStyle(Typography.miniLabel)
                 .foregroundStyle(colors.text.standard.muted)
             Text(summary)
-                .typography(Typography.descriptionSmall)
+                .textStyle(Typography.descriptionSmall)
                 .foregroundStyle(colors.text.standard.muted)
                 .opacity(open ? 0 : 1)
                 .frame(
@@ -357,10 +352,10 @@ private struct LeafRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             gutter
             Text(DataFormat.label(label))
-                .typography(Typography.miniLabel)
+                .textStyle(Typography.miniLabel)
                 .foregroundStyle(colors.text.standard.muted)
             valueText
-                .typography(Typography.descriptionSmall)
+                .textStyle(Typography.descriptionSmall)
                 .foregroundStyle(colors.text.standard.base)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, Spacing.n12)
@@ -380,25 +375,16 @@ private struct LeafRow: View {
             gutter
             VStack(alignment: .leading, spacing: stackedGap) {
                 Text(DataFormat.label(label))
-                    .typography(Typography.miniLabel)
+                    .textStyle(Typography.miniLabel)
                     .foregroundStyle(colors.text.standard.muted)
                 valueText
-                    .typography(Typography.descriptionSmall)
+                    .textStyle(Typography.descriptionSmall)
                     .foregroundStyle(colors.text.standard.base)
                     .fixedSize(horizontal: false, vertical: true)
                 if cut {
                     showMore
-                        // Web's 4pt margin is measured between trimmed boxes;
-                        // here the paragraph's lower air and the button's
-                        // upper air already carry most of it.
-                        .padding(
-                            .top,
-                            max(
-                                Spacing.n4 - Typography.descriptionSmall.lineBoxInset
-                                    - Typography.tag.lineBoxInset,
-                                0
-                            )
-                        )
+                        // Web's 4pt margin is measured between trimmed boxes.
+                        .padding(.top, Spacing.n4)
                 }
             }
         }
@@ -464,7 +450,7 @@ private struct DataTableView: View {
                     GridRow(alignment: .firstTextBaseline) {
                         ForEach(columns, id: \.self) { column in
                             Text(DataFormat.label(column))
-                                .typography(Typography.miniLabel)
+                                .textStyle(Typography.miniLabel)
                                 .foregroundStyle(colors.text.standard.muted)
                                 .padding(.bottom, Spacing.n4)
                         }
@@ -495,7 +481,7 @@ private struct DataTableView: View {
         SwiftUI.GridRow(alignment: .firstTextBaseline) {
             ForEach(columns, id: \.self) { column in
                 Text(DataFormat.value(row.value(forKey: column) ?? .null))
-                    .typography(Typography.descriptionSmall)
+                    .textStyle(Typography.descriptionSmall)
                     .foregroundStyle(colors.text.standard.base)
                     .lineLimit(1)
                     .fixedSize()
@@ -520,7 +506,7 @@ private struct ShowAllButton: View {
             withAnimation(Animations.smooth) { action() }
         } label: {
             Text(Localized.DataCard.showAll(String(count)))
-                .typography(Typography.tag)
+                .textStyle(Typography.tag)
                 .foregroundStyle(colors.accent)
         }
         .buttonStyle(.plain)
@@ -537,7 +523,7 @@ private struct ShowMoreButton: View {
             withAnimation(Animations.smooth) { action() }
         } label: {
             Text(Localized.DataCard.showMore)
-                .typography(Typography.tag)
+                .textStyle(Typography.tag)
                 .foregroundStyle(colors.accent)
         }
         .buttonStyle(.plain)

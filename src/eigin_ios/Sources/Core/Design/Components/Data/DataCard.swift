@@ -61,15 +61,10 @@ struct DataCard<Footer: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             if let label {
                 Text(label)
-                    .typography(Typography.miniLabel)
+                    .textStyle(Typography.miniLabel)
                     .foregroundStyle(colors.text.standard.muted)
                     .padding(.horizontal, Spacing.n20)
-                    // Web labels are cap-trimmed; the line box's lower air
-                    // comes out of the grouping gap.
-                    .padding(
-                        .bottom,
-                        Sizing.PageLayout.ContentGrouping.gap - Typography.miniLabel.lineBoxInset
-                    )
+                    .padding(.bottom, Sizing.PageLayout.ContentGrouping.gap)
             }
 
             DataRows(
@@ -79,8 +74,8 @@ struct DataCard<Footer: View>: View {
                 preview: preview,
                 limit: limit
             )
-            .padding(.top, Spacing.n20 - Typography.miniLabel.lineBoxInset)
-            .padding(.bottom, Spacing.n20 - Typography.descriptionSmall.lineBoxInset)
+            .padding(.top, Spacing.n20)
+            .padding(.bottom, Spacing.n20)
             .padding(.horizontal, Spacing.n20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(colors.surface.standard.elevated)
@@ -91,7 +86,7 @@ struct DataCard<Footer: View>: View {
                     footer()
                 }
                 .foregroundStyle(colors.text.standard.muted)
-                .padding(.top, Sizing.PageLayout.ContentGrouping.gap - Typography.tag.lineBoxInset)
+                .padding(.top, Sizing.PageLayout.ContentGrouping.gap)
                 .padding(.horizontal, Spacing.n20)
             }
         }

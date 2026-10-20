@@ -29,6 +29,32 @@ pub fn render(tokens: &Value, fonts: Option<&InstalledFonts>) -> Result<String> 
         "\n{selectors} {{\n  text-box: trim-both cap alphabetic;\n}}\n\n"
     );
 
+    // Optical inset per style: the space a line box carries above the cap and below
+    // the baseline, (lineHeight − capHeight) / 2. Components add it where a hard edge
+    // has to read even against the prose's untrimmed line boxes, the way iOS's
+    // `opticalInset` does. Needs the real font files; without them the variables are
+    // absent and consumers fall back to plain spacing (their `var(..., 0px)`).
+    if let Some(fonts) = fonts {
+        let insets: Vec<String> = TYPOGRAPHY_FIELDS
+            .iter()
+            .filter_map(|name| {
+                let token = group.get(name)?.get("$value")?;
+                let family = token.get("fontFamily")?.as_str()?;
+                let weight = token.get("fontWeight")?.as_str()?;
+                let ratio = fonts.cap_ratio(family, weight)?;
+                let size = token.get("fontSize")?.as_f64()?;
+                let line_height = token.get("lineHeight")?.as_f64()?;
+                Some(format!(
+                    "  --text-optical-inset-{name}: {}px;",
+                    fmt_num(((line_height - size * ratio) / 2.0 * 100.0).round() / 100.0)
+                ))
+            })
+            .collect();
+        if !insets.is_empty() {
+            let _ = writeln!(out, ":root {{\n{}\n}}\n", insets.join("\n"));
+        }
+    }
+
     for name in TYPOGRAPHY_FIELDS {
         let token = group
             .get(name)
