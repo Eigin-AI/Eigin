@@ -108,7 +108,55 @@ struct IntegrationScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppAnchoredScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppIdentityHeader(
+                    name: displayName,
+                    kind: kindLabel,
+                    state: connectionState,
+                    status: statusLabel,
+                    icon: markImage,
+                    letter: markImage == nil ? String(displayName.prefix(1)) : nil
+                )
+
+                if let notice { notice }
+
+                facts
+
+                if let capabilityRows {
+                    AppRowsGroup(
+                        label: Localized.Integration.Screen.activeLabel,
+                        rows: capabilityRows
+                    )
+                }
+
+                offers
+
+                // The reconnect button is the only section worth
+                // anchoring: on a server with few tools, an unconditional
+                // spacer leaves the remove group dangling far below with
+                // nothing to justify the gap.
+                if needsReconnect {
+                    Spacer(minLength: 0)
+
+                    ReconnectButton(isReconnecting: isReconnecting) {
+                        reconnect()
+                    }
+
+                    if let reconnectError {
+                        Text(reconnectError)
+                            .typography(Typography.tag)
+                            .foregroundStyle(colors.text.standard.error)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                removeGroup
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: displayName,
                 leading: {
@@ -120,56 +168,6 @@ struct IntegrationScreen: View {
                     )
                 }
             )
-
-            AppAnchoredScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppIdentityHeader(
-                        name: displayName,
-                        kind: kindLabel,
-                        state: connectionState,
-                        status: statusLabel,
-                        icon: markImage,
-                        letter: markImage == nil ? String(displayName.prefix(1)) : nil
-                    )
-
-                    if let notice { notice }
-
-                    facts
-
-                    if let capabilityRows {
-                        AppRowsGroup(
-                            label: Localized.Integration.Screen.activeLabel,
-                            rows: capabilityRows
-                        )
-                    }
-
-                    offers
-
-                    // The reconnect button is the only section worth
-                    // anchoring: on a server with few tools, an unconditional
-                    // spacer leaves the remove group dangling far below with
-                    // nothing to justify the gap.
-                    if needsReconnect {
-                        Spacer(minLength: 0)
-
-                        ReconnectButton(isReconnecting: isReconnecting) {
-                            reconnect()
-                        }
-
-                        if let reconnectError {
-                            Text(reconnectError)
-                                .typography(Typography.tag)
-                                .foregroundStyle(colors.text.standard.error)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-
-                    removeGroup
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

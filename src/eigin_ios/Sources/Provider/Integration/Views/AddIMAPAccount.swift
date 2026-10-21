@@ -45,7 +45,32 @@ struct AddIMAPAccount: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                accountFields
+                imapFields
+                smtpFields
+
+                if case .error(let message) = phase {
+                    AppCardSurface {
+                        VStack(alignment: .leading, spacing: Spacing.n8) {
+                            Label(
+                                Localized.Errors.Connection.title,
+                                systemImage: "exclamationmark.triangle"
+                            )
+                            .typography(Typography.titleXS)
+                            .foregroundStyle(colors.text.standard.error)
+                            Text(message)
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.text.standard.muted)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Integrations.Imap.displayName,
                 leading: {
@@ -58,34 +83,6 @@ struct AddIMAPAccount: View {
                 },
                 trailing: { trailingAction }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    accountFields
-                    imapFields
-                    smtpFields
-
-                    if case .error(let message) = phase {
-                        AppCardSurface {
-                            VStack(alignment: .leading, spacing: Spacing.n8) {
-                                Label(
-                                    Localized.Errors.Connection.title,
-                                    systemImage: "exclamationmark.triangle"
-                                )
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.text.standard.error)
-                                Text(message)
-                                    .typography(Typography.tag)
-                                    .foregroundStyle(colors.text.standard.muted)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .onAppear { prefillFromExisting() }

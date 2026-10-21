@@ -1,29 +1,26 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
 
-  const { children }: { children: Snippet } = $props();
+  const { header, footer, children }: { header?: Snippet; footer?: Snippet; children: Snippet } =
+    $props();
 </script>
 
 <!--
   The scrolling body of a settings-style screen: groups stacked down the page
-  with the page-layout gap, inset by n16, and room to clear the bottom.
+  with the page-layout gap, inset by n16, and room to clear the bottom. The
+  header and footer float over it, and content softens as it scrolls beneath.
 
   The stack is at least as tall as the screen, so anything marked `bottom`
   rests on the floor and rides up as the content grows past it.
 -->
-<div class="scroll">
+<SoftEdgeScroll {header} {footer} flushFooter>
   <div class="stack">
     {@render children()}
   </div>
-</div>
+</SoftEdgeScroll>
 
 <style>
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
   .stack {
     display: flex;
     flex-direction: column;

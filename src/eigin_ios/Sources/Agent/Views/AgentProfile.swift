@@ -49,22 +49,19 @@ struct AgentProfile: View {
     }
 
     var body: some View {
-        let base = VStack(spacing: 0) {
-            AppNavigationHeader(title: Localized.Ui.agent, leading: { EmptyView() })
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    agentCard
-                    if let asset = upgradeAsset {
-                        voiceUpgradeCard(asset: asset)
-                    }
-                    providerCard
+        let base = SoftEdgeScrollView.tabRoot {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                agentCard
+                if let asset = upgradeAsset {
+                    voiceUpgradeCard(asset: asset)
                 }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
+                providerCard
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
+            AppNavigationHeader(title: Localized.Ui.agent, leading: { EmptyView() })
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

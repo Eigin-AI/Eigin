@@ -42,7 +42,6 @@
        only reports one on an installed PWA, so the device frame supplies it. */
     padding: max(var(--spacing-n4), var(--eigin-safe-area-top, env(safe-area-inset-top)))
       var(--spacing-n16) var(--spacing-n16);
-    background: var(--color-surface-standard-base);
   }
 
   .frame {

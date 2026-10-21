@@ -2,18 +2,16 @@ import SwiftUI
 
 /// The bottom navigation bar container.
 ///
-/// Displays a row of `AppNavigationTab` items separated by spacers, with two
-/// background styles: `.clear` blends transparently with the page; `.surface`
-/// shows a rounded-top filled surface using the standard background color.
+/// Displays a row of `AppNavigationTab` items separated by spacers. It has no
+/// surface of its own: it floats over the screen, and the soft edge beneath
+/// it softens content scrolling under it.
 struct AppNavigationBar: View {
+    /// Matches the drawn height: n8 top padding, 64pt tab row, n24 bottom padding.
     static var height: CGFloat {
-        Spacing.n8 + 64 + Spacing.n8
+        Spacing.n8 + 64 + Spacing.n24
     }
 
-    let background: AppNavigationBarBackground
     let tabs: [AppNavigationTab]
-
-    @Environment(\.colors) private var colors
 
     var body: some View {
         HStack(spacing: 0) {
@@ -28,60 +26,23 @@ struct AppNavigationBar: View {
         .padding(.bottom, Spacing.n24)
         .padding(.horizontal, Spacing.n48)
         .frame(maxWidth: .infinity)
-        .background(backgroundShape)
     }
-
-    @ViewBuilder
-    private var backgroundShape: some View {
-        switch background {
-        case .clear:
-            Color.clear
-        case .surface:
-            colors.surface.standard.base
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        cornerRadii: .init(
-                            topLeading: Radius.card,
-                            topTrailing: Radius.card
-                        ),
-                        style: .continuous
-                    )
-                )
-        }
-    }
-}
-
-enum AppNavigationBarBackground {
-    case clear
-    case surface
 }
 
 // MARK: - Preview
 
-#Preview("Surface Light") {
-    AppNavigationBarPreview(background: .surface)
+#Preview("Light") {
+    AppNavigationBarPreview()
         .resolveTheme()
 }
 
-#Preview("Surface Dark") {
-    AppNavigationBarPreview(background: .surface)
-        .resolveTheme()
-        .environment(\.colorScheme, .dark)
-}
-
-#Preview("Clear Light") {
-    AppNavigationBarPreview(background: .clear)
-        .resolveTheme()
-}
-
-#Preview("Clear Dark") {
-    AppNavigationBarPreview(background: .clear)
+#Preview("Dark") {
+    AppNavigationBarPreview()
         .resolveTheme()
         .environment(\.colorScheme, .dark)
 }
 
 private struct AppNavigationBarPreview: View {
-    let background: AppNavigationBarBackground
     @State private var selected = 0
     @Environment(\.colors) private var colors
 
@@ -91,7 +52,7 @@ private struct AppNavigationBarPreview: View {
 
             VStack {
                 Spacer()
-                AppNavigationBar(background: background, tabs: [
+                AppNavigationBar(tabs: [
                     AppNavigationTab(
                         icon: Iconography.Brand.avatar,
                         label: "Eigin",

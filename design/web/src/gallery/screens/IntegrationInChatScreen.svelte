@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import {
     ActionButton,
     BrandAvatar,
@@ -24,7 +25,6 @@
   let moment = $state<(typeof moments)[number]>("asking");
   let step = $state<ConnectPlatformStep>("disclosure");
   let draft = $state("");
-  let composerHeight = $state(0);
 
   useStageControls(() => controls);
 
@@ -103,21 +103,29 @@ Want me to put it in your calendar?`,
   why the agent can't help, and the agent says where to connect it instead.
 -->
 <div class="chat">
-  <NavigationHeader>
-    {#snippet leading()}
-      <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+  <SoftEdgeScroll>
+    {#snippet header()}
+      <NavigationHeader>
+        {#snippet leading()}
+          <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+        {/snippet}
+        {#snippet center()}
+          <BrandAvatar emoji="🪶" label="Agent">
+            <Icon name="brand/avatar" size="fill" />
+          </BrandAvatar>
+        {/snippet}
+        {#snippet trailing()}
+          <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
+        {/snippet}
+      </NavigationHeader>
     {/snippet}
-    {#snippet center()}
-      <BrandAvatar emoji="🪶" label="Agent">
-        <Icon name="brand/avatar" size="fill" />
-      </BrandAvatar>
+    {#snippet footer()}
+      <ChatInput
+        bind:value={draft}
+        isSendEnabled={draft.trim().length > 0}
+        onActionTap={() => {}}
+      />
     {/snippet}
-    {#snippet trailing()}
-      <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
-    {/snippet}
-  </NavigationHeader>
-
-  <div class="scroll" style:padding-bottom="calc({composerHeight}px + var(--spacing-n16))">
     <ChatFeed>
       <ChatUserMessage text={script.ask} />
 
@@ -139,11 +147,7 @@ Want me to put it in your calendar?`,
         </ChatBrandMessage>
       {/if}
     </ChatFeed>
-  </div>
-
-  <div class="composer" bind:clientHeight={composerHeight}>
-    <ChatInput bind:value={draft} isSendEnabled={draft.trim().length > 0} onActionTap={() => {}} />
-  </div>
+  </SoftEdgeScroll>
 
   <!-- One integration provides health, so the chat opens its connect sheet
        directly. Several provide email, so the person picks one first. -->
@@ -172,22 +176,5 @@ Want me to put it in your calendar?`,
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .composer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding-bottom: max(
-      var(--spacing-n8),
-      var(--eigin-safe-area-bottom, env(safe-area-inset-bottom))
-    );
   }
 </style>

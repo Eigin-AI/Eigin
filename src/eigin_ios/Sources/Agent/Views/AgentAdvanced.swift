@@ -6,7 +6,13 @@ struct AgentAdvanced: View {
     @Bindable var agent: Agent
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                coreCard
+                behaviourCard
+            }
+            .padding(.horizontal, Spacing.n16)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Agent.Profile.Section.advanced,
                 leading: {
@@ -18,15 +24,6 @@ struct AgentAdvanced: View {
                     )
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    coreCard
-                    behaviourCard
-                }
-                .padding(.horizontal, Spacing.n16)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

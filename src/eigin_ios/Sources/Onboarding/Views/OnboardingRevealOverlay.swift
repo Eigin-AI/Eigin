@@ -70,6 +70,8 @@ struct OnboardingRevealOverlay: View {
                 .frame(maxWidth: .infinity, minHeight: viewport.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // No header floats here; the soft edge softens content into the bare screen.
+            .softEdge()
             .scrollIndicators(.hidden)
             // The hatch plays out alone, held still; only then can a short screen scroll.
             .scrollDisabled(!landed)

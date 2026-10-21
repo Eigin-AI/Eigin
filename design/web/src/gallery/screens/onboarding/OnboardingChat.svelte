@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import {
     ActionButton,
     ChatBrandMessage,
@@ -53,8 +54,7 @@
   let turn = $state(0);
   let fill = $state(avatarProgress.conversation);
   let draft = $state(turns[0].suggestion ?? "");
-  let composerHeight = $state(0);
-  let feed = $state<HTMLDivElement>();
+  let feed = $state<HTMLElement>();
 
   const busy = $derived(thinking || streaming !== undefined || revealing);
 
@@ -122,26 +122,30 @@
   side is scripted, and your next reply waits in the composer.
 -->
 <div class="chat">
-  <NavigationHeader>
-    {#snippet leading()}
-      <ActionButton
-        icon="functional/arrow/left"
-        variant="open"
-        size="medium"
-        label="Back"
-        onclick={onBack}
+  <SoftEdgeScroll bind:scroller={feed}>
+    {#snippet header()}
+      <NavigationHeader>
+        {#snippet leading()}
+          <ActionButton
+            icon="functional/arrow/left"
+            variant="open"
+            size="medium"
+            label="Back"
+            onclick={onBack}
+          />
+        {/snippet}
+        {#snippet center()}
+          <OnboardingAvatar progress={fill} size={56} />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+    {#snippet footer()}
+      <ChatInput
+        bind:value={draft}
+        isSendEnabled={!busy && draft.trim().length > 0}
+        onSend={send}
       />
     {/snippet}
-    {#snippet center()}
-      <OnboardingAvatar progress={fill} size={56} />
-    {/snippet}
-  </NavigationHeader>
-
-  <div
-    class="scroll"
-    bind:this={feed}
-    style:padding-bottom="calc({composerHeight}px + var(--spacing-n16))"
-  >
     <ChatFeed>
       {#each items as item, index (index)}
         {#if item.kind === "agent"}
@@ -159,11 +163,7 @@
         <ChatBrandMessage><Markdown text={streaming} /></ChatBrandMessage>
       {/if}
     </ChatFeed>
-  </div>
-
-  <div class="composer" bind:clientHeight={composerHeight}>
-    <ChatInput bind:value={draft} isSendEnabled={!busy && draft.trim().length > 0} onSend={send} />
-  </div>
+  </SoftEdgeScroll>
 
   {#if revealing}
     <div class="reveal">
@@ -180,24 +180,6 @@
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    padding-top: var(--spacing-n16);
-    overflow-y: auto;
-  }
-
-  .composer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding-bottom: max(
-      var(--spacing-n8),
-      var(--eigin-safe-area-bottom, env(safe-area-inset-bottom))
-    );
   }
 
   .reveal {

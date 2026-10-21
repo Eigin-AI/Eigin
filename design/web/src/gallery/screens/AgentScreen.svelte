@@ -9,7 +9,12 @@
     Row,
   } from "@lib";
 
+  import ScreenScroll from "@gallery/screens/ScreenScroll.svelte";
+
   let tab = $state("agent");
+
+  /* `#/screens/agent?long` repeats the groups so the page overflows. */
+  let longPage = $derived(window.location.hash.includes("long"));
 
   let name = $state("Wren");
   let editingName = $state(false);
@@ -43,10 +48,12 @@
 
 <!-- The agent tab: who the agent is, how it speaks, and what runs it. -->
 <div class="agent">
-  <NavigationHeader title="Agent" />
+  <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Agent" />
+    {/snippet}
 
-  <div class="scroll">
-    <div class="blocks">
+    {#each Array.from({ length: longPage ? 4 : 1 }, (_, i) => i) as i (i)}
       <ContentGroup>
         <!-- Hero row: the name swaps for a text field in place. -->
         <div class="identity">
@@ -96,24 +103,25 @@
         />
         <Row title="Model" value="Auto" onclick={() => {}} />
       </ContentGroup>
-    </div>
-  </div>
-
-  <NavigationBar>
-    <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
-      {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
-      {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab
-      label="Settings"
-      selected={tab === "settings"}
-      onclick={() => (tab = "settings")}
-    >
-      {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
-    </NavigationTab>
-  </NavigationBar>
+    {/each}
+    {#snippet footer()}
+      <NavigationBar>
+        <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
+          {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
+          {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab
+          label="Settings"
+          selected={tab === "settings"}
+          onclick={() => (tab = "settings")}
+        >
+          {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
+        </NavigationTab>
+      </NavigationBar>
+    {/snippet}
+  </ScreenScroll>
 </div>
 
 <style>
@@ -122,19 +130,6 @@
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .blocks {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-gap);
-    padding: var(--spacing-n8) var(--spacing-n16) var(--spacing-n32);
   }
 
   .identity {

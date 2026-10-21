@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
   import SheetHeader from "./SheetHeader.svelte";
+  import SoftEdgeScroll from "../../internal/SoftEdgeScroll.svelte";
 
   interface Props {
     /** Two-way bindable presentation state. */
@@ -155,20 +156,27 @@
     >
       {#if chrome}
         <div class="grabber" aria-hidden="true"></div>
-        <SheetHeader
-          {title}
-          {label}
-          {description}
-          {descriptionContent}
-          onDismiss={showsDismissButton ? dismiss : undefined}
-        />
+        <!-- The header floats over the scroll, so content softens into it. -->
         <div class="content">
-          <div class="stack">
-            {@render primary()}
-            {#if secondary}
-              {@render secondary()}
-            {/if}
-          </div>
+          <SoftEdgeScroll shape="sheet" topOnly>
+            {#snippet header()}
+              <div class="header">
+                <SheetHeader
+                  {title}
+                  {label}
+                  {description}
+                  {descriptionContent}
+                  onDismiss={showsDismissButton ? dismiss : undefined}
+                />
+              </div>
+            {/snippet}
+            <div class="stack">
+              {@render primary()}
+              {#if secondary}
+                {@render secondary()}
+              {/if}
+            </div>
+          </SoftEdgeScroll>
         </div>
       {:else}
         {@render primary()}
@@ -206,7 +214,7 @@
     box-sizing: border-box;
     width: 100%;
     margin: 0;
-    padding: var(--spacing-n32) 0 0;
+    padding: 0;
     border: none;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
     background: var(--color-surface-standard-base);
@@ -228,9 +236,7 @@
     height: calc(100% - var(--eigin-safe-area-top, 0px) - var(--spacing-n32));
   }
 
-  /* Its own header sits at the very top, so there is no chrome to pad for. */
   .sheet.bare {
-    padding-top: 0;
     overflow: hidden;
   }
 
@@ -245,6 +251,7 @@
   /* The iOS drag indicator, drawn since the sheet itself cannot be dragged. */
   .grabber {
     position: absolute;
+    z-index: 2;
     top: var(--spacing-n8);
     left: 50%;
     width: 36px;
@@ -255,14 +262,21 @@
   }
 
   .content {
-    overflow-y: auto;
-    /* VStack(spacing: pyTop) between header and scroll area on iOS. */
-    margin-top: var(--spacing-n32);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
+  /* The sheet's top padding, carried by the floating header. */
+  .header {
+    padding-top: var(--spacing-n32);
+  }
+
+  /* pyTop between header and content on iOS. */
   .stack {
     display: flex;
     flex-direction: column;
+    padding-top: var(--spacing-n32);
     gap: var(--sizing-pageLayout-gap);
     padding-bottom: var(--spacing-n40);
   }

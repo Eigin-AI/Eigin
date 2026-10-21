@@ -50,7 +50,7 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    color: var(--color-icon-standard-disabled);
+    color: var(--color-icon-standard-muted);
     transition: color var(--motion-fast) var(--motion-easing-snap);
   }
 
@@ -64,7 +64,7 @@
   }
 
   .label {
-    color: var(--color-text-standard-disabled);
+    color: var(--color-text-standard-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

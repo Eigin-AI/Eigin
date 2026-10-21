@@ -160,6 +160,8 @@ struct AppChatInput: View {
             action: showStopButton ? (onStop ?? {}) : onSend
         )
         .disabled(!showStopButton && !isSendEnabled)
+        // Stable anchor for UI tests of send-driven flows.
+        .accessibilityIdentifier("chat-send")
     }
 }
 

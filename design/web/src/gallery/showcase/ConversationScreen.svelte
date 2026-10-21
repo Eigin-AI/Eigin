@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import { tick } from "svelte";
   import {
     ActionButton,
@@ -39,9 +40,7 @@
       return { label, description, symbol: symbol ?? symbols[index % symbols.length] };
     });
 
-  /* The composer overlays the feed, so the feed reserves its height below. */
-  let composerHeight = $state(0);
-  let scroll = $state<HTMLDivElement>();
+  let scroll = $state<HTMLElement>();
 
   /* Like the app, the feed rests on its latest turn, unless the shot has
      been scrolled somewhere on purpose. */
@@ -53,25 +52,25 @@
 
 <!-- A conversation written in the chat builder, in the chat screen's chrome. -->
 <div class="chat">
-  <NavigationHeader>
-    {#snippet leading()}
-      <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+  <SoftEdgeScroll bind:scroller={scroll}>
+    {#snippet header()}
+      <NavigationHeader>
+        {#snippet leading()}
+          <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+        {/snippet}
+        {#snippet center()}
+          <BrandAvatar emoji="🪶" label="Agent">
+            <Icon name="brand/avatar" size="fill" />
+          </BrandAvatar>
+        {/snippet}
+        {#snippet trailing()}
+          <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
+        {/snippet}
+      </NavigationHeader>
     {/snippet}
-    {#snippet center()}
-      <BrandAvatar emoji="🪶" label="Agent">
-        <Icon name="brand/avatar" size="fill" />
-      </BrandAvatar>
+    {#snippet footer()}
+      <ChatInput value="" isSendEnabled={false} onActionTap={() => {}} />
     {/snippet}
-    {#snippet trailing()}
-      <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
-    {/snippet}
-  </NavigationHeader>
-
-  <div
-    class="scroll"
-    bind:this={scroll}
-    style:padding-bottom="calc({composerHeight}px + var(--spacing-n16))"
-  >
     <ChatFeed>
       {#each turns as turn, index (index)}
         {#if turn.kind === "user"}
@@ -87,11 +86,7 @@
         {/if}
       {/each}
     </ChatFeed>
-  </div>
-
-  <div class="composer" bind:clientHeight={composerHeight}>
-    <ChatInput value="" isSendEnabled={false} onActionTap={() => {}} />
-  </div>
+  </SoftEdgeScroll>
 </div>
 
 <style>
@@ -101,22 +96,5 @@
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  .composer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding-bottom: max(
-      var(--spacing-n8),
-      var(--eigin-safe-area-bottom, env(safe-area-inset-bottom))
-    );
   }
 </style>

@@ -65,7 +65,7 @@ struct ProviderSelectSheetContent: View {
     }
 
     var body: some View {
-        ScrollView {
+        Group {
             VStack(spacing: Sizing.PageLayout.gap) {
                 AppSearchField(
                     text: $searchText,
@@ -129,7 +129,6 @@ struct ProviderSelectSheetContent: View {
             .padding(.top, Spacing.n8)
             .padding(.bottom, Spacing.n32)
         }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func markIcon(for preset: ProviderPreset) -> Image? {

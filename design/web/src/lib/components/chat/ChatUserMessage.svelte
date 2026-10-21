@@ -91,8 +91,8 @@
     transition: max-height var(--motion-slow) var(--motion-easing-gentle);
   }
 
-  /* The collapsed bubble fades out over a 28pt mask. */
+  /* The collapsed bubble fades out over an n28 mask. */
   .bubble.collapsed .body {
-    mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to bottom, black calc(100% - var(--spacing-n28)), transparent 100%);
   }
 </style>

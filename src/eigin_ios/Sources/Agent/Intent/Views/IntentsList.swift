@@ -29,19 +29,8 @@ struct IntentsList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppNavigationHeader(
-                title: Localized.Intents.title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                }
-            )
-
             if intents.isEmpty {
+                header
                 ContentUnavailableView(
                     Localized.Tools.No.Active.intents,
                     systemImage: "arrow.triangle.branch",
@@ -86,6 +75,7 @@ struct IntentsList: View {
                 .animation(Animations.smooth, value: intents.map(\.id))
                 .contentMargins(.top, 0, for: .scrollContent)
                 .scrollContentBackground(.hidden)
+                .softEdge { header }
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
@@ -102,6 +92,20 @@ struct IntentsList: View {
         } message: {
             Text(Localized.Intent.dismissWarning)
         }
+    }
+
+    private var header: some View {
+        AppNavigationHeader(
+            title: Localized.Intents.title,
+            leading: {
+                AppActionButton(
+                    icon: Iconography.Functional.Arrow.left,
+                    variant: .open,
+                    size: .medium,
+                    action: { dismiss() }
+                )
+            }
+        )
     }
 
     private func intentPreview(_ content: String) -> String {

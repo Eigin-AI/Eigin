@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "@lib";
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import AgentHatch from "@gallery/screens/onboarding/AgentHatch.svelte";
   import { LANDS } from "@gallery/screens/onboarding/hatch";
   import OnboardingSpeech from "@gallery/screens/onboarding/OnboardingSpeech.svelte";
@@ -47,55 +48,63 @@
   rises to the top, as the welcome avatar does, and only then does the agent
   name itself and say what it is for.
 -->
-<div class="reveal" class:landed bind:clientHeight={height}>
-  <div
-    class="slot"
-    class:landed
-    bind:this={slot}
-    style:translate={landed ? "0 0" : `0 ${toCentre}px`}
-    style:visibility={height > 0 ? "visible" : "hidden"}
-    style:--rise-easing={rise.easing}
-    style:--rise-ms="{rise.ms}ms"
-  >
-    <AgentHatch {emoji} {speed} size={HATCH} />
-  </div>
+<div class="screen">
+  <SoftEdgeScroll>
+    <div class="reveal" class:landed bind:clientHeight={height}>
+      <div
+        class="slot"
+        class:landed
+        bind:this={slot}
+        style:translate={landed ? "0 0" : `0 ${toCentre}px`}
+        style:visibility={height > 0 ? "visible" : "hidden"}
+        style:--rise-easing={rise.easing}
+        style:--rise-ms="{rise.ms}ms"
+      >
+        <AgentHatch {emoji} {speed} size={HATCH} />
+      </div>
 
-  {#if landed}
-    <!-- The name once it has risen, then a longer beat before the line. -->
-    <OnboardingSpeech
-      title="I am {agentName}."
-      text={digest}
-      titleDelay={500}
-      streamDelay={1100}
-      onFinished={(line) => (spoken = line)}
-    />
-  {/if}
+      {#if landed}
+        <!-- The name once it has risen, then a longer beat before the line. -->
+        <OnboardingSpeech
+          title="I am {agentName}."
+          text={digest}
+          titleDelay={500}
+          streamDelay={1100}
+          onFinished={(line) => (spoken = line)}
+        />
+      {/if}
 
-  <div class="actions" class:revealed inert={!revealed}>
-    <Button label="Continue" onclick={onContinue} />
-  </div>
+      <div class="actions" class:revealed inert={!revealed}>
+        <Button label="Continue" onclick={onContinue} />
+      </div>
+    </div>
+  </SoftEdgeScroll>
 </div>
 
 <style>
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--color-surface-standard-base);
+  }
+
+  .screen :global(.scroll) {
+    scrollbar-width: none;
+  }
+
   .reveal {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-n24);
     box-sizing: border-box;
-    height: 100%;
+    min-height: 100%;
     padding: calc(var(--eigin-safe-area-top, 0px) + var(--spacing-n32)) var(--spacing-n24)
       calc(var(--eigin-safe-area-bottom, 0px) + var(--spacing-n32));
     background: var(--color-surface-standard-base);
     /* The burst spills past the hatch; the screen edge is where it stops. */
     overflow: clip;
-  }
-
-  /* Once landed, a short screen scrolls the whole reveal, so Continue stays
-     reachable. Not before: the hatch plays out alone, held still. */
-  .reveal.landed {
-    overflow-y: auto;
-    scrollbar-width: none;
   }
 
   /* The splash is over once it lands, so the canvas stops spilling: clipped,

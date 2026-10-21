@@ -36,7 +36,35 @@ struct LocalProviderView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppAnchoredScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppIdentityHeader(
+                    name: Localized.Provider.Local.title,
+                    kind: Localized.Provider.Local.kindLabel,
+                    state: connectionState,
+                    status: statusLabel,
+                    icon: Iconography.Functional.lock
+                )
+
+                facts
+
+                // The row carries the live state and its own size, so the
+                // screen says neither: its button is the only place the
+                // decision lives.
+                AssetRow(asset: gemmaManager, showsAction: false)
+
+                if let action {
+                    AppButton(action.label, variant: action.variant) { action.act() }
+                }
+
+                if gemmaManager.state == .ready {
+                    deleteGroup
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Provider.Local.title,
                 leading: {
@@ -48,36 +76,6 @@ struct LocalProviderView: View {
                     )
                 }
             )
-
-            AppAnchoredScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppIdentityHeader(
-                        name: Localized.Provider.Local.title,
-                        kind: Localized.Provider.Local.kindLabel,
-                        state: connectionState,
-                        status: statusLabel,
-                        icon: Iconography.Functional.lock
-                    )
-
-                    facts
-
-                    // The row carries the live state and its own size, so the
-                    // screen says neither: its button is the only place the
-                    // decision lives.
-                    AssetRow(asset: gemmaManager, showsAction: false)
-
-                    if let action {
-                        AppButton(action.label, variant: action.variant) { action.act() }
-                    }
-
-                    if gemmaManager.state == .ready {
-                        deleteGroup
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())

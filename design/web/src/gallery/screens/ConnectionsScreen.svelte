@@ -12,13 +12,15 @@
   there is one place to look and one way to add.
 -->
 <div class="connections">
-  <NavigationHeader title="Connections">
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Connections">
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <!-- Descriptions say what a connection gives you. Only one that needs
          something from you carries a status. -->
     <ContentGroup label="AI providers">

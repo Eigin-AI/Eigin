@@ -38,7 +38,21 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: Sizing.PageLayout.pyTop) {
+        // The header floats over the scroll, so content softens into it.
+        SoftEdgeScrollView(softens: .top) {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                primary()
+                if hasSecondary {
+                    secondary()
+                }
+            }
+            .padding(.bottom, Sizing.PageLayout.pyBottom)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                contentHeight = $0
+                reportIntrinsicHeight()
+            }
+            .padding(.top, Sizing.PageLayout.pyTop)
+        } header: {
             header()
                 // Keep the header at its ideal height: once the presentation
                 // clamps to a fitted detent, a squeezed frame never changes
@@ -49,22 +63,9 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
                     headerHeight = $0
                     reportIntrinsicHeight()
                 }
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    primary()
-                    if hasSecondary {
-                        secondary()
-                    }
-                }
-                .padding(.bottom, Sizing.PageLayout.pyBottom)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                    contentHeight = $0
-                    reportIntrinsicHeight()
-                }
-            }
-            .scrollBounceBehavior(.basedOnSize)
+                .padding(.top, Sizing.PageLayout.pyTop)
         }
-        .padding(.top, Sizing.PageLayout.pyTop)
+        .environment(\.softEdgeShape, .sheet)
         .frame(maxWidth: .infinity, alignment: .top)
         .background {
             GeometryReader { _ in
@@ -82,7 +83,7 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
 
     private func reportIntrinsicHeight() {
         guard let intrinsicHeight else { return }
-        // Outer top padding + header + the VStack's header/content spacing + content,
+        // Top padding + header + the gap below it + content,
         // plus the safe areas the presentation leaves outside the scroll view: a
         // detent's height spans them too, so a fitted sheet that leaves them out
         // undershoots and clips its last row into the bottom edge.

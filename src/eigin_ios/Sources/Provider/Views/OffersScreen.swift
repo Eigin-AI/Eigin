@@ -24,7 +24,35 @@ struct OffersScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppSearchField(
+                    text: $searchText,
+                    placeholder: Localized.Integration.Offers.searchPlaceholder(
+                        "\(items.count)",
+                        noun
+                    )
+                )
+
+                if shown.isEmpty {
+                    Text(Localized.Integration.Offers.noMatches(searchText))
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.n24)
+                } else {
+                    AppRowsGroup(
+                        footnote: Localized.Integration.Offers.footnote,
+                        rows: shown.map { item in
+                            AppRowSpec(id: item, title: item, accessory: .none)
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Integration.Offers.title,
                 leading: {
@@ -36,37 +64,6 @@ struct OffersScreen: View {
                     )
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppSearchField(
-                        text: $searchText,
-                        placeholder: Localized.Integration.Offers.searchPlaceholder(
-                            "\(items.count)",
-                            noun
-                        )
-                    )
-
-                    if shown.isEmpty {
-                        Text(Localized.Integration.Offers.noMatches(searchText))
-                            .typography(Typography.note)
-                            .foregroundStyle(colors.text.standard.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, Spacing.n24)
-                    } else {
-                        AppRowsGroup(
-                            footnote: Localized.Integration.Offers.footnote,
-                            rows: shown.map { item in
-                                AppRowSpec(id: item, title: item, accessory: .none)
-                            }
-                        )
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

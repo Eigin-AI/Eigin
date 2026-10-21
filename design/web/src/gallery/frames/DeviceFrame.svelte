@@ -162,6 +162,10 @@
     overflow: hidden;
     position: relative;
     background: var(--color-surface-standard-base);
+    /* A no-op mask makes the screen a backdrop root: blurs inside it, like
+       the soft edge, see only the screen and not the bezel behind its rounded
+       corners. */
+    mask-image: linear-gradient(black, black);
   }
 
   /* Hardware, so it stays black in either scheme. */

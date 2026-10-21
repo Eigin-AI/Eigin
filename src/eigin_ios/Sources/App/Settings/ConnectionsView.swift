@@ -46,7 +46,15 @@ struct ConnectionsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                providersGroup
+                integrationsGroup
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Ui.connections,
                 leading: {
@@ -58,17 +66,6 @@ struct ConnectionsView: View {
                     )
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    providersGroup
-                    integrationsGroup
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

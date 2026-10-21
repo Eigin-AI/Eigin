@@ -48,18 +48,6 @@ struct SpaceBootstrapView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppNavigationHeader(
-                title: Localized.Space.Bootstrap.title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                }
-            )
-
             ChatFeed(
                 items: chatItems,
                 throttler: chatLoop.throttler,
@@ -69,7 +57,20 @@ struct SpaceBootstrapView: View {
                 isInputDisabled: isStreaming,
                 onSend: { _ in send() },
                 onStop: stopHandler,
-                allowsIcebreakers: false
+                allowsIcebreakers: false,
+                header: {
+                    AppNavigationHeader(
+                        title: Localized.Space.Bootstrap.title,
+                        leading: {
+                            AppActionButton(
+                                icon: Iconography.Functional.Arrow.left,
+                                variant: .open,
+                                size: .medium,
+                                action: { dismiss() }
+                            )
+                        }
+                    )
+                }
             )
             .safeAreaInset(edge: .bottom, spacing: Spacing.n8) {
                 if showFinishButton {

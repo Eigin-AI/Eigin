@@ -59,13 +59,15 @@
   usable searched, which is why the field sits above it.
 -->
 <div class="models">
-  <NavigationHeader title="Models">
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Models">
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <SearchField bind:value={query} placeholder="Search 47 models" />
 
     {#if nothingShown}

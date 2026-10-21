@@ -28,7 +28,33 @@ struct LocalAssetsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            // Label and card are one group, like every other settings
+            // screen; the wider page gap sits between sections.
+            VStack(alignment: .leading, spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                Text(Localized.Settings.LocalAssets.totalInstalled(String(installedCount)))
+                    .typography(Typography.miniLabel)
+                    .foregroundStyle(colors.text.standard.muted)
+                    .padding(.horizontal, Spacing.n8)
+
+                AppCardSurface(padding: 0) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(assets.enumerated()), id: \.element.id) { index, asset in
+                            if index > 0 {
+                                Divider()
+                            }
+                            AssetRow(asset: asset, onDelete: {
+                                deleteCandidate = AssetItem(asset)
+                            })
+                            .padding(.vertical, Spacing.n2)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Settings.LocalAssets.title,
                 leading: {
@@ -40,35 +66,6 @@ struct LocalAssetsView: View {
                     )
                 }
             )
-
-            ScrollView {
-                // Label and card are one group, like every other settings
-                // screen; the wider page gap sits between sections.
-                VStack(alignment: .leading, spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                    Text(Localized.Settings.LocalAssets.totalInstalled(String(installedCount)))
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .padding(.horizontal, Spacing.n8)
-
-                    AppCardSurface(padding: 0) {
-                        VStack(spacing: 0) {
-                            ForEach(Array(assets.enumerated()), id: \.element.id) { index, asset in
-                                if index > 0 {
-                                    Divider()
-                                }
-                                AssetRow(asset: asset, onDelete: {
-                                    deleteCandidate = AssetItem(asset)
-                                })
-                                .padding(.vertical, Spacing.n2)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

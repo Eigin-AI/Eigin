@@ -61,13 +61,15 @@
   below answers it — the notice never carries its own action.
 -->
 <div class="eigin">
-  <NavigationHeader title="Eigin Relay">
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Eigin Relay">
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <IdentityHeader
       name="Eigin Relay"
       kind="Private cloud AI"

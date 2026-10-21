@@ -60,13 +60,15 @@
   printing, and inventing a line per model would be worse than the name alone.
 -->
 <div class="provider">
-  <NavigationHeader title="Anthropic">
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Anthropic">
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <IdentityHeader
       name="Anthropic"
       kind="AI provider"
