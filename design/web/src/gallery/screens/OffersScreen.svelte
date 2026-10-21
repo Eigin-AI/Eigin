@@ -52,13 +52,15 @@
   something in it.
 -->
 <div class="list">
-  <NavigationHeader {title}>
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader {title}>
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <SearchField bind:value={query} placeholder="Search {items.length} {noun}" />
 
     {#if shown.length === 0}

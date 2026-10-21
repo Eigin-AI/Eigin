@@ -8,8 +8,12 @@
     NavigationTab,
   } from "@lib";
   import ChatListRow from "@gallery/screens/ChatListRow.svelte";
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
 
   let tab = $state("chats");
+
+  /* `#/screens/chat-list?long` repeats the sections so the list overflows. */
+  let longList = $derived(window.location.hash.includes("long"));
 
   const sections = [
     {
@@ -55,48 +59,59 @@
 
 <!-- The chat list: flat rows grouped by when they were last touched. -->
 <div class="chat-list">
-  <NavigationHeader>
-    {#snippet leading()}
-      <ActionButton icon="brand/security" variant="open" size="medium" label="Filter by space" />
+  <SoftEdgeScroll flushFooter>
+    {#snippet header()}
+      <NavigationHeader>
+        {#snippet leading()}
+          <ActionButton
+            icon="brand/security"
+            variant="open"
+            size="medium"
+            label="Filter by space"
+          />
+        {/snippet}
+        {#snippet center()}
+          <BrandAvatar emoji="🪶" label="Agent">
+            <Icon name="brand/avatar" size="fill" />
+          </BrandAvatar>
+        {/snippet}
+        {#snippet trailing()}
+          <ActionButton icon="functional/plus" variant="open" size="medium" label="New chat" />
+        {/snippet}
+      </NavigationHeader>
     {/snippet}
-    {#snippet center()}
-      <BrandAvatar emoji="🪶" label="Agent">
-        <Icon name="brand/avatar" size="fill" />
-      </BrandAvatar>
+    <div class="list">
+      {#each Array.from({ length: longList ? 4 : 1 }, (_, i) => i) as i (i)}
+        {#each sections as section, j (`${i}:${j}`)}
+          <section class="section">
+            <h2 class="t-miniLabel section-title">{section.title}</h2>
+            <div class="rows">
+              {#each section.chats as chat (chat.title)}
+                <ChatListRow title={chat.title} preview={chat.preview} emoji={chat.emoji} />
+              {/each}
+            </div>
+          </section>
+        {/each}
+      {/each}
+    </div>
+    {#snippet footer()}
+      <NavigationBar>
+        <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
+          {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
+          {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab
+          label="Settings"
+          selected={tab === "settings"}
+          onclick={() => (tab = "settings")}
+        >
+          {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
+        </NavigationTab>
+      </NavigationBar>
     {/snippet}
-    {#snippet trailing()}
-      <ActionButton icon="functional/plus" variant="open" size="medium" label="New chat" />
-    {/snippet}
-  </NavigationHeader>
-
-  <div class="scroll">
-    {#each sections as section (section.title)}
-      <section class="section">
-        <h2 class="t-miniLabel section-title">{section.title}</h2>
-        <div class="rows">
-          {#each section.chats as chat (chat.title)}
-            <ChatListRow title={chat.title} preview={chat.preview} emoji={chat.emoji} />
-          {/each}
-        </div>
-      </section>
-    {/each}
-  </div>
-
-  <NavigationBar>
-    <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
-      {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
-      {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab
-      label="Settings"
-      selected={tab === "settings"}
-      onclick={() => (tab = "settings")}
-    >
-      {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
-    </NavigationTab>
-  </NavigationBar>
+  </SoftEdgeScroll>
 </div>
 
 <style>
@@ -107,10 +122,7 @@
     background: var(--color-surface-standard-base);
   }
 
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
+  .list {
     /* Grouped lists inset rows by 16 on both edges. */
     padding: 0 var(--spacing-n16) var(--spacing-n32);
   }

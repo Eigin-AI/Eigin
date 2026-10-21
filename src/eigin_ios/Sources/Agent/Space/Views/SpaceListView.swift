@@ -24,28 +24,8 @@ struct SpaceListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppNavigationHeader(
-                title: Localized.Space.title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                },
-                trailing: {
-                    AppActionButton(
-                        icon: Iconography.Functional.plus,
-                        variant: .open,
-                        size: .medium,
-                        action: { showBootstrap = true }
-                    )
-                    .disabled(agent == nil || activeProvider == nil)
-                }
-            )
-
             if spaces.isEmpty {
+                header
                 ContentUnavailableView(
                     Localized.Space.title,
                     systemImage: "square.grid.2x2",
@@ -69,6 +49,29 @@ struct SpaceListView: View {
         }
     }
 
+    private var header: some View {
+        AppNavigationHeader(
+            title: Localized.Space.title,
+            leading: {
+                AppActionButton(
+                    icon: Iconography.Functional.Arrow.left,
+                    variant: .open,
+                    size: .medium,
+                    action: { dismiss() }
+                )
+            },
+            trailing: {
+                AppActionButton(
+                    icon: Iconography.Functional.plus,
+                    variant: .open,
+                    size: .medium,
+                    action: { showBootstrap = true }
+                )
+                .disabled(agent == nil || activeProvider == nil)
+            }
+        )
+    }
+
     private var spaceList: some View {
         ScrollView {
             LazyVStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
@@ -82,6 +85,7 @@ struct SpaceListView: View {
             .padding(.top, Spacing.n8)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .softEdge { header }
     }
 
     private func spaceRow(for space: Space) -> some View {

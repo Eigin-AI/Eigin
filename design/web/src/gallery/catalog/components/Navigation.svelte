@@ -9,7 +9,6 @@
   } from "@lib";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
 
-  let background = $state("surface");
   let selected = $state("chat");
 
   const tabs = [
@@ -23,11 +22,8 @@
 
 <div class="doc">
   <h2 class="t-titleM">Navigation Bar</h2>
-  <div class="controls">
-    <OptionSelector options={["surface", "clear"]} bind:value={background} />
-  </div>
   <div class="phone bottom">
-    <NavigationBar background={background as "surface" | "clear"}>
+    <NavigationBar>
       {#each tabs as tab (tab.id)}
         <NavigationTab
           label={tab.label}

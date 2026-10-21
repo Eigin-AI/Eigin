@@ -8,6 +8,7 @@ import Content from "@gallery/catalog/components/Content.svelte";
 import Controls from "@gallery/catalog/components/Controls.svelte";
 import Data from "@gallery/catalog/components/Data.svelte";
 import Disclosures from "@gallery/catalog/components/Disclosures.svelte";
+import SoftEdgeDoc from "@gallery/catalog/components/SoftEdgeDoc.svelte";
 import Images from "@gallery/catalog/components/Images.svelte";
 import Icons from "@gallery/catalog/fundamentals/Icons.svelte";
 import Inputs from "@gallery/catalog/components/Inputs.svelte";
@@ -42,6 +43,7 @@ export const catalogEntries: CatalogEntry[] = [
   { id: "disclosures", title: "Disclosures", section: "components", component: Disclosures },
   { id: "navigation", title: "Navigation", section: "components", component: Navigation },
   { id: "chat", title: "Chat messages", section: "components", component: Chat },
+  { id: "soft-edge", title: "Soft edge", section: "components", component: SoftEdgeDoc },
   { id: "morph", title: "Morph blob", section: "components", component: Morph },
   { id: "content", title: "Formatting", section: "components", component: Content },
   { id: "images", title: "Images", section: "components", component: Images },

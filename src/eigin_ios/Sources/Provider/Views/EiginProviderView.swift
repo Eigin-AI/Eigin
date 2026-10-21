@@ -15,7 +15,31 @@ struct EiginProviderView: View {
     @State private var showInfo = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppAnchoredScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppIdentityHeader(
+                    name: Localized.Provider.Eigin.title,
+                    kind: Localized.Provider.Eigin.rowSubtitle,
+                    state: connectionState,
+                    status: statusLabel
+                ) {
+                    AppBrandAvatar(size: 64)
+                }
+
+                if let notice { notice }
+
+                facts
+
+                Spacer(minLength: 0)
+
+                AppButton(Localized.Provider.Eigin.getMoreCredits, variant: .spot) {
+                    showPurchase = true
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Provider.Eigin.title,
                 leading: {
@@ -27,32 +51,6 @@ struct EiginProviderView: View {
                     )
                 }
             )
-
-            AppAnchoredScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppIdentityHeader(
-                        name: Localized.Provider.Eigin.title,
-                        kind: Localized.Provider.Eigin.rowSubtitle,
-                        state: connectionState,
-                        status: statusLabel
-                    ) {
-                        AppBrandAvatar(size: 64)
-                    }
-
-                    if let notice { notice }
-
-                    facts
-
-                    Spacer(minLength: 0)
-
-                    AppButton(Localized.Provider.Eigin.getMoreCredits, variant: .spot) {
-                        showPurchase = true
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.surface.standard.base.ignoresSafeArea())

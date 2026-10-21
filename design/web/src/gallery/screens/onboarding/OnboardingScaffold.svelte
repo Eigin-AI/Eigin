@@ -3,6 +3,7 @@
   import { fade } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { driveFrames } from "@lib";
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import OnboardingAvatar, {
     vesselSize as avatarVesselSize,
   } from "@gallery/screens/onboarding/OnboardingAvatar.svelte";
@@ -75,36 +76,38 @@
   it all, the whole screen scrolls, avatar and line included.
 -->
 <div class="scaffold" bind:clientHeight={height}>
-  <div class="scroller">
-    <div
-      class="avatar-slot"
-      style:translate="0 {toCentre * (1 - pose.rise)}px"
-      style:scale={pose.scale}
-      style:visibility={pose.rise === 1 || height > 0 ? "visible" : "hidden"}
-      bind:this={slot}
-    >
-      <OnboardingAvatar
-        {progress}
-        {showsProgress}
-        animatesIn={!entrance}
-        breath={pose.breath}
-        stretch={pose.stretch}
-        size={AVATAR}
-      />
-    </div>
+  <SoftEdgeScroll>
+    <div class="content">
+      <div
+        class="avatar-slot"
+        style:translate="0 {toCentre * (1 - pose.rise)}px"
+        style:scale={pose.scale}
+        style:visibility={pose.rise === 1 || height > 0 ? "visible" : "hidden"}
+        bind:this={slot}
+      >
+        <OnboardingAvatar
+          {progress}
+          {showsProgress}
+          animatesIn={!entrance}
+          breath={pose.breath}
+          stretch={pose.stretch}
+          size={AVATAR}
+        />
+      </div>
 
-    <!-- Stacked, so the outgoing and incoming turns overlap for one fade
+      <!-- Stacked, so the outgoing and incoming turns overlap for one fade
        without moving anything. -->
-    <div class="turns">
-      {#key turnId}
-        <div class="layer" out:fade={{ duration: TURN_FADE_MS, easing: cubicOut }}>
-          <OnboardingTurn {title} {text} {titleDelay}>
-            {@render children()}
-          </OnboardingTurn>
-        </div>
-      {/key}
+      <div class="turns">
+        {#key turnId}
+          <div class="layer" out:fade={{ duration: TURN_FADE_MS, easing: cubicOut }}>
+            <OnboardingTurn {title} {text} {titleDelay}>
+              {@render children()}
+            </OnboardingTurn>
+          </div>
+        {/key}
+      </div>
     </div>
-  </div>
+  </SoftEdgeScroll>
 </div>
 
 <style>
@@ -113,22 +116,26 @@
   .scaffold {
     position: relative;
     height: 100%;
+    display: flex;
+    flex-direction: column;
     background: var(--color-surface-standard-base);
     overflow: hidden;
   }
 
-  .scroller {
+  .scaffold :global(.scroll) {
+    scrollbar-width: none;
+  }
+
+  .content {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-n24);
     box-sizing: border-box;
-    height: 100%;
+    min-height: 100%;
     padding: calc(var(--eigin-safe-area-top, 0px) + var(--spacing-n32)) var(--spacing-n24)
       calc(var(--eigin-safe-area-bottom, 0px) + var(--spacing-n32));
     overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: none;
   }
 
   /* Above the turns, so the rising avatar never passes behind a title. */

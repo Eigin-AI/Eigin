@@ -74,20 +74,6 @@ struct OnboardingChat: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                AppNavigationHeader(
-                    leading: {
-                        AppActionButton(
-                            icon: Iconography.Functional.Arrow.left,
-                            variant: .open,
-                            size: .medium,
-                            action: onBack
-                        )
-                    },
-                    center: {
-                        OnboardingAvatar(progress: fillProgress, size: 56)
-                    }
-                )
-
                 ChatFeed(
                     items: chatItems,
                     throttler: chatLoop.throttler,
@@ -99,11 +85,23 @@ struct OnboardingChat: View {
                     onSend: { _ in handleSend() },
                     onStop: nil,
                     showsInputActions: false,
-                    allowsIcebreakers: false
+                    allowsIcebreakers: false,
+                    header: {
+                        AppNavigationHeader(
+                            leading: {
+                                AppActionButton(
+                                    icon: Iconography.Functional.Arrow.left,
+                                    variant: .open,
+                                    size: .medium,
+                                    action: onBack
+                                )
+                            },
+                            center: {
+                                OnboardingAvatar(progress: fillProgress, size: 56)
+                            }
+                        )
+                    }
                 )
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    Color.clear.frame(height: Spacing.n16)
-                }
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
 

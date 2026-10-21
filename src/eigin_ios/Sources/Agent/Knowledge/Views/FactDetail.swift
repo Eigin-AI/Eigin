@@ -23,6 +23,7 @@ struct FactDetail: View {
             relationshipsSection
         }
         .scrollContentBackground(.hidden)
+        .softEdge()
         .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationTitle(primaryName, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)

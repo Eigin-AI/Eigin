@@ -10,20 +10,17 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                AppNavigationHeader(title: Localized.Ui.settings, leading: { EmptyView() })
-
-                ScrollView {
-                    VStack(spacing: Sizing.PageLayout.gap) {
-                        generalGroup
-                        agentGroup
-                        systemGroup
-                    }
-                    .padding(.horizontal, Spacing.n16)
-                    .padding(.top, Spacing.n8)
-                    .padding(.bottom, Spacing.n32)
+            SoftEdgeScrollView.tabRoot {
+                VStack(spacing: Sizing.PageLayout.gap) {
+                    generalGroup
+                    agentGroup
+                    systemGroup
                 }
-                .scrollBounceBehavior(.basedOnSize)
+                .padding(.horizontal, Spacing.n16)
+                .padding(.top, Spacing.n8)
+                .padding(.bottom, Spacing.n32)
+            } header: {
+                AppNavigationHeader(title: Localized.Ui.settings, leading: { EmptyView() })
             }
             .background(colors.surface.standard.base.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)

@@ -62,7 +62,72 @@ struct PlatformIntegrationScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppAnchoredScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppIdentityHeader(
+                    name: displayName,
+                    kind: Localized.Integrations.Platform.kindLabel,
+                    state: isRefused ? .attention : .connected,
+                    status: isRefused
+                        ? Localized.Integrations.Platform.notAllowed
+                        : Localized.Integration.Screen.Status.connected,
+                    icon: type?.brandImage
+                )
+
+                // Only when it can't work at all. Tapping it goes where
+                // the link goes.
+                if isRefused {
+                    AppNotice(
+                        tone: .warning,
+                        title: Localized.Integrations.Platform.Screen.offTitle(
+                            displayName,
+                            settings
+                        ),
+                        body: Localized.Integrations.Platform.Screen.offBody(settings),
+                        action: { openSettings() }
+                    )
+                }
+
+                if notAsked {
+                    AppNotice(
+                        tone: .warning,
+                        title: Localized.Integrations.Platform.Screen
+                            .notAskedTitle(displayName),
+                        body: Localized.Integrations.Platform.Screen.notAskedBody,
+                        action: { askAgain() }
+                    )
+                }
+
+                if let source {
+                    kindsGroup(Localized.Integrations.Platform.reads, kinds: source.reads)
+                    kindsGroup(Localized.Integrations.Platform.saves, kinds: source.saves)
+                }
+
+                AppRowsGroup(
+                    footnote: Localized.Integrations.Platform.Screen.changeFootnote(settings),
+                    rows: [
+                        AppRowSpec(
+                            title: Localized.Integrations.Platform.Screen
+                                .changeAccess(settings),
+                            accessory: .link,
+                            action: { openSettings() }
+                        ),
+                    ]
+                )
+
+                AppRowsGroup(rows: [
+                    AppRowSpec(
+                        title: Localized.Integration.Screen.remove(displayName),
+                        accessory: .trash,
+                        tone: .destructive,
+                        action: { showRemoveConfirmation = true }
+                    ),
+                ])
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: displayName,
                 leading: {
@@ -74,73 +139,6 @@ struct PlatformIntegrationScreen: View {
                     )
                 }
             )
-
-            AppAnchoredScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppIdentityHeader(
-                        name: displayName,
-                        kind: Localized.Integrations.Platform.kindLabel,
-                        state: isRefused ? .attention : .connected,
-                        status: isRefused
-                            ? Localized.Integrations.Platform.notAllowed
-                            : Localized.Integration.Screen.Status.connected,
-                        icon: type?.brandImage
-                    )
-
-                    // Only when it can't work at all. Tapping it goes where
-                    // the link goes.
-                    if isRefused {
-                        AppNotice(
-                            tone: .warning,
-                            title: Localized.Integrations.Platform.Screen.offTitle(
-                                displayName,
-                                settings
-                            ),
-                            body: Localized.Integrations.Platform.Screen.offBody(settings),
-                            action: { openSettings() }
-                        )
-                    }
-
-                    if notAsked {
-                        AppNotice(
-                            tone: .warning,
-                            title: Localized.Integrations.Platform.Screen
-                                .notAskedTitle(displayName),
-                            body: Localized.Integrations.Platform.Screen.notAskedBody,
-                            action: { askAgain() }
-                        )
-                    }
-
-                    if let source {
-                        kindsGroup(Localized.Integrations.Platform.reads, kinds: source.reads)
-                        kindsGroup(Localized.Integrations.Platform.saves, kinds: source.saves)
-                    }
-
-                    AppRowsGroup(
-                        footnote: Localized.Integrations.Platform.Screen.changeFootnote(settings),
-                        rows: [
-                            AppRowSpec(
-                                title: Localized.Integrations.Platform.Screen
-                                    .changeAccess(settings),
-                                accessory: .link,
-                                action: { openSettings() }
-                            ),
-                        ]
-                    )
-
-                    AppRowsGroup(rows: [
-                        AppRowSpec(
-                            title: Localized.Integration.Screen.remove(displayName),
-                            accessory: .trash,
-                            tone: .destructive,
-                            action: { showRemoveConfirmation = true }
-                        ),
-                    ])
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

@@ -17,7 +17,25 @@ struct SpaceDetailView: View {
     @Query(sort: \Chat.updatedAt) private var allChats: [Chat]
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                presentationCard
+
+                VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                    instructionsCard
+                    privacyCard
+                }
+
+                AppButton(
+                    Localized.Space.Detail.Action.deleteSpace,
+                    variant: .destructive,
+                    size: .large
+                ) {
+                    showDeleteConfirmation = true
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Space.Detail.title,
                 leading: {
@@ -29,27 +47,6 @@ struct SpaceDetailView: View {
                     )
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    presentationCard
-
-                    VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                        instructionsCard
-                        privacyCard
-                    }
-
-                    AppButton(
-                        Localized.Space.Detail.Action.deleteSpace,
-                        variant: .destructive,
-                        size: .large
-                    ) {
-                        showDeleteConfirmation = true
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

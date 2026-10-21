@@ -131,19 +131,23 @@ struct ChatView: View {
         )
     }
 
+    private var header: some View {
+        ChatHeaderView(
+            chat: viewModel.chat,
+            emoji: agent?.emoji,
+            onBack: { dismiss() },
+            onPhone: startLiveCall,
+            isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting
+        )
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
 
         VStack(spacing: 0) {
-            ChatHeaderView(
-                chat: viewModel.chat,
-                emoji: agent?.emoji,
-                onBack: { dismiss() },
-                onPhone: startLiveCall,
-                isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting
-            )
-
             if !canSend, viewModel.window.messages.isEmpty {
+                header
+
                 ContentUnavailableView(
                     "No Agent",
                     systemImage: "person.crop.circle",
@@ -232,7 +236,8 @@ struct ChatView: View {
                                 integrations: integrations
                             )
                         }
-                        : nil
+                        : nil,
+                    header: { header }
                 )
             }
         }

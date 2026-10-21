@@ -79,13 +79,15 @@
   under the thing being downloaded.
 -->
 <div class="local">
-  <NavigationHeader title="Local model">
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Local model">
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <IdentityHeader
       name="Local model"
       kind="On this phone"

@@ -39,11 +39,11 @@ struct AppNavigationTab: View {
     // MARK: - Colors
 
     private var iconColor: Color {
-        isSelected ? colors.icon.standard.base : colors.icon.standard.disabled
+        isSelected ? colors.icon.standard.base : colors.icon.standard.muted
     }
 
     private var labelColor: Color {
-        isSelected ? colors.text.standard.base : colors.text.standard.disabled
+        isSelected ? colors.text.standard.base : colors.text.standard.muted
     }
 }
 

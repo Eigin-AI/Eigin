@@ -82,7 +82,6 @@ export { default as BrandAvatar } from "./components/navigation/BrandAvatar.svel
 export { default as NavigationBar } from "./components/navigation/NavigationBar.svelte";
 export { default as NavigationHeader } from "./components/navigation/NavigationHeader.svelte";
 export { default as NavigationTab } from "./components/navigation/NavigationTab.svelte";
-export type { NavigationBarBackground } from "./components/navigation/types";
 
 export type {
   TypographyName,

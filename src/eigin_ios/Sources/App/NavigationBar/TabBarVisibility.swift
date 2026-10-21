@@ -19,8 +19,8 @@ final class TabBarVisibility {
         let visible = !hidden
         guard visible != isVisible else { return }
         if visible {
-            // Returning: slide back up.
-            withAnimation(Animations.snap) {
+            // Returning: fade back in, unhurried.
+            withAnimation(.easeOut(duration: Animations.slow)) {
                 isVisible = visible
             }
         } else {

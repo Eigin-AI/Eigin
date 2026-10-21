@@ -35,7 +35,40 @@ struct ProviderModelsScreen: View {
     private static let recommendedLimit = 5
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppSearchField(
+                    text: $searchText,
+                    placeholder: Localized.Provider.Models.searchPrompt(
+                        "\(provider.availableModels.count)"
+                    )
+                )
+
+                if nothingShown {
+                    Text(Localized.Provider.Models.noMatches(searchText))
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.n8)
+                }
+
+                modelGroup(
+                    title: Localized.Provider.Models.recommended,
+                    models: recommended
+                )
+
+                modelGroup(title: Localized.Provider.Models.other, models: other)
+
+                modelGroup(
+                    title: Localized.Provider.Models.unknown,
+                    models: unknown,
+                    footnote: Localized.Provider.Models.unknownFootnote
+                )
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Provider.Models.title,
                 leading: {
@@ -52,44 +85,8 @@ struct ProviderModelsScreen: View {
                     }
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppSearchField(
-                        text: $searchText,
-                        placeholder: Localized.Provider.Models.searchPrompt(
-                            "\(provider.availableModels.count)"
-                        )
-                    )
-
-                    if nothingShown {
-                        Text(Localized.Provider.Models.noMatches(searchText))
-                            .typography(Typography.note)
-                            .foregroundStyle(colors.text.standard.muted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, Spacing.n8)
-                    }
-
-                    modelGroup(
-                        title: Localized.Provider.Models.recommended,
-                        models: recommended
-                    )
-
-                    modelGroup(title: Localized.Provider.Models.other, models: other)
-
-                    modelGroup(
-                        title: Localized.Provider.Models.unknown,
-                        models: unknown,
-                        footnote: Localized.Provider.Models.unknownFootnote
-                    )
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .onChange(of: searchText) { regroup() }
         }
+        .onChange(of: searchText) { regroup() }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task { await load() }

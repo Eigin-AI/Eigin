@@ -8,15 +8,12 @@ import SwiftUI
 /// brand avatar sits grounded against the action buttons; pass a `title:`
 /// instead to render a vertically-centered text title.
 ///
-/// Owns its own safe-area handling: the surface background extends into the
-/// top safe area so the app background never shows behind the status bar,
-/// and `.safeAreaPadding(.top, Spacing.n4)` ensures a small minimum gap
-/// when the system inset is absent (e.g. landscape).
+/// Has no surface of its own: it floats over the screen, and the soft edge
+/// beneath it softens content scrolling under it. Pass it as the `header` of
+/// `softEdge(header:footer:)`. `.safeAreaPadding(.top, Spacing.n4)` ensures a
+/// small minimum gap when the system inset is absent (e.g. landscape).
 ///
-/// Place it as the top element of a `VStack(spacing: 0)` above the scrollable
-/// content; the header's own background bleeds into the top safe area, so the
-/// owner only needs an opaque content background below it. Only the `leading`
-/// slot is required. `center` and `trailing` default to `EmptyView` and can be
+/// Only the `leading` slot is required. `center` and `trailing` default to `EmptyView` and can be
 /// omitted for simple back-nav headers.
 struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
     @ViewBuilder let leading: () -> Leading
@@ -56,7 +53,6 @@ struct AppNavigationHeader<Leading: View, Center: View, Trailing: View>: View {
             .frame(maxWidth: .infinity)
             .padding(.bottom, Spacing.n16)
             .padding(.horizontal, Spacing.n16)
-            .background(colors.surface.standard.base.ignoresSafeArea(edges: .top))
             .safeAreaPadding(.top, Spacing.n4)
     }
 

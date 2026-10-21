@@ -15,16 +15,23 @@
     { value: "de", label: "Deutsch" },
   ];
 
+  import ScreenScroll from "@gallery/screens/ScreenScroll.svelte";
+
   let language = $state("en");
   let tab = $state("settings");
+
+  /* `#/screens/settings?long` repeats the groups so the page overflows. */
+  let longPage = $derived(window.location.hash.includes("long"));
 </script>
 
 <!-- Settings as iOS composes it: a header, groups of rows, and the tab bar. -->
 <div class="settings">
-  <NavigationHeader title="Settings" />
+  <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title="Settings" />
+    {/snippet}
 
-  <div class="scroll">
-    <div class="groups">
+    {#each Array.from({ length: longPage ? 4 : 1 }, (_, i) => i) as i (i)}
       <ContentGroup label="General">
         <OptionPicker
           title="Language"
@@ -44,24 +51,25 @@
         <Row title="Advanced" onclick={() => {}} />
         <Row title="About" onclick={() => {}} />
       </ContentGroup>
-    </div>
-  </div>
-
-  <NavigationBar>
-    <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
-      {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
-      {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
-    </NavigationTab>
-    <NavigationTab
-      label="Settings"
-      selected={tab === "settings"}
-      onclick={() => (tab = "settings")}
-    >
-      {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
-    </NavigationTab>
-  </NavigationBar>
+    {/each}
+    {#snippet footer()}
+      <NavigationBar>
+        <NavigationTab label="Chats" selected={tab === "chats"} onclick={() => (tab = "chats")}>
+          {#snippet icon()}<Icon name="brand/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab label="Agent" selected={tab === "agent"} onclick={() => (tab = "agent")}>
+          {#snippet icon()}<Icon name="functional/avatar" size="fill" />{/snippet}
+        </NavigationTab>
+        <NavigationTab
+          label="Settings"
+          selected={tab === "settings"}
+          onclick={() => (tab = "settings")}
+        >
+          {#snippet icon()}<Icon name="brand/settings" size="fill" />{/snippet}
+        </NavigationTab>
+      </NavigationBar>
+    {/snippet}
+  </ScreenScroll>
 </div>
 
 <style>
@@ -70,19 +78,5 @@
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  /* PageLayout.gap between groups, n16 horizontal, n8 top, n32 bottom. */
-  .groups {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sizing-pageLayout-gap);
-    padding: var(--spacing-n8) var(--spacing-n16) var(--spacing-n32);
   }
 </style>

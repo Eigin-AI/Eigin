@@ -23,7 +23,97 @@ struct ToolPermissions: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                // All built-in capability categories in one card.
+                // Integration-backed categories (email, family & school)
+                // only appear once something provides them.
+                let integrationCategories = Set(
+                    Container.shared.integrationManager()
+                        .connectedCapabilities(integrations: integrations)
+                        .compactMap(\.toolCategory)
+                )
+                let categories = ToolCapability.Category.allCases
+                    .filter { !ToolRegistry.capabilities(for: $0).isEmpty }
+                    .filter { integrationCategories.contains($0) || !isIntegrationBacked($0) }
+
+                if !categories.isEmpty {
+                    AppCardSurface(padding: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(
+                                Array(categories.enumerated()),
+                                id: \.element
+                            ) { index, category in
+                                let capabilities = ToolRegistry.capabilities(for: category)
+
+                                if index > 0 {
+                                    Divider().padding(.horizontal, Spacing.n24)
+                                }
+
+                                AppDisclosure(category.displayName, variant: .open) {
+                                    VStack(spacing: Spacing.n16) {
+                                        ForEach(capabilities, id: \.key) { capability in
+                                            AppOptionPicker(
+                                                title: capability.displayName,
+                                                options: permissionOptions,
+                                                selection: builtInLevels[capability.key]
+                                                    ?? capability.defaultPermissionLevel
+                                            ) { newLevel in
+                                                builtInLevels[capability.key] = newLevel
+                                                persistGrant(
+                                                    capability: capability,
+                                                    level: newLevel
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // MCP per-server overrides in one card
+                if !enabledServers.isEmpty {
+                    AppCardSurface(padding: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(
+                                Array(enabledServers.enumerated()),
+                                id: \.element.id
+                            ) { index, server in
+                                if index > 0 {
+                                    Divider().padding(.horizontal, Spacing.n24)
+                                }
+
+                                AppDisclosure(server.name, variant: .open) {
+                                    if server.cachedToolNames.isEmpty {
+                                        Text(Localized.Mcp.noToolsDiscovered)
+                                            .typography(Typography.tag)
+                                            .foregroundStyle(colors.text.standard.muted)
+                                    } else {
+                                        VStack(spacing: Spacing.n16) {
+                                            ForEach(
+                                                server.cachedToolNames,
+                                                id: \.self
+                                            ) { toolName in
+                                                mcpToolPicker(
+                                                    server: server,
+                                                    toolName: toolName
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                .onAppear { loadGrants() }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: Localized.Settings.Permissions.title,
                 leading: {
@@ -35,99 +125,6 @@ struct ToolPermissions: View {
                     )
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    // All built-in capability categories in one card.
-                    // Integration-backed categories (email, family & school)
-                    // only appear once something provides them.
-                    let integrationCategories = Set(
-                        Container.shared.integrationManager()
-                            .connectedCapabilities(integrations: integrations)
-                            .compactMap(\.toolCategory)
-                    )
-                    let categories = ToolCapability.Category.allCases
-                        .filter { !ToolRegistry.capabilities(for: $0).isEmpty }
-                        .filter { integrationCategories.contains($0) || !isIntegrationBacked($0) }
-
-                    if !categories.isEmpty {
-                        AppCardSurface(padding: 0) {
-                            VStack(spacing: 0) {
-                                ForEach(
-                                    Array(categories.enumerated()),
-                                    id: \.element
-                                ) { index, category in
-                                    let capabilities = ToolRegistry.capabilities(for: category)
-
-                                    if index > 0 {
-                                        Divider().padding(.horizontal, Spacing.n24)
-                                    }
-
-                                    AppDisclosure(category.displayName, variant: .open) {
-                                        VStack(spacing: Spacing.n16) {
-                                            ForEach(capabilities, id: \.key) { capability in
-                                                AppOptionPicker(
-                                                    title: capability.displayName,
-                                                    options: permissionOptions,
-                                                    selection: builtInLevels[capability.key]
-                                                        ?? capability.defaultPermissionLevel
-                                                ) { newLevel in
-                                                    builtInLevels[capability.key] = newLevel
-                                                    persistGrant(
-                                                        capability: capability,
-                                                        level: newLevel
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // MCP per-server overrides in one card
-                    if !enabledServers.isEmpty {
-                        AppCardSurface(padding: 0) {
-                            VStack(spacing: 0) {
-                                ForEach(
-                                    Array(enabledServers.enumerated()),
-                                    id: \.element.id
-                                ) { index, server in
-                                    if index > 0 {
-                                        Divider().padding(.horizontal, Spacing.n24)
-                                    }
-
-                                    AppDisclosure(server.name, variant: .open) {
-                                        if server.cachedToolNames.isEmpty {
-                                            Text(Localized.Mcp.noToolsDiscovered)
-                                                .typography(Typography.tag)
-                                                .foregroundStyle(colors.text.standard.muted)
-                                        } else {
-                                            VStack(spacing: Spacing.n16) {
-                                                ForEach(
-                                                    server.cachedToolNames,
-                                                    id: \.self
-                                                ) { toolName in
-                                                    mcpToolPicker(
-                                                        server: server,
-                                                        toolName: toolName
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .onAppear { loadGrants() }
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

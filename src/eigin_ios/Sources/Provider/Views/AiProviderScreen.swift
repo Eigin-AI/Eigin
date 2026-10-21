@@ -44,7 +44,47 @@ struct AiProviderScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SoftEdgeScrollView {
+            VStack(spacing: Sizing.PageLayout.gap) {
+                AppIdentityHeader(
+                    name: provider.name,
+                    kind: Localized.Provider.AiScreen.kindLabel,
+                    state: connectionState,
+                    status: statusLabel,
+                    icon: providerMark(),
+                    letter: providerMark() == nil ? String(provider.name.prefix(1)) : nil
+                )
+
+                if let error = connectionError {
+                    AppNotice(
+                        tone: .warning,
+                        title: error.title,
+                        body: error.suggestion
+                    )
+                }
+
+                if isConnecting {
+                    connectingNotice
+                }
+
+                facts
+
+                if isChatGPTProvider {
+                    signInRefresh
+                }
+
+                if isReplacingKey {
+                    keyReplacement
+                }
+
+                models
+
+                remove
+            }
+            .padding(.horizontal, Spacing.n16)
+            .padding(.top, Spacing.n8)
+            .padding(.bottom, Spacing.n32)
+        } header: {
             AppNavigationHeader(
                 title: provider.name,
                 leading: {
@@ -62,49 +102,6 @@ struct AiProviderScreen: View {
                     }
                 }
             )
-
-            ScrollView {
-                VStack(spacing: Sizing.PageLayout.gap) {
-                    AppIdentityHeader(
-                        name: provider.name,
-                        kind: Localized.Provider.AiScreen.kindLabel,
-                        state: connectionState,
-                        status: statusLabel,
-                        icon: providerMark(),
-                        letter: providerMark() == nil ? String(provider.name.prefix(1)) : nil
-                    )
-
-                    if let error = connectionError {
-                        AppNotice(
-                            tone: .warning,
-                            title: error.title,
-                            body: error.suggestion
-                        )
-                    }
-
-                    if isConnecting {
-                        connectingNotice
-                    }
-
-                    facts
-
-                    if isChatGPTProvider {
-                        signInRefresh
-                    }
-
-                    if isReplacingKey {
-                        keyReplacement
-                    }
-
-                    models
-
-                    remove
-                }
-                .padding(.horizontal, Spacing.n16)
-                .padding(.top, Spacing.n8)
-                .padding(.bottom, Spacing.n32)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

@@ -87,13 +87,15 @@
   category — the only place in the app where the word MCP appears at all.
 -->
 <div class="integration">
-  <NavigationHeader title={subject.name}>
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title={subject.name}>
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <IdentityHeader
       name={subject.name}
       kind={subject.summary}

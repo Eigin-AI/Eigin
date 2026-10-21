@@ -11,7 +11,61 @@ struct IntentDetail: View {
     @State private var showDismissConfirmation = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        List {
+            Section {
+                Text(intent.content)
+                    .typography(Typography.body)
+                    .foregroundStyle(colors.text.standard.base)
+            }
+
+            if !intent.tasks.isEmpty {
+                Section(Localized.Intent.tasks) {
+                    ForEach(intent.tasks) { task in
+                        taskRow(task)
+                    }
+                }
+            }
+
+            if !intent.events.isEmpty {
+                Section(Localized.Intent.events) {
+                    ForEach(intent.events) { event in
+                        LabeledContent(event.content) {
+                            Text(LocalDateFormatter.string(from: event.at))
+                                .typography(Typography.note)
+                                .foregroundStyle(colors.text.standard.muted)
+                        }
+                    }
+                }
+            }
+
+            if !intent.schedules.isEmpty {
+                Section(Localized.Intent.schedules) {
+                    ForEach(intent.schedules) { schedule in
+                        LabeledContent(schedule.content) {
+                            Text(scheduleSummary(schedule))
+                                .typography(Typography.note)
+                                .foregroundStyle(colors.text.standard.muted)
+                        }
+                    }
+                }
+            }
+
+            Section(Localized.Ui.details) {
+                LabeledContent(Localized.Ui.created) {
+                    Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+                LabeledContent(Localized.Tools.Last.updated) {
+                    Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+            }
+        }
+        .contentMargins(.top, 0, for: .scrollContent)
+        .scrollContentBackground(.hidden)
+        .softEdge {
             AppNavigationHeader(
                 title: Localized.Ui.intent,
                 leading: {
@@ -31,61 +85,6 @@ struct IntentDetail: View {
                     )
                 }
             )
-
-            List {
-                Section {
-                    Text(intent.content)
-                        .typography(Typography.body)
-                        .foregroundStyle(colors.text.standard.base)
-                }
-
-                if !intent.tasks.isEmpty {
-                    Section(Localized.Intent.tasks) {
-                        ForEach(intent.tasks) { task in
-                            taskRow(task)
-                        }
-                    }
-                }
-
-                if !intent.events.isEmpty {
-                    Section(Localized.Intent.events) {
-                        ForEach(intent.events) { event in
-                            LabeledContent(event.content) {
-                                Text(LocalDateFormatter.string(from: event.at))
-                                    .typography(Typography.note)
-                                    .foregroundStyle(colors.text.standard.muted)
-                            }
-                        }
-                    }
-                }
-
-                if !intent.schedules.isEmpty {
-                    Section(Localized.Intent.schedules) {
-                        ForEach(intent.schedules) { schedule in
-                            LabeledContent(schedule.content) {
-                                Text(scheduleSummary(schedule))
-                                    .typography(Typography.note)
-                                    .foregroundStyle(colors.text.standard.muted)
-                            }
-                        }
-                    }
-                }
-
-                Section(Localized.Ui.details) {
-                    LabeledContent(Localized.Ui.created) {
-                        Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
-                            .typography(Typography.note)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                    LabeledContent(Localized.Tools.Last.updated) {
-                        Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                            .typography(Typography.note)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                }
-            }
-            .contentMargins(.top, 0, for: .scrollContent)
-            .scrollContentBackground(.hidden)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

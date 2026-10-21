@@ -14,7 +14,7 @@ struct NavigationBarView: View {
         VStack {
             Spacer()
             if tabBarVisibility.isVisible {
-                AppNavigationBar(background: .surface, tabs: [
+                AppNavigationBar(tabs: [
                     AppNavigationTab(
                         icon: Iconography.Brand.avatar,
                         label: Localized.Ui.chats,
@@ -37,7 +37,7 @@ struct NavigationBarView: View {
                         selectedTab = .settings
                     },
                 ])
-                .transition(.move(edge: .bottom))
+                .transition(.opacity)
             }
         }
         // Ignore the keyboard too so the bar stays anchored and never rides it.

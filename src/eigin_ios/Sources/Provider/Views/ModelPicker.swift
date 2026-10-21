@@ -31,7 +31,25 @@ struct ModelPicker: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 0) {
+        List {
+            if selectableModels.isEmpty {
+                // No cached models: keep the loading state until the background refresh
+                // resolves,
+                // then show a genuine empty-catalog message if it still came back empty.
+                if isLoaded, !isRefreshing {
+                    emptyCatalog
+                } else {
+                    loadingPlaceholder
+                }
+            } else {
+                content
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search models")
+        .onChange(of: searchText) { prepare() }
+        .contentMargins(.top, 0, for: .scrollContent)
+        .scrollContentBackground(.hidden)
+        .softEdge {
             AppNavigationHeader(
                 title: Localized.Model.Picker.title,
                 leading: {
@@ -49,25 +67,6 @@ struct ModelPicker: View {
                     }
                 }
             )
-
-            List {
-                if selectableModels.isEmpty {
-                    // No cached models: keep the loading state until the background refresh
-                    // resolves,
-                    // then show a genuine empty-catalog message if it still came back empty.
-                    if isLoaded, !isRefreshing {
-                        emptyCatalog
-                    } else {
-                        loadingPlaceholder
-                    }
-                } else {
-                    content
-                }
-            }
-            .searchable(text: $searchText, prompt: "Search models")
-            .onChange(of: searchText) { prepare() }
-            .contentMargins(.top, 0, for: .scrollContent)
-            .scrollContentBackground(.hidden)
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

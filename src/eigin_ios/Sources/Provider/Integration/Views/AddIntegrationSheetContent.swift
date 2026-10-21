@@ -24,7 +24,7 @@ struct AddIntegrationSheetContent: View {
     @State private var selectedCategory: IntegrationCategory?
 
     var body: some View {
-        ScrollView {
+        Group {
             VStack(spacing: Sizing.PageLayout.gap) {
                 contents
             }
@@ -32,7 +32,6 @@ struct AddIntegrationSheetContent: View {
             .padding(.top, Spacing.n8)
             .padding(.bottom, Spacing.n32)
         }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     @Environment(\.colors) private var colors

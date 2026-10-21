@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
   import {
     ActionButton,
     BrandAvatar,
@@ -49,8 +50,8 @@
 
 Want me to hold Friday mornings open for the next month?`;
 
-  /* The composer overlays the feed, so the feed reserves its height below. */
-  let composerHeight = $state(0);
+  /* `#/screens/chat?long` repeats the conversation so the feed overflows. */
+  let longConversation = $derived(window.location.hash.includes("long"));
 </script>
 
 <!--
@@ -58,52 +59,53 @@ Want me to hold Friday mornings open for the next month?`;
   The tab bar is deliberately absent — iOS hides it on this screen.
 -->
 <div class="chat">
-  <NavigationHeader>
-    {#snippet leading()}
-      <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+  <SoftEdgeScroll>
+    {#snippet header()}
+      <NavigationHeader>
+        {#snippet leading()}
+          <ActionButton icon="functional/note" variant="open" size="medium" label="Conversations" />
+        {/snippet}
+        {#snippet center()}
+          <BrandAvatar emoji="🪶" label="Agent">
+            <Icon name="brand/avatar" size="fill" />
+          </BrandAvatar>
+        {/snippet}
+        {#snippet trailing()}
+          <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
+        {/snippet}
+      </NavigationHeader>
     {/snippet}
-    {#snippet center()}
-      <BrandAvatar emoji="🪶" label="Agent">
-        <Icon name="brand/avatar" size="fill" />
-      </BrandAvatar>
+    {#snippet footer()}
+      <ChatInput
+        bind:value={draft}
+        isSendEnabled={draft.trim().length > 0}
+        onActionTap={() => {}}
+      />
     {/snippet}
-    {#snippet trailing()}
-      <ActionButton icon="functional/phone" variant="open" size="medium" label="Call" />
-    {/snippet}
-  </NavigationHeader>
-
-  <div class="scroll" style:padding-bottom="calc({composerHeight}px + var(--spacing-n16))">
     <ChatFeed>
-      <ChatUserMessage text="What do my notes say about how I like to work in the mornings?" />
+      {#each Array.from({ length: longConversation ? 4 : 1 }, (_, i) => i) as i (i)}
+        <ChatUserMessage text="What do my notes say about how I like to work in the mornings?" />
 
-      <ToolGroup tools={lookups} />
+        <ToolGroup tools={lookups} />
 
-      <ChatBrandMessage>
-        <Markdown text={reply} />
-      </ChatBrandMessage>
+        <ChatBrandMessage>
+          <Markdown text={reply} />
+        </ChatBrandMessage>
 
-      {#if !optionsAnswered}
-        <OptionsGroup options={fridayOptions} onSelect={() => (optionsAnswered = true)} />
-      {/if}
+        {#if !optionsAnswered}
+          <OptionsGroup options={fridayOptions} onSelect={() => (optionsAnswered = true)} />
+        {/if}
 
-      <ChatUserMessage text="Alternate weeks, but leave the first Friday alone." />
+        <ChatUserMessage text="Alternate weeks, but leave the first Friday alone." />
 
-      <ChatBrandMessage>
-        <Markdown
-          text="Done. Every other Friday morning held, the first of each month untouched."
-        />
-      </ChatBrandMessage>
+        <ChatBrandMessage>
+          <Markdown
+            text="Done. Every other Friday morning held, the first of each month untouched."
+          />
+        </ChatBrandMessage>
+      {/each}
     </ChatFeed>
-  </div>
-
-  <!--
-    The composer anchors in a bottom safe-area inset, n16 above. That
-    inset reserves room in the scroll while content still scrolls underneath,
-    so the bar overlays the feed rather than cutting it off.
-  -->
-  <div class="composer" bind:clientHeight={composerHeight}>
-    <ChatInput bind:value={draft} isSendEnabled={draft.trim().length > 0} onActionTap={() => {}} />
-  </div>
+  </SoftEdgeScroll>
 </div>
 
 <style>
@@ -113,24 +115,5 @@ Want me to hold Friday mornings open for the next month?`;
     flex-direction: column;
     height: 100%;
     background: var(--color-surface-standard-base);
-  }
-
-  .scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  /* No backdrop: the bar is the capsule, and the feed shows around it, the
-     way it does on iOS. */
-  .composer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding-bottom: max(
-      var(--spacing-n8),
-      var(--eigin-safe-area-bottom, env(safe-area-inset-bottom))
-    );
   }
 </style>

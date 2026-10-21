@@ -60,6 +60,7 @@ struct FactsList: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .softEdge()
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
@@ -230,6 +231,7 @@ private struct FactTypeList: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .softEdge()
         .background(colors.surface.standard.base.ignoresSafeArea())
         .navigationTitle(header, style: Typography.titleXl)
         .navigationBarTitleDisplayMode(.inline)

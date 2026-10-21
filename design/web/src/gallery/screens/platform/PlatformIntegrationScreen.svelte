@@ -60,13 +60,15 @@
   saving can show as off.
 -->
 <div class="platform">
-  <NavigationHeader title={subject.name}>
-    {#snippet leading()}
-      <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
-    {/snippet}
-  </NavigationHeader>
-
   <ScreenScroll>
+    {#snippet header()}
+      <NavigationHeader title={subject.name}>
+        {#snippet leading()}
+          <ActionButton icon="functional/arrow/left" variant="open" size="medium" label="Back" />
+        {/snippet}
+      </NavigationHeader>
+    {/snippet}
+
     <IdentityHeader
       name={subject.name}
       kind="On this phone"

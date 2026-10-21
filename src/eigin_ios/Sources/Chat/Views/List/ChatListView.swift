@@ -37,30 +37,9 @@ struct ChatListView: View {
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                AppNavigationHeader(
-                    leading: {
-                        SpaceFilterMenu(
-                            spaces: spaces,
-                            selectedSpaceID: $selectedSpaceID,
-                            onManageSpaces: { path.append(ChatListDestination.manageSpaces) }
-                        )
-                    },
-                    center: {
-                        AppBrandAvatar(emoji: agent?.emoji)
-                    },
-                    trailing: {
-                        AppActionButton(
-                            icon: Iconography.Functional.plus,
-                            variant: .open,
-                            size: .medium,
-                            action: createNewChat
-                        )
-                        .disabled(agent == nil)
-                    }
-                )
-
                 Group {
                     if filteredChats.isEmpty {
+                        header
                         ContentUnavailableView(
                             Localized.Chat.EmptyState.title,
                             systemImage: "bubble",
@@ -201,6 +180,30 @@ struct ChatListView: View {
         return groups
     }
 
+    private var header: some View {
+        AppNavigationHeader(
+            leading: {
+                SpaceFilterMenu(
+                    spaces: spaces,
+                    selectedSpaceID: $selectedSpaceID,
+                    onManageSpaces: { path.append(ChatListDestination.manageSpaces) }
+                )
+            },
+            center: {
+                AppBrandAvatar(emoji: agent?.emoji)
+            },
+            trailing: {
+                AppActionButton(
+                    icon: Iconography.Functional.plus,
+                    variant: .open,
+                    size: .medium,
+                    action: createNewChat
+                )
+                .disabled(agent == nil)
+            }
+        )
+    }
+
     private var chatList: some View {
         List {
             ForEach(groupedChats, id: \.0) { title, sectionChats in
@@ -247,6 +250,7 @@ struct ChatListView: View {
         }
         .listStyle(.grouped)
         .listSectionSeparator(.hidden)
+        .softEdge(header: { header }, footerHeight: AppNavigationBar.height)
         .animation(Animations.smooth, value: filteredChats.map(\.id))
         .scrollContentBackground(.hidden)
     }

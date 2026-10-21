@@ -40,6 +40,11 @@ struct FeedInteractions {
     var onConnectionResolved: ((CapabilityConnectResult) -> Void)?
 }
 
+/// What the feed measures of its scroll view to size the viewport.
+private struct ViewportMetrics: Equatable {
+    var containerHeight: CGFloat
+}
+
 /// A shared scrollable chat feed with input bar.
 ///
 /// Renders a list of `ChatItem`s plus optional streaming content, and provides
@@ -93,10 +98,28 @@ struct ChatFeed: View {
     @State private var sheets = ChatFeedSheetState()
     /// Owns scroll position, the current-turn pin, and grow-in tracking.
     @State private var scroll = FeedScrollCoordinator()
+    /// Scroll view container height; feeds the viewport computation.
+    @State private var containerHeight: CGFloat = 0
     @State private var didArmAutoCamera = false
     /// Show gate, appearance clock and stall clock for the thinking indicator.
     @State private var thinkingIndicatorState = ThinkingIndicatorState()
     @FocusState private var isInputFocused: Bool
+    @State private var composerHeight: CGFloat = 0
+    /// Floats over the top of the feed; the soft edge softens content beneath it.
+    private let headerView: AnyView
+    /// Home-indicator zone the feed scrolls under. Device-level, never the
+    /// keyboard inset; see ``WindowSafeArea``.
+    @State private var bottomSafeArea: CGFloat = 0
+
+    /// The usable viewport: the scroll container (which already excludes the
+    /// header's reserved inset) minus the composer zone that overlays it and
+    /// the home-indicator area.
+    private func updateViewportHeight() {
+        scroll.viewportHeight = max(
+            0,
+            containerHeight - bottomSafeArea - composerHeight - Spacing.n16
+        )
+    }
 
     init(
         items: [ChatItem],
@@ -117,7 +140,8 @@ struct ChatFeed: View {
         allowsIcebreakers: Bool = true,
         isLoaded: Bool = true,
         isContentReady: Bool = true,
-        onUserMessageFooterAction: (() -> Void)? = nil
+        onUserMessageFooterAction: (() -> Void)? = nil,
+        @ViewBuilder header: () -> some View = { EmptyView() }
     ) {
         self.items = items
         self.throttler = throttler
@@ -138,6 +162,7 @@ struct ChatFeed: View {
         self.isLoaded = isLoaded
         self.isContentReady = isContentReady
         self.onUserMessageFooterAction = onUserMessageFooterAction
+        headerView = AnyView(header())
     }
 
     var body: some View {
@@ -268,6 +293,13 @@ struct ChatFeed: View {
                         VStack(alignment: .leading, spacing: Sizing.Chat.Gap.message) {
                             ForEach(rows(items[pinnedIndex...])) { item in
                                 itemRow(for: item)
+                                    // Keep the just-sent message clear of the
+                                    // header's soft edge when pinned to the top.
+                                    .padding(
+                                        .top,
+                                        item.id == scroll.pinnedUserMessageID
+                                            ? Spacing.n16 : 0
+                                    )
                             }
                             typingIndicator
                         }
@@ -300,9 +332,18 @@ struct ChatFeed: View {
                         }
                     }
                 }
+                .padding(.bottom, composerHeight + Spacing.n16 + bottomSafeArea)
 
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
+            // The feed scrolls under the composer, so the content reaches the
+            // screen bottom; the composer is an overlay instead. The keyboard
+            // must not shrink the scroll: its measured height feeds the
+            // pinned-turn block's viewport reserve, and a keyboard-shrunk
+            // container would leave a send nowhere to pin to.
+            .ignoresSafeArea(.container, edges: .bottom)
+            .ignoresSafeArea(.keyboard)
+            .softEdge(header: { headerView }, footerHeight: composerHeight)
             .opacity(isContentReady ? 1 : 0)
             .defaultScrollAnchor(scroll.defaultAnchor(isAgentOpened: isAgentOpened))
             // One-time reveal at the bottom anchor; invisible mid-fade.
@@ -321,10 +362,17 @@ struct ChatFeed: View {
             }
             // Track the ScrollView container height. Used as `minHeight` of
             // the current-turn block so it always fills at least one viewport.
-            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                geometry.containerSize.height
+            .onScrollGeometryChange(for: ViewportMetrics.self) { geometry in
+                ViewportMetrics(containerHeight: geometry.containerSize.height)
             } action: { _, newValue in
-                scroll.viewportHeight = newValue
+                containerHeight = newValue.containerHeight
+                bottomSafeArea = WindowSafeArea.bottom
+                updateViewportHeight()
+            }
+            // The composer is an overlay, so its own resizes (attachments,
+            // icebreakers) don't touch the container height — re-derive here.
+            .onChange(of: composerHeight) { _, _ in
+                updateViewportHeight()
             }
             .overlay(alignment: .bottom) {
                 if !scroll.isAtBottom {
@@ -343,12 +391,12 @@ struct ChatFeed: View {
                                     .stroke(colors.text.standard.muted.opacity(0.2), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, Spacing.n16)
+                    .padding(.bottom, composerHeight + Spacing.n16)
                     .transition(.scale.combined(with: .opacity))
                 }
             }
             .animation(Animations.smooth, value: scroll.isAtBottom)
-            .safeAreaInset(edge: .bottom, spacing: Spacing.n16) {
+            .overlay(alignment: .bottom) {
                 VStack(spacing: 0) {
                     if showsIcebreakers {
                         IcebreakerFeed(
@@ -391,6 +439,9 @@ struct ChatFeed: View {
                 .animation(Animations.smooth, value: context.stagedAttachments.isEmpty)
                 .animation(Animations.smooth, value: showsIcebreakers)
                 .ignoresSafeArea(.container, edges: .horizontal)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    composerHeight = $0
+                }
             }
             // Scroll correction on prepend: old first item pinned to top.
             .onChange(of: items.first?.id) { oldFirstID, newFirstID in

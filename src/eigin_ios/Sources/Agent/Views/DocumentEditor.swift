@@ -9,26 +9,26 @@ struct DocumentEditor: View {
     @Binding var text: String
 
     var body: some View {
-        VStack(spacing: 0) {
-            AppNavigationHeader(
-                title: title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                }
-            )
-
-            TextEditor(text: $text)
-                .typography(Typography.chatMessageUser)
-                .padding(.horizontal, breakpoint.outer)
-                .scrollContentBackground(.hidden)
-                .scrollBounceBehavior(.basedOnSize)
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        // Softened by the header's soft edge as the text scrolls beneath it.
+        TextEditor(text: $text)
+            .typography(Typography.chatMessageUser)
+            .padding(.horizontal, breakpoint.outer)
+            .scrollContentBackground(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .softEdge {
+                AppNavigationHeader(
+                    title: title,
+                    leading: {
+                        AppActionButton(
+                            icon: Iconography.Functional.Arrow.left,
+                            variant: .open,
+                            size: .medium,
+                            action: { dismiss() }
+                        )
+                    }
+                )
+            }
+            .background(colors.surface.standard.base.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
     }
 }
