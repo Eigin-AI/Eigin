@@ -2,6 +2,44 @@ import { expect, test } from "@playwright/test";
 
 /* Components behaviour, as rendered in the gallery. */
 
+test("long user messages collapse to four line boxes and expand fully", async ({ page }) => {
+  await page.goto("/#/components/chat");
+  const bubble = page.locator("button.bubble.long").first();
+  const body = bubble.locator(".body");
+  await expect(bubble).toHaveAttribute("aria-expanded", "false");
+
+  const checkCollapsed = async () => {
+    const dimensions = await body.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(style.lineHeight),
+        mask: style.maskImage,
+      };
+    });
+    expect(dimensions.height).toBeCloseTo(4 * dimensions.lineHeight, 0);
+    expect(dimensions.mask).toContain(`${dimensions.lineHeight}px`);
+  };
+  await checkCollapsed();
+  // The preview and fade follow a changed typography token without JS measurements.
+  await body.evaluate((element) => {
+    element.style.lineHeight = "30px";
+  });
+  await page.waitForTimeout(500);
+  await checkCollapsed();
+
+  await bubble.click();
+  await expect(bubble).toHaveAttribute("aria-expanded", "true");
+  await expect
+    .poll(() => body.evaluate((element) => Math.abs(element.clientHeight - element.scrollHeight)))
+    .toBeLessThanOrEqual(1);
+  await expect(body).toHaveCSS("mask-image", "none");
+  await bubble.click();
+  await expect(bubble).toHaveAttribute("aria-expanded", "false");
+  await page.waitForTimeout(500);
+  await checkCollapsed();
+});
+
 test("a user message never clips the text it wraps", async ({ page }) => {
   await page.goto("/#/components/chat");
   const bubble = page.locator(".bubble").first();

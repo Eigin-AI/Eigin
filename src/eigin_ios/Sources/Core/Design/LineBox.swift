@@ -33,8 +33,7 @@ extension UIFont {
     }
 }
 
-/// Draws SwiftUI text centred in its line boxes. With an exact line height SwiftUI puts
-/// the first baseline at the font size and all the spare space below.
+/// Draws SwiftUI text centred within its typographic line boxes.
 struct CentredLineRenderer: TextRenderer {
     /// Where the first baseline should sit, from the top of the text.
     let baseline: CGFloat
@@ -45,7 +44,9 @@ struct CentredLineRenderer: TextRenderer {
 
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         guard let first = layout.first else { return }
-        context.translateBy(x: 0, y: baseline - first.origin.y)
+        // Drawing origins include glyph-overflow insets; preserve those when moving the baseline.
+        let baselineInLineBox = first.origin.y - first.typographicBounds.rect.minY
+        context.translateBy(x: 0, y: baseline - baselineInLineBox)
         for line in layout {
             context.draw(line)
         }

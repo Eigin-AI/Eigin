@@ -7,7 +7,18 @@ import SwiftUI
 struct AppChatUserMessage: View {
     let text: String
     private static let collapseThreshold = 200
-    private static let collapsedHeight: CGFloat = 110
+
+    /// Collapsed bubbles show four lines, the fourth fading out under the gradient.
+    /// Derived from the style's line box so it tracks the typography tokens.
+    private static let collapsedLines: CGFloat = 4
+
+    private static var lineHeight: CGFloat {
+        Typography.chatMessageUser.lineHeight ?? Typography.chatMessageUser.uiFont.lineHeight
+    }
+
+    private static var collapsedHeight: CGFloat {
+        collapsedLines * lineHeight
+    }
 
     @Environment(\.colors) private var colors
     @Environment(\.gridBreakpoint) private var breakpoint
@@ -46,7 +57,7 @@ struct AppChatUserMessage: View {
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
-                            .frame(height: 28)
+                            .frame(height: Self.lineHeight)
                         }
                     }
                 }

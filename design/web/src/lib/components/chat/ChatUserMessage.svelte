@@ -1,8 +1,7 @@
 <script lang="ts">
   /* Mirrors AppChatUserMessage: long messages render collapsed and expand on
-     tap. Thresholds, in characters and points. */
+     tap. The preview shows four line boxes with a one-line fade. */
   const COLLAPSE_THRESHOLD = 200;
-  const COLLAPSED_HEIGHT = 110;
 
   interface Props {
     text: string;
@@ -28,9 +27,7 @@
     return () => observer.disconnect();
   });
 
-  const maxHeight = $derived(
-    isCollapsed ? `${COLLAPSED_HEIGHT}px` : fullHeight ? `${fullHeight}px` : "none",
-  );
+  const maxHeight = $derived(isCollapsed ? "4lh" : fullHeight ? `${fullHeight}px` : "none");
 </script>
 
 <div class="row">
@@ -91,8 +88,8 @@
     transition: max-height var(--motion-slow) var(--motion-easing-gentle);
   }
 
-  /* The collapsed bubble fades out over an n28 mask. */
+  /* Follow the typography's line height for the fourth-line fade. */
   .bubble.collapsed .body {
-    mask-image: linear-gradient(to bottom, black calc(100% - var(--spacing-n28)), transparent 100%);
+    mask-image: linear-gradient(to bottom, black calc(100% - 1lh), transparent 100%);
   }
 </style>
