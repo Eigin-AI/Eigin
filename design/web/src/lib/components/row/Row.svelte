@@ -8,6 +8,8 @@
     title: string;
     /** Supporting line under the title. */
     description?: string;
+    /** Supporting line with inline markup, such as a link. Wins over `description`. */
+    descriptionContent?: Snippet;
     /** Current setting, shown at the trailing edge. Truncates rather than wraps. */
     value?: string;
     /** Leading glyph. */
@@ -29,6 +31,7 @@
   const {
     title,
     description,
+    descriptionContent,
     value,
     icon,
     letter,
@@ -77,7 +80,9 @@
 
   <span class="labels">
     <span class="t-titleXS title">{title}</span>
-    {#if description}
+    {#if descriptionContent}
+      <span class="t-tag description">{@render descriptionContent()}</span>
+    {:else if description}
       <span class="t-tag description">{description}</span>
     {/if}
   </span>

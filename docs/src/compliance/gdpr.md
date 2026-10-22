@@ -98,6 +98,6 @@ Record kept under Art. 30(1). Controller: Eigin ApS, CVR 46428765, Denmark, hell
 | TensorX | Hosted inference | Ireland, Finland | [DPA](https://tensorx.ai/dpa/), no retention, no training |
 | Mistral | Hosted inference | France | [DPA](https://legal.mistral.ai/terms/data-processing-addendum), zero data retention |
 | Corti | Hosted inference | Denmark | [Terms](https://www.corti.ai/legal/terms-and-conditions), DPA via [trust center](https://app.drata.com/trust/9cc6d701-0c38-11ee-865f-029d78a187d9), zero data retention |
-| Staan | Web search | France | [Privacy policy](https://staan.ai/privacy-policy). Zero data retention enabled for API requests; DPO at dpo@qwant.com |
+| Staan | Web search | France | [Privacy policy](https://staan.ai/privacy-policy). Zero data retention requested, not yet confirmed; DPO at dpo@qwant.com |
 
 Apple is not a processor. It sells the credit pack as an independent controller and sends the Relay only a signed transaction and refund notifications.

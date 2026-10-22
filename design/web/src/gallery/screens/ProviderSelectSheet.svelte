@@ -88,14 +88,6 @@
       <ContentGroup footnote="Anything with an OpenAI-compatible API.">
         <Row title="Connect by address" icon="functional/globe" onclick={() => {}} />
       </ContentGroup>
-
-      <!-- Matches the iOS disclosure, down to the privacy link on its own
-           line: present before you commit, quieter than body text. -->
-      <p class="t-note disclosure">
-        Conversations you send go directly to the third-party AI provider you connect, under their
-        terms.
-        <a class="policy" href="https://www.eigin.ai/privacy/">See the privacy policy.</a>
-      </p>
     </div>
   {/snippet}
 </Sheet>
@@ -106,18 +98,5 @@
     flex-direction: column;
     gap: var(--sizing-pageLayout-gap);
     padding: 0 var(--spacing-n16);
-  }
-
-  /* Level with the row text above it, like a group's own footnote. */
-  .disclosure {
-    margin: 0;
-    padding: 0 var(--spacing-n24);
-    color: var(--color-text-standard-disabled);
-  }
-
-  .policy {
-    display: block;
-    margin-top: var(--spacing-n8);
-    color: var(--color-text-standard-link);
   }
 </style>

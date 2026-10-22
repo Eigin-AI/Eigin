@@ -57,9 +57,13 @@ extension ChatService {
 }
 
 /// Implementation that uses ``LLMClientFactory`` to pick the right client for each provider.
+///
+/// Nothing is sent to a cloud provider the user has not allowed: every request,
+/// foreground or background, is refused here until they have.
 struct DefaultChatService: ChatService {
     let keychainService: KeychainService
     let providerCredentialResolver: any ProviderCredentialResolving
+    let consentStore: any AIConsentStore
 
     func chatCompletionStream(
         baseURL: String,
@@ -67,6 +71,9 @@ struct DefaultChatService: ChatService {
         messages: [ChatMessage],
         model: String
     ) async throws -> AsyncThrowingStream<String, Error> {
+        guard !consentStore.needsConsent(baseURL: baseURL) else {
+            throw AIConsentError.notAllowed
+        }
         guard let apiKey = await ProviderCredentials.apiToken(
             baseURL: baseURL,
             providerID: providerID,
@@ -113,6 +120,9 @@ struct DefaultChatService: ChatService {
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        guard !consentStore.needsConsent(baseURL: baseURL) else {
+            throw AIConsentError.notAllowed
+        }
         guard let apiKey = await ProviderCredentials.apiToken(
             baseURL: baseURL,
             providerID: providerID,

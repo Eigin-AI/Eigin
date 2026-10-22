@@ -13,6 +13,8 @@ Generating a reply sends the conversation to whichever engine you choose:
 - **Your own provider**: any OpenAI-compatible provider. Eigin highlights sensible options, though data handling follows each provider's terms.
 - **A local model**: runs entirely on-device, so nothing leaves for inference.
 
+Before anything goes to a cloud provider, Eigin asks once: what is shared, who receives it, Allow or Not now. Until you allow it, nothing is sent to that provider.
+
 #### Integrations
 Services you connect, like Gmail, are called directly from your device, without passing through Eigin infrastructure.
 

@@ -202,7 +202,8 @@ enum BackgroundPromptService {
         // Use AgenticChatLoop for full provider compatibility (thought signatures, etc.).
         let chatService: ChatService = DefaultChatService(
             keychainService: keychain,
-            providerCredentialResolver: Container.shared.providerCredentialResolver()
+            providerCredentialResolver: Container.shared.providerCredentialResolver(),
+            consentStore: Container.shared.aiConsentStore()
         )
 
         let (produced, rounds) = await runChatLoop(

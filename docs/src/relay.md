@@ -4,7 +4,7 @@ Eigin Relay is a connectivity service for Eigin agents. It brokers the few capab
 
 ## Search
 
-Web search queries go to the relay, which forwards them to [Staan](https://staan.ai), a European search API operated by the Qwant + Ecosia joint venture, EU-hosted in France with zero data retention, and returns the results with LLM-ready content snippets. Search draws from a shared usage pool; when it's exhausted, the app falls back to on-device search.
+Web search queries go to the relay, which forwards them to [Staan](https://staan.ai), a European search API operated by the Qwant + Ecosia joint venture, EU-hosted in France, and returns the results with LLM-ready content snippets. Search draws from a shared usage pool; when it's exhausted, the app falls back to on-device search.
 
 ## Inference
 

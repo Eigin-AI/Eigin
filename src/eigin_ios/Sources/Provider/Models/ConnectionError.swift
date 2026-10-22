@@ -44,6 +44,12 @@ struct ConnectionError: Equatable {
             recovery = .purchaseEiginRelayCredits
             return
         }
+        if error is AIConsentError {
+            title = Localized.Provider.Consent.notAllowedTitle
+            suggestion = Localized.Provider.Consent.notAllowedBody
+            rawDescription = error.localizedDescription
+            return
+        }
         if let signInError = error as? ChatGPTSubscriptionError {
             switch signInError {
             case .subscriptionRequired:

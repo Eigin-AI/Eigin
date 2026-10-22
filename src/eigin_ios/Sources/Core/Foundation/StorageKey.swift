@@ -22,6 +22,8 @@ enum StorageKey {
     /// Lives in `UserDefaults` rather than the SwiftData schema, so the watch
     /// context carries across taps without a migration.
     static let watchChat = "watchChat"
+    /// Provider addresses the user allowed sharing with (`AIConsentStore`).
+    static let aiConsent = "aiConsent"
 
     /// Whether the person said no to connecting a ``Capability``, by raw value
     /// (``DeclinedCapabilities``).

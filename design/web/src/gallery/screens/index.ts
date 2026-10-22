@@ -16,6 +16,7 @@ import OffersScreen from "@gallery/screens/OffersScreen.svelte";
 import LocalModelInfoScreen from "@gallery/screens/LocalModelInfoScreen.svelte";
 import LocalModelScreen from "@gallery/screens/LocalModelScreen.svelte";
 import RelayInfoScreen from "@gallery/screens/RelayInfoScreen.svelte";
+import RelayConsentScreen from "@gallery/screens/RelayConsentScreen.svelte";
 import ProviderConnectScreen from "@gallery/screens/ProviderConnectScreen.svelte";
 import ProviderSelectScreen from "@gallery/screens/ProviderSelectScreen.svelte";
 import SettingsScreen from "@gallery/screens/SettingsScreen.svelte";
@@ -182,8 +183,15 @@ export const screenEntries: ScreenEntry[] = [
     title: "Eigin Relay · Get credits",
     section: "connections",
     component: GetCreditsScreen,
+    about: "Buy a pack of credits, or restore an earlier purchase.",
+  },
+  {
+    id: "relay-consent",
+    title: "Eigin Relay · Share",
+    section: "connections",
+    component: RelayConsentScreen,
     about:
-      "Buy a pack of credits, or restore an earlier purchase. The small print about payments and third-party processing sits at the foot, before you commit.",
+      "Asked before the first conversation goes through the relay: what is shared, where it goes, and whether that is all right.",
   },
   {
     id: "relay-info",
@@ -238,7 +246,7 @@ export const screenEntries: ScreenEntry[] = [
     section: "connections",
     component: ProviderConnectScreen,
     about:
-      "Connect one provider, whichever way it lets you in: a browser sign-in, an API key, or an address. Nothing reports success before it has been checked.",
+      "Connect one provider, whichever way it lets you in: a browser sign-in, an API key, or an address. Nothing reports success before it has been checked, and nothing is saved until you allow sharing with it.",
   },
   {
     id: "integration",

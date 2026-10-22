@@ -121,7 +121,8 @@ extension Container {
         self {
             DefaultChatService(
                 keychainService: self.keychainService(),
-                providerCredentialResolver: self.providerCredentialResolver()
+                providerCredentialResolver: self.providerCredentialResolver(),
+                consentStore: self.aiConsentStore()
             )
         }.singleton
     }
@@ -141,6 +142,10 @@ extension Container {
         self {
             DefaultProviderCredentialResolver(chatGPT: self.chatGPTCredentialStore())
         }.singleton
+    }
+
+    var aiConsentStore: Factory<any AIConsentStore> {
+        self { DefaultAIConsentStore() }.singleton
     }
 
     var networkReachability: Factory<any NetworkReachability> {

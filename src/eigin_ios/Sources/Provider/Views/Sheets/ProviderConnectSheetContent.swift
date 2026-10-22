@@ -8,7 +8,8 @@ import SwiftUI
 /// The three routes ask for different things and fail differently, but they
 /// end the same: a header that says the connection is up, and one button back
 /// to where you were. Nothing here reports success before it has been
-/// checked. The name of an address-connected provider is offered rather than
+/// checked, and nothing is saved until the user allows sharing with it
+/// (App Store guideline 5.1.2). The name of an address-connected provider is offered rather than
 /// asked for: the domain is a good enough guess, and the one moment it is
 /// worth confirming is once the thing has actually answered.
 struct ProviderConnectSheetContent: View {
@@ -32,17 +33,35 @@ struct ProviderConnectSheetContent: View {
     /// in the header (how to get a key, where to add credits) stops being true
     /// once the connection is up, and its height crowds the connected UI on
     /// short screens — so presenters drop it via `onStepChange` at `.done`.
-    enum Step {
+    enum Step: Equatable {
         case start
         case working
         case failed
+        /// The check passed; asks before anything personal is sent.
+        case consent(AIConsentContent.Recipient)
         case done
+
+        /// The sheet title for this step, given the presenter's own.
+        func sheetTitle(_ base: String) -> String {
+            if case .consent(let recipient) = self { return recipient.title }
+            return base
+        }
+
+        /// The sheet description for this step, given the presenter's own.
+        func sheetDescription(_ base: String?) -> String? {
+            switch self {
+            case .consent(let recipient): recipient.description
+            case .done: nil
+            default: base
+            }
+        }
     }
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
     @Injected(\.keychainService) private var keychainService
     @Injected(\.chatGPTCredentialStore) private var chatGPTCredentialStore
+    @Injected(\.aiConsentStore) private var consentStore
 
     let mode: Mode
     /// The way in, carried straight from the group the row was picked from.
@@ -147,6 +166,8 @@ struct ProviderConnectSheetContent: View {
             workingStep
         case .failed:
             failedStep
+        case .consent:
+            consentStep
         case .done:
             doneStep
         }
@@ -256,6 +277,26 @@ struct ProviderConnectSheetContent: View {
             }
         }
         .padding(.horizontal, Spacing.n24)
+    }
+
+    // MARK: - Consent
+
+    /// The last question before the provider is saved. Not now goes back to
+    /// the list, with nothing saved.
+    private var consentStep: some View {
+        AIConsentContent(
+            recipient: consentRecipient,
+            onAllow: {
+                if let baseURL = pendingBaseURL { consentStore.allow(baseURL: baseURL) }
+                step = .done
+            },
+            onDecline: onBack
+        )
+        .padding(.horizontal, Spacing.n16)
+    }
+
+    private var consentRecipient: AIConsentContent.Recipient {
+        .provider(name: displayName, privacyPolicyURL: preset?.privacyPolicyURL)
     }
 
     // MARK: - Done
@@ -462,7 +503,7 @@ struct ProviderConnectSheetContent: View {
             // Held onto until the done step; the sheet commits on Done.
             pendingBaseURL = speculativeBaseURL
             pendingToken = apiToken
-            step = .done
+            step = .consent(consentRecipient)
             Haptics.success()
         } catch {
             guard isCurrent() else { return }

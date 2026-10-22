@@ -41,6 +41,8 @@ struct AppRowSpec: Identifiable {
     var id: String
     var title: String
     var description: String?
+    /// Supporting line with inline markup, such as a link. Wins over `description`.
+    var descriptionContent: AttributedString?
     var value: String?
     /// A custom whole-glyph view (a brand avatar, say), taking precedence
     /// over the icon/letter stand-ins.
@@ -58,6 +60,7 @@ struct AppRowSpec: Identifiable {
         id: String? = nil,
         title: String,
         description: String? = nil,
+        descriptionContent: AttributedString? = nil,
         value: String? = nil,
         mark: AnyView? = nil,
         icon: Image? = nil,
@@ -71,6 +74,7 @@ struct AppRowSpec: Identifiable {
         self.id = id ?? title
         self.title = title
         self.description = description
+        self.descriptionContent = descriptionContent
         self.value = value
         self.mark = mark
         self.icon = icon
@@ -127,7 +131,12 @@ struct AppRow: View {
                 Text(spec.title)
                     .typography(Typography.titleXS)
                     .foregroundStyle(titleColor)
-                if let description = spec.description {
+                if let content = spec.descriptionContent {
+                    Text(content)
+                        .typography(Typography.tag)
+                        .foregroundStyle(colors.text.standard.muted)
+                        .tint(colors.text.standard.link)
+                } else if let description = spec.description {
                     Text(description)
                         .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
