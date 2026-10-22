@@ -46,7 +46,9 @@ struct AppSheet<Header: View, Primary: View, Secondary: View>: View {
                     secondary()
                 }
             }
-            .padding(.bottom, Sizing.PageLayout.pyBottom)
+            // pyBottom includes the bottom safe area: the padding soaks it up
+            // so content sits pyBottom above the very bottom, matching web.
+            .padding(.bottom, max(0, Sizing.PageLayout.pyBottom - sheetInsets.bottom))
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
                 contentHeight = $0
                 reportIntrinsicHeight()
