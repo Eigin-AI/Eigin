@@ -26,17 +26,9 @@ final class FeedScrollCoordinator {
     /// What produced the pending item change.
     private var intent: FeedIntent = .idle
 
-    /// The `defaultScrollAnchor` for the feed, picked from the current mode.
-    ///
-    /// - pagination or a pinned turn → `nil`: neither should be tugged by a
-    ///   default anchor. A pending pagination batch is held in place by an
-    ///   explicit `scrollTo`, and a `.bottom` default would fight it; an
-    ///   active pin would be clipped by `.bottom` re-asserting past it.
-    /// - agent-initiated opening (first item isn't a user message) → `.top`:
-    ///   a long opening summary shows from its top instead of bottom-anchoring
-    ///   past it.
-    /// - otherwise → `.bottom`: a normal conversation rests at the latest reply.
-    func defaultAnchor(isAgentOpened: Bool) -> UnitPoint? {
+    /// Initial positioning only; content growth must preserve the reader's position.
+    /// Explicit send and pagination navigation outrank the initial anchor.
+    func initialAnchor(isAgentOpened: Bool) -> UnitPoint? {
         if appendAnchorID != nil { return nil }
         if pinnedUserMessageID != nil { return nil }
         if isAgentOpened { return .top }

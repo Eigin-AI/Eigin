@@ -345,7 +345,10 @@ struct ChatFeed: View {
             .ignoresSafeArea(.keyboard)
             .softEdge(header: { headerView }, footerHeight: composerHeight)
             .opacity(isContentReady ? 1 : 0)
-            .defaultScrollAnchor(scroll.defaultAnchor(isAgentOpened: isAgentOpened))
+            .defaultScrollAnchor(
+                scroll.initialAnchor(isAgentOpened: isAgentOpened),
+                for: .initialOffset
+            )
             // One-time reveal at the bottom anchor; invisible mid-fade.
             .onChange(of: isContentReady) { _, isReady in
                 guard isReady,
