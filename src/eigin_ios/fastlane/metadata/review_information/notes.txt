@@ -7,7 +7,7 @@ A short walkthrough video: https://youtu.be/21q-JgungI8
 GETTING STARTED
 
 1. Open the app. Onboarding asks for your name and what you want help with.
-2. On the connect step, tap "Use Eigin", then Buy on "500 Credits" (consumable in-app purchase). Sandbox purchases grant credits right away.
+2. On the connect step, tap "Use Eigin". A sheet discloses what is shared with third-party AI and who receives it. Tap Allow, then Buy on "500 Credits" (consumable in-app purchase). Sandbox purchases grant credits right away.
 3. Onboarding ends with a short conversation. Ask the assistant to wrap it up whenever you like.
 
 Onboarding always uses cloud AI, so either credits or your own provider is required to finish it. An on-device model is available afterwards under Settings > Connections; it needs an iPhone 15 or newer.
@@ -21,6 +21,10 @@ THINGS TO TRY
 CREDITS
 
 Credits are consumable in-app purchases. "Recover credits" re-applies purchases made on this Apple Account, so a balance survives a reinstall.
+
+SHARING WITH THIRD-PARTY AI
+
+Before any personal data is shared with a third-party AI provider, Eigin clearly discloses what is shared and who receives it, and asks for explicit permission.
 
 PERMISSIONS
 
