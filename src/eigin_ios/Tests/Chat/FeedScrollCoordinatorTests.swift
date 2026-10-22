@@ -98,6 +98,34 @@ struct FeedScrollCoordinatorTests {
         #expect(coordinator.preStreamItemIDs.isEmpty)
     }
 
+    @Test(
+        "Incoming replies leave navigation alone at and away from the bottom",
+        arguments: [true, false]
+    )
+    func incomingReplyDoesNotNavigate(atBottom: Bool) {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.scrollPositionChanged(atBottom)
+
+        let outcome = coordinator.scrollBehaviorForNewItems([userItem("u1"), assistantItem("a1")])
+
+        #expect(outcome == .none)
+        #expect(coordinator.isAtBottom == atBottom)
+    }
+
+    @Test("Streaming and completion preserve the send pin")
+    func streamingPreservesPin() {
+        let coordinator = FeedScrollCoordinator()
+        coordinator.declareSending()
+        _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
+        let items = [userItem("u1"), assistantItem("a1")]
+
+        for phase: StreamThrottler.Phase in [.waiting, .streaming, .done, .idle] {
+            coordinator.phaseChanged(to: phase, items: items)
+            #expect(coordinator.pinnedUserMessageID == "u1")
+            #expect(coordinator.scrollBehaviorForNewItems(items) == .none)
+        }
+    }
+
     // MARK: - Reveal
 
     @Test("A normal conversation's first reveal rests at the bottom")
@@ -126,40 +154,40 @@ struct FeedScrollCoordinatorTests {
         #expect(!coordinator.shouldRevealAtBottom(isAgentOpened: false))
     }
 
-    // MARK: - Default anchor
+    // MARK: - Initial anchor
 
-    @Test("A normal conversation rests at the bottom")
-    func defaultAnchorBottom() {
+    @Test("A normal conversation initially opens at the bottom")
+    func initialAnchorBottom() {
         let coordinator = FeedScrollCoordinator()
 
-        #expect(coordinator.defaultAnchor(isAgentOpened: false) == .bottom)
+        #expect(coordinator.initialAnchor(isAgentOpened: false) == .bottom)
     }
 
     @Test("An agent-initiated opening anchors to the top")
-    func defaultAnchorTopForAgentOpen() {
+    func initialAnchorTopForAgentOpen() {
         let coordinator = FeedScrollCoordinator()
 
         // Opens with a summary that's longer than one viewport — top anchor
         // shows it from the top instead of bottom-anchoring past it.
-        #expect(coordinator.defaultAnchor(isAgentOpened: true) == .top)
+        #expect(coordinator.initialAnchor(isAgentOpened: true) == .top)
     }
 
-    @Test("A pinned turn drops the default anchor so it can't tug the pin")
-    func defaultAnchorNilWhilePinned() {
+    @Test("A pinned turn drops the initial anchor so it can't tug the pin")
+    func initialAnchorNilWhilePinned() {
         let coordinator = FeedScrollCoordinator()
         coordinator.declareSending()
         _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
 
         #expect(coordinator.pinnedUserMessageID == "u1")
-        #expect(coordinator.defaultAnchor(isAgentOpened: false) == nil)
+        #expect(coordinator.initialAnchor(isAgentOpened: false) == nil)
     }
 
-    @Test("A pending pagination batch drops the default anchor")
-    func defaultAnchorNilWhilePaginating() {
+    @Test("A pending pagination batch drops the initial anchor")
+    func initialAnchorNilWhilePaginating() {
         let coordinator = FeedScrollCoordinator()
         coordinator.beginLoadNewer(lastItemID: "a0")
 
-        #expect(coordinator.defaultAnchor(isAgentOpened: false) == nil)
+        #expect(coordinator.initialAnchor(isAgentOpened: false) == nil)
     }
 
     @Test("A pin wins over an agent-opened flag")
@@ -168,7 +196,7 @@ struct FeedScrollCoordinatorTests {
         coordinator.declareSending()
         _ = coordinator.scrollBehaviorForNewItems([userItem("u1")])
 
-        #expect(coordinator.defaultAnchor(isAgentOpened: true) == nil)
+        #expect(coordinator.initialAnchor(isAgentOpened: true) == nil)
     }
 
     @Test("A pending pagination batch wins over an agent-opened flag")
@@ -176,6 +204,6 @@ struct FeedScrollCoordinatorTests {
         let coordinator = FeedScrollCoordinator()
         coordinator.beginLoadNewer(lastItemID: "a0")
 
-        #expect(coordinator.defaultAnchor(isAgentOpened: true) == nil)
+        #expect(coordinator.initialAnchor(isAgentOpened: true) == nil)
     }
 }
