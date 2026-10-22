@@ -6,6 +6,10 @@ import Foundation
 /// (catalog projection from cached tool names, no connection needed) so the
 /// two stay namespaced identically.
 enum MCPNaming {
+    /// Delimiter between segments in IDs and capability keys — double so a
+    /// single underscore in a server or tool name can't read as a boundary.
+    static let namespaceDelimiter = "__"
+
     /// Sanitizes a server name for use in a tool/skill identifier:
     /// lowercased, spaces become underscores, non-alphanumeric/underscore
     /// characters dropped.
@@ -26,6 +30,6 @@ enum MCPNaming {
     /// server or tool name (e.g. "my_server") can't be misread as part of the
     /// delimiter when the name is split back apart.
     static func toolName(serverName: String, toolName: String) -> String {
-        "mcp__\(sanitize(serverName))__\(toolName)"
+        "mcp\(namespaceDelimiter)\(sanitize(serverName))\(namespaceDelimiter)\(toolName)"
     }
 }

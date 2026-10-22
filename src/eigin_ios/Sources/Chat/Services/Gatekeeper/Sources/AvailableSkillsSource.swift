@@ -7,8 +7,9 @@ import NaturalLanguage
 /// The last few messages are embedded and matched against skill descriptors
 /// (``SkillIndex``); the top matches render as compact hint lines — name +
 /// one-line description. When retrieval finds nothing above threshold, no
-/// skill section renders. When retrieval itself is unavailable (model assets
-/// missing), a capped list of the catalog appears instead.
+/// skill section renders. When retrieval is unavailable (model assets
+/// missing) and no exact name match anchors the context, a capped list of
+/// the catalog appears instead.
 @MainActor
 final class AvailableSkillsSource: SystemHintSource {
     let title = "Available skills"

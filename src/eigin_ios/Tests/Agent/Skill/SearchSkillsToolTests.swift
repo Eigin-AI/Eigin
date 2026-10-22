@@ -1,5 +1,7 @@
 @testable import Eigin
+import Factory
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("SearchSkillsTool")
@@ -77,6 +79,81 @@ struct SearchSkillsToolTests {
             makeCall(arguments: #"{"query": "anything"}"#),
             agent: makeAgent()
         )
+        #expect(!result.isError)
+        #expect(result.content.contains("unavailable"))
+        #expect(!result.content.contains("No matching skills"))
+    }
+}
+
+/// #317 reproduction, end to end: a connected GitLab MCP server (no server
+/// instructions, so its projected descriptor is boilerplate) must surface by
+/// name — even with the embedding model unavailable.
+@Suite("SearchSkillsTool - MCP", .serialized)
+struct SearchSkillsToolMCPTests {
+    @MainActor init() {
+        Container.shared.reset()
+        Container.shared.integrationManager.register {
+            @MainActor in IntegrationManager(
+                oauthService: FakeIntegrationOAuthService(),
+                imapCredentialStore: FakeIMAPCredentialStore(),
+                aulaCredentialStore: FakeAulaCredentialStore()
+            )
+        }
+    }
+
+    @MainActor
+    private func makeFixture() throws -> (Agent, Chat, ModelContainer) {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: Schema(SchemaV6.models, version: SchemaV6.versionIdentifier),
+            configurations: config
+        )
+        let agent = Agent(name: "TestAgent", providerID: UUID(), model: "test-model")
+        container.mainContext.insert(agent)
+        let chat = Chat(agentID: agent.id)
+        container.mainContext.insert(chat)
+        return (agent, chat, container)
+    }
+
+    @Test @MainActor func searchSurfacesInstructionlessMCPServerByName() async throws {
+        let (agent, chat, container) = try makeFixture()
+        let server = MCPServer(name: "GitLab", url: "https://example.com")
+        server.cachedToolNames = ["create_merge_request", "list_issues"]
+        container.mainContext.insert(server)
+
+        let tool = SearchSkillsTool(chatID: chat.id, skillIndex: SkillIndex(embed: { _ in nil }))
+        let result = await tool.execute(
+            ToolCall(
+                id: "call_search_mcp_\(UUID().uuidString)",
+                type: "function",
+                function: .init(name: "search_skills", arguments: #"{"query": "GitLab"}"#)
+            ),
+            agent: agent
+        )
+
+        #expect(!result.isError)
+        #expect(result.content.contains("mcp__gitlab"))
+    }
+
+    @Test @MainActor func searchStillReportsUnavailableWithoutAnIdentityMatch() async throws {
+        let (agent, chat, container) = try makeFixture()
+        let server = MCPServer(name: "GitLab", url: "https://example.com")
+        server.cachedToolNames = ["create_merge_request"]
+        container.mainContext.insert(server)
+
+        let tool = SearchSkillsTool(chatID: chat.id, skillIndex: SkillIndex(embed: { _ in nil }))
+        let result = await tool.execute(
+            ToolCall(
+                id: "call_search_mcp_\(UUID().uuidString)",
+                type: "function",
+                function: .init(
+                    name: "search_skills",
+                    arguments: #"{"query": "anything else so it doesn't match"}"#
+                )
+            ),
+            agent: agent
+        )
+
         #expect(!result.isError)
         #expect(result.content.contains("unavailable"))
         #expect(!result.content.contains("No matching skills"))

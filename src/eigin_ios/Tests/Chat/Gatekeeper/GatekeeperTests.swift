@@ -188,6 +188,22 @@ struct GatekeeperTests {
     }
 
     @Test func noSkillSectionWhenNothingMatchesThreshold() async {
+        // The message neither embeds close enough nor names the skill —
+        // nothing above threshold means no skill section. (A message naming a
+        // skill now hints it by name — see the #317 test below.)
+        let gatekeeper = makeGatekeeper(
+            skillIndex: noMatchSkillIndex(query: "remind me about the weather report")
+        )
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            messages: [userMessage("remind me about the weather report")]
+        ))
+        #expect(!(result.hint ?? "").contains("## Available skills"))
+    }
+
+    @Test func hintsSkillNamedInTheConversationEvenWithWeakSemantics() async {
+        // #317: naming the skill in the conversation qualifies it on lexical
+        // identity alone — an orthogonal embedding must not hide it.
         let gatekeeper = makeGatekeeper(
             skillIndex: noMatchSkillIndex(query: "find this issue on GitLab")
         )
@@ -195,7 +211,9 @@ struct GatekeeperTests {
             availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
             messages: [userMessage("find this issue on GitLab")]
         ))
-        #expect(!(result.hint ?? "").contains("## Available skills"))
+        let hint = result.hint ?? ""
+        #expect(hint.contains("## Available skills"))
+        #expect(hint.contains("gitlab"))
     }
 
     @Test func noSkillSectionInSmallContext() async {
@@ -210,6 +228,22 @@ struct GatekeeperTests {
     }
 
     @Test func fallsBackToCappedFullListWhenEmbedderUnavailable() async {
+        // Unavailable embedder and no exact name match in the message: nil
+        // matches leave the capped fallback list as the only source of the
+        // section, so the section + GitLab assertions pin this branch.
+        let gatekeeper = makeGatekeeper(skillIndex: SkillIndex(embed: { _ in nil }))
+        let result = await gatekeeper.beforeTurn(input(
+            availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
+            messages: [userMessage("remind me about the weather report")]
+        ))
+        let hint = result.hint ?? ""
+        #expect(hint.contains("## Available skills"))
+        #expect(hint.contains("GitLab (`gitlab`)"))
+    }
+
+    @Test func unavailableEmbedderStillSurfacesNamedSkill() async {
+        // #317: without the embedding model, an exact name match in the
+        // conversation is still trustworthy enough to hint.
         let gatekeeper = makeGatekeeper(skillIndex: SkillIndex(embed: { _ in nil }))
         let result = await gatekeeper.beforeTurn(input(
             availableSkills: [skill(id: "gitlab", displayName: "GitLab")],
@@ -217,7 +251,6 @@ struct GatekeeperTests {
         ))
         let hint = result.hint ?? ""
         #expect(hint.contains("## Available skills"))
-        #expect(hint.contains("GitLab"))
-        #expect(hint.contains("search_skills"))
+        #expect(hint.contains("GitLab (`gitlab`)"))
     }
 }
