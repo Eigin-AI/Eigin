@@ -6,11 +6,14 @@ struct ScoredSkill: Sendable {
     let score: Double
 }
 
-/// Retrieval over skill descriptors: scores candidates against a query and
-/// returns the best matches.
+/// Retrieval over skill descriptors: ranks candidates by a combination of
+/// exact lexical evidence (name, ID, tool words — ``SkillLexicalMatcher``)
+/// and embedding cosine, and returns the best matches.
 ///
-/// Returns `nil` when the embedder is unavailable (model assets missing), an
-/// empty array when nothing scored above `threshold`.
+/// Returns `nil` when the embedder is unavailable (model assets missing) and
+/// no exact name match anchors the query — callers treat that as "search
+/// unavailable", not a no-match. Empty array means retrieval ran and nothing
+/// scored above `threshold`.
 protocol SkillIndexing: Actor {
     func search(
         query: String,
@@ -67,8 +70,13 @@ actor SkillIndex: SkillIndexing {
     }
 
     /// Ranks `candidates` against a *decomposition* of the query — e.g. the
-    /// individual sentences of the last few messages. Each part is embedded and
-    /// scored separately; a skill's score is its best-matching part.
+    /// individual sentences of the last few messages. Each part is embedded
+    /// and scored separately; a skill's score is its best-matching part,
+    /// never lower than its best lexical match (name, ID, tool words).
+    ///
+    /// Lexical evidence weaker than exact name/ID only counts for skills that
+    /// also have an embedding vector — an embedder-less device must surface
+    /// only certain identity matches, not prefix or tool-word guesses.
     nonisolated func search(
         queryParts: [String],
         among candidates: [Skill],
@@ -79,19 +87,36 @@ actor SkillIndex: SkillIndexing {
         guard !parts.isEmpty else { return nil }
 
         let embeddedParts = await embeddedParts(parts)
-        guard !embeddedParts.isEmpty else { return nil }
-
         let descriptorVectors = await embeddings(for: candidates)
+        let lexical = await lexicalScores(for: candidates, queryParts: parts)
 
         let scored = candidates.compactMap { skill -> ScoredSkill? in
-            guard let descriptorVector = descriptorVectors[skill.id] else { return nil }
-            // A skill's score is its best-matching part.
-            let score = embeddedParts
-                .map { EmbeddingHelpers.cosineSimilarity($0, descriptorVector) }
-                .max() ?? 0
-            return score >= threshold ? ScoredSkill(skill: skill, score: score) : nil
+            let descriptorVector = descriptorVectors[skill.id]
+            let semantic = descriptorVector.map { vector in
+                embeddedParts
+                    .map { EmbeddingHelpers.cosineSimilarity($0, vector) }
+                    .max() ?? 0
+            } ?? 0
+            // Prefix and tool-word evidence needs an embedded query and a
+            // semantic vector to corroborate it; exact identity stands alone
+            // (see #317).
+            let lexicalScore = lexical[skill.id].map { match in
+                match.isExactName || (!embeddedParts.isEmpty && descriptorVector != nil)
+                    ? match.score : 0
+            } ?? 0
+            let score = max(semantic, lexicalScore)
+            guard score >= threshold else { return nil }
+            return ScoredSkill(skill: skill, score: score)
         }
-        .sorted { $0.score > $1.score }
+        .sorted { $0.score == $1.score ? $0.skill.id < $1.skill.id : $0.score > $1.score }
+
+        // Embedder produced nothing (down or asset-less) and no descriptor
+        // embedded: only exact identity matches surfaced, so anything else
+        // is "unavailable" — don't report a no-match the search never
+        // established.
+        if embeddedParts.isEmpty, descriptorVectors.isEmpty {
+            return scored.isEmpty ? nil : Array(scored.prefix(limit))
+        }
 
         return Array(scored.prefix(limit))
     }
@@ -99,6 +124,25 @@ actor SkillIndex: SkillIndexing {
     /// Embeds the query parts, skipping parts the embedder can't handle.
     private func embeddedParts(_ parts: [String]) -> [[Double]] {
         parts.compactMap(embed)
+    }
+
+    /// Lexical evidence per skill: exact/prefix token matches over display
+    /// name, ID, tool names, and descriptor tokens. Pure token work, so it
+    /// always runs on this actor — never on the main thread.
+    private func lexicalScores(
+        for candidates: [Skill],
+        queryParts: [String]
+    ) -> [String: (score: Double, isExactName: Bool)] {
+        let tokenizedParts = queryParts.map(SkillLexicalMatcher.tokens).filter { !$0.isEmpty }
+        guard !tokenizedParts.isEmpty else { return [:] }
+        var result: [String: (score: Double, isExactName: Bool)] = [:]
+        for skill in candidates {
+            let fields = SkillLexicalMatcher.fields(for: skill)
+            if let match = SkillLexicalMatcher.score(fields: fields, queryParts: tokenizedParts) {
+                result[skill.id] = match
+            }
+        }
+        return result
     }
 
     /// The descriptor vector per candidate, embedding and caching on first use.
