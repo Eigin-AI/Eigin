@@ -464,8 +464,12 @@ struct ProviderConnectSheetContent: View {
 
     // MARK: - Checks and creation
 
-    /// The check is the connect: fetching the model list is the first thing
-    /// the key has to survive, and nothing is saved until it does.
+    /// The check is the connect: fetching the model list and a one-token
+    /// completion ping are what the key has to survive, and nothing is saved
+    /// until it does. Some providers serve `/models` without a valid key, so
+    /// the ping is what actually rejects one. The ping throws only on 401/403;
+    /// other errors pass so a listed-but-broken or busy model never blocks a
+    /// good key.
     private func connectWithAPIKey() {
         connectionError = nil
         step = .working
@@ -493,6 +497,9 @@ struct ProviderConnectSheetContent: View {
         do {
             let client = LLMClientFactory.client(baseURL: speculativeBaseURL, apiToken: apiToken)
             let modelIDs = try await client.fetchModels()
+            if let model = KnownModelCatalog.bestModel(from: modelIDs) {
+                try await client.validateAPIKey(model: model)
+            }
             guard isCurrent() else { return }
             createdModels = modelIDs
 
@@ -508,7 +515,7 @@ struct ProviderConnectSheetContent: View {
         } catch {
             guard isCurrent() else { return }
             AppLogger.error(
-                "Failed to fetch models for provider: \(public: error.localizedDescription)",
+                "Failed to validate provider connection: \(public: error.localizedDescription)",
                 category: .onboarding
             )
             connectionError = ConnectionError(from: error)
