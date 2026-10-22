@@ -29,6 +29,8 @@ struct ProviderPreset: Identifiable, Hashable {
     let baseURL: String
     let helpText: String
     let apiKeyURL: String?
+    /// The provider's own privacy policy, linked where the user consents to sharing.
+    let privacyPolicyURL: String?
     /// SF Symbol name used when no bundled logo exists.
     let systemImage: String?
     let authMethod: AuthMethod
@@ -47,6 +49,7 @@ struct ProviderPreset: Identifiable, Hashable {
         baseURL: String,
         helpText: String,
         apiKeyURL: String?,
+        privacyPolicyURL: String? = nil,
         systemImage: String? = nil,
         authMethod: AuthMethod = .apiKey,
         oAuthAuthorizationURL: String? = nil,
@@ -59,6 +62,7 @@ struct ProviderPreset: Identifiable, Hashable {
         self.baseURL = baseURL
         self.helpText = helpText
         self.apiKeyURL = apiKeyURL
+        self.privacyPolicyURL = privacyPolicyURL
         self.systemImage = systemImage
         self.authMethod = authMethod
         self.oAuthAuthorizationURL = oAuthAuthorizationURL
@@ -80,8 +84,11 @@ struct ProviderPreset: Identifiable, Hashable {
     /// Whether this provider routes inference through the Eigin relay (authorized by credits, not a
     /// keychain API key).
     static func isRelay(_ baseURL: String) -> Bool {
-        baseURL.hasPrefix("eigin-relay://")
+        baseURL.hasPrefix(relayBaseURL)
     }
+
+    /// The address every Eigin relay provider is saved with.
+    static let relayBaseURL = "eigin-relay://"
 
     /// Whether this provider connects via ChatGPT subscription sign-in (SIWC). Inference goes to
     /// the Responses API on `api.openai.com`, authorized by a refreshable OAuth token rather than
@@ -122,6 +129,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "openai-chatgpt://",
             helpText: Localized.Provider.Setup.Chatgpt.instruction,
             apiKeyURL: nil,
+            privacyPolicyURL: "https://openai.com/policies/privacy-policy/",
             authMethod: .chatGPTSubscription,
             region: .usa
         ),
@@ -131,6 +139,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.openai.com/v1",
             helpText: Localized.Provider.Setup.Openai.instruction,
             apiKeyURL: "https://platform.openai.com/api-keys",
+            privacyPolicyURL: "https://openai.com/policies/privacy-policy/",
             region: .usa
         ),
         ProviderPreset(
@@ -139,6 +148,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.anthropic.com/v1",
             helpText: Localized.Provider.Setup.Anthropic.instruction,
             apiKeyURL: "https://platform.claude.com/settings/keys",
+            privacyPolicyURL: "https://www.anthropic.com/legal/privacy",
             region: .usa
         ),
         ProviderPreset(
@@ -147,6 +157,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
             helpText: Localized.Provider.Setup.Google.instruction,
             apiKeyURL: "https://aistudio.google.com/api-keys",
+            privacyPolicyURL: "https://policies.google.com/privacy",
             region: .usa
         ),
         ProviderPreset(
@@ -155,6 +166,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.mistral.ai/v1",
             helpText: Localized.Provider.Setup.Mistral.instruction,
             apiKeyURL: "https://console.mistral.ai/api-keys",
+            privacyPolicyURL: "https://legal.mistral.ai/terms/privacy-policy",
             region: .europe
         ),
         ProviderPreset(
@@ -163,6 +175,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.eurouter.ai/api/v1",
             helpText: Localized.Provider.Setup.Eurouter.instruction,
             apiKeyURL: "https://www.eurouter.ai/dashboard",
+            privacyPolicyURL: "https://www.eurouter.ai/privacy",
             authMethod: .oAuthPKCE,
             oAuthAuthorizationURL: "https://api.eurouter.ai/api/v1/auth",
             oAuthTokenExchangeURL: "https://api.eurouter.ai/api/v1/auth/keys",
@@ -174,6 +187,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://openrouter.ai/api/v1",
             helpText: Localized.Provider.Setup.Openrouter.instruction,
             apiKeyURL: "https://openrouter.ai/settings/credits",
+            privacyPolicyURL: "https://openrouter.ai/privacy",
             authMethod: .oAuthPKCE,
             oAuthAuthorizationURL: "https://openrouter.ai/auth",
             oAuthTokenExchangeURL: "https://openrouter.ai/api/v1/auth/keys",
@@ -185,6 +199,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.berget.ai/v1",
             helpText: Localized.Provider.Setup.Berget.instruction,
             apiKeyURL: "https://console.berget.ai/api-keys",
+            privacyPolicyURL: "https://berget.ai/privacy",
             region: .europe
         ),
         ProviderPreset(
@@ -193,6 +208,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://api.infercom.ai/v1",
             helpText: Localized.Provider.Setup.Infercom.instruction,
             apiKeyURL: "https://cloud.infercom.ai/apis",
+            privacyPolicyURL: "https://infercom.ai/privacypolicy/",
             region: .europe
         ),
         ProviderPreset(
@@ -201,6 +217,7 @@ struct ProviderPreset: Identifiable, Hashable {
             baseURL: "https://ai.eu.corti.app/v1",
             helpText: Localized.Provider.Setup.Corti.instruction,
             apiKeyURL: "https://console.corti.app",
+            privacyPolicyURL: "https://www.corti.ai/legal/privacy-policy",
             region: .europe
         ),
     ]

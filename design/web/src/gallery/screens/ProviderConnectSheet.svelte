@@ -10,6 +10,7 @@
     SubtleActionButton,
     TextInput,
   } from "@lib";
+  import AiConsent from "@gallery/screens/AiConsent.svelte";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
   import { useStageControls } from "@gallery/screens/stageControls.svelte";
 
@@ -18,7 +19,7 @@
   /* How you got here, and how far you have got. The app knows both; here they
      are driven by hand. */
   const routes = ["sign in", "api key", "address"] as const;
-  const steps = ["start", "working", "failed", "done"] as const;
+  const steps = ["start", "working", "failed", "consent", "done"] as const;
   let route = $state<(typeof routes)[number]>("sign in");
   let step = $state<(typeof steps)[number]>("start");
 
@@ -68,8 +69,18 @@
 -->
 <Sheet
   bind:open
-  title={step === "done" ? "Connected" : route === "address" ? "Connect address" : name}
-  description={step === "done" ? undefined : description}
+  title={step === "done"
+    ? "Connected"
+    : step === "consent"
+      ? `Share with ${name}?`
+      : route === "address"
+        ? "Connect address"
+        : name}
+  description={step === "done"
+    ? undefined
+    : step === "consent"
+      ? "To reply, Eigin sends your conversation to a cloud AI."
+      : description}
 >
   {#snippet primary()}
     <div class="flow">
@@ -95,6 +106,19 @@
         </ContentGroup>
 
         <Button label="Done" onclick={() => (open = false)} />
+      {:else if step === "consent"}
+        <!-- The last thing before the provider is saved: the check has passed,
+             and nothing personal has been sent yet. Not now goes back to the
+             list. -->
+        <AiConsent
+          recipient="own"
+          {name}
+          policyURL={route === "address"
+            ? undefined
+            : "https://openai.com/policies/privacy-policy/"}
+          onAllow={() => (step = "done")}
+          onDecline={() => (step = "start")}
+        />
       {:else if step === "working"}
         <!-- A wait is something the screen is telling you, so it is a notice
              like any other. Nothing to press but the way out. -->

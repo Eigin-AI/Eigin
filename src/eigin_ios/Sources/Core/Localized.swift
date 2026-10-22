@@ -3820,6 +3820,104 @@ enum Localized {
             }
         }
 
+        enum Consent {
+            /// Consent sheet: primary button that allows sharing.
+            static var allow: String {
+                Localized.get("provider.consent.allow")
+            }
+
+            /// Consent sheet row: data from connected services (body).
+            static var connectedBody: String {
+                Localized.get("provider.consent.connectedBody")
+            }
+
+            /// Consent sheet row: data from connected services (title).
+            static var connectedTitle: String {
+                Localized.get("provider.consent.connectedTitle")
+            }
+
+            /// Consent sheet row: the current conversation (body).
+            static var conversationBody: String {
+                Localized.get("provider.consent.conversationBody")
+            }
+
+            /// Consent sheet row: the current conversation (title).
+            static var conversationTitle: String {
+                Localized.get("provider.consent.conversationTitle")
+            }
+
+            /// Consent sheet description for a provider the user connects.
+            static var description: String {
+                Localized.get("provider.consent.description")
+            }
+
+            /// Consent sheet row body for a connected provider, as Markdown. The first argument is
+            /// the provider name, the second its privacy policy URL.
+            static func destinationOwn(_ p1: String, _ p2: String) -> String {
+                String(format: Localized.get("provider.consent.destinationOwn"), p1, p2)
+            }
+
+            /// Consent sheet row body for a provider without a known privacy policy. The argument
+            /// is the provider name.
+            static func destinationOwnUnlinked(_ p1: String) -> String {
+                String(format: Localized.get("provider.consent.destinationOwnUnlinked"), p1)
+            }
+
+            /// Consent sheet row body for the Eigin Relay, as Markdown. The argument is Eigin's
+            /// privacy policy URL.
+            static func destinationRelay(_ p1: String) -> String {
+                String(format: Localized.get("provider.consent.destinationRelay"), p1)
+            }
+
+            /// Consent sheet row: who receives the data (title).
+            static var destinationTitle: String {
+                Localized.get("provider.consent.destinationTitle")
+            }
+
+            /// Consent sheet: label above the list of what is shared.
+            static var groupLabel: String {
+                Localized.get("provider.consent.groupLabel")
+            }
+
+            /// Consent sheet row: saved memories (body).
+            static var memoriesBody: String {
+                Localized.get("provider.consent.memoriesBody")
+            }
+
+            /// Consent sheet row: saved memories (title).
+            static var memoriesTitle: String {
+                Localized.get("provider.consent.memoriesTitle")
+            }
+
+            /// Error body when a request was refused because sharing with the provider is not
+            /// allowed yet.
+            static var notAllowedBody: String {
+                Localized.get("provider.consent.notAllowedBody")
+            }
+
+            /// Error title when a request was refused because sharing with the provider is not
+            /// allowed yet.
+            static var notAllowedTitle: String {
+                Localized.get("provider.consent.notAllowedTitle")
+            }
+
+            /// Consent sheet description for the Eigin Relay.
+            static var relayDescription: String {
+                Localized.get("provider.consent.relayDescription")
+            }
+
+            /// Consent sheet title before sharing with the Eigin Relay.
+            static var relayTitle: String {
+                Localized.get("provider.consent.relayTitle")
+            }
+
+            /// Consent sheet title before sharing with a cloud AI provider. The argument is the
+            /// provider name.
+            static func title(_ p1: String) -> String {
+                String(format: Localized.get("provider.consent.title"), p1)
+            }
+        }
+
         enum Credits {
             /// A description under the "Connected to" message in the OAuth flow, reminding the user
             /// to top up their credits before proceeding.
@@ -3845,25 +3943,6 @@ enum Localized {
                 static func other(_ p1: String) -> String {
                     String(format: Localized.get("provider.description.models.other"), p1)
                 }
-            }
-        }
-
-        enum Disclosure {
-            /// Third-party AI disclosure on the credits sheet, where the user commits to Eigin
-            /// cloud inference
-            static var eiginCloud: String {
-                Localized.get("provider.disclosure.eiginCloud")
-            }
-
-            /// Third-party AI disclosure on the provider-select sheet, where the user commits to a
-            /// provider they connect themselves
-            static var ownProvider: String {
-                Localized.get("provider.disclosure.ownProvider")
-            }
-
-            /// Tappable tail of the third-party AI disclosure, linking to the privacy policy
-            static var privacyLink: String {
-                Localized.get("provider.disclosure.privacyLink")
             }
         }
 

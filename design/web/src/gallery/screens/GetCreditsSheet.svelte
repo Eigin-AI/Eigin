@@ -45,14 +45,6 @@
         <Icon name="functional/refresh" size={14} />
         <span class="t-note">Restore credits</span>
       </button>
-
-      <!-- Matches the iOS disclosure: footnote tone, the privacy link on its
-           own line, and the whole thing quieter than body text. -->
-      <p class="t-note disclosure">
-        Payments are handled by the App Store. Conversations you send are processed by third-party
-        AI providers in the EU on Eigin's behalf.
-        <a class="policy" href="https://www.eigin.ai/privacy/">See the privacy policy.</a>
-      </p>
     </div>
   {/snippet}
 </Sheet>
@@ -95,18 +87,5 @@
     color: var(--color-text-standard-muted);
     font-family: inherit;
     cursor: pointer;
-  }
-
-  /* Sits close under restore: the two are the sheet's tail, and only the
-     restore action needs lifting off the packs. */
-  .disclosure {
-    margin: 0 var(--spacing-n24);
-    color: var(--color-text-standard-disabled);
-  }
-
-  .policy {
-    display: block;
-    margin-top: var(--spacing-n8);
-    color: var(--color-text-standard-link);
   }
 </style>

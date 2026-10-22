@@ -22,9 +22,10 @@ struct ConnectionsView: View {
     @State private var showSelectSheet = false
     @State private var showConnectSheet = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
-    /// Cleared chrome: the connect sheet's setup copy reads as a leftover
-    /// once the connection is up (see `ProviderConnectSheetContent.Step`).
-    @State private var connectReachedDone = false
+    /// Drives the connect sheet's header: the consent step asks its own
+    /// question, and setup copy reads as a leftover once the connection is up
+    /// (see `ProviderConnectSheetContent.Step`).
+    @State private var connectStep = ProviderConnectSheetContent.Step.start
     @State private var showAddIntegration = false
     /// The connect sheet stacks over the add sheet, as provider connect does
     /// over provider select.
@@ -77,7 +78,7 @@ struct ConnectionsView: View {
         ) {
             ProviderSelectSheetContent(connectedBaseURLs: connectedBaseURLs) { selection in
                 showSelectSheet = false
-                connectReachedDone = false
+                connectStep = .start
                 switch selection {
                 case .preset(let preset, let method):
                     selectedMode = .preset(preset, method: method)
@@ -89,8 +90,8 @@ struct ConnectionsView: View {
         }
         .appSheet(
             isPresented: $showConnectSheet,
-            title: connectSheetTitle,
-            description: connectReachedDone ? nil : connectSheetDescription,
+            title: connectStep.sheetTitle(connectSheetTitle),
+            description: connectStep.sheetDescription(connectSheetDescription),
             detents: [.large],
             fitsContent: true
         ) {
@@ -100,15 +101,15 @@ struct ConnectionsView: View {
                     onComplete: { _ in
                         showConnectSheet = false
                         selectedMode = nil
-                        connectReachedDone = false
+                        connectStep = .start
                     },
                     onBack: {
                         showConnectSheet = false
                         selectedMode = nil
-                        connectReachedDone = false
+                        connectStep = .start
                         showSelectSheet = true
                     },
-                    onStepChange: { connectReachedDone = $0 == .done }
+                    onStepChange: { connectStep = $0 }
                 )
             }
         }

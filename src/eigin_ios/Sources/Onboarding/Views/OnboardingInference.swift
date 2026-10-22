@@ -2,7 +2,8 @@ import Factory
 import SwiftUI
 
 /// Connects the agent to inference. Eigin Cloud is the default: choosing it
-/// presents the credits sheet (the relay runs on credits). Connecting your own
+/// asks consent to share with the relay first, then presents the credits sheet
+/// (the relay runs on credits), so nobody pays before they have agreed. Connecting your own
 /// provider is secondary. Running offline opens a sheet that kicks off the
 /// background model download and returns you here to still pick a provider for
 /// this conversation — the cloud always powers onboarding; the local model takes
@@ -16,16 +17,19 @@ struct OnboardingInference: View {
 
     @Environment(\.colors) private var colors
     @Injected(\.gemmaModelManager) private var gemmaManager: any GemmaModelManaging
+    @Injected(\.aiConsentStore) private var consentStore
     @State private var creditsModel = EiginCreditsModel()
 
+    @State private var showRelayConsent = false
     @State private var showCredits = false
     @State private var showDownload = false
     @State private var showProviderSelect = false
     @State private var showProviderConnect = false
     @State private var selectedMode: ProviderConnectSheetContent.Mode?
-    /// Cleared chrome: the connect sheet's setup copy reads as a leftover
-    /// once the connection is up (see `ProviderConnectSheetContent.Step`).
-    @State private var connectReachedDone = false
+    /// Drives the connect sheet's header: the consent step asks its own
+    /// question, and setup copy reads as a leftover once the connection is up
+    /// (see `ProviderConnectSheetContent.Step`).
+    @State private var connectStep = ProviderConnectSheetContent.Step.start
 
     private var offlineAvailable: Bool {
         gemmaManager.isSupported && gemmaManager.state == .notDownloaded
@@ -80,6 +84,23 @@ struct OnboardingInference: View {
         }
         .task { await creditsModel.onAppear() }
         .appSheet(
+            isPresented: $showRelayConsent,
+            title: AIConsentContent.Recipient.relay.title,
+            description: AIConsentContent.Recipient.relay.description,
+            fitsContent: true
+        ) {
+            AIConsentContent(
+                recipient: .relay,
+                onAllow: {
+                    consentStore.allow(baseURL: ProviderPreset.relayBaseURL)
+                    showRelayConsent = false
+                    continueWithEigin()
+                },
+                onDecline: { showRelayConsent = false }
+            )
+            .padding(.horizontal, Spacing.n16)
+        }
+        .appSheet(
             isPresented: $showCredits,
             title: Localized.Provider.Eigin.getCreditsTitle,
             description: Localized.Provider.Eigin.getCreditsDescription,
@@ -107,7 +128,7 @@ struct OnboardingInference: View {
         ) {
             ProviderSelectSheetContent { selection in
                 showProviderSelect = false
-                connectReachedDone = false
+                connectStep = .start
                 switch selection {
                 case .preset(let preset, let method):
                     selectedMode = .preset(preset, method: method)
@@ -118,8 +139,8 @@ struct OnboardingInference: View {
         }
         .appSheet(
             isPresented: $showProviderConnect,
-            title: connectSheetTitle,
-            description: connectReachedDone ? nil : connectSheetDescription,
+            title: connectStep.sheetTitle(connectSheetTitle),
+            description: connectStep.sheetDescription(connectSheetDescription),
             detents: [.large],
             fitsContent: true
         ) {
@@ -129,24 +150,33 @@ struct OnboardingInference: View {
                     onComplete: { provider in
                         showProviderConnect = false
                         selectedMode = nil
-                        connectReachedDone = false
+                        connectStep = .start
                         onConnectOwn(provider)
                     },
                     onBack: {
                         showProviderConnect = false
                         selectedMode = nil
-                        connectReachedDone = false
+                        connectStep = .start
                         showProviderSelect = true
                     },
-                    onStepChange: { connectReachedDone = $0 == .done }
+                    onStepChange: { connectStep = $0 }
                 )
             }
         }
     }
 
-    /// Uses Eigin Cloud. Proceeds straight away when the user already has
-    /// credits; otherwise presents the credits sheet to get some first.
+    /// Uses Eigin Cloud, once sharing with the relay is allowed.
     private func useEigin() {
+        if consentStore.needsConsent(baseURL: ProviderPreset.relayBaseURL) {
+            showRelayConsent = true
+        } else {
+            continueWithEigin()
+        }
+    }
+
+    /// Proceeds straight away when the user already has credits; otherwise
+    /// presents the credits sheet to get some first.
+    private func continueWithEigin() {
         if creditsModel.totalCredits > 0 {
             onUseCloud()
         } else {

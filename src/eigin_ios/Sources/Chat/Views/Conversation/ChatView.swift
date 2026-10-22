@@ -35,6 +35,9 @@ struct ChatView: View {
     @State private var isContentReady = false
     @Environment(\.dismiss) private var dismiss
     @Injected(\.chatAttachmentStore) private var attachmentStore
+    @Injected(\.aiConsentStore) private var consentStore
+    /// What to do once the user allows sharing with the active provider.
+    @State private var pendingConsentAction: (() -> Void)?
 
     init(chatID: UUID, opening: ChatOpening? = nil) {
         self.chatID = chatID
@@ -166,16 +169,18 @@ struct ChatView: View {
                     autoStartDictation: opening == .dictation,
                     autoShowCamera: opening == .camera,
                     onSend: { context in
-                        guard let agent, let provider = activeProvider else { return }
-                        viewModel.send(
-                            context: context,
-                            agent: agent,
-                            provider: provider,
-                            space: space,
-                            spaces: spaces,
-                            mcpServers: mcpServers,
-                            integrations: integrations
-                        )
+                        afterConsent {
+                            guard let agent, let provider = activeProvider else { return }
+                            viewModel.send(
+                                context: context,
+                                agent: agent,
+                                provider: provider,
+                                space: space,
+                                spaces: spaces,
+                                mcpServers: mcpServers,
+                                integrations: integrations
+                            )
+                        }
                     },
                     onStop: (viewModel.isStreaming && !viewModel.chatLoop
                         .isAwaitingUserInteraction) ? { viewModel.handleStop() } : nil,
@@ -226,15 +231,17 @@ struct ChatView: View {
                     isContentReady: isContentReady,
                     onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
                         ? {
-                            guard let agent, let provider = activeProvider else { return }
-                            viewModel.retryLastTurn(
-                                agent: agent,
-                                provider: provider,
-                                space: space,
-                                spaces: spaces,
-                                mcpServers: mcpServers,
-                                integrations: integrations
-                            )
+                            afterConsent {
+                                guard let agent, let provider = activeProvider else { return }
+                                viewModel.retryLastTurn(
+                                    agent: agent,
+                                    provider: provider,
+                                    space: space,
+                                    spaces: spaces,
+                                    mcpServers: mcpServers,
+                                    integrations: integrations
+                                )
+                            }
                         }
                         : nil,
                     header: { header }
@@ -346,6 +353,21 @@ struct ChatView: View {
             }
         }
         .appSheet(
+            isPresented: showConsent,
+            title: consentRecipient?.title ?? "",
+            description: consentRecipient?.description,
+            fitsContent: true
+        ) {
+            if let recipient = consentRecipient {
+                AIConsentContent(
+                    recipient: recipient,
+                    onAllow: allowActiveProvider,
+                    onDecline: { pendingConsentAction = nil }
+                )
+                .padding(.horizontal, Spacing.n16)
+            }
+        }
+        .appSheet(
             isPresented: $showNonVisionStagedWarning,
             title: Localized.Attachment.imageStagedOnNonVisionTitle,
             description: Localized.Attachment.imageStagedOnNonVisionMessage,
@@ -371,6 +393,10 @@ struct ChatView: View {
 
     /// Reuses the phone button's voice-download gate before presenting the live call.
     private func startLiveCall() {
+        afterConsent(presentLiveCall)
+    }
+
+    private func presentLiveCall() {
         if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
            !asset.state.isBusy
         {
@@ -378,6 +404,35 @@ struct ChatView: View {
         } else {
             showLiveCall = true
         }
+    }
+
+    // MARK: - Consent
+
+    /// Runs `action` once sharing with the active provider is allowed, asking
+    /// first when it is not. Declining sends nothing; the next try asks again.
+    private func afterConsent(_ action: @escaping () -> Void) {
+        guard let provider = activeProvider,
+              consentStore.needsConsent(baseURL: provider.baseURL)
+        else { return action() }
+        pendingConsentAction = action
+    }
+
+    private func allowActiveProvider() {
+        if let provider = activeProvider { consentStore.allow(baseURL: provider.baseURL) }
+        let action = pendingConsentAction
+        pendingConsentAction = nil
+        action?()
+    }
+
+    private var showConsent: Binding<Bool> {
+        Binding(
+            get: { pendingConsentAction != nil },
+            set: { if !$0 { pendingConsentAction = nil } }
+        )
+    }
+
+    private var consentRecipient: AIConsentContent.Recipient? {
+        activeProvider.map(AIConsentContent.Recipient.init(provider:))
     }
 
     /// Normalises and saves a newly picked image, then stages it for the next

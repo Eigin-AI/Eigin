@@ -35,11 +35,6 @@ struct GetCreditsSheetContent: View {
                         .foregroundStyle(colors.text.standard.error)
                         .multilineTextAlignment(.center)
                 }
-
-                // Third-party disclosure before the user commits to Eigin
-                // cloud (App Store guideline 5.1.2).
-                ThirdPartyDisclosureText(variant: .eiginCloud)
-                    .padding(.leading, Spacing.n24)
             }
             .padding(.horizontal, px)
         }
