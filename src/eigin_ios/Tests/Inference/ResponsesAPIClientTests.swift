@@ -59,6 +59,40 @@ struct ResponsesAPIClientTests {
         }
     }
 
+    // MARK: - validateAPIKey
+
+    @Test(arguments: [401, 403])
+    func validateAPIKeyThrowsOnAuthFailure(statusCode: Int) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/responses",
+            data: Data(),
+            statusCode: statusCode
+        )
+
+        let client = ResponsesAPIClient(apiToken: "bad-token", session: session)
+
+        do {
+            try await client.validateAPIKey(model: "gpt-6.1")
+            Issue.record("Expected invalidUser to be thrown")
+        } catch let error as ResponsesAPIError {
+            #expect(error == .invalidUser)
+        }
+    }
+
+    @Test(arguments: [400, 404, 429, 500])
+    func validateAPIKeyIgnoresNonAuthErrors(statusCode: Int) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/responses",
+            data: Data(),
+            statusCode: statusCode
+        )
+
+        let client = ResponsesAPIClient(apiToken: "token", session: session)
+        try await client.validateAPIKey(model: "gpt-6.1")
+    }
+
     // MARK: - Request mapping
 
     private func sentBody(for url: String) throws -> [String: Any] {

@@ -74,6 +74,72 @@ struct OpenAICompatibleClientTests {
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
+    // MARK: - validateAPIKey
+
+    @Test(arguments: [401, 403])
+    func validateAPIKeyThrowsOnAuthFailure(statusCode: Int) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let url = "https://api.example.com/v1/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: Data(), statusCode: statusCode)
+
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "bad-token",
+            session: session
+        )
+
+        do {
+            try await client.validateAPIKey(model: "some-model")
+            Issue.record("Expected httpError(\(statusCode)) to be thrown")
+        } catch let error as OpenAICompatibleClientError {
+            guard case .httpError(statusCode, _) = error else {
+                Issue.record("Expected httpError(\(statusCode)), got \(error)")
+                return
+            }
+        }
+    }
+
+    /// Non-auth failures pass: the model may not exist or be busy, which says
+    /// nothing about the key.
+    @Test(arguments: [400, 404, 429, 500])
+    func validateAPIKeyIgnoresNonAuthErrors(statusCode: Int) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "https://api.example.com/v1/chat/completions",
+            data: Data(),
+            statusCode: statusCode
+        )
+
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+
+        try await client.validateAPIKey(model: "some-model")
+    }
+
+    @Test func validateAPIKeySendsMinimalPing() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let url = "https://api.example.com/v1/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: Data(), statusCode: 200)
+
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+        try await client.validateAPIKey(model: "some-model")
+
+        let body = try sentBody(for: url)
+        let messages = try #require(body["messages"] as? [[String: Any]])
+        #expect(body["model"] as? String == "some-model")
+        #expect(body["max_tokens"] as? Int == 1)
+        #expect(messages.count == 1)
+        #expect(messages.first?["role"] as? String == "user")
+        #expect(messages.first?["content"] as? String == "hi")
+    }
+
     @Test func includesPromptCacheKeyForOpenAICompatibleProvider() async throws {
         let session = FakeURLProtocol.fakeSession()
         let url = "https://api.example.com/v1/chat/completions"

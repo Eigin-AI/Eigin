@@ -362,8 +362,8 @@ struct AiProviderScreen: View {
                     apiToken: apiKey
                 )
                 let modelIDs = try await client.fetchModels()
-                if let firstModel = modelIDs.first {
-                    try await client.validateAPIKey(model: firstModel)
+                if let model = KnownModelCatalog.bestModel(from: modelIDs) {
+                    try await client.validateAPIKey(model: model)
                 }
 
                 // Model enablements survive the key change where the models do.
