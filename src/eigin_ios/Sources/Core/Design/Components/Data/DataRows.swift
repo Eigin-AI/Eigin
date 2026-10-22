@@ -468,6 +468,8 @@ private struct DataTableView: View {
                         }
                     }
                 }
+                // Trimmed cells end at the baseline; keep descenders inside the scroll viewport.
+                .padding(.bottom, max(0, -Typography.descriptionSmall.uiFont.descender))
             }
             if items.count > preview, !expanded.contains(path) {
                 ShowAllButton(count: items.count) {
