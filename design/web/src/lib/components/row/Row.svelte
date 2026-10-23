@@ -8,6 +8,8 @@
     title: string;
     /** Supporting line under the title. */
     description?: string;
+    /** Optional cap for supporting text; full text remains available in details. */
+    descriptionLineLimit?: number;
     /** Supporting line with inline markup, such as a link. Wins over `description`. */
     descriptionContent?: Snippet;
     /** Current setting, shown at the trailing edge. Truncates rather than wraps. */
@@ -31,6 +33,7 @@
   const {
     title,
     description,
+    descriptionLineLimit,
     descriptionContent,
     value,
     icon,
@@ -80,10 +83,14 @@
 
   <span class="labels">
     <span class="t-titleXS title">{title}</span>
-    {#if descriptionContent}
-      <span class="t-tag description">{@render descriptionContent()}</span>
-    {:else if description}
-      <span class="t-tag description">{description}</span>
+    {#if descriptionContent || description}
+      <span
+        class="t-tag description"
+        class:clamped={descriptionLineLimit !== undefined}
+        style:--description-lines={descriptionLineLimit}
+      >
+        {#if descriptionContent}{@render descriptionContent()}{:else}{description}{/if}
+      </span>
     {/if}
   </span>
 
@@ -113,6 +120,15 @@
 {/if}
 
 <style>
+  .description.clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--description-lines);
+    line-clamp: var(--description-lines);
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
   .eigin-row {
     position: relative;
     display: flex;

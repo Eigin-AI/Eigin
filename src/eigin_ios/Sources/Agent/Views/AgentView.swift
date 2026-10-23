@@ -20,10 +20,10 @@ struct AgentView: View {
                         providers: providers
                     )
                 } else {
-                    ContentUnavailableView(
-                        "No Agent",
-                        systemImage: "person.crop.circle.badge.questionmark",
-                        description: Text(Localized.Onboarding.completionHint)
+                    AppEmptyState(
+                        icon: Iconography.Functional.avatar,
+                        title: Localized.Agent.EmptyState.title,
+                        description: Localized.Onboarding.completionHint
                     )
                 }
             }

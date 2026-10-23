@@ -69,6 +69,23 @@
         }
       }
     },
+    "agent.emptyState.title": {
+      "comment": "agent.emptyState.title",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No agent"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen agent"
+          }
+        }
+      }
+    },
     "agent.identityLabel": {
       "comment": "A heading for the identity section of the agent's core.",
       "localizations": {
@@ -1365,6 +1382,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add"
+          }
+        }
+      }
+    },
+    "common.actions.back": {
+      "comment": "Accessibility label for a back navigation button",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilbage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         }
       }
@@ -3001,6 +3035,227 @@
         }
       }
     },
+    "errors.chatgpt.invalidUserSuggestion": {
+      "comment": "Suggestion when the ChatGPT sign-in is no longer valid",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit ChatGPT-login er ikke længere gyldigt. Log ind igen for at fortsætte med dit abonnement."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your ChatGPT sign-in is no longer valid. Sign in again to keep using your subscription."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.invalidUserTitle": {
+      "comment": "Error title when the ChatGPT sign-in is no longer valid",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind igen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in again"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.planUsageNotGranted": {
+      "comment": "Notice body when the user declined ChatGPT plan usage during sign-in",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abonnementsbrug blev ikke godkendt ved login, så ChatGPT kan ikke svare her. Log ind igen og godkend abonnementsbrug, eller brug en API-nøgle i stedet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan usage wasn't approved during sign-in, so ChatGPT can't answer here. Sign in again and approve plan usage, or use an API key instead."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.plusRequiredSuggestion": {
+      "comment": "Suggestion when the signed-in account is not ChatGPT Plus or Pro",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind kræver et ChatGPT Plus- eller Pro-abonnement. Brug en API-nøgle i stedet, eller opgradér i ChatGPT-appen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in needs a ChatGPT Plus or Pro subscription. Use an API key instead, or upgrade in the ChatGPT app."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.plusRequiredTitle": {
+      "comment": "Error title when the signed-in account is not ChatGPT Plus or Pro",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT Plus eller Pro påkrævet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT Plus or Pro required"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.signinFailedSuggestion": {
+      "comment": "Suggestion when ChatGPT sign-in could not be completed — causes vary (e.g. an ineligible subscription)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der opstod et problem ved login. Tjek at din konto har et ChatGPT Plus- eller Pro-abonnement, og prøv igen eller brug en anden udbyder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There was a problem signing in. Make sure your account has a ChatGPT Plus or Pro subscription, then try again or use a different provider."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.signinFailedTitle": {
+      "comment": "Title when ChatGPT sign-in could not be completed (may have multiple causes)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke forbinde til din ChatGPT-konto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't connect to your ChatGPT account"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unavailableSuggestion": {
+      "comment": "Suggestion when ChatGPT plan usage is temporarily unavailable",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT-abonnementet kunne ikke nås. Prøv igen om lidt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT plan usage couldn't be reached. Try again in a moment."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unavailableTitle": {
+      "comment": "Error title when ChatGPT plan usage is temporarily unavailable",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT er utilgængelig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT is unavailable"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unsupportedCapabilitySuggestion": {
+      "comment": "Suggestion when the request uses something the ChatGPT plan flow doesn't support. The argument names the unsupported capability.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT-abonnementet kan ikke det. Prøv en anden udbyder i stedet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The ChatGPT subscription can't do that. Try a different provider instead."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.unsupportedCapabilityTitle": {
+      "comment": "Error title when the request uses something the ChatGPT plan flow doesn't support",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Understøttes ikke her"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not supported here"
+          }
+        }
+      }
+    },
+    "errors.chatgpt.usageLimitSuggestion": {
+      "comment": "Suggestion when the ChatGPT plan's usage limit is reached",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit ChatGPT-abonnements forbrugsgrænse er brugt op. Tjek dine ChatGPT-indstillinger, eller prøv igen senere."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your ChatGPT plan's usage limit is used up. Check your ChatGPT settings, or try again later."
+          }
+        }
+      }
+    },
+    "errors.chatgpt.usageLimitTitle": {
+      "comment": "Error title when the ChatGPT plan's usage limit is reached",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbrugsgrænsen er nået"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan usage limit reached"
+          }
+        }
+      }
+    },
     "errors.connection.failed": {
       "comment": "Short error title for a generic connection failure",
       "localizations": {
@@ -4000,6 +4255,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Facts"
+          }
+        }
+      }
+    },
+    "facts.type.note": {
+      "comment": "Singular label for the 'note' fact type",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notat"
           }
         }
       }
@@ -5038,6 +5310,40 @@
         }
       }
     },
+    "integration.offers.emptyHint": {
+      "comment": "integration.offers.emptyHint",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This connection has no items to show yet."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne forbindelse har endnu ingen elementer at vise."
+          }
+        }
+      }
+    },
+    "integration.offers.emptyTitle": {
+      "comment": "integration.offers.emptyTitle",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing available yet"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet tilgængeligt endnu"
+          }
+        }
+      }
+    },
     "integration.offers.footnote": {
       "comment": "Footnote under the offers list.",
       "localizations": {
@@ -5068,6 +5374,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing matches “%@”."
+          }
+        }
+      }
+    },
+    "integration.offers.noMatchesTitle": {
+      "comment": "integration.offers.noMatchesTitle",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching items"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen matchende elementer"
           }
         }
       }
@@ -6636,6 +6959,57 @@
         }
       }
     },
+    "intent.content": {
+      "comment": "intent.content",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indhold"
+          }
+        }
+      }
+    },
+    "intent.dismissAction": {
+      "comment": "intent.dismissAction",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss intent"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afvis intention"
+          }
+        }
+      }
+    },
+    "intent.dismissFailed": {
+      "comment": "intent.dismissFailed",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t dismiss intent. Try again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke afvise intentionen. Prøv igen."
+          }
+        }
+      }
+    },
     "intent.dismissWarning": {
       "comment": "A message displayed when dismissing an intent.",
       "localizations": {
@@ -6659,13 +7033,30 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hensigter vises her, når din agent bemærker dine mål og interesser."
+            "value": "Mål og planer, som din agent holder styr på, vises her."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Intents will appear here as your agent notices your goals and interests."
+            "value": "Goals and plans your agent is keeping track of will appear here."
+          }
+        }
+      }
+    },
+    "intent.emptyState.title": {
+      "comment": "Empty state title when there are no active intents",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to follow up on"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet at følge op på"
           }
         }
       }
@@ -6721,6 +7112,23 @@
         }
       }
     },
+    "intent.updated": {
+      "comment": "intent.updated",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdateret"
+          }
+        }
+      }
+    },
     "intents.dictationChat.description": {
       "comment": "App intent description: start a fresh chat with dictation armed.",
       "localizations": {
@@ -6768,6 +7176,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "This intent will no longer guide your agent."
+          }
+        }
+      }
+    },
+    "intents.footnote": {
+      "comment": "intents.footnote",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your agent keeps these goals in mind across conversations."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din agent husker disse mål på tværs af samtaler."
           }
         }
       }
@@ -6925,19 +7350,70 @@
         }
       }
     },
+    "knowledge.delete": {
+      "comment": "Destructive knowledge detail action and confirmation title",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet viden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete knowledge"
+          }
+        }
+      }
+    },
+    "knowledge.deleteFailed": {
+      "comment": "Message when deleting knowledge fails",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke slette denne viden. Prøv igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not delete knowledge. Please try again."
+          }
+        }
+      }
+    },
+    "knowledge.deleteWarning": {
+      "comment": "Knowledge deletion confirmation message",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din agent vil ikke længere kunne huske denne viden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your agent will no longer recall this knowledge."
+          }
+        }
+      }
+    },
     "knowledge.emptyState.hint": {
       "comment": "A description text that appears when a user's knowledge list is empty.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viden vises her, efterhånden som din agent lærer."
+            "value": "Efterhånden som du taler, husker din agent mennesker, præferencer og ting, der betyder noget for dig."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Knowledge will appear here as your agent learns."
+            "value": "As you talk, your agent remembers people, preferences and things that matter to you."
           }
         }
       }
@@ -6948,13 +7424,387 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ingen viden"
+            "value": "Viden begynder her"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No Knowledge"
+            "value": "Knowledge starts here"
+          }
+        }
+      }
+    },
+    "knowledge.error.hint": {
+      "comment": "Description when the knowledge graph fails to load",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knowledge couldn’t be loaded. Try again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke indlæse viden. Prøv igen."
+          }
+        }
+      }
+    },
+    "knowledge.error.title": {
+      "comment": "Title when the knowledge graph fails to load",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load knowledge"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke indlæse viden"
+          }
+        }
+      }
+    },
+    "knowledge.graph.backToYou": {
+      "comment": "Button returning the graph to the user",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to you"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilbage til dig"
+          }
+        }
+      }
+    },
+    "knowledge.graph.connection": {
+      "comment": "Singular word after a connection count",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connection"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "forbindelse"
+          }
+        }
+      }
+    },
+    "knowledge.graph.connectionRange": {
+      "comment": "Connection count range, page indicator",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@–%2$@ of %3$@ connections"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@–%2$@ af %3$@ forbindelser"
+          }
+        }
+      }
+    },
+    "knowledge.graph.connections": {
+      "comment": "Plural word after a connection count",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connections"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "forbindelser"
+          }
+        }
+      }
+    },
+    "knowledge.graph.connectionsSection": {
+      "comment": "Section label in the summary sheet listing a knowledge entity's connections",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connections"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbindelser"
+          }
+        }
+      }
+    },
+    "knowledge.graph.details": {
+      "comment": "Accessibility label for viewing a knowledge entity's details",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View details for %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se detaljer for %@"
+          }
+        }
+      }
+    },
+    "knowledge.graph.explore": {
+      "comment": "Accessibility label for exploring a connection",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explore %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udforsk %@"
+          }
+        }
+      }
+    },
+    "knowledge.graph.loading": {
+      "comment": "Message shown while the knowledge graph loads",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading graph"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indlæser graf"
+          }
+        }
+      }
+    },
+    "knowledge.graph.loadingList": {
+      "comment": "Message shown while the knowledge list loads",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading knowledge"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indlæser viden"
+          }
+        }
+      }
+    },
+    "knowledge.graph.modeGraph": {
+      "comment": "Graph view mode segment",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graph"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graf"
+          }
+        }
+      }
+    },
+    "knowledge.graph.modeList": {
+      "comment": "List view mode segment",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste"
+          }
+        }
+      }
+    },
+    "knowledge.graph.next": {
+      "comment": "Accessibility label for the next page button",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next relationships"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Næste relationer"
+          }
+        }
+      }
+    },
+    "knowledge.graph.noConnections": {
+      "comment": "Shown when the focused entity has no connections",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No connections yet"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen forbindelser endnu"
+          }
+        }
+      }
+    },
+    "knowledge.graph.previous": {
+      "comment": "Accessibility label for the previous page button",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous relationships"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forrige relationer"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.belongsTo": {
+      "comment": "Relationship label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belongs to"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilhører"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.describes": {
+      "comment": "Relationship label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Describes"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskriver"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.incoming": {
+      "comment": "Suffix marking an incoming relationship",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Incoming"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Indgående"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.relatesTo": {
+      "comment": "Relationship label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relates to"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relaterer til"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.supersedes": {
+      "comment": "Relationship label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supersedes"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstatter"
+          }
+        }
+      }
+    },
+    "knowledge.relationship.uses": {
+      "comment": "Relationship label",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruger"
           }
         }
       }
@@ -6976,6 +7826,57 @@
         }
       }
     },
+    "knowledge.sheet.viewFullDetails": {
+      "comment": "Row opening the full knowledge detail screen",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View full details"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se alle detaljer"
+          }
+        }
+      }
+    },
+    "knowledge.showAll": {
+      "comment": "Open the full category list; parameter is the plural category name",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis alle %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all %@"
+          }
+        }
+      }
+    },
+    "knowledge.showMore": {
+      "comment": "Reveal another batch of category rows; parameter is the number of additional items",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis %@ mere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show %@ more"
+          }
+        }
+      }
+    },
     "knowledge.title": {
       "comment": "Navigation title for knowledge container",
       "localizations": {
@@ -6989,6 +7890,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Knowledge"
+          }
+        }
+      }
+    },
+    "knowledge.value.no": {
+      "comment": "Display value for a false knowledge field",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nej"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "knowledge.value.yes": {
+      "comment": "Display value for a true knowledge field",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
           }
         }
       }
@@ -7867,7 +8802,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "All Models"
+            "value": "All models"
           }
         }
       }
@@ -7906,19 +8841,53 @@
         }
       }
     },
+    "model.picker.auto.footnote": {
+      "comment": "model.picker.auto.footnote",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto follows the highest-ranked available model from this provider."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto følger den højest rangerede tilgængelige model fra denne udbyder."
+          }
+        }
+      }
+    },
     "model.picker.auto.title": {
       "comment": "Title of the automatic model selection option",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatisk"
+            "value": "Auto"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic"
+            "value": "Auto"
+          }
+        }
+      }
+    },
+    "model.picker.clearSearch": {
+      "comment": "model.picker.clearSearch",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear search"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd søgning"
           }
         }
       }
@@ -7940,19 +8909,53 @@
         }
       }
     },
+    "model.picker.emptyHint": {
+      "comment": "model.picker.emptyHint",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This provider hasn’t returned any models. Check its connection in Settings."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne udbyder har ikke returneret nogen modeller. Tjek forbindelsen i Indstillinger."
+          }
+        }
+      }
+    },
     "model.picker.loading": {
       "comment": "Placeholder shown while the model catalog is being fetched for the first time",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Henter modeller…"
+            "value": "Finder modeller"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Loading models…"
+            "value": "Finding models"
+          }
+        }
+      }
+    },
+    "model.picker.moreModels": {
+      "comment": "model.picker.moreModels",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ more models"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ flere modeller"
           }
         }
       }
@@ -7963,13 +8966,30 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Denne udbyder har ingen tilgængelige modeller endnu."
+            "value": "Ingen tilgængelige modeller"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This provider has no available models yet."
+            "value": "No models available"
+          }
+        }
+      }
+    },
+    "model.picker.noSearchHint": {
+      "comment": "model.picker.noSearchHint",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try another name or model ID instead of “%@”."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøv et andet navn eller model-ID i stedet for “%@”."
           }
         }
       }
@@ -7980,13 +9000,47 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ingen modeller matcher din søgning."
+            "value": "Ingen matchende modeller"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No models match your search."
+            "value": "No matching models"
+          }
+        }
+      }
+    },
+    "model.picker.oneMoreModel": {
+      "comment": "model.picker.oneMoreModel",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 more model"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 model mere"
+          }
+        }
+      }
+    },
+    "model.picker.otherModels": {
+      "comment": "model.picker.otherModels",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other models"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andre modeller"
           }
         }
       }
@@ -7997,13 +9051,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Andre anbefalede"
+            "value": "Anbefalede"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Other Recommended"
+            "value": "Recommended"
           }
         }
       }
@@ -8048,13 +9102,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vælg model"
+            "value": "Model"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose Model"
+            "value": "Model"
           }
         }
       }
@@ -8892,23 +9946,6 @@
         }
       }
     },
-    "onboarding.modelSetup.downloadingProgress": {
-      "comment": "Status text during model download",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Downloader (%lld%%)"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Downloading (%lld%%)"
-          }
-        }
-      }
-    },
     "onboarding.modelSetup.downloadStatus": {
       "comment": "Subtitle explaining that the model download continues in the background",
       "localizations": {
@@ -8922,6 +9959,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download runs in the background. Check back here anytime to see how we are doing."
+          }
+        }
+      }
+    },
+    "onboarding.modelSetup.downloadingProgress": {
+      "comment": "Status text during model download",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloader (%lld%%)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading (%lld%%)"
           }
         }
       }
@@ -10728,6 +11782,23 @@
         }
       }
     },
+    "provider.ai-screen.signInAgain": {
+      "comment": "Button that reruns the ChatGPT sign-in to replace an expired or rejected credential.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind igen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in again"
+          }
+        }
+      }
+    },
     "provider.ai-screen.status.connected": {
       "comment": "Status line when the provider works.",
       "localizations": {
@@ -11085,6 +12156,312 @@
         }
       }
     },
+    "provider.consent.allow": {
+      "comment": "Consent sheet: primary button that allows sharing.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tillad"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow"
+          }
+        }
+      }
+    },
+    "provider.consent.connectedBody": {
+      "comment": "Consent sheet row: data from connected services (body).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Som kalender eller påmindelser, hvis du tillader det."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Like calendar or reminders, if you allow it."
+          }
+        }
+      }
+    },
+    "provider.consent.connectedTitle": {
+      "comment": "Consent sheet row: data from connected services (title).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forbundne data"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected data"
+          }
+        }
+      }
+    },
+    "provider.consent.conversationBody": {
+      "comment": "Consent sheet row: the current conversation (body).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dine beskeder og vedhæftninger."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your messages and attachments."
+          }
+        }
+      }
+    },
+    "provider.consent.conversationTitle": {
+      "comment": "Consent sheet row: the current conversation (title).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne samtale"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This conversation"
+          }
+        }
+      }
+    },
+    "provider.consent.description": {
+      "comment": "Consent sheet description for a provider the user connects.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For at svare sender Eigin din samtale til en cloud AI."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To reply, Eigin sends your conversation to a cloud AI."
+          }
+        }
+      }
+    },
+    "provider.consent.destinationOwn": {
+      "comment": "Consent sheet row body for a connected provider, as Markdown. The first argument is the provider name, the second its privacy policy URL.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direkte til %1$@ under deres [privatlivspolitik](%2$@)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Straight to %1$@, under its [privacy policy](%2$@)."
+          }
+        }
+      }
+    },
+    "provider.consent.destinationOwnUnlinked": {
+      "comment": "Consent sheet row body for a provider without a known privacy policy. The argument is the provider name.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direkte til %@ under deres egne vilkår."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Straight to %@, under its own terms."
+          }
+        }
+      }
+    },
+    "provider.consent.destinationRelay": {
+      "comment": "Consent sheet row body for the Eigin Relay, as Markdown. The argument is Eigin's privacy policy URL.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Via Eigin til Corti, TensorX eller Mistral. Samtaler gemmes aldrig. Se vores [privatlivspolitik](%@)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Via Eigin to Corti, TensorX or Mistral. Chats are never stored. See our [privacy policy](%@)."
+          }
+        }
+      }
+    },
+    "provider.consent.destinationTitle": {
+      "comment": "Consent sheet row: who receives the data (title).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvor det sendes hen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where it goes"
+          }
+        }
+      }
+    },
+    "provider.consent.groupLabel": {
+      "comment": "Consent sheet: label above the list of what is shared.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det, der deles"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What is shared"
+          }
+        }
+      }
+    },
+    "provider.consent.memoriesBody": {
+      "comment": "Consent sheet row: saved memories (body).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fra tidligere samtaler, når det er relevant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From earlier chats, when relevant."
+          }
+        }
+      }
+    },
+    "provider.consent.memoriesTitle": {
+      "comment": "Consent sheet row: saved memories (title).",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erindringer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memories"
+          }
+        }
+      }
+    },
+    "provider.consent.notAllowedBody": {
+      "comment": "Error body when a request was refused because sharing with the provider is not allowed yet.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send en besked i en samtale for at tillade deling med denne AI-udbyder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send a message in a chat to allow sharing with this AI provider."
+          }
+        }
+      }
+    },
+    "provider.consent.notAllowedTitle": {
+      "comment": "Error title when a request was refused because sharing with the provider is not allowed yet.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deling er ikke tilladt endnu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharing not allowed yet"
+          }
+        }
+      }
+    },
+    "provider.consent.relayDescription": {
+      "comment": "Consent sheet description for the Eigin Relay.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For at svare sender Eigin din samtale til en privat cloud AI."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To reply, Eigin sends your conversation to a private cloud AI."
+          }
+        }
+      }
+    },
+    "provider.consent.relayTitle": {
+      "comment": "Consent sheet title before sharing with the Eigin Relay.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Del med Eigin?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share with Eigin?"
+          }
+        }
+      }
+    },
+    "provider.consent.title": {
+      "comment": "Consent sheet title before sharing with a cloud AI provider. The argument is the provider name.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Del med %@?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share with %@?"
+          }
+        }
+      }
+    },
     "provider.credits.warning": {
       "comment": "A description under the \"Connected to\" message in the OAuth flow, reminding the user to top up their credits before proceeding.",
       "localizations": {
@@ -11166,312 +12543,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ models"
-          }
-        }
-      }
-    },
-    "provider.consent.title": {
-      "comment": "Consent sheet title before sharing with a cloud AI provider. The argument is the provider name.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Del med %@?"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share with %@?"
-          }
-        }
-      }
-    },
-    "provider.consent.relayTitle": {
-      "comment": "Consent sheet title before sharing with the Eigin Relay.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Del med Eigin?"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share with Eigin?"
-          }
-        }
-      }
-    },
-    "provider.consent.description": {
-      "comment": "Consent sheet description for a provider the user connects.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For at svare sender Eigin din samtale til en cloud AI."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To reply, Eigin sends your conversation to a cloud AI."
-          }
-        }
-      }
-    },
-    "provider.consent.relayDescription": {
-      "comment": "Consent sheet description for the Eigin Relay.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For at svare sender Eigin din samtale til en privat cloud AI."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To reply, Eigin sends your conversation to a private cloud AI."
-          }
-        }
-      }
-    },
-    "provider.consent.groupLabel": {
-      "comment": "Consent sheet: label above the list of what is shared.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det, der deles"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What is shared"
-          }
-        }
-      }
-    },
-    "provider.consent.conversationTitle": {
-      "comment": "Consent sheet row: the current conversation (title).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Denne samtale"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This conversation"
-          }
-        }
-      }
-    },
-    "provider.consent.conversationBody": {
-      "comment": "Consent sheet row: the current conversation (body).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dine beskeder og vedhæftninger."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your messages and attachments."
-          }
-        }
-      }
-    },
-    "provider.consent.memoriesTitle": {
-      "comment": "Consent sheet row: saved memories (title).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erindringer"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memories"
-          }
-        }
-      }
-    },
-    "provider.consent.memoriesBody": {
-      "comment": "Consent sheet row: saved memories (body).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fra tidligere samtaler, når det er relevant."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "From earlier chats, when relevant."
-          }
-        }
-      }
-    },
-    "provider.consent.connectedTitle": {
-      "comment": "Consent sheet row: data from connected services (title).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Forbundne data"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connected data"
-          }
-        }
-      }
-    },
-    "provider.consent.connectedBody": {
-      "comment": "Consent sheet row: data from connected services (body).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Som kalender eller påmindelser, hvis du tillader det."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Like calendar or reminders, if you allow it."
-          }
-        }
-      }
-    },
-    "provider.consent.destinationTitle": {
-      "comment": "Consent sheet row: who receives the data (title).",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hvor det sendes hen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where it goes"
-          }
-        }
-      }
-    },
-    "provider.consent.destinationOwn": {
-      "comment": "Consent sheet row body for a connected provider, as Markdown. The first argument is the provider name, the second its privacy policy URL.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Direkte til %1$@ under deres [privatlivspolitik](%2$@)."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Straight to %1$@, under its [privacy policy](%2$@)."
-          }
-        }
-      }
-    },
-    "provider.consent.destinationOwnUnlinked": {
-      "comment": "Consent sheet row body for a provider without a known privacy policy. The argument is the provider name.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Direkte til %@ under deres egne vilkår."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Straight to %@, under its own terms."
-          }
-        }
-      }
-    },
-    "provider.consent.destinationRelay": {
-      "comment": "Consent sheet row body for the Eigin Relay, as Markdown. The argument is Eigin's privacy policy URL.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Via Eigin til Corti, TensorX eller Mistral. Samtaler gemmes aldrig. Se vores [privatlivspolitik](%@)."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Via Eigin to Corti, TensorX or Mistral. Chats are never stored. See our [privacy policy](%@)."
-          }
-        }
-      }
-    },
-    "provider.consent.allow": {
-      "comment": "Consent sheet: primary button that allows sharing.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tillad"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow"
-          }
-        }
-      }
-    },
-    "provider.consent.notAllowedTitle": {
-      "comment": "Error title when a request was refused because sharing with the provider is not allowed yet.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deling er ikke tilladt endnu"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sharing not allowed yet"
-          }
-        }
-      }
-    },
-    "provider.consent.notAllowedBody": {
-      "comment": "Error body when a request was refused because sharing with the provider is not allowed yet.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send en besked i en samtale for at tillade deling med denne AI-udbyder."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send a message in a chat to allow sharing with this AI provider."
           }
         }
       }
@@ -11629,6 +12700,23 @@
         }
       }
     },
+    "provider.eigin.creditTitle": {
+      "comment": "Info section: what a credit is (title)",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvad en credit er"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What a credit is"
+          }
+        }
+      }
+    },
     "provider.eigin.creditsCaption": {
       "comment": "Caption under the credit balance on the Eigin screen",
       "localizations": {
@@ -11676,23 +12764,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "You're good to go"
-          }
-        }
-      }
-    },
-    "provider.eigin.creditTitle": {
-      "comment": "Info section: what a credit is (title)",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hvad en credit er"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What a credit is"
           }
         }
       }
@@ -11969,23 +13040,6 @@
         }
       }
     },
-    "provider.eigin.restoreCredits": {
-      "comment": "Button that re-redeems past purchases so credits survive a reinstall",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gendan credits"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recover credits"
-          }
-        }
-      }
-    },
     "provider.eigin.purchaseNetwork": {
       "comment": "Shown when the app could not reach Eigin Relay during a purchase or restore",
       "localizations": {
@@ -12084,6 +13138,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "We couldn't verify this purchase. Try again."
+          }
+        }
+      }
+    },
+    "provider.eigin.restoreCredits": {
+      "comment": "Button that re-redeems past purchases so credits survive a reinstall",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gendan credits"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover credits"
           }
         }
       }
@@ -13142,23 +14213,6 @@
         }
       }
     },
-    "provider.setup.corti.instruction": {
-      "comment": "Step-by-step instruction for obtaining a Corti API key",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hent din API-nøgle i Corti-konsollen på console.corti.app."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Get your API key in the Corti console at console.corti.app."
-          }
-        }
-      }
-    },
     "provider.setup.changeProvider": {
       "comment": "Secondary action that returns the user to the provider picker from the connect sheet",
       "localizations": {
@@ -13172,6 +14226,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Provider"
+          }
+        }
+      }
+    },
+    "provider.setup.chatgpt.instruction": {
+      "comment": "How to connect via ChatGPT subscription sign-in",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind for at bruge dit ChatGPT Plus- eller Pro-abonnement i Eigin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to use your ChatGPT Plus or Pro subscription in Eigin."
+          }
+        }
+      }
+    },
+    "provider.setup.corti.instruction": {
+      "comment": "Step-by-step instruction for obtaining a Corti API key",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent din API-nøgle i Corti-konsollen på console.corti.app."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get your API key in the Corti console at console.corti.app."
           }
         }
       }
@@ -14652,6 +15740,57 @@
         }
       }
     },
+    "settings.permissions.builtInTools": {
+      "comment": "settings.permissions.builtInTools",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in tools"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbyggede værktøjer"
+          }
+        }
+      }
+    },
+    "settings.permissions.connectedTools": {
+      "comment": "settings.permissions.connectedTools",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected tools"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilsluttede værktøjer"
+          }
+        }
+      }
+    },
+    "settings.permissions.defaultHint": {
+      "comment": "settings.permissions.defaultHint",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default uses the shared permission for the connection."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard bruger den fælles tilladelse for forbindelsen."
+          }
+        }
+      }
+    },
     "settings.permissions.defaultLabel": {
       "comment": "Default permission level option",
       "localizations": {
@@ -14682,6 +15821,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "MCP Servers"
+          }
+        }
+      }
+    },
+    "settings.permissions.saveFailed": {
+      "comment": "settings.permissions.saveFailed",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t update permission. Try again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke opdatere tilladelsen. Prøv igen."
           }
         }
       }
@@ -15059,6 +16215,40 @@
         }
       }
     },
+    "skills.available": {
+      "comment": "skills.available",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Available"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilgængelige"
+          }
+        }
+      }
+    },
+    "skills.footnote": {
+      "comment": "skills.footnote",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skills give your agent instructions for different kinds of work."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Færdigheder giver din agent instruktioner til forskellige slags arbejde."
+          }
+        }
+      }
+    },
     "skills.instruction": {
       "comment": "Section header for a skill's instruction text",
       "localizations": {
@@ -15161,6 +16351,23 @@
         }
       }
     },
+    "space.create": {
+      "comment": "space.create",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create space"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opret rum"
+          }
+        }
+      }
+    },
     "space.deleteWarning": {
       "comment": "An alert message that appears when the user confirms deleting a space. It explains that the chats and memories in the deleted space will be moved to the \"All Chats\" space.",
       "localizations": {
@@ -15190,7 +16397,24 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete Space"
+            "value": "Delete space"
+          }
+        }
+      }
+    },
+    "space.detail.changeSymbol": {
+      "comment": "space.detail.changeSymbol",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change symbol"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skift symbol"
           }
         }
       }
@@ -15201,13 +16425,30 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Data oprettet her forbliver skjult fra andre rum"
+            "value": "Data oprettet her forbliver skjult for andre rum."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Data created here stays hidden from other spaces"
+            "value": "Data created here stays hidden from other spaces."
+          }
+        }
+      }
+    },
+    "space.detail.identity": {
+      "comment": "space.detail.identity",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identity"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identitet"
           }
         }
       }
@@ -15225,6 +16466,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Private"
+          }
+        }
+      }
+    },
+    "space.detail.privateSpace": {
+      "comment": "space.detail.privateSpace",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private space"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privat rum"
           }
         }
       }
@@ -15269,13 +16527,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rediger rum"
+            "value": "Rum"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Edit Space"
+            "value": "Space"
           }
         }
       }
@@ -15286,13 +16544,30 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tryk + for at oprette et nyt rum."
+            "value": "Saml relaterede chats i et rum med deres egne instruktioner."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap + to create a new space."
+            "value": "Group related chats in a space, with instructions of their own."
+          }
+        }
+      }
+    },
+    "space.emptyState.title": {
+      "comment": "Empty state title when there are no spaces",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No spaces yet"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen rum endnu"
           }
         }
       }
@@ -17269,6 +18544,23 @@
         }
       }
     },
+    "tools.description.searchSkills": {
+      "comment": "One-sentence description of the search_skills tool, shown in the tool detail sheet",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søger i hele kompetencekataloget efter passende kompetencer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searches the full skill catalog for skills matching a need."
+          }
+        }
+      }
+    },
     "tools.description.setPresentation": {
       "comment": "One-sentence description of the set_presentation tool, shown in the tool detail sheet",
       "localizations": {
@@ -17299,23 +18591,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Changes how willing your agent is to reach out on its own."
-          }
-        }
-      }
-    },
-    "tools.description.searchSkills": {
-      "comment": "One-sentence description of the search_skills tool, shown in the tool detail sheet",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Søger i hele kompetencekataloget efter passende kompetencer."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Searches the full skill catalog for skills matching a need."
           }
         }
       }
@@ -20057,40 +21332,6 @@
         }
       }
     },
-    "ui.skill.calendar": {
-      "comment": "Name of the calendar skill.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendar"
-          }
-        }
-      }
-    },
-    "ui.skill.reminders": {
-      "comment": "Name of the reminders skill.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Påmindelser"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reminders"
-          }
-        }
-      }
-    },
     "ui.search-models": {
       "comment": "Placeholder text for the model search field",
       "localizations": {
@@ -20257,6 +21498,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show All (%@)"
+          }
+        }
+      }
+    },
+    "ui.skill.calendar": {
+      "comment": "Name of the calendar skill.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar"
+          }
+        }
+      }
+    },
+    "ui.skill.reminders": {
+      "comment": "Name of the reminders skill.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Påmindelser"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders"
           }
         }
       }
@@ -21201,261 +22476,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Photo"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.plusRequiredTitle": {
-      "comment": "Error title when the signed-in account is not ChatGPT Plus or Pro",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT Plus eller Pro påkrævet"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT Plus or Pro required"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.plusRequiredSuggestion": {
-      "comment": "Suggestion when the signed-in account is not ChatGPT Plus or Pro",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Log ind kræver et ChatGPT Plus- eller Pro-abonnement. Brug en API-nøgle i stedet, eller opgradér i ChatGPT-appen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign-in needs a ChatGPT Plus or Pro subscription. Use an API key instead, or upgrade in the ChatGPT app."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.usageLimitTitle": {
-      "comment": "Error title when the ChatGPT plan's usage limit is reached",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Forbrugsgrænsen er nået"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plan usage limit reached"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.usageLimitSuggestion": {
-      "comment": "Suggestion when the ChatGPT plan's usage limit is reached",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dit ChatGPT-abonnements forbrugsgrænse er brugt op. Tjek dine ChatGPT-indstillinger, eller prøv igen senere."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your ChatGPT plan's usage limit is used up. Check your ChatGPT settings, or try again later."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.invalidUserTitle": {
-      "comment": "Error title when the ChatGPT sign-in is no longer valid",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Log ind igen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in again"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.invalidUserSuggestion": {
-      "comment": "Suggestion when the ChatGPT sign-in is no longer valid",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dit ChatGPT-login er ikke længere gyldigt. Log ind igen for at fortsætte med dit abonnement."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your ChatGPT sign-in is no longer valid. Sign in again to keep using your subscription."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.unavailableTitle": {
-      "comment": "Error title when ChatGPT plan usage is temporarily unavailable",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT er utilgængelig"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT is unavailable"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.unavailableSuggestion": {
-      "comment": "Suggestion when ChatGPT plan usage is temporarily unavailable",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT-abonnementet kunne ikke nås. Prøv igen om lidt."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT plan usage couldn't be reached. Try again in a moment."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.unsupportedCapabilityTitle": {
-      "comment": "Error title when the request uses something the ChatGPT plan flow doesn't support",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Understøttes ikke her"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not supported here"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.unsupportedCapabilitySuggestion": {
-      "comment": "Suggestion when the request uses something the ChatGPT plan flow doesn't support. The argument names the unsupported capability.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT-abonnementet kan ikke det. Prøv en anden udbyder i stedet."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The ChatGPT subscription can't do that. Try a different provider instead."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.planUsageNotGranted": {
-      "comment": "Notice body when the user declined ChatGPT plan usage during sign-in",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abonnementsbrug blev ikke godkendt ved login, så ChatGPT kan ikke svare her. Log ind igen og godkend abonnementsbrug, eller brug en API-nøgle i stedet."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plan usage wasn't approved during sign-in, so ChatGPT can't answer here. Sign in again and approve plan usage, or use an API key instead."
-          }
-        }
-      }
-    },
-    "provider.ai-screen.signInAgain": {
-      "comment": "Button that reruns the ChatGPT sign-in to replace an expired or rejected credential.",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Log ind igen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in again"
-          }
-        }
-      }
-    },
-    "provider.setup.chatgpt.instruction": {
-      "comment": "How to connect via ChatGPT subscription sign-in",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Log ind for at bruge dit ChatGPT Plus- eller Pro-abonnement i Eigin."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign in to use your ChatGPT Plus or Pro subscription in Eigin."
-          }
-        }
-      }
-    },
-    "errors.chatgpt.signinFailedTitle": {
-      "comment": "Title when ChatGPT sign-in could not be completed (may have multiple causes)",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kunne ikke forbinde til din ChatGPT-konto"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't connect to your ChatGPT account"
-          }
-        }
-      }
-    },
-    "errors.chatgpt.signinFailedSuggestion": {
-      "comment": "Suggestion when ChatGPT sign-in could not be completed — causes vary (e.g. an ineligible subscription)",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der opstod et problem ved login. Tjek at din konto har et ChatGPT Plus- eller Pro-abonnement, og prøv igen eller brug en anden udbyder."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "There was a problem signing in. Make sure your account has a ChatGPT Plus or Pro subscription, then try again or use a different provider."
           }
         }
       }

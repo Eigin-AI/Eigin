@@ -11,6 +11,7 @@ struct AppRowSpec: Identifiable {
         case link
         case plus
         case trash
+        case check
         case none
     }
 
@@ -41,6 +42,7 @@ struct AppRowSpec: Identifiable {
     var id: String
     var title: String
     var description: String?
+    var descriptionLineLimit: Int?
     /// Supporting line with inline markup, such as a link. Wins over `description`.
     var descriptionContent: AttributedString?
     var value: String?
@@ -60,6 +62,7 @@ struct AppRowSpec: Identifiable {
         id: String? = nil,
         title: String,
         description: String? = nil,
+        descriptionLineLimit: Int? = nil,
         descriptionContent: AttributedString? = nil,
         value: String? = nil,
         mark: AnyView? = nil,
@@ -74,6 +77,7 @@ struct AppRowSpec: Identifiable {
         self.id = id ?? title
         self.title = title
         self.description = description
+        self.descriptionLineLimit = descriptionLineLimit
         self.descriptionContent = descriptionContent
         self.value = value
         self.mark = mark
@@ -133,11 +137,13 @@ struct AppRow: View {
                     .foregroundStyle(titleColor)
                 if let content = spec.descriptionContent {
                     Text(content)
+                        .lineLimit(spec.descriptionLineLimit)
                         .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                         .tint(colors.text.standard.link)
                 } else if let description = spec.description {
                     Text(description)
+                        .lineLimit(spec.descriptionLineLimit)
                         .typography(Typography.tag)
                         .foregroundStyle(colors.text.standard.muted)
                 }
@@ -178,7 +184,8 @@ struct AppRow: View {
     }
 
     private var accessoryColor: Color {
-        switch spec.tone {
+        if case .check = spec.accessory { return colors.icon.standard.base }
+        return switch spec.tone {
         case .accent: colors.accent
         case .destructive: colors.text.standard.error
         default: colors.text.standard.muted
@@ -197,6 +204,8 @@ struct AppRow: View {
             glyph(Iconography.Functional.plus, size: size)
         case .trash:
             glyph(Iconography.Functional.trash, size: size)
+        case .check:
+            glyph(Iconography.Functional.check, size: 20)
         case .none:
             EmptyView()
         }

@@ -51,10 +51,21 @@ struct ScreenshotSceneRoot: View {
                 )
             case .connections:
                 NavigationStack { ConnectionsView() }
+            case .modelPicker, .intents, .intentDetail, .skills, .skillDetail, .spaces,
+                 .spaceDetail,
+                 .permissions, .knowledge:
+                ScreenshotSecondaryScene(scene: scene)
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(Self.anchorIdentifier)
+        .task {
+            if ProcessInfo.processInfo.arguments.contains("--screenshot-landscape"),
+               let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            {
+                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeLeft))
+            }
+        }
     }
 }
 
@@ -68,7 +79,8 @@ extension ScreenshotScene {
         case .followUp: ScreenshotFollowUpScene.chatTitle
         case .onDevice: ScreenshotOnDeviceScene.chatTitle
         case .care: ScreenshotCareScene.chatTitle
-        case .connections: nil
+        case .connections, .modelPicker, .intents, .intentDetail, .skills, .skillDetail, .spaces,
+             .spaceDetail, .permissions, .knowledge: nil
         }
     }
 }

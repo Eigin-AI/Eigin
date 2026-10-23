@@ -2,7 +2,6 @@ import Factory
 import SwiftUI
 
 struct IntentDetail: View {
-    @Environment(\.colors) private var colors
     @Injected(\.intentService) private var intentService
     @Environment(\.dismiss) private var dismiss
 
@@ -10,113 +9,87 @@ struct IntentDetail: View {
 
     @State private var showDismissConfirmation = false
 
+    @State private var isDismissing = false
+    @State private var showDismissError = false
+
     var body: some View {
-        List {
-            Section {
-                Text(intent.content)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.base)
+        AppSecondaryScreen(title: Localized.Ui.intent) {
+            AppContentGroup(label: Localized.Intent.content) {
+                AppDetailText(text: intent.content)
             }
-
             if !intent.tasks.isEmpty {
-                Section(Localized.Intent.tasks) {
-                    ForEach(intent.tasks) { task in
-                        taskRow(task)
-                    }
-                }
+                AppRowsGroup(label: Localized.Intent.tasks, rows: intent.tasks.map { task in
+                    AppRowSpec(
+                        id: "\(task.id)",
+                        title: task.content,
+                        description: task.due.map { LocalDateFormatter.string(from: $0) },
+                        icon: task.completed ? Iconography.Functional.check : nil,
+                        accessory: .none,
+                        tone: task.completed ? .muted : .standard
+                    )
+                })
             }
-
             if !intent.events.isEmpty {
-                Section(Localized.Intent.events) {
-                    ForEach(intent.events) { event in
-                        LabeledContent(event.content) {
-                            Text(LocalDateFormatter.string(from: event.at))
-                                .typography(Typography.note)
-                                .foregroundStyle(colors.text.standard.muted)
-                        }
-                    }
-                }
+                AppRowsGroup(label: Localized.Intent.events, rows: intent.events.map { event in
+                    AppRowSpec(
+                        id: "\(event.id)",
+                        title: event.content,
+                        description: LocalDateFormatter.string(from: event.at),
+                        accessory: .none
+                    )
+                })
             }
-
             if !intent.schedules.isEmpty {
-                Section(Localized.Intent.schedules) {
-                    ForEach(intent.schedules) { schedule in
-                        LabeledContent(schedule.content) {
-                            Text(scheduleSummary(schedule))
-                                .typography(Typography.note)
-                                .foregroundStyle(colors.text.standard.muted)
-                        }
+                AppRowsGroup(
+                    label: Localized.Intent.schedules,
+                    rows: intent.schedules.map { schedule in
+                        AppRowSpec(
+                            id: "\(schedule.id)",
+                            title: schedule.content,
+                            description: scheduleSummary(schedule),
+                            accessory: .none
+                        )
                     }
-                }
+                )
             }
-
-            Section(Localized.Ui.details) {
-                LabeledContent(Localized.Ui.created) {
-                    Text(intent.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-                LabeledContent(Localized.Tools.Last.updated) {
-                    Text(intent.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
+            AppRowsGroup(label: Localized.Ui.details, rows: [
+                AppRowSpec(
+                    title: Localized.Ui.created,
+                    value: intent.createdAt.formatted(date: .abbreviated, time: .shortened),
+                    accessory: .none
+                ),
+                AppRowSpec(
+                    title: Localized.Intent.updated,
+                    value: intent.updatedAt.formatted(date: .abbreviated, time: .shortened),
+                    accessory: .none
+                ),
+            ])
+            AppRowsGroup(rows: [AppRowSpec(
+                title: Localized.Intent.dismissAction,
+                accessory: .trash,
+                tone: .destructive,
+                action: { showDismissConfirmation = true }
+            )])
+            .disabled(isDismissing)
         }
-        .contentMargins(.top, 0, for: .scrollContent)
-        .scrollContentBackground(.hidden)
-        .softEdge {
-            AppNavigationHeader(
-                title: Localized.Ui.intent,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                },
-                trailing: {
-                    AppActionButton(
-                        icon: Image(systemName: "xmark"),
-                        variant: .open,
-                        size: .medium,
-                        action: { showDismissConfirmation = true }
-                    )
-                }
-            )
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Ui.dismiss, role: .destructive) {
+                guard !isDismissing else { return }
+                isDismissing = true
                 Task {
-                    try? await intentService.dismiss(id: intent.id)
-                    dismiss()
+                    defer { isDismissing = false }
+                    do {
+                        try await intentService.dismiss(id: intent.id)
+                        dismiss()
+                    } catch { showDismissError = true }
                 }
             }
         } message: {
             Text(Localized.Intent.dismissWarning)
         }
-    }
-
-    private func taskRow(_ task: IntentTask) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.n8) {
-            Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(task.completed ? colors.text.standard.muted : colors.text.standard
-                    .base)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(task.content)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.base)
-                    .strikethrough(task.completed)
-                if let due = task.due {
-                    Text(LocalDateFormatter.string(from: due))
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
+        .alert(Localized.Intent.dismissFailed, isPresented: $showDismissError) {
+            Button(Localized.Common.Actions.ok, role: .cancel) {}
         }
     }
 

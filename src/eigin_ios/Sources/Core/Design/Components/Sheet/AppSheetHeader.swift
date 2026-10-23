@@ -4,6 +4,8 @@ struct AppSheetHeader: View {
     var label: String?
     let title: String
     var description: String?
+    /// Optional cap for the plain-text description; other sheets keep their full text.
+    var descriptionLineLimit: Int?
     /// Rich, dynamic description in place of the plain `description` string.
     /// Rendered in the header group so it inherits description spacing/inset.
     var descriptionContent: AnyView?
@@ -36,6 +38,7 @@ struct AppSheetHeader: View {
                         descriptionContent
                     } else if let description {
                         Text(description)
+                            .lineLimit(descriptionLineLimit)
                             .typography(Typography.description)
                             .foregroundStyle(colors.text.standard.muted)
                     }

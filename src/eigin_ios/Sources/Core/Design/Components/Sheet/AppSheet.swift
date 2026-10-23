@@ -105,6 +105,7 @@ extension View {
         title: String,
         label: String? = nil,
         description: String? = nil,
+        descriptionLineLimit: Int? = nil,
         descriptionContent: AnyView? = nil,
         detents: Set<PresentationDetent> = [.medium, .large],
         fitsContent: Bool = false,
@@ -118,6 +119,7 @@ extension View {
                 label: label,
                 title: title,
                 description: description,
+                descriptionLineLimit: descriptionLineLimit,
                 descriptionContent: descriptionContent,
                 detents: detents,
                 fitsContent: fitsContent,
@@ -137,6 +139,7 @@ private struct AppSheetContainer<Primary: View, Secondary: View>: View {
     let label: String?
     let title: String
     let description: String?
+    let descriptionLineLimit: Int?
     let descriptionContent: AnyView?
     let detents: Set<PresentationDetent>
     let fitsContent: Bool
@@ -160,6 +163,7 @@ private struct AppSheetContainer<Primary: View, Secondary: View>: View {
                     label: label,
                     title: title,
                     description: description,
+                    descriptionLineLimit: descriptionLineLimit,
                     descriptionContent: descriptionContent,
                     onDismiss: onDismiss
                 )

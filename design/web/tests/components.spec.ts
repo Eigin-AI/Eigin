@@ -159,13 +159,24 @@ test("a control does not select its own label", async ({ page }) => {
   expect(selectable).toBe("none");
 });
 
-test("a screen group with nothing in it is not drawn", async ({ page }) => {
+test("the sidebar only draws groups with navigable entries", async ({ page }) => {
   await page.goto("/#/screens/chat");
 
-  // Primary screens have their fold; the secondary group is empty, so the
-  // sidebar stays short until something lands in it.
-  await expect(page.getByRole("button", { name: "Screens" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "More screens" })).toHaveCount(0);
+  const sidebar = page.getByRole("navigation");
+  await expect(sidebar.getByRole("button", { name: /^Chats/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(sidebar.getByRole("radio", { name: "Chat", exact: true })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+
+  const groups = sidebar.locator(".disclosure");
+  expect(await groups.count()).toBeGreaterThan(0);
+  for (const group of await groups.all()) {
+    await expect(group.getByRole("radio", { includeHidden: true })).not.toHaveCount(0);
+  }
 });
 
 test("the segmented indicator sits on the selected segment, whatever its width", async ({
@@ -204,24 +215,58 @@ test("an asset row shows the transfer as numbers, not a spinner", async ({ page 
   expect(drawn).toBeCloseTo(0.62, 2);
 });
 
-test("a sheet is as tall as its content, and stops below the safe area", async ({ page }) => {
+test("a sheet caps long content below the safe area and hugs filtered content", async ({
+  page,
+}) => {
   await page.goto("/#/screens/add-integration");
 
-  const room = await page.evaluate(() => {
-    const screen = document.querySelector(".device-screen")!.getBoundingClientRect();
-    const sheet = document.querySelector(".sheet")!.getBoundingClientRect();
-    const safeTop = parseFloat(
-      getComputedStyle(document.querySelector(".device-screen")!).getPropertyValue(
-        "--eigin-safe-area-top",
-      ),
-    );
-    return { clearance: sheet.top - screen.top, safeTop, height: sheet.height };
+  const sheet = page.getByRole("dialog");
+  await expect(sheet).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(() => sheet.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
+    .toBe(0);
+
+  const room = await sheet.evaluate((el) => {
+    const screen = el.closest(".device-screen")!;
+    const frame = screen.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    const style = getComputedStyle(screen);
+    const scale = frame.height / screen.clientHeight;
+    const safeTop = parseFloat(style.getPropertyValue("--eigin-safe-area-top"));
+    const gap = parseFloat(style.getPropertyValue("--spacing-n32"));
+    return {
+      clearance: (box.top - frame.top) / scale,
+      height: box.height / scale,
+      physicalHeight: box.height,
+      cap: screen.clientHeight - safeTop - gap,
+      safeTop,
+      gap,
+    };
   });
 
-  // It hugs its content rather than filling the frame...
-  expect(room.height).toBeLessThan(600);
-  // ...and whatever it holds, it never reaches the status bar.
-  expect(room.clearance).toBeGreaterThan(room.safeTop);
+  // The full catalogue reaches the cap and scrolls inside the sheet.
+  expect(room.clearance).toBeCloseTo(room.safeTop + room.gap, 0);
+  expect(room.height).toBeCloseTo(room.cap, 0);
+  const scroll = sheet.locator(".scroll");
+  await expect
+    .poll(() => scroll.evaluate((el) => el.scrollHeight - el.clientHeight))
+    .toBeGreaterThan(0);
+
+  // Filtering to one result restores content-hugging without clipping rows.
+  await sheet.getByPlaceholder("Search integrations").fill("Google");
+  await expect(
+    sheet.getByRole("button", { name: "Google Gmail, Calendar and Contacts" }),
+  ).toBeVisible();
+  await expect
+    .poll(() => sheet.evaluate((el) => el.getBoundingClientRect().height))
+    .toBeLessThan(room.physicalHeight);
+  await expect
+    .poll(() => scroll.evaluate((el) => el.scrollHeight - el.clientHeight))
+    .toBeLessThanOrEqual(1);
+  const address = await sheet.getByRole("button", { name: "Connect by address" }).boundingBox();
+  const body = await scroll.boundingBox();
+  expect(address!.y + address!.height).toBeLessThanOrEqual(body!.y + body!.height + 1);
 });
 
 test("a typography class decides the family, and nothing overrides it", async ({ page }) => {

@@ -101,3 +101,6 @@ export {
 } from "./generated/tokens";
 export type { IconName } from "./generated/icons";
 export { icons } from "./generated/icons";
+
+export { default as EmptyState } from "./components/status/EmptyState.svelte";
+export { default as LoadingState } from "./components/status/LoadingState.svelte";

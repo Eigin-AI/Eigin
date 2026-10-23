@@ -46,6 +46,7 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
 
         let context = container.mainContext
         let fixtures = ScreenshotFixtures.seed(into: context)
+        if scene.isSecondary { ScreenshotSecondaryScene.seed(context, fixtures: fixtures) }
         if let chatTitle = scene.chatTitle {
             // A header chat for the canvas scenes; the conversation itself is
             // composed as view-only items (see ScreenshotCanvas).

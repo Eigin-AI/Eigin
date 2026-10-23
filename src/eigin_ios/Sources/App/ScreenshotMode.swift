@@ -14,6 +14,15 @@ enum ScreenshotScene: String {
     case memory
     case followUp = "follow-up"
     case connections
+    case modelPicker = "model-picker"
+    case intents
+    case intentDetail = "intent-detail"
+    case skills
+    case skillDetail = "skill-detail"
+    case spaces
+    case spaceDetail = "space-detail"
+    case permissions
+    case knowledge
 }
 
 /// Installs a screenshot scene at launch. The only implementation is

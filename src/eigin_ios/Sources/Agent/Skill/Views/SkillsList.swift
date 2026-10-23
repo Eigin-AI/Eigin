@@ -1,50 +1,42 @@
+import Factory
+import SwiftData
 import SwiftUI
 
-/// Lists all bundled skills the agent can use.
+/// Bundled skills available through built-in tools and connected capabilities.
 struct SkillsList: View {
-    @Environment(\.colors) private var colors
-    @Environment(\.dismiss) private var dismiss
+    @Query private var integrations: [Integration]
+    @Injected(\.integrationManager) private var integrationManager
+
+    private var available: [Skill] {
+        SkillCatalog.resolvable(
+            from: BundledSkill.all,
+            connectedCapabilities: integrationManager
+                .connectedCapabilities(integrations: integrations)
+        )
+    }
 
     var body: some View {
-        List(BundledSkill.all) { skill in
-            NavigationLink {
-                SkillDetail(skill: skill)
-                    .hidesTabBar()
-            } label: {
-                VStack(alignment: .leading, spacing: Spacing.n4) {
-                    Text(skill.displayName)
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(colors.text.standard.base)
-                    Text(skill.description)
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
+        AppSecondaryScreen(title: Localized.Agent.skills) {
+            AppContentGroup(
+                label: Localized.Skills.available,
+                footnote: Localized.Skills.footnote
+            ) {
+                ForEach(Array(available.enumerated()), id: \.element.id) { index, skill in
+                    if index > 0 { RowHairline() }
+                    NavigationLink {
+                        SkillDetail(skill: skill).hidesTabBar()
+                    } label: {
+                        AppRow(AppRowSpec(title: skill.displayName, description: skill.description))
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .listRowBackground(colors.surface.standard.alternative)
         }
-        .contentMargins(.top, 0, for: .scrollContent)
-        .scrollContentBackground(.hidden)
-        .softEdge {
-            AppNavigationHeader(
-                title: Localized.Agent.skills,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                }
-            )
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
 #Preview {
-    NavigationStack {
-        SkillsList()
-    }
-    .previewEnvironment()
+    NavigationStack { SkillsList() }
+        .previewEnvironment()
 }

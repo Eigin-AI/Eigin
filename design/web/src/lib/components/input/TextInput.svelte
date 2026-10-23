@@ -36,6 +36,7 @@
       <input
         bind:this={field}
         bind:value
+        aria-label={label}
         type={isSecure ? "password" : "text"}
         class="t-description"
         onfocus={() => (focused = true)}

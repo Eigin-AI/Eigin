@@ -151,10 +151,10 @@ struct ChatView: View {
             if !canSend, viewModel.window.messages.isEmpty {
                 header
 
-                ContentUnavailableView(
-                    "No Agent",
-                    systemImage: "person.crop.circle",
-                    description: Text(Localized.Agent.EmptyState.setupHint)
+                AppEmptyState(
+                    icon: Iconography.Functional.avatar,
+                    title: Localized.Agent.EmptyState.title,
+                    description: Localized.Agent.EmptyState.setupHint
                 )
             } else {
                 ChatFeed(
