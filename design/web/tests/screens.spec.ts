@@ -16,10 +16,11 @@ test("chat rows keep one height whatever the preview says", async ({ page }) => 
 });
 
 test("the chat screen scrolls its feed, not the phone frame", async ({ page }) => {
-  await page.goto("/#/screens/chat");
+  await page.goto("/#/screens/chat?long");
+  await page.evaluate(() => document.fonts.ready);
 
   const viewport = page.locator(".device-viewport");
-  const feed = page.locator(".scroll");
+  const feed = page.locator(".device-screen .scroll");
   await expect(feed).toBeVisible();
 
   // The frame itself never scrolls: the header and composer are pinned.
@@ -30,27 +31,41 @@ test("the chat screen scrolls its feed, not the phone frame", async ({ page }) =
   expect(frame.scroll).toBe(frame.client);
 
   const headerBefore = await page.locator(".nav-header").boundingBox();
-  const composerBefore = await page.locator(".composer").boundingBox();
+  const composer = page.locator(".device-screen .region > .footer");
+  await expect(composer.getByPlaceholder("Chat with Eigin")).toBeAttached();
+  const composerBefore = await composer.boundingBox();
   await feed.evaluate((el) => el.scrollTo(0, el.scrollHeight));
   await expect.poll(async () => feed.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
 
   expect(await page.locator(".nav-header").boundingBox()).toEqual(headerBefore);
-  expect(await page.locator(".composer").boundingBox()).toEqual(composerBefore);
+  expect(await composer.boundingBox()).toEqual(composerBefore);
 });
 
-test("the chat feed runs behind the composer", async ({ page }) => {
-  await page.goto("/#/screens/chat");
+test("the chat feed runs behind the composer and reserves its height", async ({ page }) => {
+  await page.goto("/#/screens/chat?long");
+  await expect(page.locator(".device-screen .region > .footer")).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
 
-  const overlap = await page.evaluate(() => {
-    const scroll = document.querySelector(".scroll")!.getBoundingClientRect();
-    const composer = document.querySelector(".composer")!.getBoundingClientRect();
-    const reserved = parseFloat(getComputedStyle(document.querySelector(".scroll")!).paddingBottom);
-    return { covered: scroll.bottom - composer.top, height: composer.height, reserved };
-  });
+  const overlap = () =>
+    page.locator(".device-screen .scroll").evaluate((el) => {
+      const scroll = el.getBoundingClientRect();
+      const footer = el.parentElement!.querySelector(".footer")!.getBoundingClientRect();
+      const scale = scroll.height / el.clientHeight;
+      return {
+        covered: (scroll.bottom - footer.top) / scale,
+        height: footer.height / scale,
+        reserved: parseFloat(getComputedStyle(el).paddingBottom),
+      };
+    });
 
-  // The bar sits over the feed, and the feed reserves its height beneath.
-  expect(overlap.covered).toBeGreaterThan(0);
-  expect(overlap.reserved).toBeGreaterThanOrEqual(overlap.height);
+  await expect.poll(async () => (await overlap()).covered).toBeGreaterThan(0);
+  // Resize observation updates the reserved space after the footer lays out.
+  await expect
+    .poll(async () => {
+      const { reserved, height } = await overlap();
+      return reserved - height;
+    })
+    .toBeGreaterThanOrEqual(0);
 });
 
 test("the call screen wears the phone's chrome and respects the island's edges", async ({
@@ -84,40 +99,86 @@ test("a sheet screen opens over the screen it belongs to", async ({ page }) => {
 });
 
 test("a screen's demo controls sit on the stage, not on the phone", async ({ page }) => {
-  await page.goto("/#/screens/mcp-server");
+  await page.goto("/#/screens/connect-integration");
 
-  // Beside the device pickers, so the phone shows only the design.
-  await expect(page.locator(".device-picker").getByRole("radio", { name: "error" })).toBeVisible();
-  await expect(page.locator(".device-screen").getByRole("radio", { name: "error" })).toHaveCount(0);
+  const failure = page
+    .locator(".device-picker")
+    .getByRole("radio", { name: "failed", exact: true });
+  await expect(failure).toBeVisible();
+  await expect(page.locator(".device-screen").getByRole("radio", { name: "failed" })).toHaveCount(
+    0,
+  );
+
+  await failure.click();
+  await expect(page.getByRole("dialog").getByText("The sign-in did not finish")).toBeVisible();
 });
 
-test("the api-key fold rolls open and the sheet grows with it", async ({ page }) => {
+test("provider search filters connection methods and keeps the address fallback", async ({
+  page,
+}) => {
   await page.goto("/#/screens/provider-select");
 
-  const sheet = page.locator(".sheet");
-  const open = (await sheet.boundingBox())!.height;
+  const sheet = page.getByRole("dialog");
+  const signIn = sheet.locator("section").filter({
+    has: page.getByRole("heading", { name: "Sign in", exact: true }),
+  });
+  const apiKey = sheet.locator("section").filter({
+    has: page.getByRole("heading", { name: "Paste an API key", exact: true }),
+  });
+  const address = sheet.getByRole("button", { name: "Connect by address" });
+  const search = sheet.getByPlaceholder("Search providers");
 
-  await page.getByText("Or connect with an API key").click();
-  await expect(page.locator(".keys")).toHaveCount(0);
+  await expect(signIn.getByRole("button", { name: "OpenAI", exact: true })).toBeVisible();
+  await expect(apiKey.getByRole("button", { name: "OpenAI", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Anthropic", exact: true })).toHaveCount(0);
 
-  const closed = (await sheet.boundingBox())!.height;
-  expect(closed).toBeLessThan(open);
+  await search.fill("Google");
+  await expect(signIn).toHaveCount(0);
+  await expect(apiKey.getByRole("button", { name: "Google", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "OpenAI", exact: true })).toHaveCount(0);
+  await expect(address).toBeVisible();
+
+  await search.fill("Unknown provider");
+  await expect(signIn).toHaveCount(0);
+  await expect(apiKey).toHaveCount(0);
+  await expect(sheet.getByText("We don't know that one", { exact: true })).toBeVisible();
+  await expect(address).toBeVisible();
+
+  await search.clear();
+  await expect(signIn.getByRole("button", { name: "OpenAI", exact: true })).toBeVisible();
+  await expect(apiKey.getByRole("button", { name: "OpenAI", exact: true })).toBeVisible();
 });
 
-test("a page presented modally takes the room and brings its own header", async ({ page }) => {
-  await page.goto("/#/screens/add-mcp-server");
+test("an integration form scrolls below its pinned sheet header", async ({ page }) => {
+  await page.goto("/#/screens/connect-integration");
+  await page
+    .locator(".device-picker")
+    .getByRole("radio", { name: "mail account", exact: true })
+    .click();
+  await page.getByRole("radio", { name: "Landscape", exact: true }).click();
 
-  // Swift uses a plain `.sheet` here, so the card fills rather than hugging...
-  const room = await page.evaluate(() => {
-    const screen = document.querySelector(".device-screen")!.getBoundingClientRect();
-    const sheet = document.querySelector(".sheet")!.getBoundingClientRect();
-    return sheet.height / screen.height;
-  });
-  expect(room).toBeGreaterThan(0.85);
+  const sheet = page.getByRole("dialog");
+  const header = sheet.locator("header");
+  await expect(header.getByRole("heading", { name: "Other email" })).toBeVisible();
+  const scroll = sheet.locator(".scroll");
+  await expect(header.getByRole("button", { name: "Dismiss" })).toBeVisible();
+  await expect(sheet.locator(".grabber")).toBeVisible();
+  for (const label of ["Email address", "App password", "IMAP server", "SMTP server"]) {
+    await expect(sheet.getByLabel(label, { exact: true })).toBeAttached();
+  }
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(() => sheet.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
+    .toBe(0);
 
-  // ...and the form's navigation header stands in for the sheet header.
-  await expect(page.locator(".sheet .grabber")).toHaveCount(0);
-  await expect(page.locator(".sheet").getByText("Add MCP Server")).toBeVisible();
+  const before = await header.boundingBox();
+  await scroll.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  expect(await header.boundingBox()).toEqual(before);
+  const action = await sheet.getByRole("button", { name: "Connect", exact: true }).boundingBox();
+  const body = await scroll.boundingBox();
+  expect(action!.y).toBeGreaterThanOrEqual(before!.y + before!.height - 1);
+  expect(action!.y + action!.height).toBeLessThanOrEqual(body!.y + body!.height + 1);
 });
 
 test("the agent's face arrives just after its body", async ({ page }) => {

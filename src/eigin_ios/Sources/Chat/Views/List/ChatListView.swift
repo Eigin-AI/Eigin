@@ -40,10 +40,10 @@ struct ChatListView: View {
                 Group {
                     if filteredChats.isEmpty {
                         header
-                        ContentUnavailableView(
-                            Localized.Chat.EmptyState.title,
-                            systemImage: "bubble",
-                            description: Text(Localized.Chat.EmptyState.hint)
+                        AppEmptyState(
+                            icon: Iconography.Brand.chatFill,
+                            title: Localized.Chat.EmptyState.title,
+                            description: Localized.Chat.EmptyState.hint
                         )
                     } else {
                         chatList

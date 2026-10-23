@@ -39,17 +39,21 @@
           selection={language}
           onSelect={(next) => (language = next)}
         />
-        <Row title="Send feedback" accessory="none" onclick={() => {}} />
+        <Row
+          title="Send feedback"
+          accessory="none"
+          onclick={() => (location.hash = "#/screens/feedback")}
+        />
       </ContentGroup>
 
       <ContentGroup label="Agent">
-        <Row title="Permissions" onclick={() => {}} />
-        <Row title="Connections" onclick={() => {}} />
+        <Row title="Permissions" onclick={() => (location.hash = "#/screens/permissions")} />
+        <Row title="Connections" onclick={() => (location.hash = "#/screens/connections")} />
       </ContentGroup>
 
       <ContentGroup label="System">
-        <Row title="Advanced" onclick={() => {}} />
-        <Row title="About" onclick={() => {}} />
+        <Row title="Advanced" onclick={() => (location.hash = "#/screens/settings-advanced")} />
+        <Row title="About" onclick={() => (location.hash = "#/screens/about")} />
       </ContentGroup>
     {/each}
     {#snippet footer()}

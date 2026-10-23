@@ -1,13 +1,56 @@
 <script lang="ts">
-  import { ContentGroup, IdentityHeader, Mark, Notice, Row, StatusLine } from "@lib";
+  import {
+    EmptyState,
+    LoadingState,
+    ContentGroup,
+    IdentityHeader,
+    Mark,
+    Notice,
+    Row,
+    StatusLine,
+  } from "@lib";
   import DeviceFrame from "@gallery/frames/DeviceFrame.svelte";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
 
+  let emptyAction = $state("no action");
   let tone = $state("info");
   let mark = $state("logo");
 </script>
 
 <div class="doc">
+  <h2 class="t-titleM">Empty state</h2>
+  <p class="lede t-description">
+    An icon, a title and a short explanation when there is no content. Add an action when there is a
+    useful next step. The state fills the available space below the screen header.
+  </p>
+  <div class="controls">
+    <OptionSelector options={["no action", "with action"]} bind:value={emptyAction} />
+  </div>
+  <div class="canvas">
+    <DeviceFrame height="content" colorScheme="inherit"
+      ><div class="state-example">
+        <EmptyState
+          icon="functional/grid"
+          title="No spaces yet"
+          description="Group related chats in a space, with instructions of their own."
+          action={emptyAction === "with action" ? "Create space" : undefined}
+          onclick={() => (location.hash = "#/screens/spaces")}
+        />
+      </div></DeviceFrame
+    >
+  </div>
+
+  <h2 class="t-titleM">Loading state</h2>
+  <p class="lede t-description">
+    A larger indeterminate indicator and a title. No subtitle or estimated progress. Motion stops
+    when reduced motion is enabled.
+  </p>
+  <div class="canvas">
+    <DeviceFrame height="content" colorScheme="inherit"
+      ><div class="state-example"><LoadingState title="Finding models" /></div></DeviceFrame
+    >
+  </div>
+
   <h2 class="t-titleM">Status line</h2>
   <p class="lede t-description">
     One vocabulary for "is this thing working": a dot and a word. Filled green is up, filled amber
@@ -118,6 +161,10 @@
 </div>
 
 <style>
+  .state-example {
+    display: flex;
+    min-height: 320px;
+  }
   .lede {
     max-width: 62ch;
     color: var(--color-text-standard-muted);

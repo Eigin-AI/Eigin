@@ -45,11 +45,24 @@ struct ProviderModelsScreen: View {
                 )
 
                 if nothingShown {
-                    Text(Localized.Provider.Models.noMatches(searchText))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Spacing.n8)
+                    AppEmptyState(
+                        icon: Iconography.Functional.search,
+                        title: searchText.isEmpty ? Localized.Model.Picker.noModels : Localized
+                            .Model.Picker.noSearchResults,
+                        description: searchText.isEmpty ? Localized.Model.Picker
+                            .emptyHint : Localized.Provider.Models.noMatches(searchText)
+                    ) {
+                        if searchText.isEmpty {
+                            AppButton(Localized.Common.Actions.retry, variant: .secondary) {
+                                Task { await load() }
+                            }
+                            .disabled(isRefreshing)
+                        } else {
+                            AppButton(Localized.Model.Picker.clearSearch, variant: .secondary) {
+                                searchText = ""
+                            }
+                        }
+                    }
                 }
 
                 modelGroup(

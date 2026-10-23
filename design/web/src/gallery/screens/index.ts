@@ -1,3 +1,18 @@
+import KnowledgeGraphScreen from "@gallery/screens/secondary/KnowledgeGraphScreen.svelte";
+import FeedbackScreen from "@gallery/screens/secondary/FeedbackScreen.svelte";
+import AboutScreen from "@gallery/screens/secondary/AboutScreen.svelte";
+import AdvancedSettingsScreen from "@gallery/screens/secondary/AdvancedSettingsScreen.svelte";
+import PermissionsScreen from "@gallery/screens/secondary/PermissionsScreen.svelte";
+import SpaceDetailScreen from "@gallery/screens/secondary/SpaceDetailScreen.svelte";
+import SpacesScreen from "@gallery/screens/secondary/SpacesScreen.svelte";
+import SkillDetailScreen from "@gallery/screens/secondary/SkillDetailScreen.svelte";
+import SkillsScreen from "@gallery/screens/secondary/SkillsScreen.svelte";
+import IntentDetailScreen from "@gallery/screens/secondary/IntentDetailScreen.svelte";
+import IntentsScreen from "@gallery/screens/secondary/IntentsScreen.svelte";
+import ModelPickerScreen from "@gallery/screens/secondary/ModelPickerScreen.svelte";
+import KnowledgeScreen from "@gallery/screens/secondary/KnowledgeScreen.svelte";
+import KnowledgeDetailScreen from "@gallery/screens/secondary/KnowledgeDetailScreen.svelte";
+import KnowledgeCategoryScreen from "@gallery/screens/secondary/KnowledgeCategoryScreen.svelte";
 import type { Component } from "svelte";
 import AddIntegrationScreen from "@gallery/screens/AddIntegrationScreen.svelte";
 import ConnectIntegrationScreen from "@gallery/screens/ConnectIntegrationScreen.svelte";
@@ -52,10 +67,12 @@ export interface ScreenEntry {
  *
  * The app has four screens you can reach from the tab bar and a long tail of
  * everything behind them, so the tail is grouped by the area it belongs to
- * rather than piled into one list. Only the group you are in stays unfolded.
+ * rather than piled into one list. Groups can be expanded independently.
  */
 export const screenSections: { id: string; title: string }[] = [
-  { id: "primary", title: "Main screens" },
+  { id: "chats", title: "Chats" },
+  { id: "agent", title: "Agent" },
+  { id: "settings", title: "Settings" },
   { id: "onboarding", title: "Onboarding" },
   { id: "connections", title: "Connections" },
   { id: "sheets", title: "Sheets" },
@@ -72,39 +89,151 @@ export const screenEntries: ScreenEntry[] = [
   {
     id: "chat-list",
     title: "Chat list",
-    section: "primary",
+    section: "chats",
     component: ChatListScreen,
     about: "Every conversation, most recent first.",
   },
   {
     id: "chat",
     title: "Chat",
-    section: "primary",
+    section: "chats",
     component: ChatScreen,
     about: "One conversation, with the agent's tools and thinking shown as it works.",
   },
   {
     id: "call",
     title: "Call",
-    section: "primary",
+    section: "chats",
     component: CallScreen,
     about: "A spoken conversation, hands free.",
   },
   {
     id: "agent",
     title: "Agent",
-    section: "primary",
+    section: "agent",
     component: AgentScreen,
     about: "Who the agent is and what it can reach: identity, soul, skills and models.",
   },
   {
     id: "settings",
     title: "Settings",
-    section: "primary",
+    section: "settings",
     component: SettingsScreen,
     about: "Everything about the app itself, and the way through to connections.",
   },
 
+  {
+    id: "model-picker",
+    title: "Model picker",
+    section: "agent",
+    component: ModelPickerScreen,
+    about:
+      "Choose an agent model. Selection stays visible for review; iOS dismisses after selection.",
+  },
+  {
+    id: "knowledge",
+    title: "Knowledge · Graph",
+    section: "agent",
+    component: KnowledgeGraphScreen,
+    about:
+      "Graph-first exploration. One focus and up to six immediate relationships, paged without adding nodes. Four neighbors in shorter viewports. Local sample data; no iOS changes.",
+  },
+  {
+    id: "knowledge-list",
+    title: "Knowledge · List",
+    section: "agent",
+    component: KnowledgeScreen,
+    about:
+      "Remembered people, things and facts, with loading and empty scenarios above the device.",
+  },
+  {
+    id: "knowledge-category",
+    title: "Knowledge · category",
+    section: "agent",
+    component: KnowledgeCategoryScreen,
+    about: "A long category list with a pinned header.",
+  },
+  {
+    id: "knowledge-detail",
+    title: "Knowledge · detail",
+    section: "agent",
+    component: KnowledgeDetailScreen,
+    about:
+      "Sample memory fields, tags, relationships and deletion confirmation. List rows open this representative detail.",
+  },
+
+  {
+    id: "intents",
+    title: "Intents",
+    section: "agent",
+    component: IntentsScreen,
+    about: "Active goals and the empty state.",
+  },
+  {
+    id: "intent-detail",
+    title: "Intents · Detail",
+    section: "agent",
+    component: IntentDetailScreen,
+    about: "Representative intent with tasks, events, schedules and dismissal confirmation.",
+  },
+  {
+    id: "skills",
+    title: "Skills",
+    section: "agent",
+    component: SkillsScreen,
+    about: "Built-in skills. Rows open a representative skill detail.",
+  },
+  {
+    id: "skill-detail",
+    title: "Skills · Detail",
+    section: "agent",
+    component: SkillDetailScreen,
+    props: { skillID: "knowledge" },
+    about: "Sample instructions, with and without dedicated tools.",
+  },
+  {
+    id: "spaces",
+    title: "Spaces",
+    section: "chats",
+    component: SpacesScreen,
+    about:
+      "Spaces manager with populated and empty scenarios. Add opens the representative editor.",
+  },
+  {
+    id: "space-detail",
+    title: "Spaces · Detail",
+    section: "chats",
+    component: SpaceDetailScreen,
+    about: "Local name, symbol, instructions and privacy edits. Changes are preview-only.",
+  },
+  {
+    id: "permissions",
+    title: "Permissions",
+    section: "settings",
+    component: PermissionsScreen,
+    about: "Representative tool categories, compact permission controls and group headings.",
+  },
+  {
+    id: "settings-advanced",
+    title: "Advanced",
+    section: "settings",
+    component: AdvancedSettingsScreen,
+    about: "Storage and logging controls. Export is preview-only.",
+  },
+  {
+    id: "about",
+    title: "About",
+    section: "settings",
+    component: AboutScreen,
+    about: "App information and legal links. License browsing is outside this preview.",
+  },
+  {
+    id: "feedback",
+    title: "Send feedback",
+    section: "sheets",
+    component: FeedbackScreen,
+    about: "Feedback form and report review over Settings. Sending is preview-only.",
+  },
   /* Onboarding is one flow entered at each step: every page plays on from
      where it starts, with the avatar carried across the setup steps. */
   {

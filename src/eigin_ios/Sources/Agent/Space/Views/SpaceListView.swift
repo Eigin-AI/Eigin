@@ -2,8 +2,6 @@ import SwiftData
 import SwiftUI
 
 struct SpaceListView: View {
-    @Environment(\.colors) private var colors
-    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Space.name) private var spaces: [Space]
     @Query private var agents: [Agent]
     @Query(sort: \Chat.updatedAt) private var allChats: [Chat]
@@ -23,94 +21,51 @@ struct SpaceListView: View {
     @State private var showBootstrap = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppSecondaryScreen(title: Localized.Space.title, fillsViewport: spaces.isEmpty) {
             if spaces.isEmpty {
-                header
-                ContentUnavailableView(
-                    Localized.Space.title,
-                    systemImage: "square.grid.2x2",
-                    description: Text(Localized.Space.EmptyState.hint)
-                )
+                AppEmptyState(
+                    icon: Iconography.Brand.security,
+                    title: Localized.Space.EmptyState.title,
+                    description: Localized.Space.EmptyState.hint
+                ) {
+                    AppButton(Localized.Space.create, variant: .secondary) { showBootstrap = true }
+                        .disabled(agent == nil || activeProvider == nil)
+                }
             } else {
-                spaceList
-            }
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .navigationDestination(item: $selectedSpace) { space in
-            SpaceDetailView(space: space)
-                .hidesTabBar()
-        }
-        .navigationDestination(isPresented: $showBootstrap) {
-            if let agent, let provider = activeProvider {
-                SpaceBootstrapView(agent: agent, provider: provider)
-                    .hidesTabBar()
-            }
-        }
-    }
-
-    private var header: some View {
-        AppNavigationHeader(
-            title: Localized.Space.title,
-            leading: {
-                AppActionButton(
-                    icon: Iconography.Functional.Arrow.left,
-                    variant: .open,
-                    size: .medium,
-                    action: { dismiss() }
-                )
-            },
-            trailing: {
-                AppActionButton(
-                    icon: Iconography.Functional.plus,
-                    variant: .open,
-                    size: .medium,
-                    action: { showBootstrap = true }
-                )
-                .disabled(agent == nil || activeProvider == nil)
-            }
-        )
-    }
-
-    private var spaceList: some View {
-        ScrollView {
-            LazyVStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                ForEach(spaces) { space in
-                    AppCardSurface(padding: Spacing.n16, action: { selectedSpace = space }) {
-                        spaceRow(for: space)
+                AppContentGroup {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                            if index > 0 { RowHairline() }
+                            let count = Localized.Space.List.chatsCount("\(chatCount(for: space))")
+                            AppRow(AppRowSpec(
+                                id: space.id.uuidString,
+                                title: "\(space.emoji) \(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)",
+                                description: space
+                                    .isPrivate ? "\(Localized.Space.Label.private) · \(count)" :
+                                    count,
+                                action: { selectedSpace = space }
+                            ))
+                        }
                     }
                 }
             }
-            .padding(.horizontal, Spacing.n16)
-            .padding(.top, Spacing.n8)
+        } trailing: {
+            AppActionButton(
+                icon: Iconography.Functional.plus,
+                variant: .open,
+                size: .medium,
+                action: { showBootstrap = true }
+            )
+            .accessibilityLabel(Localized.Space.create)
+            .disabled(agent == nil || activeProvider == nil)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .softEdge { header }
-    }
-
-    private func spaceRow(for space: Space) -> some View {
-        HStack(spacing: Spacing.n12) {
-            Text(space.emoji)
-                .font(.system(size: 32))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
-                    .typography(Typography.titleXS)
-                    .foregroundStyle(colors.text.standard.base)
-                    .lineLimit(1)
-                let count = chatCount(for: space)
-                Text(Localized.Space.List.chatsCount("\(count)"))
-                    .typography(Typography.tag)
-                    .foregroundStyle(colors.text.standard.muted)
+        .navigationDestination(item: $selectedSpace) { space in
+            SpaceDetailView(space: space).hidesTabBar()
+        }
+        .navigationDestination(isPresented: $showBootstrap) {
+            if let agent, let provider = activeProvider {
+                SpaceBootstrapView(agent: agent, provider: provider).hidesTabBar()
             }
-            Spacer()
-            if space.isPrivate {
-                Image(systemName: "eye.slash")
-                    .typography(Typography.miniLabel)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-            Image(systemName: "chevron.right")
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
         }
     }
 

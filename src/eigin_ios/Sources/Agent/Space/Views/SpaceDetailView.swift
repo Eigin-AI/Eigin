@@ -17,39 +17,37 @@ struct SpaceDetailView: View {
     @Query(sort: \Chat.updatedAt) private var allChats: [Chat]
 
     var body: some View {
-        SoftEdgeScrollView {
-            VStack(spacing: Sizing.PageLayout.gap) {
+        AppSecondaryScreen(title: Localized.Space.Detail.title) {
+            AppContentGroup(label: Localized.Space.Detail.identity) {
                 presentationCard
-
-                VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
-                    instructionsCard
-                    privacyCard
-                }
-
-                AppButton(
-                    Localized.Space.Detail.Action.deleteSpace,
-                    variant: .destructive,
-                    size: .large
-                ) {
-                    showDeleteConfirmation = true
-                }
-            }
-            .padding(.horizontal, Spacing.n16)
-        } header: {
-            AppNavigationHeader(
-                title: Localized.Space.Detail.title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
+                RowHairline()
+                NavigationLink {
+                    DocumentEditor(
+                        title: Localized.Space.Section.instructions,
+                        text: $space.instructions
                     )
+                    .hidesTabBar()
+                } label: {
+                    AppRow(AppRowSpec(title: Localized.Space.Section.instructions))
                 }
-            )
+                .buttonStyle(.plain)
+            }
+            AppRowsGroup(footnote: Localized.Space.Detail.Hint.private, rows: [AppRowSpec(
+                title: Localized.Space.Detail.privateSpace,
+                trailing: .custom(AnyView(AppSwitch(isOn: space.isPrivate) {
+                    space.isPrivate.toggle()
+                    space.updatedAt = .now
+                    Haptics.light()
+                }.accessibilityLabel(Localized.Space.Detail.privateSpace)))
+            )])
+            AppRowsGroup(rows: [AppRowSpec(
+                title: Localized.Space.Detail.Action.deleteSpace,
+                accessory: .trash,
+                tone: .destructive,
+                action: { showDeleteConfirmation = true }
+            )])
         }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .onDisappear { if isEditingName { commitNameEdit() } }
         .alert(Localized.Common.Alert.deleteSpaceTitle, isPresented: $showDeleteConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Common.Actions.delete, role: .destructive) {
@@ -64,119 +62,53 @@ struct SpaceDetailView: View {
     // MARK: - Presentation
 
     private var presentationCard: some View {
-        AppCardSurface {
-            HStack(alignment: .center, spacing: Spacing.n12) {
-                Button {
-                    showEmojiPicker = true
-                } label: {
-                    Text(space.emoji)
-                        .font(.system(size: 40))
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showEmojiPicker) {
-                    EmojiGrid(
-                        selectedEmoji: $space.emoji,
-                        isPresented: $showEmojiPicker,
-                        colors: colors
-                    )
-                }
+        HStack(alignment: .center, spacing: Spacing.n12) {
+            Button {
+                showEmojiPicker = true
+            } label: {
+                Text(space.emoji)
+                    .font(.system(size: 40))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Localized.Space.Detail.changeSymbol)
+            .popover(isPresented: $showEmojiPicker) {
+                EmojiGrid(
+                    selectedEmoji: $space.emoji,
+                    isPresented: $showEmojiPicker,
+                    colors: colors
+                )
+            }
 
-                if isEditingName {
-                    TextField(Localized.Common.Fields.spaceName, text: $editingNameText)
-                        .typography(Typography.titleM)
-                        .focused($isNameFocused)
-                        .onSubmit { commitNameEdit() }
-                        .onChange(of: isNameFocused) { _, focused in
-                            if !focused { commitNameEdit() }
-                        }
-                        .onAppear {
-                            editingNameText = space.name
-                            isNameFocused = true
-                        }
-                } else {
+            if isEditingName {
+                TextField(Localized.Common.Fields.spaceName, text: $editingNameText)
+                    .typography(Typography.titleM)
+                    .focused($isNameFocused)
+                    .onSubmit { commitNameEdit() }
+                    .onChange(of: isNameFocused) { _, focused in
+                        if !focused { commitNameEdit() }
+                    }
+                    .onAppear {
+                        editingNameText = space.name
+                        isNameFocused = true
+                    }
+            } else {
+                Button {
+                    editingNameText = space.name
+                    withAnimation(Animations.snap) { isEditingName = true }
+                } label: {
                     Text(space.name.isEmpty ? Localized.Space.List.untitledSpace : space.name)
                         .typography(Typography.titleM)
                         .foregroundStyle(colors.text.standard.base)
-                        .onTapGesture {
-                            editingNameText = space.name
-                            withAnimation(Animations.snap) {
-                                isEditingName = true
-                            }
-                        }
+                        .multilineTextAlignment(.leading)
                 }
-
-                Spacer()
+                .buttonStyle(.plain)
+                .accessibilityHint(Localized.Common.Fields.spaceName)
             }
+
+            Spacer()
         }
-    }
-
-    // MARK: - Instructions
-
-    private var instructionsCard: some View {
-        NavigationLink {
-            DocumentEditor(
-                title: Localized.Space.Section.instructions,
-                text: $space.instructions
-            )
-            .hidesTabBar()
-        } label: {
-            AppCardSurface {
-                HStack(spacing: Spacing.n16) {
-                    Iconography.Functional.note
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 28, height: 28)
-                        .foregroundStyle(colors.text.standard.muted)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(Localized.Space.Section.instructions)
-                            .typography(Typography.titleXS)
-                            .foregroundStyle(colors.text.standard.base)
-                        Text(instructionsPreview)
-                            .typography(Typography.tag)
-                            .foregroundStyle(colors.text.standard.muted)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .typography(Typography.miniLabel)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var instructionsPreview: String {
-        if space.instructions.isEmpty {
-            return Localized.Fact.Detail.notSet
-        }
-        return String(space.instructions.prefix(30)) + "..."
-    }
-
-    // MARK: - Privacy
-
-    private var privacyCard: some View {
-        AppCardSurface {
-            HStack(spacing: Spacing.n16) {
-                Image(systemName: "eye.slash")
-                    .font(.system(size: 17))
-                    .foregroundStyle(colors.text.standard.muted)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Localized.Space.Detail.Label.private)
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(colors.text.standard.base)
-                    Text(Localized.Space.Detail.Hint.private)
-                        .typography(Typography.tag)
-                        .foregroundStyle(colors.text.standard.muted)
-                }
-                Spacer()
-                AppSwitch(isOn: space.isPrivate) {
-                    space.isPrivate.toggle()
-                    space.updatedAt = .now
-                    Haptics.light()
-                }
-            }
-        }
+        .padding(.horizontal, Spacing.n24)
+        .padding(.vertical, Spacing.n16)
     }
 
     // MARK: - Helpers

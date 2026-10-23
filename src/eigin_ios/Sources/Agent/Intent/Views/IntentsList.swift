@@ -3,14 +3,13 @@ import SwiftData
 import SwiftUI
 
 struct IntentsList: View {
-    @Environment(\.colors) private var colors
-    @Environment(\.dismiss) private var dismiss
     @Injected(\.intentService) private var intentService
 
     @Query private var intents: [Intent]
 
     @State private var intentToDismiss: Intent?
     @State private var showDismissConfirmation = false
+    @State private var showDismissError = false
 
     init(agentID: UUID) {
         let id = agentID
@@ -28,91 +27,54 @@ struct IntentsList: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        AppSecondaryScreen(title: Localized.Intents.title, fillsViewport: intents.isEmpty) {
             if intents.isEmpty {
-                header
-                ContentUnavailableView(
-                    Localized.Tools.No.Active.intents,
-                    systemImage: "arrow.triangle.branch",
-                    description: Text(Localized.Intent.EmptyState.hint)
+                AppEmptyState(
+                    icon: Iconography.Functional.sparkles,
+                    title: Localized.Intent.EmptyState.title,
+                    description: Localized.Intent.EmptyState.hint
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List {
-                    ForEach(sortedIntents) { intent in
+                AppContentGroup(footnote: Localized.Intents.footnote) {
+                    ForEach(Array(sortedIntents.enumerated()), id: \.element.id) { index, intent in
+                        if index > 0 { RowHairline() }
                         NavigationLink {
-                            IntentDetail(intent: intent)
-                                .hidesTabBar()
+                            IntentDetail(intent: intent).hidesTabBar()
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(intentPreview(intent.content))
-                                    .typography(Typography.titleXS)
-                                    .foregroundStyle(colors.text.standard.base)
-                                    .lineLimit(2)
-                                HStack(spacing: Spacing.n8) {
-                                    Text(RelativeTimestamp.string(for: intent.updatedAt))
-                                        .typography(Typography.miniLabel)
-                                        .foregroundStyle(colors.text.standard.muted)
-                                    if let cue = IntentDigest.summary(for: intent.snapshot) {
-                                        Text(cue)
-                                            .typography(Typography.miniLabel)
-                                            .foregroundStyle(colors.text.standard.disabled)
-                                    }
-                                }
-                            }
+                            AppRow(AppRowSpec(
+                                title: intent.content,
+                                description: IntentDigest
+                                    .summary(for: intent.snapshot),
+                                accessory: .none
+                            ))
+                            .multilineTextAlignment(.leading)
                         }
-                        .swipeActions(edge: .trailing) {
-                            Button {
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(Localized.Intent.dismissAction, role: .destructive) {
                                 intentToDismiss = intent
                                 showDismissConfirmation = true
-                            } label: {
-                                Label(Localized.Ui.dismiss, systemImage: "xmark.circle")
                             }
-                            .tint(.orange)
                         }
                     }
                 }
-                .animation(Animations.smooth, value: intents.map(\.id))
-                .contentMargins(.top, 0, for: .scrollContent)
-                .scrollContentBackground(.hidden)
-                .softEdge { header }
             }
         }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
         .alert(Localized.Ui.dismissIntent, isPresented: $showDismissConfirmation) {
             Button(Localized.Common.Actions.cancel, role: .cancel) {}
             Button(Localized.Ui.dismiss, role: .destructive) {
                 if let intent = intentToDismiss {
                     Task {
-                        try? await intentService.dismiss(id: intent.id)
+                        do { try await intentService.dismiss(id: intent.id) }
+                        catch { showDismissError = true }
                     }
                 }
             }
         } message: {
             Text(Localized.Intent.dismissWarning)
         }
-    }
-
-    private var header: some View {
-        AppNavigationHeader(
-            title: Localized.Intents.title,
-            leading: {
-                AppActionButton(
-                    icon: Iconography.Functional.Arrow.left,
-                    variant: .open,
-                    size: .medium,
-                    action: { dismiss() }
-                )
-            }
-        )
-    }
-
-    private func intentPreview(_ content: String) -> String {
-        let firstLine = content.prefix(while: { $0 != "\n" })
-        if firstLine.count > 60 {
-            return String(firstLine.prefix(60)) + "..."
+        .alert(Localized.Intent.dismissFailed, isPresented: $showDismissError) {
+            Button(Localized.Common.Actions.ok, role: .cancel) {}
         }
-        return String(firstLine)
     }
 }

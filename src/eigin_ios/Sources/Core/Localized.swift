@@ -90,6 +90,11 @@ enum Localized {
             static var setupHint: String {
                 Localized.get("agent.emptyState.setupHint")
             }
+
+            /// agent.emptyState.title
+            static var title: String {
+                Localized.get("agent.emptyState.title")
+            }
         }
 
         enum Proactivity {
@@ -451,6 +456,11 @@ enum Localized {
             /// Generic add button label
             static var add: String {
                 Localized.get("common.actions.add")
+            }
+
+            /// Accessibility label for a back navigation button
+            static var back: String {
+                Localized.get("common.actions.back")
             }
 
             /// Generic cancel button label
@@ -1383,6 +1393,11 @@ enum Localized {
                 Localized.get("facts.type.facts")
             }
 
+            /// Singular label for the 'note' fact type
+            static var note: String {
+                Localized.get("facts.type.note")
+            }
+
             /// Label for the 'notes' fact type
             static var notes: String {
                 Localized.get("facts.type.notes")
@@ -1722,6 +1737,16 @@ enum Localized {
         }
 
         enum Offers {
+            /// integration.offers.emptyHint
+            static var emptyHint: String {
+                Localized.get("integration.offers.emptyHint")
+            }
+
+            /// integration.offers.emptyTitle
+            static var emptyTitle: String {
+                Localized.get("integration.offers.emptyTitle")
+            }
+
             /// Footnote under the offers list.
             static var footnote: String {
                 Localized.get("integration.offers.footnote")
@@ -1730,6 +1755,11 @@ enum Localized {
             /// Empty state when the offers search finds nothing. The argument is the query.
             static func noMatches(_ p1: String) -> String {
                 String(format: Localized.get("integration.offers.noMatches"), p1)
+            }
+
+            /// integration.offers.noMatchesTitle
+            static var noMatchesTitle: String {
+                Localized.get("integration.offers.noMatchesTitle")
             }
 
             /// Search field placeholder. First argument is the item count, second the noun.
@@ -2278,6 +2308,21 @@ enum Localized {
     }
 
     enum Intent {
+        /// intent.content
+        static var content: String {
+            Localized.get("intent.content")
+        }
+
+        /// intent.dismissAction
+        static var dismissAction: String {
+            Localized.get("intent.dismissAction")
+        }
+
+        /// intent.dismissFailed
+        static var dismissFailed: String {
+            Localized.get("intent.dismissFailed")
+        }
+
         /// A message displayed when dismissing an intent.
         static var dismissWarning: String {
             Localized.get("intent.dismissWarning")
@@ -2298,10 +2343,20 @@ enum Localized {
             Localized.get("intent.tasks")
         }
 
+        /// intent.updated
+        static var updated: String {
+            Localized.get("intent.updated")
+        }
+
         enum EmptyState {
             /// A description text that appears when there are no active intents.
             static var hint: String {
                 Localized.get("intent.emptyState.hint")
+            }
+
+            /// Empty state title when there are no active intents
+            static var title: String {
+                Localized.get("intent.emptyState.title")
             }
         }
     }
@@ -2310,6 +2365,11 @@ enum Localized {
         /// Confirmation message when dismissing an intent
         static var dismissWarning: String {
             Localized.get("intents.dismissWarning")
+        }
+
+        /// intents.footnote
+        static var footnote: String {
+            Localized.get("intents.footnote")
         }
 
         /// Navigation title for intents list
@@ -2379,9 +2439,34 @@ enum Localized {
     }
 
     enum Knowledge {
+        /// Destructive knowledge detail action and confirmation title
+        static var delete: String {
+            Localized.get("knowledge.delete")
+        }
+
+        /// Message when deleting knowledge fails
+        static var deleteFailed: String {
+            Localized.get("knowledge.deleteFailed")
+        }
+
+        /// Knowledge deletion confirmation message
+        static var deleteWarning: String {
+            Localized.get("knowledge.deleteWarning")
+        }
+
         /// A label displayed above the user's knowledge.
         static var sectionTitle: String {
             Localized.get("knowledge.sectionTitle")
+        }
+
+        /// Open the full category list; parameter is the plural category name
+        static func showAll(_ p1: String) -> String {
+            String(format: Localized.get("knowledge.showAll"), p1)
+        }
+
+        /// Reveal another batch of category rows; parameter is the number of additional items
+        static func showMore(_ p1: String) -> String {
+            String(format: Localized.get("knowledge.showMore"), p1)
         }
 
         /// Navigation title for knowledge container
@@ -2398,6 +2483,141 @@ enum Localized {
             /// Empty state title when there are no knowledge items
             static var title: String {
                 Localized.get("knowledge.emptyState.title")
+            }
+        }
+
+        enum Error {
+            /// Description when the knowledge graph fails to load
+            static var hint: String {
+                Localized.get("knowledge.error.hint")
+            }
+
+            /// Title when the knowledge graph fails to load
+            static var title: String {
+                Localized.get("knowledge.error.title")
+            }
+        }
+
+        enum Graph {
+            /// Button returning the graph to the user
+            static var backToYou: String {
+                Localized.get("knowledge.graph.backToYou")
+            }
+
+            /// Singular word after a connection count
+            static var connection: String {
+                Localized.get("knowledge.graph.connection")
+            }
+
+            /// Connection count range, page indicator
+            static func connectionRange(_ p1: String, _ p2: String, _ p3: String) -> String {
+                String(format: Localized.get("knowledge.graph.connectionRange"), p1, p2, p3)
+            }
+
+            /// Plural word after a connection count
+            static var connections: String {
+                Localized.get("knowledge.graph.connections")
+            }
+
+            /// Section label in the summary sheet listing a knowledge entity's connections
+            static var connectionsSection: String {
+                Localized.get("knowledge.graph.connectionsSection")
+            }
+
+            /// Accessibility label for viewing a knowledge entity's details
+            static func details(_ p1: String) -> String {
+                String(format: Localized.get("knowledge.graph.details"), p1)
+            }
+
+            /// Accessibility label for exploring a connection
+            static func explore(_ p1: String) -> String {
+                String(format: Localized.get("knowledge.graph.explore"), p1)
+            }
+
+            /// Message shown while the knowledge graph loads
+            static var loading: String {
+                Localized.get("knowledge.graph.loading")
+            }
+
+            /// Message shown while the knowledge list loads
+            static var loadingList: String {
+                Localized.get("knowledge.graph.loadingList")
+            }
+
+            /// Graph view mode segment
+            static var modeGraph: String {
+                Localized.get("knowledge.graph.modeGraph")
+            }
+
+            /// List view mode segment
+            static var modeList: String {
+                Localized.get("knowledge.graph.modeList")
+            }
+
+            /// Accessibility label for the next page button
+            static var next: String {
+                Localized.get("knowledge.graph.next")
+            }
+
+            /// Shown when the focused entity has no connections
+            static var noConnections: String {
+                Localized.get("knowledge.graph.noConnections")
+            }
+
+            /// Accessibility label for the previous page button
+            static var previous: String {
+                Localized.get("knowledge.graph.previous")
+            }
+        }
+
+        enum Relationship {
+            /// Relationship label
+            static var belongsTo: String {
+                Localized.get("knowledge.relationship.belongsTo")
+            }
+
+            /// Relationship label
+            static var describes: String {
+                Localized.get("knowledge.relationship.describes")
+            }
+
+            /// Suffix marking an incoming relationship
+            static var incoming: String {
+                Localized.get("knowledge.relationship.incoming")
+            }
+
+            /// Relationship label
+            static var relatesTo: String {
+                Localized.get("knowledge.relationship.relatesTo")
+            }
+
+            /// Relationship label
+            static var supersedes: String {
+                Localized.get("knowledge.relationship.supersedes")
+            }
+
+            /// Relationship label
+            static var uses: String {
+                Localized.get("knowledge.relationship.uses")
+            }
+        }
+
+        enum Sheet {
+            /// Row opening the full knowledge detail screen
+            static var viewFullDetails: String {
+                Localized.get("knowledge.sheet.viewFullDetails")
+            }
+        }
+
+        enum Value {
+            /// Display value for a false knowledge field
+            static var no: String {
+                Localized.get("knowledge.value.no")
+            }
+
+            /// Display value for a true knowledge field
+            static var yes: String {
+                Localized.get("knowledge.value.yes")
             }
         }
     }
@@ -2712,9 +2932,19 @@ enum Localized {
                 Localized.get("model.picker.allModels")
             }
 
+            /// model.picker.clearSearch
+            static var clearSearch: String {
+                Localized.get("model.picker.clearSearch")
+            }
+
             /// Separator between recommended models
             static var dotSeparator: String {
                 Localized.get("model.picker.dotSeparator")
+            }
+
+            /// model.picker.emptyHint
+            static var emptyHint: String {
+                Localized.get("model.picker.emptyHint")
             }
 
             /// Placeholder shown while the model catalog is being fetched for the first time
@@ -2722,14 +2952,34 @@ enum Localized {
                 Localized.get("model.picker.loading")
             }
 
+            /// model.picker.moreModels
+            static func moreModels(_ p1: String) -> String {
+                String(format: Localized.get("model.picker.moreModels"), p1)
+            }
+
             /// Empty state shown when a provider returns no models at all
             static var noModels: String {
                 Localized.get("model.picker.noModels")
             }
 
+            /// model.picker.noSearchHint
+            static func noSearchHint(_ p1: String) -> String {
+                String(format: Localized.get("model.picker.noSearchHint"), p1)
+            }
+
             /// Empty state when search has no results
             static var noSearchResults: String {
                 Localized.get("model.picker.noSearchResults")
+            }
+
+            /// model.picker.oneMoreModel
+            static var oneMoreModel: String {
+                Localized.get("model.picker.oneMoreModel")
+            }
+
+            /// model.picker.otherModels
+            static var otherModels: String {
+                Localized.get("model.picker.otherModels")
             }
 
             /// Section header for other recommended models
@@ -2761,6 +3011,11 @@ enum Localized {
                 /// Explains what automatic model selection does
                 static var description: String {
                     Localized.get("model.picker.auto.description")
+                }
+
+                /// model.picker.auto.footnote
+                static var footnote: String {
+                    Localized.get("model.picker.auto.footnote")
                 }
 
                 /// Title of the automatic model selection option
@@ -4959,6 +5214,21 @@ enum Localized {
         }
 
         enum Permissions {
+            /// settings.permissions.builtInTools
+            static var builtInTools: String {
+                Localized.get("settings.permissions.builtInTools")
+            }
+
+            /// settings.permissions.connectedTools
+            static var connectedTools: String {
+                Localized.get("settings.permissions.connectedTools")
+            }
+
+            /// settings.permissions.defaultHint
+            static var defaultHint: String {
+                Localized.get("settings.permissions.defaultHint")
+            }
+
             /// Default permission level option
             static var defaultLabel: String {
                 Localized.get("settings.permissions.defaultLabel")
@@ -4967,6 +5237,11 @@ enum Localized {
             /// Label for MCP servers section
             static var mcpServers: String {
                 Localized.get("settings.permissions.mcpServers")
+            }
+
+            /// settings.permissions.saveFailed
+            static var saveFailed: String {
+                Localized.get("settings.permissions.saveFailed")
             }
 
             /// Navigation title for tool permissions
@@ -5064,6 +5339,16 @@ enum Localized {
     }
 
     enum Skills {
+        /// skills.available
+        static var available: String {
+            Localized.get("skills.available")
+        }
+
+        /// skills.footnote
+        static var footnote: String {
+            Localized.get("skills.footnote")
+        }
+
         /// Section header for a skill's instruction text
         static var instruction: String {
             Localized.get("skills.instruction")
@@ -5081,6 +5366,11 @@ enum Localized {
     }
 
     enum Space {
+        /// space.create
+        static var create: String {
+            Localized.get("space.create")
+        }
+
         /// An alert message that appears when the user confirms deleting a space. It explains that
         /// the chats and memories in the deleted space will be moved to the "All Chats" space.
         static var deleteWarning: String {
@@ -5117,6 +5407,21 @@ enum Localized {
         }
 
         enum Detail {
+            /// space.detail.changeSymbol
+            static var changeSymbol: String {
+                Localized.get("space.detail.changeSymbol")
+            }
+
+            /// space.detail.identity
+            static var identity: String {
+                Localized.get("space.detail.identity")
+            }
+
+            /// space.detail.privateSpace
+            static var privateSpace: String {
+                Localized.get("space.detail.privateSpace")
+            }
+
             /// Navigation title shown while editing a space
             static var title: String {
                 Localized.get("space.detail.title")
@@ -5161,6 +5466,11 @@ enum Localized {
             /// user to add a new space.
             static var hint: String {
                 Localized.get("space.emptyState.hint")
+            }
+
+            /// Empty state title when there are no spaces
+            static var title: String {
+                Localized.get("space.emptyState.title")
             }
         }
 

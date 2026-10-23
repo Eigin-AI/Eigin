@@ -35,11 +35,19 @@ struct OffersScreen: View {
                 )
 
                 if shown.isEmpty {
-                    Text(Localized.Integration.Offers.noMatches(searchText))
-                        .typography(Typography.note)
-                        .foregroundStyle(colors.text.standard.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Spacing.n24)
+                    AppEmptyState(
+                        icon: Iconography.Functional.search,
+                        title: searchText.isEmpty ? Localized.Integration.Offers
+                            .emptyTitle : Localized.Integration.Offers.noMatchesTitle,
+                        description: searchText.isEmpty ? Localized.Integration.Offers
+                            .emptyHint : Localized.Integration.Offers.noMatches(searchText)
+                    ) {
+                        if !searchText.isEmpty {
+                            AppButton(Localized.Model.Picker.clearSearch, variant: .secondary) {
+                                searchText = ""
+                            }
+                        }
+                    }
                 } else {
                     AppRowsGroup(
                         footnote: Localized.Integration.Offers.footnote,

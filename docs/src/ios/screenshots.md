@@ -69,3 +69,21 @@ fits in about three lines. Line wrapping decides — check the capture.
    to keep the sequence contiguous.
 5. New files need `just generate` for xcodegen to pick them up. Then run the
    lane and eyeball the output — the copy rules above are what to check for.
+
+## Secondary-screen review
+
+Development-only scenes also stage the real secondary screens with isolated
+fixtures: `model-picker`, `intents`, `intent-detail`, `skills`, `skill-detail`,
+`spaces`, `space-detail`, `permissions`, and `knowledge`. These scenes are outside the
+numbered App Store capture sequence.
+
+After building and installing `EiginDev` on a simulator, launch a scene directly:
+
+```sh
+xcrun simctl launch <simulator-id> <dev-bundle-id> --screenshot-scenario space-detail
+xcrun simctl io <simulator-id> screenshot /tmp/space-detail.png
+```
+
+Add `--screenshot-landscape` to request a landscape capture. Terminate the app
+before launching a different scene. All edits, dismissals, and
+permission changes in these scenes affect only their in-memory screenshot store.

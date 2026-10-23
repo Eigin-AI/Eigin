@@ -6,13 +6,14 @@ struct SweepRing: View {
     /// Outer diameter. Callers pass it; the default is the design's standard
     /// ring size.
     var size: CGFloat = Sizing.Button.Icon.large
+    /// Track and arc width, inset within the outer diameter.
+    var stroke: CGFloat = 4
 
     @Environment(\.colors) private var colors
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var sweeping = false
 
-    private let stroke: CGFloat = 4
     private let arc = 0.18
     private let period: Double = 1.6
 
@@ -24,6 +25,7 @@ struct SweepRing: View {
                     .trim(from: 0, to: arc)
                     .stroke(colors.accent, style: StrokeStyle(lineWidth: stroke, lineCap: .round))
             }
+            .frame(width: size - stroke, height: size - stroke)
             .frame(width: size, height: size)
             .rotationEffect(.degrees(sweeping ? 360 : 0))
             .accessibilityHidden(true)

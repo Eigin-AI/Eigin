@@ -1,79 +1,80 @@
-import Factory
 import SwiftUI
 
-/// Wrapper view that toggles between the flat knowledge list and the graph visualization.
-///
-/// User preference for list vs. graph mode is persisted via `@AppStorage`.
+/// Knowledge entry: the graph explorer by default, with a segmented control
+/// switching to the flat list. The mode follows the visit — it does not persist.
 struct KnowledgeContainer: View {
     @Environment(\.colors) private var colors
     @Environment(\.dismiss) private var dismiss
-    @Injected(\.knowledgeService) private var knowledgeService
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let agentID: UUID?
 
-    @AppStorage("knowledgeViewMode") private var viewMode: KnowledgeViewMode = .list
-    @State private var graphViewModel: KnowledgeGraphViewModel?
+    @State private var viewMode: Mode = .graph
+
+    enum Mode { case graph, list }
 
     var body: some View {
-        VStack(spacing: 0) {
-            AppNavigationHeader(
-                title: Localized.Knowledge.sectionTitle,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                },
-                trailing: {
-                    AppActionButton(
-                        icon: Image(systemName: viewMode == .list
-                            ? "point.3.connected.trianglepath.dotted"
-                            : "list.bullet"),
-                        variant: .open,
-                        size: .medium,
-                        action: {
-                            withAnimation(Animations.snap) {
-                                viewMode = viewMode == .list ? .graph : .list
-                            }
-                            if viewMode == .graph, graphViewModel == nil {
-                                Task { await loadGraph() }
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                switch viewMode {
+                case .graph:
+                    KnowledgeGraphScreen(agentID: agentID)
+                case .list:
+                    FactsList(agentID: agentID)
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    if geometry.size.height < 450 {
+                        ZStack {
+                            Text(Localized.Knowledge.sectionTitle)
+                                .typography(Typography.titleXS)
+                                .foregroundStyle(colors.text.standard.base)
+                            HStack {
+                                AppActionButton(
+                                    icon: Iconography.Functional.Arrow.left,
+                                    variant: .open,
+                                    size: .medium,
+                                    action: { dismiss() }
+                                )
+                                .accessibilityLabel(Localized.Common.Actions.back)
+                                Spacer()
                             }
                         }
-                    )
+                        .frame(height: Sizing.Button.Action.medium)
+                        .padding(.horizontal, Spacing.n16)
+                    } else {
+                        AppNavigationHeader(
+                            title: Localized.Knowledge.sectionTitle,
+                            leading: {
+                                AppActionButton(
+                                    icon: Iconography.Functional.Arrow.left,
+                                    variant: .open,
+                                    size: .medium,
+                                    action: { dismiss() }
+                                )
+                                .accessibilityLabel(Localized.Common.Actions.back)
+                            }
+                        )
+                    }
+                    AppSegmentedControl(
+                        segments: [
+                            AppSegment(Localized.Knowledge.Graph.modeGraph, value: Mode.graph),
+                            AppSegment(Localized.Knowledge.Graph.modeList, value: Mode.list),
+                        ],
+                        selection: viewMode
+                    ) { mode in
+                        withAnimation(reduceMotion ? nil : Animations.snap) { viewMode = mode }
+                    }
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.bottom, Spacing.n8)
                 }
-            )
-
-            switch viewMode {
-            case .list:
-                FactsList(agentID: agentID)
-            case .graph:
-                if let vm = graphViewModel {
-                    KnowledgeGraph(viewModel: vm, agentID: agentID)
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .task { await loadGraph() }
-                }
+                .background(colors.surface.standard.base)
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
-
-    private func loadGraph() async {
-        let vm = KnowledgeGraphViewModel(knowledgeService: knowledgeService, agentID: agentID)
-        graphViewModel = vm
-        await vm.loadInitialGraph()
-    }
-}
-
-// MARK: - View Mode
-
-enum KnowledgeViewMode: String {
-    case list
-    case graph
 }
 
 #Preview {

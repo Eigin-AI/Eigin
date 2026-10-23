@@ -52,12 +52,11 @@ struct AppButton<Trailing: View>: View {
             .padding(.horizontal, horizontalPadding)
             .frame(maxWidth: size == .large ? .infinity : nil)
             .frame(height: variant == .open ? nil : height)
-            .background(backgroundColor)
+            .background { Capsule().fill(backgroundColor) }
             .overlay {
                 Capsule()
                     .fill(isHovered && isEnabled ? hoverColor : .clear)
             }
-            .clipShape(RoundedRectangle(cornerRadius: Radius.full))
         }
         .buttonStyle(AppButtonStyle(variant: variant))
         .animation(Animations.smooth, value: isHovered)

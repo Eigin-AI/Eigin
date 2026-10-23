@@ -17,6 +17,10 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
     var relatedIncoming: [String: [FirmEntity]] = [:]
     /// Outgoing related entities keyed by qualified ID.
     var relatedOutgoing: [String: [FirmEntity]] = [:]
+    /// Records each `getRelated` call as `(qualifiedID, direction)` in order.
+    private(set) var relatedRequests: [(String, FirmDirection)] = []
+    /// When set, replaces the canned related result for the given qualified ID.
+    var relatedOverride: ((String) async throws -> [FirmEntity])?
 
     // MARK: - Observability
 
@@ -30,6 +34,10 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
 
     /// When set, `getRelated` throws instead of returning.
     var throwOnGetRelated: Bool = false
+    /// When set, deletion fails without changing the stored entities.
+    var throwOnDeleteEntity = false
+    /// When set, category enumeration fails.
+    var throwOnListSchemas = false
 
     // MARK: - KnowledgeService
 
@@ -65,6 +73,7 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
     }
 
     func listSchemas(spaceID: UUID?, agentID: UUID?) async throws -> [String] {
+        if throwOnListSchemas { throw NSError(domain: "FakeKnowledgeService", code: 3) }
         record(spaceID: spaceID, agentID: agentID)
         return Array(Set(entities.values.map(\.entityType))).sorted()
     }
@@ -80,9 +89,19 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
         }
         record(spaceID: spaceID, agentID: agentID)
         let qualifiedID = "\(type).\(id)"
+        relatedRequests.append((qualifiedID, direction))
+        if let relatedOverride {
+            return try await relatedOverride(qualifiedID)
+        }
+        let incoming = relatedIncoming[qualifiedID] ?? []
         switch direction {
-        case .incoming: return relatedIncoming[qualifiedID] ?? []
+        case .incoming: return incoming
         case .outgoing: return relatedOutgoing[qualifiedID] ?? []
+        case .both:
+            var seen: Set<String> = []
+            return (incoming + (relatedOutgoing[qualifiedID] ?? [])).filter {
+                seen.insert($0.id).inserted
+            }
         @unknown default: return []
         }
     }
@@ -97,6 +116,8 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
     }
 
     func deleteEntity(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws {
+        record(spaceID: spaceID, agentID: agentID)
+        if throwOnDeleteEntity { throw NSError(domain: "FakeKnowledgeService", code: 2) }
         entities["\(type).\(id)"] = nil
     }
 

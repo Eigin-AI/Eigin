@@ -1,15 +1,7 @@
 import Factory
 import SwiftUI
 
-/// Model picker: automatic selection at the top, or a specific model for those who want
-/// to choose.
-///
-/// Below the Auto row come "Recommended" (ordered by preference ranking) and "Other".
-///
-/// The provider's catalog is treated as a refreshable cache: the cached list renders instantly,
-/// then a background refresh updates it so newly added models appear and retired ones disappear.
-/// Grouping and sorting are computed once off the render path (not in `body`) so the view stays
-/// responsive even for providers with large catalogs.
+/// Selects Auto or an enabled model from the provider's refreshable catalog.
 struct ModelPicker: View {
     let provider: Provider
     @Binding var selectedModel: String
@@ -26,216 +18,104 @@ struct ModelPicker: View {
     @State private var unknownModels: [String] = []
     @State private var isLoaded = false
     @State private var isRefreshing = false
-    @State private var isOtherCollapsed = true
-
-    // MARK: - Body
 
     var body: some View {
-        List {
+        AppSecondaryScreen(title: Localized.Model.Picker.title, fillsViewport: true) {
             if selectableModels.isEmpty {
-                // No cached models: keep the loading state until the background refresh
-                // resolves,
-                // then show a genuine empty-catalog message if it still came back empty.
                 if isLoaded, !isRefreshing {
-                    emptyCatalog
+                    AppEmptyState(
+                        icon: Iconography.Functional.sparkles,
+                        title: Localized.Model.Picker.noModels,
+                        description: Localized.Model.Picker.emptyHint
+                    )
                 } else {
-                    loadingPlaceholder
+                    AppLoadingState(title: Localized.Model.Picker.loading)
                 }
             } else {
+                AppSearchField(text: $searchText, placeholder: Localized.Model.Picker.searchPrompt)
                 content
             }
+        } trailing: {
+            if isRefreshing, !selectableModels.isEmpty {
+                SweepRing(size: Spacing.n16, stroke: 2)
+                    .accessibilityLabel(Localized.Model.Picker.loading)
+            }
         }
-        .searchable(text: $searchText, prompt: "Search models")
         .onChange(of: searchText) { prepare() }
-        .contentMargins(.top, 0, for: .scrollContent)
-        .scrollContentBackground(.hidden)
-        .softEdge {
-            AppNavigationHeader(
-                title: Localized.Model.Picker.title,
-                leading: {
-                    AppActionButton(
-                        icon: Iconography.Functional.Arrow.left,
-                        variant: .open,
-                        size: .medium,
-                        action: { dismiss() }
-                    )
-                },
-                trailing: {
-                    if isRefreshing {
-                        ProgressView()
-                            .padding(.trailing, Spacing.n4)
-                    }
-                }
-            )
-        }
-        .background(colors.surface.standard.base.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
         .task {
-            // Render the cached catalog immediately, then refresh in the background so the
-            // list reflects what the provider serves now. Only the enabled
-            // models appear: the switches on the provider screens decide
-            // what this picker offers, and a refresh never re-widens it.
+            // Cached models remain selectable while the provider refreshes.
             await enrich(models: selectableModels)
+            guard !Task.isCancelled else { return }
             isLoaded = true
-
             isRefreshing = true
             _ = try? await refresher.refresh(provider, apiKeyOverride: nil)
             isRefreshing = false
+            guard !Task.isCancelled else { return }
             await enrich(models: selectableModels)
         }
     }
 
     @ViewBuilder
     private var content: some View {
-        if searchText.isEmpty {
-            Section {
-                autoRow
-            }
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            AppRowsGroup(footnote: Localized.Model.Picker.Auto.footnote, rows: [AppRowSpec(
+                title: Localized.Model.Picker.Auto.title,
+                description: isAuto && !selectedModel.isEmpty
+                    ? displayName(for: selectedModel) : Localized.Model.Picker.Auto.description,
+                accessory: isAuto ? .check : .none,
+                action: { isAuto = true; dismiss() }
+            )])
+            .accessibilityAddTraits(isAuto ? .isSelected : [])
         }
-
         if !rankedModels.isEmpty {
-            Section {
-                ForEach(rankedModels, id: \.self) { modelID in
-                    modelRow(modelID)
-                }
-            } header: {
-                Text(Localized.Model.Picker.otherRecommended)
-                    .typography(Typography.miniLabel)
+            AppContentGroup(label: Localized.Model.Picker.otherRecommended) {
+                modelRows(rankedModels)
             }
         }
-
         if !unknownModels.isEmpty {
-            Section {
-                if !isOtherCollapsed {
-                    ForEach(unknownModels, id: \.self) { modelID in
-                        modelRow(modelID)
-                    }
+            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                AppDisclosure(
+                    Localized.Model.Picker.allModels,
+                    description: unknownModels.count == 1
+                        ? Localized.Model.Picker.oneMoreModel
+                        : Localized.Model.Picker.moreModels("\(unknownModels.count)")
+                ) {
+                    VStack(spacing: 0) { modelRows(unknownModels) }
                 }
-            } header: {
-                Button {
-                    withAnimation { isOtherCollapsed.toggle() }
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        Image(systemName: isOtherCollapsed ? "chevron.right" : "chevron.down")
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                        Text(Localized.Model.Picker.allModels)
-                        Text(verbatim: "\(unknownModels.count)")
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                    .contentShape(Rectangle())
+            } else {
+                AppContentGroup(label: Localized.Model.Picker.otherModels) {
+                    modelRows(unknownModels)
                 }
-                .buttonStyle(.plain)
             }
         }
-
-        if !searchText.isEmpty, rankedModels.isEmpty, unknownModels.isEmpty {
-            Section {
-                infoRow(Localized.Model.Picker.noSearchResults)
+        if isLoaded, !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           rankedModels.isEmpty, unknownModels.isEmpty
+        {
+            AppEmptyState(
+                icon: Iconography.Functional.search,
+                title: Localized.Model.Picker.noSearchResults,
+                description: Localized.Model.Picker.noSearchHint(searchText)
+            ) {
+                AppButton(Localized.Model.Picker.clearSearch, variant: .secondary) {
+                    searchText = ""
+                }
             }
         }
     }
 
-    /// Hands model choice back to the router. The model in use is shown as subtext so a
-    /// curious user can still see what is running.
-    private var autoRow: some View {
-        Button {
-            isAuto = true
-            dismiss()
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Localized.Model.Picker.Auto.title)
-                        .typography(Typography.titleXS)
-                        .foregroundStyle(colors.text.standard.base)
-
-                    // On auto, what it picked is the useful thing to show. Off it, the
-                    // offer is.
-                    if isAuto, !selectedModel.isEmpty {
-                        Text(Localized.Model.Picker.Auto.current(displayName(for: selectedModel)))
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.accent)
-                    } else {
-                        Text(Localized.Model.Picker.Auto.description)
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                }
-
-                Spacer()
-
-                if isAuto {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(colors.accent)
-                }
-            }
-            .contentShape(Rectangle())
+    private func modelRows(_ models: [String]) -> some View {
+        ForEach(Array(models.enumerated()), id: \.element) { index, modelID in
+            if index > 0 { RowHairline() }
+            let selected = !isAuto && selectedModel == modelID
+            AppRow(AppRowSpec(
+                id: modelID,
+                title: displayName(for: modelID),
+                description: subtitle(for: modelID),
+                accessory: selected ? .check : .none,
+                action: { selectedModel = modelID; isAuto = false; dismiss() }
+            ))
+            .accessibilityAddTraits(selected ? .isSelected : [])
         }
-        .buttonStyle(.plain)
-    }
-
-    private var loadingPlaceholder: some View {
-        Section {
-            HStack(spacing: Spacing.n8) {
-                ProgressView()
-                Text(Localized.Model.Picker.loading)
-                    .typography(Typography.body)
-                    .foregroundStyle(colors.text.standard.muted)
-            }
-            .padding(.vertical, Spacing.n4)
-        }
-    }
-
-    private var emptyCatalog: some View {
-        Section {
-            infoRow(Localized.Model.Picker.noModels)
-        }
-    }
-
-    private func infoRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.n8) {
-            Image(systemName: "info.circle")
-                .foregroundStyle(colors.text.standard.muted)
-                .typography(Typography.miniLabel)
-            Text(text)
-                .typography(Typography.miniLabel)
-                .foregroundStyle(colors.text.standard.muted)
-        }
-        .padding(.vertical, Spacing.n4)
-    }
-
-    // MARK: - Model Row
-
-    private func modelRow(_ modelID: String) -> some View {
-        Button {
-            selectedModel = modelID
-            isAuto = false
-            dismiss()
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName(for: modelID))
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.base)
-
-                    if let subtitle = subtitle(for: modelID) {
-                        Text(subtitle)
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
-                    }
-                }
-
-                Spacer()
-
-                if !isAuto, selectedModel == modelID {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(colors.accent)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Preparation
@@ -294,8 +174,8 @@ struct ModelPicker: View {
     }
 
     private func matchesSearch(_ id: String) -> Bool {
-        guard !searchText.isEmpty else { return true }
-        let query = searchText.lowercased()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return true }
         return displayName(for: id).lowercased().contains(query)
             || id.lowercased().contains(query)
     }

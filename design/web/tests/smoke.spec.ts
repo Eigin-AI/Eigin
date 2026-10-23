@@ -8,25 +8,26 @@ test("the sidebar folds its sections and opens the one you are in", async ({ pag
   // The section holding the current page opens itself; the others stay folded.
   await expect(sections.filter({ hasText: "Components" })).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator('.sidebar .header[aria-expanded="true"]')).toHaveCount(1);
-  await expect(sections.filter({ hasText: "Main screens" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  await expect(sections.filter({ hasText: "Agent" })).toHaveAttribute("aria-expanded", "false");
   // The header names the page you are on, so a folded section still tells you.
   await expect(page.locator(".sidebar").getByText("Content groups").first()).toBeVisible();
 
-  // Folded sections take no room, so the pages inside them are unreachable.
-  // Addressed by the section it belongs to, so adding a section elsewhere in
-  // the sidebar does not move it.
-  const screensFold = page
+  // Match the header so an option in another group cannot select that group.
+  const agentFold = page
     .locator(".sidebar .disclosure")
-    .filter({ hasText: "Main screens" })
+    .filter({ has: page.getByRole("button", { name: "Agent", exact: true }) })
     .locator(".reveal");
-  expect(await screensFold.evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
+  expect(await agentFold.evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
 
-  await sections.filter({ hasText: "Main screens" }).click();
-  await expect(page.getByRole("radio", { name: "Agent", exact: true })).toBeVisible();
+  await sections.filter({ hasText: "Agent" }).click();
+  const agent = page.getByRole("radio", { name: "Agent", exact: true });
+  await expect(agent).toBeVisible();
+  await expect(sections.filter({ hasText: "Components" })).toHaveAttribute("aria-expanded", "true");
   await expect
-    .poll(async () => screensFold.evaluate((el) => el.getBoundingClientRect().height))
+    .poll(async () => agentFold.evaluate((el) => el.getBoundingClientRect().height))
     .toBeGreaterThan(20);
+
+  await agent.click();
+  await expect(page).toHaveURL(/#\/screens\/agent$/);
+  await expect(agent).toHaveAttribute("aria-checked", "true");
 });

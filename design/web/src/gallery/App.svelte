@@ -22,7 +22,8 @@
     const [path, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
     const [kind, id] = path.split("/");
     if (kind === "components" && id) return { kind: "component", id };
-    if (kind === "screens" && id) return { kind: "screen", id };
+    if (kind === "screens" && id)
+      return { kind: "screen", id: id === "knowledge-graph" ? "knowledge" : id };
     if (kind === "showcase" && id)
       return { kind: "showcase", id, params: new URLSearchParams(query) };
     return { kind: "home" };

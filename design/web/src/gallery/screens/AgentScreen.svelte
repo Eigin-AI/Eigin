@@ -101,7 +101,11 @@
           selection={provider}
           onSelect={(next) => (provider = next)}
         />
-        <Row title="Model" value="Auto" onclick={() => {}} />
+        <Row
+          title="Model"
+          value="Auto"
+          onclick={() => (location.hash = "#/screens/model-picker")}
+        />
       </ContentGroup>
     {/each}
     {#snippet footer()}

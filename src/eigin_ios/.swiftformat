@@ -13,5 +13,5 @@
 --patternlet inline
 # Packages/LiteRTLM is vendored third-party code kept verbatim for clean
 # upstream diffing on version bumps; do not reformat it to our style.
---exclude .build,Frameworks,Packages/LiteRTLM
+--exclude .build,Frameworks,Packages/LiteRTLM,DerivedData
 --disable preferKeyPath,redundantSendable

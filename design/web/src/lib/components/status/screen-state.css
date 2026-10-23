@@ -1,0 +1,22 @@
+/* Empty and loading states share the same full-area placement. */
+.eigin-screen-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-n16);
+  padding: var(--spacing-n32) var(--spacing-n24);
+  text-align: center;
+  color: var(--color-text-standard-base);
+}
+
+.eigin-screen-state h2,
+.eigin-screen-state p {
+  margin: 0;
+}
+
+.eigin-screen-state p {
+  max-width: 32ch;
+  color: var(--color-text-standard-muted);
+}
