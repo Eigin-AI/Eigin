@@ -166,6 +166,7 @@ import { registerRoleCommand } from "./tools/role-command.ts";
 import { registerPlanCommand } from "./tools/plan-command.ts";
 import { registerReviewCommand } from "./tools/review-command.ts";
 import { registerSubagentTool } from "./tools/subagent/index.ts";
+import { PANEL_TOOL, registerPanel } from "./tools/panel/index.ts";
 import { registerCompactRendering } from "./tool-rendering.ts";
 import { ADD_TASKS_TOOL, CLEAR_TASKS_TOOL, RESOLVE_TASKS_TOOL, registerTaskTools } from "./tools/tasks.ts";
 import {
@@ -199,6 +200,7 @@ const ALWAYS_ON_TOOLS = [
   RESOLVE_TASKS_TOOL,
   CLEAR_TASKS_TOOL,
   "subagent",
+  PANEL_TOOL,
 ];
 const STATUS_KEY = "stage";
 const TASKS_STATUS_KEY = "tasks";
@@ -766,6 +768,7 @@ export default function stageExtension(pi: ExtensionAPI): void {
     sessionCwd: () => sessionCwd,
   });
   registerSubagentTool(pi);
+  registerPanel(pi);
   registerCompactRendering(pi); // one-line collapsed tool results (see tool-rendering.ts)
   registerTaskTools(pi, {
     add(texts, ctx) {
