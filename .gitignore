@@ -133,3 +133,6 @@ test-results/
 
 # Showcase PNGs are one-off exports; the repo keeps the JPEGs.
 design/assets/showcase/**/*.png
+
+# Private synthetic audience review inputs and reports.
+.pi/panel/runs/
