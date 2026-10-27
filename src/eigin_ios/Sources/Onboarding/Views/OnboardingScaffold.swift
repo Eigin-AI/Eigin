@@ -129,6 +129,8 @@ struct OnboardingScaffold<Content: View>: View {
                 .frame(maxWidth: .infinity, minHeight: viewport.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // Keep the controls clear of the bottom fade when the keyboard resizes the viewport.
+            .defaultScrollAnchor(.bottom, for: .sizeChanges)
             // No header floats here; the soft edge softens content into the bare screen.
             .softEdge()
             .scrollIndicators(.hidden)
