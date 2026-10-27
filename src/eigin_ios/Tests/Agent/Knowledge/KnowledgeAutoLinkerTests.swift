@@ -125,6 +125,12 @@ struct KnowledgeAutoLinkerTests {
             []
         }
 
+        func isRetired(
+            type: String, id: String, spaceID: UUID?, agentID: UUID?
+        ) async throws -> Bool {
+            false
+        }
+
         func setExpired(
             type: String, id: String, expired: Bool, spaceID: UUID?, agentID: UUID?
         ) async throws {}

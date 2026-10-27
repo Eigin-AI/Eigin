@@ -112,6 +112,14 @@ final class KnowledgeExplorer {
             try Task.checkCancellation()
             guard ticket == generation else { return }
             guard let current else { await load(); return }
+            // The focus was retired while the view was open — return to the root.
+            if try await service.isRetired(
+                type: current.entityType, id: KnowledgePresentation.shortID(current),
+                spaceID: spaceID, agentID: agentID
+            ) {
+                await load()
+                return
+            }
             let result = try await fetch(current)
             try Task.checkCancellation()
             guard ticket == generation else { return }
@@ -182,7 +190,17 @@ final class KnowledgeExplorer {
             type: entity.entityType, id: KnowledgePresentation.shortID(entity), direction: .both,
             spaceID: spaceID, agentID: agentID
         )
-        return KnowledgeNeighborhood(focus: entity, related: related)
+        // Relationship rows are derived from the neighbor list, so dropping
+        // retired entities removes their rows (including `supersedes`) too.
+        var live: [FirmEntity] = []
+        for candidate in related {
+            if try await service.isRetired(
+                type: candidate.entityType, id: KnowledgePresentation.shortID(candidate),
+                spaceID: spaceID, agentID: agentID
+            ) { continue }
+            live.append(candidate)
+        }
+        return KnowledgeNeighborhood(focus: entity, related: live)
     }
 
     private func startingEntity() async throws -> FirmEntity? {
@@ -199,6 +217,9 @@ final class KnowledgeExplorer {
                 guard let entity = try await service.getEntity(
                     type: type, id: id, spaceID: spaceID, agentID: agentID
                 ) else { continue }
+                if try await service.isRetired(
+                    type: type, id: id, spaceID: spaceID, agentID: agentID
+                ) { continue }
                 let references = entity.fields.reduce(0) { count, field in
                     guard KnowledgePresentation.predicates.contains(field.name),
                           case .list(let items) = field.value else { return count }

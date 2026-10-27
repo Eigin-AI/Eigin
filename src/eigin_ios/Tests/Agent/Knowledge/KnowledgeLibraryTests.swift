@@ -113,4 +113,19 @@ struct KnowledgeLibraryTests {
         #expect(library.categories.flatMap(\.items).map(\.id) == before)
         #expect(library.error == nil)
     }
+
+    @Test func retiredEntriesAreHiddenFromCategories() async throws {
+        let service = FakeKnowledgeService()
+        let records = [
+            entity("fact", "current"),
+            entity("fact", "merged_away"),
+            entity("fact", "superseded"),
+        ]
+        service.entities = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+        service.retiredIDs = ["fact.merged_away", "fact.superseded"]
+        let library = KnowledgeLibrary(service: service, agentID: nil)
+        await library.load()
+        let facts = try #require(library.categories.first { $0.type == "fact" })
+        #expect(facts.items.map(\.id) == ["fact.current"])
+    }
 }

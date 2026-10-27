@@ -25,8 +25,17 @@ final class KnowledgeDetails {
                 direction: .both,
                 spaceID: nil, agentID: agentID
             )
+            // Retired entities carry no relationship rows in the details.
+            var live: [FirmEntity] = []
+            for candidate in related {
+                if try await service.isRetired(
+                    type: candidate.entityType, id: KnowledgePresentation.shortID(candidate),
+                    spaceID: nil, agentID: agentID
+                ) { continue }
+                live.append(candidate)
+            }
             try Task.checkCancellation()
-            relationships = KnowledgeNeighborhood(focus: entity, related: related).relationships
+            relationships = KnowledgeNeighborhood(focus: entity, related: live).relationships
         } catch is CancellationError {
             return
         } catch {

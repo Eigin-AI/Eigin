@@ -218,6 +218,16 @@ final class FakeKnowledgeService: KnowledgeService, @unchecked Sendable {
         return entities.values.filter { $0.entityType == type && !expiredIDs.contains($0.id) }
     }
 
+    /// Qualified IDs (`"fact.x"`) reported as retired by ``isRetired`` in
+    /// addition to expired entries (``setExpired``).
+    var retiredIDs: Set<String> = []
+
+    func isRetired(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws -> Bool {
+        record(spaceID: spaceID, agentID: agentID)
+        let key = "\(type).\(id)"
+        return retiredIDs.contains(key) || expiredIDs.contains(key)
+    }
+
     // MARK: - Helpers
 
     private func record(spaceID: UUID?, agentID: UUID?) {

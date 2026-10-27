@@ -27,6 +27,24 @@ struct KnowledgeDetailsTests {
         #expect(service.receivedAgentIDs.allSatisfy { $0 == agentID })
     }
 
+    @Test func retiredRelatedEntityProducesNoRelationshipRow() async {
+        let service = FakeKnowledgeService()
+        let focus = FirmEntity(id: "fact.current", entityType: "fact", fields: [
+            .init(
+                name: "supersedes",
+                value: .list(items: [.entityReference(entityId: "fact.old")])
+            ),
+        ])
+        let retired = FirmEntity(id: "fact.old", entityType: "fact", fields: [
+            .init(name: "relates_to", value: .entityReference(entityId: focus.id)),
+        ])
+        service.relatedOutgoing[focus.id] = [retired]
+        service.retiredIDs = [retired.id]
+        let details = KnowledgeDetails(entity: focus, service: service, agentID: nil)
+        await details.load()
+        #expect(details.relationships.isEmpty)
+    }
+
     @Test func failedDeletionLeavesKnowledgeAvailable() async {
         let service = FakeKnowledgeService()
         let entity = FirmEntity(id: "note.unsaved", entityType: "note", fields: [])
