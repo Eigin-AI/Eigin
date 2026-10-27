@@ -104,20 +104,28 @@ struct ChatFeed: View {
     /// Show gate, appearance clock and stall clock for the thinking indicator.
     @State private var thinkingIndicatorState = ThinkingIndicatorState()
     @FocusState private var isInputFocused: Bool
-    @State private var composerHeight: CGFloat = 0
     /// Floats over the top of the feed; the soft edge softens content beneath it.
     private let headerView: AnyView
-    /// Home-indicator zone the feed scrolls under. Device-level, never the
-    /// keyboard inset; see ``WindowSafeArea``.
-    @State private var bottomSafeArea: CGFloat = 0
+    @State private var scrollFrame: CGRect = .zero
+    @State private var composerFrame: CGRect = .zero
+
+    private var composerHeight: CGFloat {
+        composerFrame.height
+    }
+
+    /// The area the composer and keyboard cover at the bottom of the scroll view.
+    private var bottomReserve: CGFloat {
+        guard !scrollFrame.isEmpty, !composerFrame.isEmpty else { return composerHeight }
+        return max(0, scrollFrame.maxY - composerFrame.minY)
+    }
 
     /// The usable viewport: the scroll container (which already excludes the
     /// header's reserved inset) minus the composer zone that overlays it and
-    /// the home-indicator area.
+    /// the keyboard.
     private func updateViewportHeight() {
         scroll.viewportHeight = max(
             0,
-            containerHeight - bottomSafeArea - composerHeight - Spacing.n16
+            containerHeight - bottomReserve - Spacing.n16
         )
     }
 
@@ -332,15 +340,15 @@ struct ChatFeed: View {
                         }
                     }
                 }
-                .padding(.bottom, composerHeight + Spacing.n16 + bottomSafeArea)
+                .padding(.bottom, bottomReserve + Spacing.n16)
 
                 Color.clear.frame(height: 1).id("bottom-anchor")
             }
-            // The feed scrolls under the composer, so the content reaches the
-            // screen bottom; the composer is an overlay instead. The keyboard
-            // must not shrink the scroll: its measured height feeds the
-            // pinned-turn block's viewport reserve, and a keyboard-shrunk
-            // container would leave a send nowhere to pin to.
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+                scrollFrame = $0
+                updateViewportHeight()
+            }
+            // Reserve the covered area in the content while scrolling under the composer.
             .ignoresSafeArea(.container, edges: .bottom)
             .ignoresSafeArea(.keyboard)
             .softEdge(header: { headerView }, footerHeight: composerHeight)
@@ -369,12 +377,6 @@ struct ChatFeed: View {
                 ViewportMetrics(containerHeight: geometry.containerSize.height)
             } action: { _, newValue in
                 containerHeight = newValue.containerHeight
-                bottomSafeArea = WindowSafeArea.bottom
-                updateViewportHeight()
-            }
-            // The composer is an overlay, so its own resizes (attachments,
-            // icebreakers) don't touch the container height — re-derive here.
-            .onChange(of: composerHeight) { _, _ in
                 updateViewportHeight()
             }
             .overlay(alignment: .bottom) {
@@ -442,8 +444,9 @@ struct ChatFeed: View {
                 .animation(Animations.smooth, value: context.stagedAttachments.isEmpty)
                 .animation(Animations.smooth, value: showsIcebreakers)
                 .ignoresSafeArea(.container, edges: .horizontal)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                    composerHeight = $0
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+                    composerFrame = $0
+                    updateViewportHeight()
                 }
             }
             // Scroll correction on prepend: old first item pinned to top.
