@@ -62,6 +62,9 @@ final class KnowledgeLibrary {
                 var entities: [(item: KnowledgeItem, date: Date?)] = []
                 for id in ids {
                     try Task.checkCancellation()
+                    if try await service.isRetired(
+                        type: type, id: id, spaceID: nil, agentID: agentID
+                    ) { continue }
                     if let entity = try await service.getEntity(
                         type: type,
                         id: id,

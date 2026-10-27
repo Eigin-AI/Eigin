@@ -37,7 +37,9 @@ struct KnowledgeNeighborhood {
         }
     }
 
-    private static func references(_ entity: FirmEntity, predicate: String) -> Set<String> {
+    /// IDs referenced by `predicate` fields on `entity`, compared like for
+    /// like with graph entity IDs (qualified).
+    static func references(_ entity: FirmEntity, predicate: String) -> Set<String> {
         func ids(_ value: FirmFieldValue) -> [String] {
             switch value {
             case .entityReference(let entityId): [entityId]

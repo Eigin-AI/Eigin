@@ -59,7 +59,7 @@ Every entry links to the chat it was created in. `get_knowledge` can optionally 
 
 ## Forgetting
 
-Memories fade by disuse rather than expiring on a set date, and can be retired deliberately. A forgotten memory is hidden from search and ranking but not deleted — the agent can still find it on request. Three things hide a memory: it's forgotten, superseded, or merged into a duplicate.
+Memories fade by disuse rather than expiring on a set date, and can be retired deliberately. A forgotten memory is hidden from search, ranking, and the knowledge views (graph, list, details) but not deleted — the agent can still find it on request via `include_expired`. Three things hide a memory: it's forgotten, superseded, or merged into a duplicate.
 
 ## Keeping memory tidy
 

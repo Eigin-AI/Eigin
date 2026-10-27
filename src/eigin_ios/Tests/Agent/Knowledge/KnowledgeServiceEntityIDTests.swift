@@ -288,4 +288,88 @@ struct KnowledgeServiceEntityIDTests {
             }
         }
     }
+
+    // MARK: - Retired entries (#319)
+
+    @Test func isRetiredFlagsExpiredSource() async throws {
+        let service = try makeService()
+        try await service.addEntity(
+            note("retire_probe", content: "kept for history"), spaceID: nil, agentID: nil
+        )
+        #expect(
+            try await !service.isRetired(
+                type: "note",
+                id: "retire_probe",
+                spaceID: nil,
+                agentID: nil
+            )
+        )
+
+        try await service.setExpired(
+            type: "note", id: "retire_probe", expired: true, spaceID: nil, agentID: nil
+        )
+        #expect(
+            try await service.isRetired(
+                type: "note",
+                id: "retire_probe",
+                spaceID: nil,
+                agentID: nil
+            )
+        )
+    }
+
+    @Test func activeSupersedesEdgeRetiresTargetWithoutExpiredFlag() async throws {
+        // Legacy data: entries superseded before the expired flag was reliably
+        // set carry only the `supersedes` edge — the target must still be
+        // retired.
+        let service = try makeService()
+        try await service.addEntity(note("legacy_old", content: "old"), spaceID: nil, agentID: nil)
+        try await service.addEntity(note("legacy_new", content: "new"), spaceID: nil, agentID: nil)
+        let replacement = try #require(
+            try await service.getEntity(type: "note", id: "legacy_new", spaceID: nil, agentID: nil)
+        )
+        try await appendKnowledgeRelation(
+            "supersedes", targets: ["note.legacy_old"], on: replacement,
+            knowledgeService: service, spaceID: nil, agentID: nil, chatID: nil
+        )
+
+        #expect(
+            try await service.isRetired(type: "note", id: "legacy_old", spaceID: nil, agentID: nil)
+        )
+        #expect(
+            try await !service.isRetired(type: "note", id: "legacy_new", spaceID: nil, agentID: nil)
+        )
+    }
+
+    @Test func retiredPredecessorDoesNotCascadeRetirement() async throws {
+        // old ← mid ← new (each supersedes the previous, no expired flags).
+        // mid is retired by the active new; old is superseded only by the
+        // retired mid, so its edge doesn't cascade further retirement.
+        let service = try makeService()
+        try await service.addEntity(note("chain_old", content: "old"), spaceID: nil, agentID: nil)
+        try await service.addEntity(note("chain_mid", content: "mid"), spaceID: nil, agentID: nil)
+        try await service.addEntity(note("chain_new", content: "new"), spaceID: nil, agentID: nil)
+        for (successor, target) in [("chain_mid", "chain_old"), ("chain_new", "chain_mid")] {
+            let entity = try #require(
+                try await service.getEntity(type: "note", id: successor, spaceID: nil, agentID: nil)
+            )
+            try await appendKnowledgeRelation(
+                "supersedes", targets: ["note.\(target)"], on: entity,
+                knowledgeService: service, spaceID: nil, agentID: nil, chatID: nil
+            )
+        }
+
+        #expect(try await service.isRetired(
+            type: "note",
+            id: "chain_mid",
+            spaceID: nil,
+            agentID: nil
+        ))
+        #expect(
+            try await !service.isRetired(type: "note", id: "chain_old", spaceID: nil, agentID: nil)
+        )
+        #expect(
+            try await !service.isRetired(type: "note", id: "chain_new", spaceID: nil, agentID: nil)
+        )
+    }
 }

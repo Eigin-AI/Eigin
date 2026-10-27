@@ -205,6 +205,52 @@ struct KnowledgeExplorerTests {
         #expect(explorer.error == nil)
     }
 
+    @Test func retiredNeighborsAreHiddenFromGraphAndRelationshipRows() async {
+        let service = FakeKnowledgeService()
+        let user = entity("actor.user")
+        let live = entity("thing.live")
+        let retired = entity("thing.retired")
+        service.entities = [user.id: user, live.id: live, retired.id: retired]
+        service.relatedOutgoing[user.id] = [live, retired]
+        service.retiredIDs = [retired.id]
+        let explorer = KnowledgeExplorer(service: service, agentID: nil)
+        await explorer.load()
+        #expect(explorer.visibleNeighbors.map(\.id) == [live.id])
+        // No relationship rows for the retired neighbor, including supersedes.
+        #expect(explorer.neighborhood?.relationships.contains {
+            $0.entity.id == retired.id
+        } == false)
+    }
+
+    @Test func retiredFocusOnRefreshReturnsToRoot() async {
+        let service = FakeKnowledgeService()
+        let user = entity("actor.user")
+        let hub = entity("thing.hub")
+        service.entities = [user.id: user, hub.id: hub]
+        service.relatedOutgoing[user.id] = [hub]
+        let explorer = KnowledgeExplorer(service: service, agentID: nil)
+        await explorer.load()
+        await explorer.focus(hub)
+        #expect(explorer.neighborhood?.focus.id == hub.id)
+
+        // The focus was retired (superseded) elsewhere while the view was open.
+        service.retiredIDs = [hub.id]
+        await explorer.refresh()
+        #expect(explorer.neighborhood?.focus.id == user.id)
+        #expect(explorer.error == nil)
+    }
+
+    @Test func fallbackRootScanSkipsRetiredEntries() async {
+        let service = FakeKnowledgeService()
+        let retired = entity("note.old")
+        let fallback = entity("note.first")
+        service.entities = [retired.id: retired, fallback.id: fallback]
+        service.retiredIDs = [retired.id]
+        let explorer = KnowledgeExplorer(service: service, agentID: nil)
+        await explorer.load()
+        #expect(explorer.root?.id == fallback.id)
+    }
+
     @Test func resolvesPredicateDirectionAndQualifiedIdentity() async {
         let service = FakeKnowledgeService()
         let user = entity("actor.user", fields: [

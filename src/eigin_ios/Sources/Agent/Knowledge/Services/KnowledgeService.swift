@@ -82,6 +82,12 @@ protocol KnowledgeService: Sendable {
     func allVisibleSources(spaceID: UUID?, agentID: UUID?) async throws -> [FirmSource]
     func unexpiredEntities(type: String, spaceID: UUID?, agentID: UUID?) async throws
         -> [FirmEntity]
+    /// Whether a memory is hidden from the knowledge views: its source is
+    /// soft-hidden (expired), or an active entry supersedes it via a
+    /// `supersedes` edge. Search keeps its own include_expired path; this
+    /// gates presentation only (graph, list, detail).
+    func isRetired(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws
+        -> Bool
 }
 
 /// Default implementation backed by a ``FirmSession`` and SwiftData persistence.
@@ -830,6 +836,53 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
         }
         return result
     }
+
+    func isRetired(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws -> Bool {
+        try await isRetired(type: type, id: id, spaceID: spaceID, agentID: agentID, visited: [])
+    }
+
+    private func isRetired(
+        type: String,
+        id: String,
+        spaceID: UUID?,
+        agentID: UUID?,
+        visited: Set<String>
+    ) async throws -> Bool {
+        var visited = visited
+        let rawID = id.hasPrefix("\(type).") ? String(id.dropFirst(type.count + 1)) : id
+        let shortID = FirmIDNormalization.normalize(rawID)
+        let key = "\(type).\(shortID)"
+        guard visited.insert(key).inserted else { return false }
+
+        let visible = try await allVisibleSources(spaceID: spaceID, agentID: agentID)
+        if visible.contains(where: { $0.expired && entityKey(for: $0.path) == key }) {
+            return true
+        }
+        // Explicit result type — the type checker crashes without it.
+        let fetched: FirmEntity? = try await getEntity(
+            type: type, id: shortID, spaceID: spaceID, agentID: agentID
+        )
+        guard let fetched else { return false }
+
+        // A `supersedes` edge only retires its target when the predecessor is
+        // itself live; already-retired predecessors don't cascade further.
+        let incoming = try await getRelated(
+            type: fetched.entityType, id: KnowledgePresentation.shortID(fetched),
+            direction: .incoming, spaceID: spaceID, agentID: agentID
+        )
+        let qualifiedKey = FirmIDNormalization.normalize(fetched.id)
+        for predecessor in incoming
+            where KnowledgeNeighborhood.references(predecessor, predicate: "supersedes")
+            .map(FirmIDNormalization.normalize).contains(qualifiedKey)
+        {
+            if try await !isRetired(
+                type: predecessor.entityType,
+                id: KnowledgePresentation.shortID(predecessor),
+                spaceID: spaceID, agentID: agentID, visited: visited
+            ) { return true }
+        }
+        return false
+    }
 }
 
 enum KnowledgeServiceError: LocalizedError {
@@ -967,5 +1020,9 @@ struct PreviewKnowledgeService: KnowledgeService {
         agentID: UUID?
     ) async throws -> [FirmEntity] {
         []
+    }
+
+    func isRetired(type: String, id: String, spaceID: UUID?, agentID: UUID?) async throws -> Bool {
+        false
     }
 }
