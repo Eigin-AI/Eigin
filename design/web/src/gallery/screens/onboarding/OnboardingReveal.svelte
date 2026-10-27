@@ -4,7 +4,7 @@
   import AgentHatch from "@gallery/screens/onboarding/AgentHatch.svelte";
   import { LANDS } from "@gallery/screens/onboarding/hatch";
   import OnboardingSpeech from "@gallery/screens/onboarding/OnboardingSpeech.svelte";
-  import { spring } from "@gallery/screens/onboarding/spring";
+  import { spring } from "@lib/internal/spring";
 
   let {
     agentName,

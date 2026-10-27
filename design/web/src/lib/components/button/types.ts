@@ -1,5 +1,6 @@
-/** Mirrors `AppButtonVariant`. */
-export type ButtonVariant = "primary" | "secondary" | "spot" | "destructive" | "open";
+/** Visual treatments for shared web buttons. */
+export type ButtonVariant =
+  "primary" | "secondary" | "elevated" | "outline" | "spot" | "destructive" | "open";
 
 /** Mirrors `AppButtonSize`. */
 export type ButtonSize = "large" | "medium" | "small" | "extraSmall";

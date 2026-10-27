@@ -1,0 +1,94 @@
+{
+  "privacy": {
+    "source": "https://www.eigin.ai/privacy/",
+    "text": "Last updated: 21 October 2026 Privacy Policy Eigin keeps your data on your device. We aim to know as little about you as possible. 1. Who we are Eigin ApS, CVR 46428765, Denmark. Contact: hello@eigin.ai. 2. Your data stays on your device Your chats, the AI's memory, and your settings are stored on your device. There are no accounts and no login. Your connected data, such as calendar, reminders, location, and email, is read on your device. It leaves only as described in section 3, when the AI needs it to answer you. You grant access through your device's permissions. You can revoke access at any time. Credentials for connected accounts are stored securely on your device. Disconnecting deletes them. Your data is not used for tracking, advertising, or training. 3. AI models When you send a message, it goes to the AI provider you chose. You pick one during onboarding and can change it in Settings at any time. Before anything goes to a cloud AI provider, the app asks for your permission. It states what is shared and who receives it, and nothing is sent until you allow it. Local model. Runs on your device. No data is shared. Your own AI provider. Goes straight to that provider, using your credentials, under their privacy policy. Eigin Relay. Our service, described below. It passes your message to a hosted AI provider, which is a third party. What is sent with each message: The conversation. Your messages and attachments in it. Memories. Things the AI saved from earlier chats, when they are relevant. Connected data. Data from your calendar, reminders, email, or other connections, only if you explicitly allow the AI to use it, and only when it needs it to answer. 4. The Eigin Relay The Relay gives you hosted AI, web search, and inference credits. Prompts are passed unread to Corti (Denmark), TensorX (Ireland, Finland) or Mistral (France), depending on the model, with zero data retention. Search queries are passed to Staan (France). Credits are tied to your purchase, not to you. We don't store your name, email, or device ID. Your IP address is used to prevent abuse. It is stored temporarily and may appear in our hosting provider's logs. The Relay runs on Scaleway cloud in the EU. Third-party AI providers are bound by contract to protect your data as strictly as we do. Our legal basis: To provide the service you use. To keep it secure. To keep the purchase records the law requires. 5. Google user data Connecting Gmail is optional. If you don't connect it, skip this section. What we access. Reading your email (gmail.readonly) and sending email for you (gmail.send). Where it goes. Your device fetches it straight from Google. It is not stored on our servers. How we use it. Only for what you ask: reading email to answer you, and drafting messages you approve before sending. What we don't do. Use it for advertising, train AI on it, sell it, or let a person at Eigin read it. When it is shared. Only when you ask the AI about your email. The email then goes to the AI model you chose in section 3. How it is protected. Connections are encrypted. Your Google credentials stay on your device. You can disconnect Gmail in the app at any time, or revoke Eigin in your Google account settings. Eigin's use and transfer of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. 6. Purchases Credits are bought through your app store, under its privacy policy. We receive a signed receipt and any refund notice. Credits do not expire. 7. No tracking Eigin includes no analytics, crash reporting, or telemetry SDKs. eigin.ai sets no cookies. 8. How long we keep data Conversations and searches. Not stored. IP addresses and logs. Our hosting provider's standard log period, then deleted. Credits. As long as you hold them. Purchase records as long as Danish law requires. Data on your device. Delete the app and your chats, memory, and settings are permanently removed. To delete your credits, email hello@eigin.ai with your purchase details. Deleting forfeits any remaining credits. 9. Your rights See, fix, or delete your data. Email us if you need help. Under the GDPR you can also restrict, move, or object to processing. Stop sharing with an AI provider. Switch to another provider or the local model, or remove the provider, in Settings → Connections. Take back a permission. Use your device's settings, or disconnect the account in the app. Complain. Datatilsynet, datatilsynet.dk. 10. Age You must be 18 or older to use Eigin. 11. Changes We may update this policy. The date at the top tells you the current version.",
+    "links": [
+      {
+        "text": "hello@eigin.ai",
+        "href": "mailto:hello@eigin.ai"
+      },
+      {
+        "text": "Google account settings",
+        "href": "https://myaccount.google.com/permissions"
+      },
+      {
+        "text": "Google API Services User Data Policy",
+        "href": "https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes"
+      },
+      {
+        "text": "hello@eigin.ai",
+        "href": "mailto:hello@eigin.ai"
+      },
+      {
+        "text": "datatilsynet.dk",
+        "href": "https://www.datatilsynet.dk"
+      }
+    ]
+  },
+  "terms": {
+    "source": "https://www.eigin.ai/terms/",
+    "text": "Last updated: 21 October 2026 Terms of Service These terms cover the Eigin app, the Eigin Relay, and related services, provided by Eigin ApS, CVR 46428765, Denmark. By using Eigin you accept these terms. You must be 18 or older. Our privacy policy explains how we handle your data. 1. Your device, your data Your data is stored on your device. You are responsible for your device, its security, and your backups. We have no access to your local data and cannot recover it. 2. AI output and actions AI output can be inaccurate or inappropriate. It is not professional advice of any kind. You are responsible for checking it before relying on it. The AI can act on your behalf, such as sending an email or adding a calendar event, when you approve the action. You are responsible for the actions you approve. Local models are downloaded through the app and may carry their own licences. 3. Credits Hosted AI through the Eigin Relay is paid with credits, bought through your app store. Refunds are handled by your app store under its policies. Credits do not expire, have no monetary value, and cannot be transferred or resold. Credits are tied to your purchase, not to you. We cannot restore a lost wallet. Rate limits apply. 4. Acceptable use Do not use Eigin to: Break the law or infringe the rights of others. Attack, overload, or gain unauthorised access to any system. Resell or share access to the Relay. The acceptable-use rules of our AI providers also apply. We may suspend access on breach. 5. Ownership Eigin ApS owns the Eigin name, logo, and software. Open-source components are governed by their own licences. You own everything you create with Eigin. 6. Third parties The Relay relies on Corti (Denmark), TensorX (Ireland, Finland), Mistral (France), Staan (France), and Scaleway (EU). Purchases are handled by your app store. AI providers, accounts, or tools you connect yourself are your relationship with them, under their terms. We are not responsible for third-party services. 7. No warranty To the extent the law allows, Eigin is provided as is and as available, without warranties of any kind. We do not promise it will be uninterrupted, error-free, or secure. Features may change, and the Relay may be interrupted or discontinued. Your mandatory consumer rights are unaffected. 8. Liability To the extent the law allows, we are not liable for indirect or consequential damages, or for loss of data or profits. Our total liability is capped at the greater of what you paid us in the past twelve months or DKK 500. Liability that cannot be excluded by law, such as for gross negligence, is not excluded. 9. Changes We may update these terms. The date at the top tells you the current version. Continued use after a change means you accept it. 10. Governing law Danish law governs these terms, and disputes go before the Danish courts. Mandatory consumer-protection rules in your country of residence are unaffected. 11. Contact hello@eigin.ai",
+    "links": [
+      {
+        "text": "privacy policy",
+        "href": "/privacy/"
+      },
+      {
+        "text": "hello@eigin.ai",
+        "href": "mailto:hello@eigin.ai"
+      }
+    ]
+  },
+  "contact": {
+    "source": "https://www.eigin.ai/contact/",
+    "text": "Contact Questions, feedback, press, partnerships, or just curious? Here's how to reach us. Say hello Or write to us at hello@eigin.ai. Support Having trouble with the app? Go to the support page. Community Join the conversation in our Matrix chat, or follow the code at code.eigin.ai. Company Eigin ApS CVR 46428765 Denmark",
+    "links": [
+      {
+        "text": "Say hello",
+        "href": "mailto:hello@eigin.ai"
+      },
+      {
+        "text": "hello@eigin.ai",
+        "href": "mailto:hello@eigin.ai"
+      },
+      {
+        "text": "support page",
+        "href": "/support/"
+      },
+      {
+        "text": "Matrix chat",
+        "href": "https://chat.eigin.ai"
+      },
+      {
+        "text": "code.eigin.ai",
+        "href": "https://code.eigin.ai"
+      }
+    ]
+  },
+  "support": {
+    "source": "https://www.eigin.ai/support/",
+    "text": "Support Something not working? Email us and we'll get back to you. Email support You can also write to support@eigin.ai directly, or find us in our Matrix chat. Found a bug or a technical issue? You can file it directly at code.eigin.ai. What to include The more we know, the better we can help. Please tell us: What you were trying to do, and what happened. Your device and operating system. Your Eigin version, found in Settings. Which model you were using. Please avoid sending us your conversations. We don't need them, and we'd rather not have them. For anything that isn't a support request, see our contact page.",
+    "links": [
+      {
+        "text": "Email support",
+        "href": "mailto:support@eigin.ai?subject=Eigin%20support%20request"
+      },
+      {
+        "text": "support@eigin.ai",
+        "href": "mailto:support@eigin.ai"
+      },
+      {
+        "text": "Matrix chat",
+        "href": "https://chat.eigin.ai"
+      },
+      {
+        "text": "code.eigin.ai",
+        "href": "https://code.eigin.ai"
+      },
+      {
+        "text": "contact page",
+        "href": "/contact/"
+      }
+    ]
+  }
+}

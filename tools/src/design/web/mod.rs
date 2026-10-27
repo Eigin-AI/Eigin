@@ -387,3 +387,10 @@ mod tests {
         assert!(ts.contains("textCase: \"uppercase\","));
     }
 }
+
+/// Regenerate the shared web design assets without platform project generation.
+pub fn generate_assets(root: &str) -> anyhow::Result<()> {
+    let tokens = super::tokens::load_tokens(root)?;
+    let installed = super::ios::fonts::install(root, &tokens)?;
+    generate(root, &tokens, installed.as_ref())
+}

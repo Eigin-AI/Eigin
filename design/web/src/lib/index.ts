@@ -4,9 +4,12 @@
 // flat re-exports here are the library's public surface; import modules
 // directly (`@lib/components/button/Button.svelte`) when you want less.
 
+export { default as FloatingPicker } from "./components/picker/FloatingPicker.svelte";
+export { default as PickerRow } from "./components/picker/PickerRow.svelte";
 export { default as EiginRoot } from "./theme/EiginRoot.svelte";
 export { default as GridScope } from "./theme/GridScope.svelte";
 export { default as Icon } from "./components/icon/Icon.svelte";
+export { default as LinkButton } from "./components/button/LinkButton.svelte";
 export { default as Button } from "./components/button/Button.svelte";
 export { default as ActionButton } from "./components/button/ActionButton.svelte";
 export { default as SubtleActionButton } from "./components/button/SubtleActionButton.svelte";
@@ -70,6 +73,7 @@ export { default as SheetHeader } from "./components/sheet/SheetHeader.svelte";
 export { default as SheetActions } from "./components/sheet/SheetActions.svelte";
 export type { SheetAction } from "./components/sheet/types";
 export { default as ChatFeed } from "./components/chat/ChatFeed.svelte";
+export { default as SoftEdgeScroll } from "./internal/SoftEdgeScroll.svelte";
 export { default as OptionsGroup } from "./components/chat/OptionsGroup.svelte";
 export { default as ChatBrandMessage } from "./components/chat/ChatBrandMessage.svelte";
 export { default as ChatUserMessage } from "./components/chat/ChatUserMessage.svelte";
@@ -78,6 +82,7 @@ export { StreamThrottler, wholeWords } from "./components/chat/streamThrottler";
 export type { StreamPhase, StreamThrottlerOptions } from "./components/chat/streamThrottler";
 export { ChasingProgress } from "./components/chat/chasingProgress";
 export { driveFrames } from "./internal/driveFrames";
+export { gentle, spring, springCurve } from "./internal/spring";
 export { default as BrandAvatar } from "./components/navigation/BrandAvatar.svelte";
 export { default as NavigationBar } from "./components/navigation/NavigationBar.svelte";
 export { default as NavigationHeader } from "./components/navigation/NavigationHeader.svelte";

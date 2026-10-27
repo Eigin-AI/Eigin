@@ -14,7 +14,7 @@ Signpost briefly what you expect the user to do — keep the flow tight and self
     1. `git add -A && git commit -m "chore: release <version>"`
     2. `git tag <version>`
     3. `git push && git push --tags`
-1. Confirm the version bump and changelog are in place (Build) and verified (Test).
+1. Confirm the version bump, changelog, and website roadmap review are complete (Build) and verified (Test). Include approved roadmap changes in the release commit, or note the no-change decision in the MR.
 2. Draft the MR description — follow `.gitlab/merge_request_templates/Default.md`,
    matched to the length and tone of this example `.pi/guidance/mr-example.md`.
     - Keep it short and concise.

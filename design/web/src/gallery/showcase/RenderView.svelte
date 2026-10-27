@@ -34,6 +34,10 @@
   /* Loops — the phone's float, a spinner — hold at the same moment, so a
      still is repeatable and a run of increasing times makes a video. */
   onMount(async () => {
+    // Nothing behind the canvas, so a transparent shot exports with real transparency.
+    for (const layer of document.querySelectorAll<HTMLElement>("html, body, .eigin-root")) {
+      layer.style.background = "transparent";
+    }
     await document.fonts.ready;
     await tick();
     await Promise.all([...document.images].map((image) => image.decode().catch(() => {})));

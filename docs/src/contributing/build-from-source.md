@@ -4,6 +4,7 @@ Eigin is a monorepo. Install the toolchain for the part you want to work on:
 
 - **iOS app**: macOS only. Targets iOS 26, drives `xcodebuild`.
 - **Relay and tooling**: anywhere Rust runs, including a Linux container.
+- **Website and web gallery**: Node.js on macOS or Linux; shared components live in `design/web/`.
 
 ## Prerequisites
 
@@ -18,6 +19,12 @@ For iOS (macOS only):
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing): `brew install xcodegen`.
 - [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it): `brew install swiftformat`.
 - Then: `xcode-select -s /Applications/Xcode.app/Contents/Developer`.
+
+For the website and web gallery:
+
+- [Node.js](https://nodejs.org/) **22.17 or newer**, with npm **10 or newer**. With [nvm](https://github.com/nvm-sh/nvm): `nvm install 24 && nvm use 24`.
+- Run `npm ci` from the repository root to install both workspaces from the shared lockfile.
+- For browser tests: `npx playwright install chromium webkit` (add `--with-deps` on Linux).
 
 Optional:
 
@@ -69,8 +76,9 @@ simulator builds don't need it.
 
 From the repo root; arguments are positional. In a Linux container, scope to `relay` (no `xcodebuild`).
 
-- `just build [ios|relay]`: default all.
-- `just test [ios|relay]`: default all.
+- `just build [ios|relay|web]`: default all; `web` builds the gallery and static website.
+- `just test [ios|relay|web|website]`: default all; `web` checks/builds both workspaces, `website` also runs the website browser tests.
+- `just generate [all|ios|web]`: default all; `web` generates shared web assets only.
 - `just format`: auto-format.
 - `just --list`: see everything.
 
@@ -86,10 +94,16 @@ just stop relay
 just logs relay [since] [--follow]
 just logs ios simulator [env] [since] [--follow]
 just logs ios device [device] [env] [since]
+just run web gallery                           # gallery on localhost:5173
+just run web site                              # website on localhost:5174
+just logs web [gallery|site]
+just stop web [gallery|site]
 ```
 
 `since` is a duration (`30s`, `10m`, `2h`, `7d`) or a date, and defaults to the
 last 10 minutes. Arguments are recognised by shape, so their order is free.
+
+The website and gallery run independently. See [Design system — Web](../design.md#web) for builds, content guidance, and browser tests.
 
 Device runs need `DEVELOPMENT_TEAM` and a phone that's unlocked, awake and on
 the same network. Name it once and it's remembered (`logs/device-default`);

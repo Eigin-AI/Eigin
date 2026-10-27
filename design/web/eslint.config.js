@@ -17,6 +17,10 @@ export default ts.config(
   ...ts.configs.recommended,
   ...svelte.configs.recommended,
   {
+    // The gallery uses plain Vite; SvelteKit is a sibling workspace dependency.
+    rules: { "svelte/no-navigation-without-resolve": "off" },
+  },
+  {
     files: ["**/*.svelte"],
     languageOptions: {
       parserOptions: {

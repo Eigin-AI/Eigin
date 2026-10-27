@@ -14,6 +14,7 @@ Goal: pin down the version and draft the release notes before touching any files
 
     ## Decision log
     Numbered list, one short line per round.
+- Include the proposed website roadmap changes (or an explicit no-change decision) in the Decision log for approval.
 - Keep it short — this drafts the GitLab release notes, not a changelog (git cliff generates that from commits in Build).
 - Review rounds go through `plan_review`: it opens the plan in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn: address requested changes (then call `plan_review` again) or append a Decision log entry on approval. Notes on an approval are guidance, not a rework list.
 - If the user types comments in chat or edits the file directly, respond to those first, then run a `plan_review` round to confirm.

@@ -1,4 +1,4 @@
-//! The web gallery: Vite dev server run detached, like the relay.
+//! The web surfaces: Vite dev server run detached, like the relay.
 
 use anyhow::{Context, Result, bail};
 use std::fs;
@@ -11,31 +11,73 @@ use std::time::Duration;
 
 use super::logs::{self, Since};
 
-const DEFAULT_PORT: u16 = 5173;
+/// Independently runnable web surfaces.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WebTarget {
+    Gallery,
+    Site,
+}
+
+impl WebTarget {
+    fn port(self) -> u16 {
+        match self {
+            Self::Gallery => 5173,
+            Self::Site => 5174,
+        }
+    }
+    fn directory(self) -> &'static str {
+        match self {
+            Self::Gallery => "design/web",
+            Self::Site => "src/eigin_website",
+        }
+    }
+    fn workspace(self) -> &'static str {
+        match self {
+            Self::Gallery => "@eigin/ui",
+            Self::Site => "@eigin/website",
+        }
+    }
+    fn identity(self) -> &'static str {
+        match self {
+            Self::Gallery => "web",
+            Self::Site => "website",
+        }
+    }
+}
+
+/// Parse an optional web surface selector; empty means gallery.
+pub fn parse(args: &[String]) -> Result<WebTarget> {
+    let args: Vec<_> = args.iter().filter(|a| !a.is_empty()).collect();
+    match args.as_slice() {
+        [] => Ok(WebTarget::Gallery),
+        [value] if value.as_str() == "gallery" => Ok(WebTarget::Gallery),
+        [value] if value.as_str() == "site" => Ok(WebTarget::Site),
+        _ => bail!("Expected web [gallery | site]"),
+    }
+}
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
-const WEB_DIR: &str = "design/web";
 
-fn log_file(root: &str) -> PathBuf {
-    PathBuf::from(root).join("logs/web.log")
+fn log_file(root: &str, target: WebTarget) -> PathBuf {
+    PathBuf::from(root).join(format!("logs/{}.log", target.identity()))
 }
 
-fn pid_file(root: &str) -> PathBuf {
-    PathBuf::from(root).join("logs/web.pid")
+fn pid_file(root: &str, target: WebTarget) -> PathBuf {
+    PathBuf::from(root).join(format!("logs/{}.pid", target.identity()))
 }
 
-fn web_dir(root: &str) -> PathBuf {
-    PathBuf::from(root).join(WEB_DIR)
+fn web_dir(root: &str, target: WebTarget) -> PathBuf {
+    PathBuf::from(root).join(target.directory())
 }
 
 /// Install node_modules when they're missing, so a fresh checkout just works.
 fn ensure_dependencies(root: &str) -> Result<()> {
-    if web_dir(root).join("node_modules/.bin/vite").exists() {
+    if PathBuf::from(root).join("node_modules/.bin/vite").exists() {
         return Ok(());
     }
     println!("→ Installing web dependencies (npm install)…");
     let status = Command::new("npm")
         .args(["install", "--no-fund", "--no-audit"])
-        .current_dir(web_dir(root))
+        .current_dir(root)
         .status()
         .context("running npm install")?;
     if !status.success() {
@@ -44,10 +86,13 @@ fn ensure_dependencies(root: &str) -> Result<()> {
     Ok(())
 }
 
-/// Start the gallery dev server, detached, replacing an instance we started before.
-pub fn start(root: &str) -> Result<()> {
-    if !web_dir(root).exists() {
-        bail!("no {WEB_DIR} — the gallery is not checked out");
+/// Start a web dev server, replacing the tracked instance for this surface.
+pub fn start(root: &str, target: WebTarget) -> Result<()> {
+    if !web_dir(root, target).exists() {
+        bail!(
+            "no {} — the web surface is not checked out",
+            target.directory()
+        );
     }
     fs::create_dir_all(PathBuf::from(root).join("logs")).context("creating the logs directory")?;
 
@@ -56,18 +101,15 @@ pub fn start(root: &str) -> Result<()> {
     // Fresh tokens before the server starts. The web target is in-process —
     // running full codegen (localize, xcodegen, build server) would be
     // far too slow for a dev-server start.
-    let tokens = crate::design::tokens::load_tokens(root)?;
-    let installed = crate::design::ios::fonts::install(root, &tokens)?;
-    crate::design::web::generate(root, &tokens, installed.as_ref())
-        .context("generating web tokens")?;
+    crate::design::web::generate_assets(root)?;
 
-    stop_running(root)?;
-    reclaim_port(DEFAULT_PORT)?;
+    stop_running(root, target)?;
+    reclaim_port(target.port(), root, target)?;
 
     let log = fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(log_file(root))
+        .open(log_file(root, target))
         .context("opening the web log")?;
 
     // Its own process group, so the server outlives whatever started it.
@@ -76,53 +118,55 @@ pub fn start(root: &str) -> Result<()> {
         .args([
             "run",
             "dev",
+            "--workspace",
+            target.workspace(),
             "--",
             "--port",
-            &DEFAULT_PORT.to_string(),
+            &target.port().to_string(),
             "--strictPort",
         ])
-        .current_dir(web_dir(root))
+        .current_dir(root)
         .stdout(log.try_clone()?)
         .stderr(log)
         .stdin(std::process::Stdio::null())
         .process_group(0);
     let child = command.spawn().context("starting the web dev server")?;
 
-    fs::write(pid_file(root), format!("{}\n", child.id())).context("writing the pid file")?;
+    fs::write(pid_file(root, target), format!("{}\n", child.id()))
+        .context("writing the pid file")?;
 
-    if wait_until_serving(DEFAULT_PORT) {
+    if wait_until_serving(target.port()) {
         let _ = std::io::stdout().flush();
-        println!("Gallery running at http://localhost:{DEFAULT_PORT} → just logs web --follow");
+        println!(
+            "Web {:?} running at http://localhost:{}",
+            target,
+            target.port()
+        );
         let _ = std::io::stdout().flush();
         return Ok(());
     }
 
-    let _ = fs::remove_file(pid_file(root));
-    let _ = Command::new("kill").arg(child.id().to_string()).status();
-    let log = fs::read_to_string(log_file(root)).unwrap_or_default();
+    let _ = fs::remove_file(pid_file(root, target));
+    let _ = Command::new("kill")
+        .args(["-TERM", "--", &format!("-{}", child.id())])
+        .status();
+    let log = fs::read_to_string(log_file(root, target)).unwrap_or_default();
     eprintln!("{}", logs::tail(&log, 20));
-    bail!("the web dev server did not come up on port {DEFAULT_PORT}");
+    bail!(
+        "the web dev server did not come up on port {}",
+        target.port()
+    );
 }
 
-/// Stop the gallery we started, if it is still running.
-pub fn stop(root: &str) -> Result<()> {
-    match read_pid(root) {
-        Some(pid) if kill(pid, "TERM") => {
-            wait_for_exit(pid);
-            let _ = fs::remove_file(pid_file(root));
-            println!("Gallery stopped (pid {pid}).");
-        }
-        Some(_) => {
-            let _ = fs::remove_file(pid_file(root));
-            println!("Stale pid file removed; the gallery was not running.");
-        }
-        None => println!("No detached gallery running."),
-    }
+/// Stop the tracked web surface, if it is still running.
+pub fn stop(root: &str, target: WebTarget) -> Result<()> {
+    stop_running(root, target)?;
+    println!("Web {:?} stopped.", target);
     Ok(())
 }
 
-pub fn show_logs(since: Option<Since>, follow: bool, root: &str) -> Result<()> {
-    let path = log_file(root);
+pub fn show_logs(since: Option<Since>, follow: bool, root: &str, target: WebTarget) -> Result<()> {
+    let path = log_file(root, target);
     if follow {
         let status = Command::new("tail")
             .args(["-n", "50", "-f"])
@@ -146,15 +190,14 @@ pub fn show_logs(since: Option<Since>, follow: bool, root: &str) -> Result<()> {
     Ok(())
 }
 
-/// A gallery from another checkout keeps running when its worktree is removed,
-/// and its pid file goes with it. Clear one off our port; refuse anything else.
-fn reclaim_port(port: u16) -> Result<()> {
+/// Reclaim this checkout's matching Vite process; refuse unrelated listeners.
+fn reclaim_port(port: u16, root: &str, target: WebTarget) -> Result<()> {
     for pid in listeners(port) {
         let command = process_command(pid);
-        if !is_gallery(&command) {
+        if !is_server(&command, root, target) {
             bail!("port {port} is held by pid {pid} ({command}) — stop it and try again");
         }
-        println!("→ Reclaiming port {port} from a stale gallery (pid {pid})…");
+        println!("→ Reclaiming port {port} from a stale web server (pid {pid})…");
         if kill(pid, "TERM") {
             wait_for_exit(pid);
         }
@@ -162,9 +205,16 @@ fn reclaim_port(port: u16) -> Result<()> {
     Ok(())
 }
 
-/// A gallery is a vite from some checkout's web dir, ours or another's.
-fn is_gallery(command: &str) -> bool {
-    command.contains(&format!("{WEB_DIR}/node_modules/.bin/vite"))
+/// Match both the checkout and target port before reclaiming a listener.
+fn is_server(command: &str, root: &str, target: WebTarget) -> bool {
+    let executables = [
+        format!("{root}/node_modules/.bin/vite"),
+        format!("{root}/{}/node_modules/.bin/vite", target.directory()),
+    ];
+    executables
+        .iter()
+        .any(|path| command.contains(&format!(" {path} ")))
+        && command.ends_with(&format!("--port {} --strictPort", target.port()))
 }
 
 fn listeners(port: u16) -> Vec<u32> {
@@ -191,18 +241,43 @@ fn process_command(pid: u32) -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-fn stop_running(root: &str) -> Result<()> {
-    if let Some(pid) = read_pid(root)
-        && kill(pid, "TERM")
-    {
-        wait_for_exit(pid);
+fn stop_running(root: &str, target: WebTarget) -> Result<()> {
+    if let Some(pid) = read_pid(root, target) {
+        let command = process_command(pid);
+        if command != "unknown" {
+            let cwd = Command::new("lsof")
+                .args(["-a", "-p", &pid.to_string(), "-d", "cwd", "-Fn"])
+                .output()
+                .context("checking web process directory")?;
+            let owned = String::from_utf8_lossy(&cwd.stdout)
+                .lines()
+                .any(|line| line == format!("n{root}"));
+            if !owned
+                || !command.starts_with("npm run dev ")
+                || !command.contains(&format!("--port {} --strictPort", target.port()))
+            {
+                bail!("pid {pid} no longer belongs to this web target — refusing to stop it");
+            }
+            // The detached npm process owns the whole server process group.
+            let status = Command::new("kill")
+                .args(["-TERM", "--", &format!("-{pid}")])
+                .status()?;
+            if !status.success() {
+                bail!("could not stop web process group {pid}");
+            }
+            wait_for_exit(pid);
+        }
     }
-    let _ = fs::remove_file(pid_file(root));
+    let _ = fs::remove_file(pid_file(root, target));
     Ok(())
 }
 
-fn read_pid(root: &str) -> Option<u32> {
-    fs::read_to_string(pid_file(root)).ok()?.trim().parse().ok()
+fn read_pid(root: &str, target: WebTarget) -> Option<u32> {
+    fs::read_to_string(pid_file(root, target))
+        .ok()?
+        .trim()
+        .parse()
+        .ok()
 }
 
 fn kill(pid: u32, signal: &str) -> bool {
@@ -248,18 +323,50 @@ fn wait_until_serving(port: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
-    fn recognises_a_gallery_from_another_checkout() {
-        let command = "node /Users/me/Repositories/eigin.feature-web/design/web/node_modules/.bin/vite --port 5173 --strictPort";
-        assert!(is_gallery(command));
+    fn selectors_are_explicit() {
+        assert_eq!(parse(&[]).unwrap(), WebTarget::Gallery);
+        assert_eq!(parse(&["site".into()]).unwrap(), WebTarget::Site);
+        assert!(parse(&["app".into()]).is_err());
+        assert!(parse(&["site".into(), "production".into()]).is_err());
+    }
+    #[test]
+    fn reclaims_workspace_vite_only_for_its_checkout_and_target() {
+        for (target, sibling) in [
+            (WebTarget::Site, WebTarget::Gallery),
+            (WebTarget::Gallery, WebTarget::Site),
+        ] {
+            let command = format!(
+                "node /repo/{}/node_modules/.bin/vite --port {} --strictPort",
+                target.directory(),
+                target.port()
+            );
+            assert!(is_server(&command, "/repo", target));
+            assert!(!is_server(&command, "/other", target));
+            assert!(!is_server(&command, "/repo", sibling));
+            let wrong_workspace = format!(
+                "node /repo/{}/node_modules/.bin/vite --port {} --strictPort",
+                sibling.directory(),
+                target.port()
+            );
+            assert!(!is_server(&wrong_workspace, "/repo", target));
+            let prefixed_checkout = command.replace("/repo/", "/other/repo/");
+            assert!(!is_server(&prefixed_checkout, "/repo", target));
+            let wrong_executable = command.replace("/.bin/vite ", "/.bin/vite-unrelated ");
+            assert!(!is_server(&wrong_executable, "/repo", target));
+        }
     }
 
     #[test]
-    fn leaves_an_unrelated_server_alone() {
-        assert!(!is_gallery(
-            "node /Users/me/other-app/node_modules/.bin/vite --port 5173"
+    fn only_reclaims_our_target() {
+        let command = "node /repo/node_modules/.bin/vite --port 5174 --strictPort";
+        assert!(is_server(command, "/repo", WebTarget::Site));
+        assert!(!is_server(command, "/repo", WebTarget::Gallery));
+        assert!(!is_server(command, "/other", WebTarget::Site));
+        assert!(!is_server(
+            "python -m http.server 5174",
+            "/repo",
+            WebTarget::Site
         ));
-        assert!(!is_gallery("python -m http.server 5173"));
     }
 }

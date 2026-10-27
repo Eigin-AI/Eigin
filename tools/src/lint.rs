@@ -49,7 +49,7 @@ pub fn run(_args: LintArgs) -> Result<()> {
 
     // Web: prettier --check + eslint. Skipped with a note without node_modules.
     let web = format!("{root}/design/web");
-    if std::path::Path::new(&format!("{web}/node_modules")).is_dir() {
+    if std::path::Path::new(&format!("{root}/node_modules")).is_dir() {
         if !run_cmd(
             Command::new("npx")
                 .args(["prettier", "--check", "src", "tests"])
@@ -65,9 +65,19 @@ pub fn run(_args: LintArgs) -> Result<()> {
             failed = true;
         }
     } else {
-        println!("Skipping web lint: design/web/node_modules missing.");
+        println!("Skipping web lint: root node_modules missing.");
     }
 
+    if std::path::Path::new(&format!("{root}/node_modules")).is_dir()
+        && !run_cmd(
+            Command::new("npx")
+                .args(["prettier", "--check", "."])
+                .current_dir(format!("{root}/src/eigin_website")),
+            "prettier --check (website)",
+        )?
+    {
+        failed = true;
+    }
     let root = config::repo_root()?;
     if !localize::validate_all(&root)? {
         failed = true;
