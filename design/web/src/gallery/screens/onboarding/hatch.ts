@@ -1,7 +1,7 @@
 import { figureOf, splinePath } from "@lib/components/morph/figure";
 import { forms } from "@lib/components/morph/forms";
 import { INITIAL_HOLD, MorphTimeline } from "@lib/components/morph/timeline";
-import { springCurve } from "@gallery/screens/onboarding/spring";
+import { springCurve } from "@lib/internal/spring";
 
 /**
  * The agent's hatch, as pure functions of time in seconds. The green circle

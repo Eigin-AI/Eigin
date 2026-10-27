@@ -147,6 +147,7 @@ export const backgrounds: Background[] = [
   { id: "soft", label: "Soft", fill: token("surface.impact.subtle"), ink: darkInk },
   { id: "light", label: "Light", fill: token("surface.standard.elevated"), ink: darkInk },
   { id: "dark", label: "Dark", fill: token("surface.standard.base", "dark"), ink: lightInk },
+  { id: "transparent", label: "None", fill: "transparent", ink: darkInk },
 ];
 export const layouts: { id: Layout; label: string }[] = [
   { id: "tilt", label: "Tilt" },
@@ -216,6 +217,36 @@ export const shotEntries: ShotEntry[] = [
     headlineSize: "l",
     tilt: { yaw: -24, pitch: 10, roll: 6 },
     placement: { x: 4, y: 0, scale: 1 },
+    glare: 0.15,
+    light: { angle: -40, height: 35 },
+    scroll: 0,
+    conversation: [
+      { kind: "user", text: "Keep an eye on school emails for me?" },
+      {
+        kind: "agent",
+        text: "OK, I'll keep an eye on it. For now, there's a **trip form** and Thursday's **bake sale**. What should we tackle first?",
+      },
+      {
+        kind: "options",
+        text: "Fill in the form | I'll draft it for you to check. | create\nRemind me Thursday | For the bake sale | focus",
+      },
+    ],
+  },
+  // The website's "Get Eigin" section: the same moment, unframed, for a dark page.
+  {
+    id: "website-get",
+    title: "Website: Get Eigin",
+    platform: "ios",
+    screen: conversationScreen,
+    layout: "tilt",
+    background: "transparent",
+    scheme: "light",
+    size: "1x1",
+    headline: "",
+    headlineAt: "center-left",
+    headlineSize: "l",
+    tilt: { yaw: -24, pitch: 10, roll: 6 },
+    placement: { x: 0, y: -1.5, scale: 1.33 },
     glare: 0.15,
     light: { angle: -40, height: 35 },
     scroll: 0,

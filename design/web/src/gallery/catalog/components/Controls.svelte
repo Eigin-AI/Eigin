@@ -1,7 +1,22 @@
 <script lang="ts">
-  import { Switch, SegmentedControl } from "@lib";
+  import { Switch, SegmentedControl, FloatingPicker, PickerRow } from "@lib";
   import type { Segment } from "@lib";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
+
+  const languages = [
+    { value: "en", label: "English", detail: undefined, emoji: undefined },
+    { value: "da", label: "Dansk", detail: undefined, emoji: undefined },
+  ];
+  const workspaces = [
+    { value: "personal", label: "Personal", detail: "Your own agent and memory", emoji: "🌿" },
+    { value: "team", label: "Team", detail: "A shared context for your team", emoji: "🐝" },
+  ];
+  let pickerContent = $state("Languages");
+  let language = $state("en");
+  let workspace = $state("personal");
+  const pickerOptions = $derived(pickerContent === "Languages" ? languages : workspaces);
+  const pickerValue = $derived(pickerContent === "Languages" ? language : workspace);
+  const currentOption = $derived(pickerOptions.find((option) => option.value === pickerValue));
 
   const states = ["enabled", "disabled"] as const;
 
@@ -47,9 +62,63 @@
       />
     </div>
   </div>
+  <h2 class="t-titleM">Floating picker</h2>
+  <div class="controls">
+    <OptionSelector options={["Languages", "Detailed rows"]} bind:value={pickerContent} />
+  </div>
+  <div class="specimen">
+    <FloatingPicker
+      label="Floating picker: {currentOption?.label}"
+      rowGap={pickerContent === "Detailed rows" ? 24 : 16}
+    >
+      {#snippet trigger()}<span class="t-buttonSmall"
+          >{pickerContent === "Languages" ? pickerValue.toUpperCase() : currentOption?.label}</span
+        >{/snippet}
+      {#snippet children(dismiss)}
+        {#each pickerOptions as option (option.value)}
+          <PickerRow
+            selected={pickerValue === option.value}
+            onclick={() => {
+              dismiss();
+              if (pickerContent === "Languages") language = option.value;
+              else workspace = option.value;
+            }}
+          >
+            <span class="picker-row-content">
+              {#if option.emoji}<span class="space-emoji" aria-hidden="true">{option.emoji}</span
+                >{/if}
+              <span class="space-labels">
+                <span class={option.detail ? "t-titleXS" : "t-navTab"}>{option.label}</span>
+                {#if option.detail}<span class="t-note space-description">{option.detail}</span
+                  >{/if}
+              </span>
+            </span>
+          </PickerRow>
+        {/each}
+      {/snippet}
+    </FloatingPicker>
+  </div>
 </div>
 
 <style>
+  .picker-row-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-n16);
+  }
+  .space-emoji {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .space-labels {
+    display: grid;
+    gap: var(--spacing-n8);
+    min-width: 0;
+  }
+  .space-description {
+    color: var(--color-text-standard-muted);
+  }
   .controls {
     display: flex;
     flex-direction: column;

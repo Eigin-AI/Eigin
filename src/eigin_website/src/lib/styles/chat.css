@@ -1,0 +1,222 @@
+/* One clock controls movement and reveals; the blob leads every new beat. */
+.chat-stage {
+  position: relative;
+  min-width: 0;
+  --color-button-standard-primary: var(--color-surface-impact-base);
+}
+
+.chat-screen {
+  position: relative;
+  display: grid;
+  align-items: center;
+  box-sizing: border-box;
+  padding-block: var(--spacing-n32);
+  width: 100%;
+  min-height: 420px;
+  isolation: isolate;
+}
+
+.chat-agent {
+  position: absolute;
+  width: 176px;
+  height: 176px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.agent {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.agent .morph-blob {
+  width: 180%;
+  height: 180%;
+}
+
+.chat-compose {
+  position: absolute;
+  top: 50%;
+  inset-inline: var(--spacing-n16);
+  opacity: var(--composer);
+  transform: translateY(calc((1 - var(--composer)) * 12px));
+  visibility: hidden;
+}
+
+.chat-screen:is([data-phase="compose"], [data-phase="sending"]) .chat-compose {
+  visibility: visible;
+}
+
+.chat-turn {
+  position: relative;
+  margin-inline: var(--spacing-n16);
+  display: grid;
+  gap: var(--spacing-n24);
+}
+
+.chat-ask {
+  opacity: var(--question);
+  transform: translateY(calc((1 - var(--question)) * 12px));
+}
+
+.chat-ask .row {
+  padding: 0 0 0 var(--spacing-n32);
+}
+
+.chat-ask .bubble {
+  padding: var(--spacing-n16) var(--spacing-n24);
+}
+
+.chat-answer {
+  position: relative;
+  padding-top: var(--spacing-n64);
+}
+
+.chat-tool {
+  position: absolute;
+  top: var(--spacing-n8);
+  left: var(--spacing-n56);
+  margin: 0;
+  color: var(--color-text-standard-muted);
+  visibility: hidden;
+}
+
+.chat-tool.shown {
+  visibility: visible;
+}
+
+.chat-response {
+  display: grid;
+  gap: var(--spacing-n24);
+}
+
+.chat-reply.t-standfirst {
+  margin: 0;
+  line-height: 1.4;
+  color: var(--color-text-standard-base);
+  opacity: var(--answer);
+  transform: translateY(calc((1 - var(--answer)) * 8px));
+}
+
+.chat-ending {
+  opacity: var(--ending);
+  transform: translateY(calc((1 - var(--ending)) * 8px));
+}
+
+/* Matches the gallery's compact CardSurface example. */
+.chat-action-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-n12);
+}
+
+.chat-action-copy {
+  display: grid;
+  gap: var(--spacing-n12);
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-action-arrow {
+  display: inline-flex;
+  color: var(--color-text-standard-muted);
+}
+
+.chat-unsaid {
+  opacity: 0;
+}
+
+.chat-controls {
+  position: absolute;
+  right: 0;
+  bottom: -32px;
+}
+
+.chat-screen:not([data-ready]) .chat-agent {
+  display: none;
+}
+
+.chat-stage .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.feature-tabs button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-n12);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-standard-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--motion-easing-smooth);
+}
+
+.feature-tabs button:is(:hover, :focus-visible, [aria-pressed="true"]) {
+  color: var(--color-text-standard-base);
+}
+
+.feature-tabs button:not([aria-pressed="true"]) .feature-bullet-icon {
+  opacity: 0.4;
+}
+
+@media (max-width: 600px) {
+  .chat-compose {
+    inset-inline: 0;
+  }
+  .chat-turn {
+    margin-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-screen *,
+  .feature-tabs button {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+#personal.feature-section {
+  background: var(--color-surface-standard-base);
+}
+
+#personal .feature-grid {
+  padding-block: clamp(var(--spacing-n64), 7vw, var(--spacing-n88));
+}
+
+/* Reserve the complete prompt's height so typing never resizes the input. */
+.chat-stage .chat-compose .text-area::after {
+  content: var(--chat-prompt);
+  visibility: hidden;
+  white-space: normal;
+  text-box: normal;
+  min-width: 0;
+  width: 100%;
+}
+
+.chat-stage .chat-compose textarea {
+  position: absolute;
+}
+
+.chat-stage .chat-compose .collapsed > span {
+  white-space: normal;
+  text-overflow: clip;
+}
+
+@media (max-width: 600px) {
+  .chat-compose .mic {
+    display: none;
+  }
+}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ConnectionState } from "./types";
-  import "@lib/theme/pulse.css";
+  import "../../theme/pulse.css";
 
   const { state, label }: { state: ConnectionState; label: string } = $props();
 </script>

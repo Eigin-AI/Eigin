@@ -40,6 +40,9 @@
     switch (variant) {
       case "primary":
         return "var(--color-text-button-onPrimary)";
+      case "outline":
+      case "elevated":
+        return "var(--color-text-standard-base)";
       case "secondary":
         return "var(--color-icon-standard-base)";
       case "spot":

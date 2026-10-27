@@ -136,3 +136,8 @@ design/assets/showcase/**/*.png
 
 # Private synthetic audience review inputs and reports.
 .pi/panel/runs/
+# Web workspaces
+node_modules/
+.svelte-kit/
+src/eigin_website/build/
+playwright-report/

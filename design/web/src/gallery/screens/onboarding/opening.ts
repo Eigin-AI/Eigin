@@ -1,4 +1,4 @@
-import { springCurve } from "@gallery/screens/onboarding/spring";
+import { springCurve } from "@lib/internal/spring";
 
 /**
  * The opening and the rhythm of the setup screens, in seconds unless named in

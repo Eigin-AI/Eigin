@@ -42,6 +42,7 @@ pub const TYPOGRAPHY_FIELDS: &[&str] = &[
     "titleXS",
     "authorL",
     "authorS",
+    "standfirstLarge",
     "standfirst",
     "body",
     "code",

@@ -11,7 +11,15 @@
   } from "@lib";
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
 
-  const variants: ButtonVariant[] = ["primary", "secondary", "spot", "destructive", "open"];
+  const variants: ButtonVariant[] = [
+    "primary",
+    "secondary",
+    "elevated",
+    "outline",
+    "spot",
+    "destructive",
+    "open",
+  ];
   const sizes: ButtonSize[] = ["large", "medium", "small", "extraSmall"];
   const states = ["enabled", "disabled"] as const;
 

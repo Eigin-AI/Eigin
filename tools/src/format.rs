@@ -40,7 +40,7 @@ pub fn run(_args: FormatArgs) -> Result<()> {
     )?;
 
     let web = format!("{root}/design/web");
-    if web_installed(&web) {
+    if web_installed(&root) {
         run_cmd(
             Command::new("npx")
                 .args(["prettier", "--write", "src", "tests"])
@@ -54,9 +54,17 @@ pub fn run(_args: FormatArgs) -> Result<()> {
             "eslint --fix",
         )?;
     } else {
-        println!("Skipping web formatting: design/web/node_modules missing.");
+        println!("Skipping web formatting: root node_modules missing.");
     }
 
+    if web_installed(&root) {
+        run_cmd(
+            Command::new("npx")
+                .args(["prettier", "--write", "."])
+                .current_dir(format!("{root}/src/eigin_website")),
+            "prettier (website)",
+        )?;
+    }
     Ok(())
 }
 

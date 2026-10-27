@@ -1,0 +1,268 @@
+.trust-page {
+  background: var(--color-surface-standard-elevated);
+  color: var(--color-text-standard-base);
+}
+
+.trust-inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--spacing-n64), 8vw, var(--spacing-n128));
+}
+
+.trust-intro {
+  max-width: 40rem;
+  display: grid;
+  gap: var(--spacing-n32);
+}
+
+.trust-title {
+  font-size: clamp(48px, 7vw, 96px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.trust-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-n16) var(--spacing-n32);
+}
+
+.trust-row {
+  align-items: start;
+  scroll-margin-top: 96px;
+}
+
+.trust-row-label {
+  grid-column: span 1;
+}
+
+.trust-row-content {
+  grid-column: span 3;
+  display: grid;
+  justify-items: start;
+  gap: var(--spacing-n24);
+  max-width: 44rem;
+  min-width: 0;
+}
+
+.trust-summary {
+  color: var(--color-text-standard-base);
+}
+
+.trust-details {
+  display: grid;
+  gap: var(--spacing-n12);
+  margin: 0;
+  padding-left: var(--spacing-n20);
+}
+
+.trust-items {
+  display: grid;
+  margin: 0;
+  width: 100%;
+}
+
+.trust-items > div {
+  display: grid;
+  gap: var(--spacing-n8);
+  padding-top: var(--spacing-n24);
+  border-top: 1px solid var(--color-border-standard-base);
+}
+
+.trust-items dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-n12);
+  color: var(--color-text-standard-base);
+}
+
+.trust-items dd {
+  margin: 0;
+}
+
+.trust-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-n32) var(--spacing-n48);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust-people li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-n20);
+}
+
+.trust-people img {
+  width: calc(var(--spacing-n64) + var(--spacing-n32));
+  height: calc(var(--spacing-n64) + var(--spacing-n32));
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.trust-people li > div {
+  display: grid;
+  gap: var(--spacing-n12);
+}
+
+.trust-people p {
+  margin: 0;
+}
+
+.trust-people .t-titleXS {
+  color: var(--color-text-standard-base);
+}
+
+.trust-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-n40) var(--spacing-n32);
+  width: 100%;
+}
+
+.trust-groups > div {
+  display: grid;
+  align-content: start;
+  gap: var(--spacing-n16);
+}
+
+.trust-groups .trust-links {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-n12);
+}
+
+@media (max-width: 600px) {
+  .trust-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 850px) {
+  .trust-row-label,
+  .trust-row-content {
+    grid-column: 1 / -1;
+  }
+}
+
+.trust-claims {
+  display: grid;
+  gap: clamp(var(--spacing-n80), 10vw, 160px);
+}
+
+.trust-claim {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "copy diagram"
+    "more diagram";
+  grid-template-rows: auto 1fr;
+  column-gap: var(--content-grid-gap);
+  row-gap: var(--spacing-n32);
+  align-items: start;
+  scroll-margin-top: 96px;
+}
+
+.trust-claim-copy {
+  grid-area: copy;
+  display: grid;
+  gap: var(--spacing-n24);
+  align-self: end;
+}
+
+.trust-claim-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-n12);
+}
+
+/* A compact status tag, sized like the roadmap's version labels. */
+.trust-claim-label .eigin-btn.tag {
+  height: var(--spacing-n24);
+  padding-inline: var(--spacing-n12);
+}
+
+.trust-statement {
+  max-width: 24ch;
+  color: var(--color-text-standard-base);
+  text-wrap: balance;
+}
+
+.trust-claim-diagram {
+  grid-area: diagram;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.trust-claim > .trust-more {
+  grid-area: more;
+}
+
+.trust-more {
+  border-top: 1px solid var(--color-border-standard-base);
+}
+
+.trust-more summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-n16);
+  padding-block: var(--spacing-n20);
+  color: var(--color-text-standard-base);
+  cursor: pointer;
+  list-style: none;
+}
+
+.trust-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.trust-more-icon {
+  display: inline-flex;
+  transition: transform var(--motion-fast) var(--motion-easing-smooth);
+}
+
+.trust-more[open]:not([data-expanded="false"]) .trust-more-icon,
+.trust-more[data-expanded="true"] .trust-more-icon {
+  transform: rotate(180deg);
+}
+
+.trust-more-content {
+  overflow: hidden;
+}
+
+/* Room above the first line, so trimmed text keeps its ascenders inside the clip. */
+.trust-more-inner {
+  padding-top: var(--spacing-n8);
+  padding-bottom: var(--spacing-n24);
+}
+
+.trust-items > .trust-more:last-child {
+  border-bottom: 1px solid var(--color-border-standard-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-more-icon {
+    transition: none;
+  }
+}
+
+@media (max-width: 850px) {
+  .trust-claim {
+    grid-template-columns: 1fr;
+    grid-template-areas: "copy" "diagram" "more";
+    grid-template-rows: auto;
+  }
+  .trust-claim-diagram {
+    justify-content: flex-start;
+  }
+}

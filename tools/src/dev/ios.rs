@@ -261,7 +261,7 @@ impl App {
             // Safe here: this is a single-threaded CLI, before anything is spawned.
             unsafe { std::env::set_var(key, value) };
         }
-        crate::generate::run(crate::generate::GenerateArgs {})
+        crate::generate::run(crate::generate::GenerateArgs::default())
     }
 }
 

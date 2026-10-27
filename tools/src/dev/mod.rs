@@ -29,6 +29,8 @@ pub struct RunArgs {
 pub struct StopArgs {
     /// relay | web
     target: String,
+    /// Web surface: gallery | site.
+    args: Vec<String>,
 }
 
 /// Show a target's logs.
@@ -158,19 +160,7 @@ pub fn run(args: RunArgs) -> Result<()> {
                 _ => ios::run_device(slots.name.as_deref(), env, &root),
             }
         }
-        "web" => {
-            let slots = classify(
-                &args.args,
-                Accepts {
-                    name: false,
-                    since: false,
-                },
-            )?;
-            if slots.env.is_some() {
-                bail!("the gallery needs no environment: just run web");
-            }
-            web::start(&root)
-        }
+        "web" => web::start(&root, web::parse(&args.args)?),
         other => bail!("Unknown run target: {other} (use relay | ios | web)"),
     }
 }
@@ -179,13 +169,33 @@ pub fn stop(args: StopArgs) -> Result<()> {
     let root = crate::config::repo_root()?;
     match args.target.as_str() {
         "relay" => relay::stop(&root),
-        "web" => web::stop(&root),
+        "web" => web::stop(&root, web::parse(&args.args)?),
         other => bail!("Unknown stop target: {other} (use relay | web)"),
     }
 }
 
 pub fn logs(args: LogsArgs) -> Result<()> {
     let root = crate::config::repo_root()?;
+    if args.target == "web" {
+        let selectors: Vec<_> = args
+            .args
+            .iter()
+            .filter(|a| !Since::looks_like(a))
+            .cloned()
+            .collect();
+        let windows: Vec<_> = args.args.iter().filter(|a| Since::looks_like(a)).collect();
+        if windows.len() > 1 {
+            bail!("Repeated log window");
+        }
+        let target = web::parse(&selectors)?;
+        let since = args
+            .since
+            .filter(|s| !s.is_empty())
+            .or_else(|| windows.first().map(|s| (*s).clone()))
+            .map(|s| Since::parse(&s))
+            .transpose()?;
+        return web::show_logs(since, args.follow, &root, target);
+    }
     let (mode, rest) = split_mode(&args.args);
     let slots = classify(
         rest,
@@ -220,15 +230,6 @@ pub fn logs(args: LogsArgs) -> Result<()> {
                 }
                 _ => ios::simulator_logs(env, &since, args.follow, &root),
             }
-        }
-        "web" => {
-            if slots.env.is_some() {
-                bail!("just logs web reads one log file, so it takes no environment");
-            }
-            if let Some(name) = slots.name {
-                bail!("Unrecognised argument: {name}");
-            }
-            web::show_logs(since, args.follow, &root)
         }
         other => bail!("Unknown logs target: {other} (use relay | ios | web)"),
     }

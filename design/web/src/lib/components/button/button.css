@@ -66,7 +66,7 @@
   outline-offset: 2px;
 }
 
-.eigin-btn:focus {
+.eigin-btn:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -92,6 +92,25 @@
   --btn-hover: var(--color-interaction-light-hover);
   --btn-pressed: var(--color-interaction-light-pressed);
   --btn-disabled: var(--color-interaction-light-disabled);
+}
+
+.eigin-btn.elevated {
+  --btn-bg: var(--color-surface-standard-elevated);
+  --btn-fg: var(--color-text-standard-base);
+  --btn-fg-disabled: var(--color-text-button-onSecondary);
+  --btn-hover: var(--color-interaction-light-hover);
+  --btn-pressed: var(--color-interaction-light-pressed);
+  --btn-disabled: var(--color-interaction-light-disabled);
+}
+
+.eigin-btn.outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-text-standard-base);
+  --btn-fg-disabled: var(--color-text-button-onSecondary);
+  --btn-hover: var(--color-interaction-light-hover);
+  --btn-pressed: var(--color-interaction-light-pressed);
+  --btn-disabled: transparent;
+  border: var(--stroke-weight-standard) solid currentColor;
 }
 
 .eigin-btn.spot {

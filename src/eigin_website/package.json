@@ -1,0 +1,29 @@
+{
+  "name": "@eigin/website",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "test": "npm run check && npm run build",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@eigin/ui": "*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@playwright/test": "^1.58.2",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.3.4",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.12"
+  }
+}

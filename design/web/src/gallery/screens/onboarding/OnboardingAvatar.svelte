@@ -10,7 +10,7 @@
   import { ChasingProgress, Icon, driveFrames } from "@lib";
   import { splinePath } from "@lib/components/morph/figure";
   import { outline } from "@gallery/screens/onboarding/opening";
-  import { gentle, spring } from "@gallery/screens/onboarding/spring";
+  import { gentle, spring } from "@lib/internal/spring";
 
   let {
     progress,

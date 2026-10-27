@@ -31,7 +31,7 @@ The `design/` folder is the single source of truth for content generated into th
 
 ## Code generation
 
-`just generate` reads everything under `design/` and writes typed accessors into each app's generated sources, so tokens, prompts, and knowledge are used through the type system rather than by raw string or path. Generated files are git-ignored, so machine-local font choices stay out of source control.
+`just generate [all|ios|web]` selects the generation target; the default is `all`. It reads everything under `design/` and writes typed accessors into the selected apps' generated sources, so tokens, prompts, and knowledge are used through the type system rather than by raw string or path. Generated files are git-ignored, so machine-local font choices stay out of source control.
 
 For the web, generation emits CSS custom properties (`tokens.css`, `typography.css`), the font files, and typed companions: `tokens.ts` (token values for styles that need them in TypeScript) and `icons.ts` (every icon as an SVG string).
 
@@ -41,12 +41,41 @@ Eigin apps build a component library on the tokens. Components consume generated
 
 ## Web
 
-`design/web/` is a Svelte 5 + TypeScript component library built on the tokens, and the gallery is where you inspect and iterate on the UI system.
+The root npm workspace contains two consumers of the generated web assets:
 
+| Workspace | Purpose |
+|---|---|
+| `design/web/` (`@eigin/ui`) | Svelte 5 + TypeScript component library and gallery |
+| `src/eigin_website/` (`@eigin/website`) | Static English/Danish marketing website using `@eigin/ui` |
+
+Use Node.js **22.17 or newer** and npm **10 or newer**. Run installation from the repository root; both workspaces share `package-lock.json`.
+
+```sh
+npm ci
+just generate web           # tokens, fonts, icons and typography for both consumers
+just run web gallery        # gallery on localhost:5173; default for `just run web`
+just run web site           # website on localhost:5174
+just build web              # build both workspaces
+just test web               # check and build both; includes the gallery class-reference check
 ```
-just run web        # gallery on localhost:5173
-just test web       # svelte-check, Vite build, class-reference check
+
+The servers have separate lifecycles: `just stop web site`, `just stop web gallery`, `just logs web site`, and `just logs web gallery`. Logs are written under `logs/`.
+
+### Browser tests
+
+Install the browser engines once, then run the suites from the repository root:
+
+```sh
+npx playwright install chromium webkit   # add --with-deps on Linux
+just test website                       # check, static build and website browser tests
+npm run test:e2e --workspace @eigin/ui    # gallery browser tests
 ```
+
+The website prerenders the homepage, Roadmap, Trust, Contact, Support, Privacy,
+and Terms under both `/en/` and `/da/` into `src/eigin_website/build/`. Privacy and
+Terms retain their published English text in both locale shells. It uses static hosting, with an independent deployment lifecycle. See [website guidance](https://code.eigin.ai/dev/eigin/-/blob/main/src/eigin_website/AGENTS.md) for local preview, content editing, and build output. New dependency licenses are recorded in [the web inventory](https://code.eigin.ai/dev/eigin/-/blob/main/LICENSES/web-packages.md).
+
+### Gallery
 
 Browse components and screens in the sidebar. Screens are sketches of layout intent, not pixel traces — each holds exactly the content the real app has, in a device frame with real chrome. To add one: create it in `design/web/src/gallery/screens/`, register it in that folder's `index.ts`, and open it from the Screens list.
 

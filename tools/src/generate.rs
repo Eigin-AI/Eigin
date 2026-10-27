@@ -8,26 +8,47 @@ use crate::knowledge;
 use crate::localize;
 use crate::prompts;
 
-/// Run all code generation tasks for the project.
+/// Generate all outputs, iOS outputs, or shared web design assets.
 ///
-/// - Always: localization, design tokens, prompts and knowledge.
+/// - All/iOS: localization, design tokens, prompts and knowledge.
+/// - Web: shared tokens, typography, fonts and icons only.
 /// - With xcodegen installed: the Xcode project from project.yml. xcodegen
 ///   itself doesn't need Xcode, only the Swift runtime.
 /// - With Xcode available: the build server config for IDE/LSP support.
 ///
 /// Each Xcode step is skipped with a note when its tool is absent, so relay and
 /// tooling work needs only Rust.
-#[derive(clap::Args)]
-pub struct GenerateArgs {}
+#[derive(clap::Args, Default)]
+pub struct GenerateArgs {
+    /// Generation target: all (default), ios, or web.
+    #[arg(value_enum, default_value_t = GenerateTarget::All)]
+    target: GenerateTarget,
+}
 
-pub fn run(_args: GenerateArgs) -> Result<()> {
+/// Independently selectable generation outputs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
+enum GenerateTarget {
+    #[default]
+    All,
+    Ios,
+    Web,
+}
+
+pub fn run(args: GenerateArgs) -> Result<()> {
     let root = config::repo_root()?;
+    if args.target == GenerateTarget::Web {
+        return design::web::generate_assets(&root);
+    }
     let ios_dir = format!("{root}/src/eigin_ios");
 
     // Run all codegen before xcodegen so generated files are on disk
     // when xcodegen scans the source directories.
     localize::generate_all(&root)?;
-    design::generate_all(&root)?;
+    match args.target {
+        GenerateTarget::All => design::generate_all(&root)?,
+        GenerateTarget::Ios => design::generate_ios(&root)?,
+        GenerateTarget::Web => unreachable!("web generation returned above"),
+    }
     prompts::generate_all(&root)?;
     knowledge::generate_all(&root)?;
 
@@ -96,4 +117,30 @@ fn run_cmd(cmd: &mut Command, label: &str) -> Result<()> {
         anyhow::bail!("{label} failed");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[derive(Parser)]
+    struct Cli {
+        #[command(flatten)]
+        args: GenerateArgs,
+    }
+
+    #[test]
+    fn generation_targets_are_explicit() {
+        for (args, expected) in [
+            (vec!["generate"], GenerateTarget::All),
+            (vec!["generate", "all"], GenerateTarget::All),
+            (vec!["generate", "ios"], GenerateTarget::Ios),
+            (vec!["generate", "web"], GenerateTarget::Web),
+        ] {
+            assert_eq!(Cli::try_parse_from(args).unwrap().args.target, expected);
+        }
+        assert!(Cli::try_parse_from(["generate", "relay"]).is_err());
+        assert!(Cli::try_parse_from(["generate", "--web"]).is_err());
+    }
 }

@@ -48,7 +48,13 @@ export async function renderShot({ origin, hash, width, height, scale = 2, out, 
     const jpeg = (format ?? (out?.endsWith(".jpg") ? "jpg" : "png")) === "jpg";
     const image = await page
       .locator(".shot-canvas")
-      .screenshot({ path: out, type: jpeg ? "jpeg" : "png", quality: jpeg ? 92 : undefined });
+      // A PNG keeps any transparent background; JPEG has no alpha, so it flattens.
+      .screenshot({
+        path: out,
+        type: jpeg ? "jpeg" : "png",
+        quality: jpeg ? 92 : undefined,
+        omitBackground: !jpeg,
+      });
     await page.close();
     return image;
   } finally {

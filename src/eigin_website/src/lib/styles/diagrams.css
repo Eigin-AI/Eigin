@@ -1,0 +1,390 @@
+/* Trust diagrams: cut-paper plates, one slow motion each. Each plate sets its own paper, ink and accent. */
+.tschem {
+  margin: 0;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-n16);
+}
+.tplate {
+  position: relative;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--plate);
+  color: var(--ink);
+}
+.tplate svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tplate--dark {
+  --plate: var(--color-surface-standard-alternative);
+  --ink: var(--color-text-standard-base);
+  --accent: var(--color-surface-impact-alternative);
+}
+.tplate--olive {
+  --plate: var(--color-surface-impact-base);
+  --ink: var(--color-text-standard-base);
+  --accent: var(--color-surface-standard-elevated);
+}
+.tplate--peach {
+  --plate: var(--color-surface-impact-alternative);
+  --ink: var(--color-text-standard-base);
+  --accent: var(--color-surface-standard-elevated);
+}
+
+.ts-head,
+.ts-foot {
+  text-transform: uppercase;
+  fill: currentColor;
+  opacity: 0.65;
+}
+.ts-foot {
+  opacity: 0.4;
+}
+.ts-name {
+  text-transform: uppercase;
+  fill: currentColor;
+}
+.ts-label {
+  fill: currentColor;
+}
+.ts-label--xs,
+.ts-small {
+  fill: currentColor;
+}
+.ts-muted {
+  opacity: 0.55;
+}
+.ts-struck {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+.ts-warn {
+  font-style: italic;
+  fill: var(--color-text-standard-error);
+}
+
+.ts-wall {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.ts-dashed {
+  stroke-dasharray: 7 7;
+}
+.ts-box {
+  fill: var(--plate);
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.ts-solid {
+  fill: currentColor;
+}
+.ts-on-solid {
+  fill: var(--plate);
+}
+.ts-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.ts-line--accent {
+  stroke: var(--accent);
+}
+/* Data in motion: a bright stretch of line that slides along a path and off its ends. */
+.ts-pulse {
+  --pulse: var(--color-surface-standard-elevated);
+  fill: none;
+  stroke: var(--pulse);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  /* One fixed-length dash; the gap is longer than any path, so it starts and ends fully off the line. */
+  stroke-dasharray: 32 1000;
+  stroke-dashoffset: 38;
+  filter: drop-shadow(0 0 2px var(--pulse));
+}
+/* On dark plates the lines are already white, so data moves in the spot colour. */
+.tplate--dark .ts-pulse {
+  --pulse: var(--color-surface-impact-base);
+}
+.ts-tick {
+  fill: none;
+  stroke: var(--plate);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ts-scribble {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.ts-x {
+  fill: none;
+  stroke: var(--color-text-standard-error);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.ts-bubble {
+  fill: var(--color-surface-standard-elevated);
+}
+.ts-on-bubble {
+  fill: var(--color-text-standard-base);
+}
+.ts-key {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ts-deny {
+  fill: var(--color-text-standard-error);
+}
+.ts-deny-x {
+  fill: none;
+  stroke: var(--color-surface-standard-elevated);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.ts-gate,
+.ts-tab {
+  fill: var(--accent);
+}
+.ts-gate-text,
+.ts-tab-text {
+  text-transform: uppercase;
+  fill: var(--color-text-standard-base);
+}
+/* The gate's echo: its own shape, swelling outwards as it fades. */
+.ts-echo {
+  fill: var(--accent);
+}
+.ts-rogue {
+  fill: var(--accent);
+}
+.ts-lens-glass {
+  fill: color-mix(in srgb, var(--color-surface-standard-elevated) 35%, transparent);
+  stroke: currentColor;
+  stroke-width: 3;
+}
+.ts-lens {
+  animation: ts-lens 7s ease-in-out infinite alternate;
+}
+@keyframes ts-lens {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-150px, 150px);
+  }
+}
+
+/* Least privilege: the sandbox agent's options branch out level by level,
+   hold, then fade and grow again. The last branch is the one that escapes. */
+.ts-grow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-opacity: 0.85;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ts-grow 9s ease-out infinite backwards;
+  animation-delay: calc(var(--l) * 0.32s);
+}
+@keyframes ts-grow {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  1% {
+    opacity: 1;
+  }
+  10% {
+    stroke-dashoffset: 0;
+  }
+  72% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  84%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+.ts-web {
+  stroke-width: 1.2;
+  stroke-opacity: 0.55;
+}
+.ts-node {
+  fill: var(--accent);
+  opacity: 0;
+  animation: ts-node 9s ease-out infinite backwards;
+  animation-delay: calc(var(--l) * 0.32s);
+}
+@keyframes ts-node {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  72% {
+    opacity: 1;
+  }
+  84%,
+  100% {
+    opacity: 0;
+  }
+}
+.ts-grow--harm {
+  stroke: var(--color-text-standard-error);
+  stroke-width: 2.5;
+  stroke-opacity: 1;
+}
+.ts-harm-dot {
+  fill: var(--color-text-standard-error);
+}
+.ts-bang {
+  fill: var(--color-surface-standard-elevated);
+}
+.ts-harm-path {
+  fill: none;
+  stroke: var(--color-text-standard-error);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: ts-node 9s ease-out infinite backwards;
+  animation-delay: calc(6.2 * 0.32s);
+}
+.ts-harm-dot,
+.ts-bang {
+  opacity: 0;
+  animation: ts-harm 9s ease-out infinite backwards;
+  animation-delay: calc(6.4 * 0.32s);
+}
+@keyframes ts-harm {
+  0%,
+  8% {
+    opacity: 0;
+  }
+  12%,
+  72% {
+    opacity: 1;
+  }
+  84%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Brand cut-outs placed where the SVG's lines start. */
+.tschem-actor {
+  position: absolute;
+  display: flex;
+  left: var(--x);
+  top: var(--y, 55.3%);
+  width: var(--w);
+  transform: translate(-50%, -50%);
+  color: var(--actor, currentColor);
+}
+.tschem-actor svg {
+  width: 100%;
+  height: auto;
+}
+/* Another agent: a plain mark, so the comparison is about what surrounds it. */
+.tschem-actor--other {
+  color: var(--accent);
+}
+.tschem-actor--logo {
+  animation: ts-breathe 4.5s ease-in-out infinite;
+}
+@keyframes ts-breathe {
+  50% {
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tschem .ts-pulse,
+  .tschem .ts-echo,
+  .tschem .ts-rogue {
+    display: none;
+  }
+  .tschem-actor,
+  .ts-lens {
+    animation: none;
+  }
+  /* Holds the online state; !important outranks the SVG's own animation. */
+  .ts-cycle-net,
+  .ts-cycle-on {
+    opacity: 1 !important;
+  }
+  .ts-cycle-off {
+    opacity: 0 !important;
+  }
+  .ts-grow {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .ts-harm-dot,
+  .ts-bang,
+  .ts-harm-path,
+  .ts-node {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Two plates in one place. The sandbox runs until its escape, then Eigin opens over it like an iris from its own mark, and closes back into it as the sandbox starts over. */
+.tswap {
+  display: grid;
+}
+.tswap > .tplate {
+  grid-area: 1 / 1;
+}
+.tswap-b {
+  clip-path: circle(120% at 15% 52%);
+  animation: ts-iris 18s infinite;
+}
+@keyframes ts-iris {
+  /* Starts on the sandbox, opens to Eigin, and closes again as the sandbox starts over. */
+  0%,
+  30% {
+    clip-path: circle(0% at 15% 52%);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.2, 1);
+  }
+  35.6%,
+  94.4% {
+    clip-path: circle(120% at 15% 52%);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.2, 1);
+  }
+  100% {
+    clip-path: circle(0% at 15% 52%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tswap {
+    gap: var(--spacing-n16);
+  }
+  .tswap > .tplate {
+    grid-area: auto;
+    animation: none;
+    clip-path: none;
+  }
+}
+
+/* Off-screen diagrams lose saturation; pausing preserves readable labels. */
+@media (prefers-reduced-motion: no-preference) {
+  .trust-claim-diagram .tschem {
+    transition: filter 600ms var(--motion-easing-smooth);
+  }
+  .trust-claim-diagram[data-in-view="false"] .tschem {
+    filter: grayscale(1);
+  }
+}

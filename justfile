@@ -12,13 +12,15 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
-[doc('Regenerate the Xcode project and other generated files')]
-generate:
+[doc('Regenerate outputs (all | ios | web; default all)')]
+generate target="all":
     #!/usr/bin/env bash
     set -euo pipefail
-    vars="$({{ tools }} config export ios)"
-    eval "$vars"
-    {{ tools }} generate
+    if [ {{ quote(target) }} != "web" ]; then
+        vars="$({{ tools }} config export ios)"
+        eval "$vars"
+    fi
+    {{ tools }} generate {{ quote(target) }}
 
 [doc('Config (init | check | secret <NAME> <env> | export ios|relay|tf-vars [env])')]
 config *args="check":
@@ -76,9 +78,10 @@ _test-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Run tests (target: all | ios | relay | web, variant: unit | postgres)')]
+[doc('Run tests (target: all | ios | relay | web | website, variant: unit | postgres)')]
 test target="all" variant="unit" env="staging" verbose="false":
     #!/usr/bin/env bash
+    set -e
     if [ "{{ target }}" = "ios" ] || [ "{{ target }}" = "all" ]; then just _test-ios {{ env }} {{ verbose }}; fi
     if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then
         if [ "{{ variant }}" = "postgres" ]; then
@@ -87,20 +90,25 @@ test target="all" variant="unit" env="staging" verbose="false":
             just _test-relay {{ verbose }}
         fi
     fi
+    if [ "{{ target }}" = "website" ]; then just _test-website; fi
     if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _test-web; fi
 
-# svelte-check + a vite build: the compile gate. Skipped without node_modules
-# (npm install runs automatically via `just run web`).
+# Compile both web consumers against freshly generated design assets.
 [private]
 _test-web:
-    #!/usr/bin/env bash
-    set -e
-    cd design/web
-    if [ ! -d node_modules ]; then
-        echo "Skipping web tests: node_modules missing (run npm install in design/web)."
-        exit 0
-    fi
-    npm run test
+    {{ tools }} generate web
+    npm run test --workspaces
+
+[private]
+_test-website:
+    {{ tools }} generate web
+    npm run test --workspace @eigin/website
+    npm run test:e2e --workspace @eigin/website
+
+[private]
+_build-web:
+    {{ tools }} generate web
+    npm run build --workspaces
 
 [private]
 _test-relay-postgres:
@@ -138,10 +146,11 @@ _build-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Build all targets (target: all | ios | relay)')]
+[doc('Build all targets (target: all | ios | relay | web)')]
 build target="all" env="staging" verbose="false":
     @if [ "{{ target }}" = "ios"   ] || [ "{{ target }}" = "all" ]; then just _build-ios {{ env }} {{ verbose }}; fi
     @if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then just _build-relay {{ verbose }}; fi
+    @if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _build-web; fi
 
 # --- Release ---
 
@@ -226,15 +235,15 @@ assets *args:
 # CLI; these recipes name the arguments and hand them over. Slots are quoted
 # because a device can be called "Daniel's iPhone (2)".
 
-[doc('Run a target detached (target: relay | web | ios). ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
+[doc('Run a target detached (target: relay | web | ios). web: [site | gallery]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
 run target="relay" mode="" value="" env="":
     @{{ tools }} run {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }}
 
-[doc('Stop a detached target (target: relay | web)')]
-stop target="relay":
-    @{{ tools }} stop {{ quote(target) }}
+[doc('Stop a detached target (target: relay | web; web: [site | gallery])')]
+stop target="relay" mode="":
+    @{{ tools }} stop {{ quote(target) }} {{ quote(mode) }}
 
-[doc('Show target logs (target: relay | web | ios). ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
+[doc('Show target logs (target: relay | web | ios). web: [site | gallery]. ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
 [arg("follow", short="f", long="follow", value="true")]
 [arg("since", long="since")]
 logs target="relay" mode="" value="" env="" since="" follow="false":
