@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "#lib/components/PageHead.svelte";
   import SectionHeading from "#lib/components/SectionHeading.svelte";
   import SiteHeader from "#lib/components/SiteHeader.svelte";
   import SiteFooter from "#lib/components/SiteFooter.svelte";
@@ -30,13 +31,7 @@
   <SectionHeading class="trust-row-label" id="{id}-title" {title} />
 {/snippet}
 
-<svelte:head>
-  <title>{copy.title}</title>
-  <meta name="description" content={copy.description} />
-  <link rel="alternate" hreflang="en" href="/en/trust/" />
-  <link rel="alternate" hreflang="da" href="/da/trust/" />
-  <link rel="alternate" hreflang="x-default" href="/en/trust/" />
-</svelte:head>
+<PageHead title={copy.title} description={copy.description} locale={data.locale} path="trust/" />
 
 <a class="skip t-body" href="#main">{data.site.skip}</a>
 <SiteHeader locale={data.locale} copy={data.site} />

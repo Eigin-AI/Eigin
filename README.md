@@ -42,7 +42,7 @@ Read about the [architecture](https://docs.eigin.ai/system-context.html) and [se
 
 ## Build it yourself
 
-Install [Rust](https://rustup.rs) and [just](https://github.com/casey/just#installation). For iOS, you also need macOS, Xcode with the iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it).
+Install [Rust](https://rustup.rs) and [just](https://github.com/casey/just#installation). For iOS, you also need macOS, Xcode 26 with the iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it).
 
 ```sh
 just hooks               # install git hooks (one-time)

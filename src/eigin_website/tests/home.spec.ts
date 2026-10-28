@@ -62,6 +62,22 @@ for (const scheme of ["light", "dark"] as const) {
       .locator(".eigin-root")
       .evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(background).not.toBe("rgba(0, 0, 0, 0)");
+    const canvas = await page.evaluate(() => {
+      const surface = document.createElement("span");
+      surface.style.backgroundColor = "var(--color-surface-standard-base)";
+      document.body.append(surface);
+      const expected = getComputedStyle(surface).backgroundColor;
+      surface.remove();
+      return {
+        expected,
+        html: getComputedStyle(document.documentElement).backgroundColor,
+        body: getComputedStyle(document.body).backgroundColor,
+      };
+    });
+    expect(canvas.expected).not.toBe("rgba(0, 0, 0, 0)");
+    expect(canvas.html).toBe(canvas.expected);
+    expect(canvas.body).toBe(canvas.expected);
+    expect(background).toBe(canvas.expected);
     await page.screenshot({ path: test.info().outputPath(`${scheme}.png`), fullPage: true });
   });
 }

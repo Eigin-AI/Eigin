@@ -15,7 +15,7 @@ Required for everything:
 
 For iOS (macOS only):
 
-- [Xcode 17](https://developer.apple.com/xcode/) with the iOS 26 SDK and the **iPhone 17 Pro** simulator.
+- [Xcode 26](https://developer.apple.com/xcode/) with the iOS 26 SDK and the **iPhone 17 Pro** simulator.
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing): `brew install xcodegen`.
 - [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it): `brew install swiftformat`.
 - Then: `xcode-select -s /Applications/Xcode.app/Contents/Developer`.

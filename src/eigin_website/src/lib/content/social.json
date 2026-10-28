@@ -1,0 +1,15 @@
+{
+  "origin": "https://eigin.ai",
+  "en": {
+    "locale": "en_GB",
+    "tagline": ["AI that feels personal,", "because it is yours."],
+    "description": "Personal AI that belongs to you. Open technology, built in Europe.",
+    "imageAlt": "Eigin — AI that feels personal, because it is yours."
+  },
+  "da": {
+    "locale": "da_DK",
+    "tagline": ["AI så personlig,", "at den skal være din."],
+    "description": "Personlig AI, der tilhører dig. Åben teknologi, bygget i Europa.",
+    "imageAlt": "Eigin — AI så personlig, at den skal være din."
+  }
+}

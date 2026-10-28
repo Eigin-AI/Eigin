@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "./PageHead.svelte";
   import { LinkButton } from "@eigin/ui";
   import SiteHeader from "./SiteHeader.svelte";
   import SiteFooter from "./SiteFooter.svelte";
@@ -55,13 +56,12 @@
   });
 </script>
 
-<svelte:head>
-  <title>{content.title} | Eigin</title>
-  <meta name="description" content={content.description} />
-  <link rel="alternate" hreflang="en" href="/en/{slug}/" />
-  <link rel="alternate" hreflang="da" href="/da/{slug}/" />
-  <link rel="alternate" hreflang="x-default" href="/en/{slug}/" />
-</svelte:head>
+<PageHead
+  title={`${content.title} · Eigin`}
+  description={content.description}
+  {locale}
+  path={`${slug}/`}
+/>
 
 {#snippet contents()}
   <nav aria-label={contentsLabel}>

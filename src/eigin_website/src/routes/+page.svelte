@@ -1,10 +1,12 @@
 <script lang="ts">
+  import PageHead from "#lib/components/PageHead.svelte";
+  import social from "#lib/content/social.json";
   import { Icon, LinkButton } from "@eigin/ui";
   import { locales, languageNames } from "#lib/locales.ts";
   import { site } from "#lib/content/site/index.ts";
 </script>
 
-<svelte:head><title>Eigin — Choose your language / Vælg sprog</title></svelte:head>
+<PageHead title="Eigin" description={social.en.description} locale="en" root />
 <main class="language-page">
   <div class="language-content">
     <span class="language-brand" aria-hidden="true"><Icon name="brand/avatar" size={64} /></span>

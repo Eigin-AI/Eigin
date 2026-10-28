@@ -35,10 +35,12 @@ export function playWhenInView(
     const observer = new IntersectionObserver(
       ([entry]) => {
         const rootHeight = entry.rootBounds?.height ?? Infinity;
-        inView = entry.intersectionRatio > 0.98 || entry.intersectionRect.height > rootHeight * 0.9;
+        inView =
+          entry.isIntersecting &&
+          (entry.intersectionRatio >= 0.5 || entry.intersectionRect.height >= rootHeight * 0.5);
         update();
       },
-      { rootMargin: `-${top}px 0px 0px 0px`, threshold: [0, 0.25, 0.5, 0.75, 0.9, 0.98, 1] },
+      { rootMargin: `-${top}px 0px 0px 0px`, threshold: [0, 0.15, 0.25, 0.5, 0.75, 1] },
     );
     observer.observe(element);
     document.addEventListener("visibilitychange", update);

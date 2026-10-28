@@ -17,6 +17,7 @@ mod localize;
 mod prompts;
 mod security;
 mod watermark;
+mod website;
 
 #[derive(Parser)]
 #[command(name = "eigin-tools")]
@@ -55,6 +56,8 @@ enum Command {
     Security(security::SecurityArgs),
     /// Inspect Eigin's best-effort text watermark.
     Watermark(watermark::WatermarkArgs),
+    /// Manage website branding assets, publishing and verification.
+    Website(website::Args),
 }
 
 fn main() -> Result<()> {
@@ -74,5 +77,6 @@ fn main() -> Result<()> {
         Command::Exec(args) => exec::run(args),
         Command::Security(args) => security::run(args),
         Command::Watermark(args) => watermark::run(args),
+        Command::Website(args) => website::run(args),
     }
 }
