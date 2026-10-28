@@ -212,7 +212,7 @@ export const shotEntries: ShotEntry[] = [
     background: "impact",
     scheme: "light",
     size: "16x9",
-    headline: "Get your hands on a hands off AI.",
+    headline: "Your AI.\nOn your terms.",
     headlineAt: "center-left",
     headlineSize: "l",
     tilt: { yaw: -24, pitch: 10, roll: 6 },
