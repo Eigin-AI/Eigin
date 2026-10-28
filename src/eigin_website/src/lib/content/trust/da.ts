@@ -7,21 +7,21 @@ const docs = "https://code.eigin.ai/dev/eigin/-/blob/main/docs/src";
 const content: TrustContent = {
   title: "Tillid — Eigin",
   description:
-    "Sådan holder Eigin personlig AI privat og sikker, i et klart sprog og med beviser, du kan tjekke.",
+    "Sådan er Eigin bygget til at beskytte dit privatliv og give dig kontrol over dine data og din AI.",
   heading: "Hvorfor stole på Eigin?",
   introduction:
-    "Her kan du se, hvordan Eigin håndterer dine data, hvad den kan, og hvor du selv kan tjekke det.",
+    "Se, hvordan Eigin er bygget med privatliv og sikkerhed i centrum, så du trygt kan bruge personlig AI.",
   more: "Sådan virker det",
   claims: [
     {
       id: "data",
       diagram: "device",
       title: "Dine data",
-      summary: "Dine samtaler og din agents hukommelse gemmes på din enhed, ikke hos os.",
+      summary: "Dine samtaler og din agents data gemmes på din enhed, ikke vores.",
       details: [
-        "Chats, hukommelse, mål og indstillinger gemmes på din enhed. Cloud-forespørgsler kan indeholde relevante minder og data fra forbundne tjenester.",
-        "Din stemme behandles på din enhed og forlader den aldrig.",
-        "Forbundne konti tilgås direkte fra din enhed, ikke gennem os.",
+        "Dine data gemmes på din enhed. Cloud-AI kan modtage minder og data fra tilsluttede tjenester.",
+        "Din stemme behandles på din enhed og forlader den ikke.",
+        "Tilsluttede konti tilgås fra din enhed, ikke gennem os.",
       ],
     },
     {
@@ -31,8 +31,8 @@ const content: TrustContent = {
       summary: "Dine beskeder går kun til den AI-model, du vælger, og kun når du har sagt ja.",
       details: [
         "Eigin spørger, før noget sendes til en cloud-model første gang.",
-        "Vores cloud-AI gemmer intet og kræver ingen konto.",
-        "Lokal inferens kører på din enhed. Værktøjer med særskilt tilladelse kan stadig kontakte forbundne tjenester.",
+        "Vores cloud-AI gemmer ikke dine chats og kræver ingen konto.",
+        "Lokale modeller kører på din enhed. Værktøjer med særskilt tilladelse kan stadig kontakte tilsluttede tjenester.",
       ],
     },
     {
@@ -42,21 +42,21 @@ const content: TrustContent = {
       summary:
         "Den kan kun bruge de værktøjer, du giver den, og spørger, før den ændrer eller sender noget.",
       details: [
-        "Den har ingen computer selv og kan ikke skrive eller køre sin egen kode.",
+        "Den har ingen “virtuel computer”, så den kan ikke skrive eller køre sin egen kode.",
         "Hvert værktøj har tilladelser, som du styrer.",
-        "Alt risikabelt spørger dig først, som standard.",
+        "Som standard spørger Eigin før handlinger med konsekvenser.",
       ],
     },
     {
       id: "sync",
       diagram: "sync",
-      title: "Sync",
+      title: "Synkronisering",
       status: "Kommer snart",
-      summary: "Når Eigin synkroniserer, kan kun du og dem, du deler med, læse det.",
+      summary: "Når Eigin synkroniserer, kan kun du og dem, du deler med, læse dataene.",
       details: [
-        "Sync mellem dine enheder og dit team er end-to-end-krypteret.",
+        "Synkronisering mellem dine enheder og dit team er end-to-end-krypteret.",
         "Kun du og de personer, du deler med, har nøglerne.",
-        "Vi sender dine data videre, men vi kan ikke læse dem.",
+        "Eigin Relay kan sende dine data videre, men kan ikke læse dem.",
       ],
     },
     {
@@ -67,7 +67,7 @@ const content: TrustContent = {
       details: [
         "Der er ingen reklamer eller sporing i appen.",
         "Vores cloud-tjeneste behøver ikke vide, hvem du er.",
-        "Vi sælger valgfrie tjenester og erhvervsabonnementer, ikke data.",
+        "Vi sælger valgfrie tjenester og erhvervsaftaler, ikke data.",
       ],
     },
     {
@@ -78,8 +78,8 @@ const content: TrustContent = {
         "Eigin er open source, så du kan se, hvordan den håndterer dine data, og hvad den må.",
       details: [
         "Koden er offentlig under AGPL-licensen.",
-        "Uden os virker den stadig med en lokal model eller din egen nøgle.",
-        "Du kan også selv hoste vores cloud-tjenester.",
+        "Eigin fungerer uafhængigt af vores firma. Du kan bruge en lokal model eller tilslutte din egen udbyder.",
+        "Vil du have fuld kontrol, kan du selv hoste vores cloud-tjenester.",
       ],
     },
   ],
@@ -99,7 +99,7 @@ const content: TrustContent = {
     },
     models: {
       description:
-        "Din agent kører på din enhed. Den kan bruge en lokal model på enheden, eller uden for den Eigin Relay eller din egen udbyder. Intet sendes ud, før du siger ja.",
+        "Din agent kører på din enhed. Den kan bruge en lokal model på enheden eller Eigin Relay eller din egen udbyder i skyen. Intet sendes ud, før du siger ja.",
       device: "din enhed",
       local: "lokal model",
       relay: "eigin relay",
@@ -124,12 +124,12 @@ const content: TrustContent = {
       team: "dit team",
       message: ["Planer for", "fredag?"],
       relay: "Eigin Relay",
-      relayNote: "Kan ikke se den.",
+      relayNote: "Kan ikke åbne den.",
     },
     money: {
       description:
-        "Eigin betales af folk, der vælger vores cloud-AI efter forbrug, og af teams til én fast pris. Intet går til annoncører, trackere eller datamæglere.",
-      cloud: "cloud-ai",
+        "Eigin finansieres af dem, der bruger vores cloud-AI efter forbrug, og af teams til én fast pris. Intet går til annoncører, trackere eller datamæglere.",
+      cloud: "cloud-AI",
       cloudNote: "Betal pr. brug.",
       team: "teamplaner",
       teamNote: "Én fast pris.",
@@ -137,13 +137,13 @@ const content: TrustContent = {
     },
     open: {
       description:
-        "En lukket app er en sort boks. Eigin er open source under AGPL: hvordan den gemmer, synkroniserer og deler dine data, kan alle læse.",
+        "En lukket app er en sort boks. Eigin er open source under AGPL: Alle kan læse, hvordan den gemmer, synkroniserer og deler dine data.",
       others: "andre apps",
       trustUs: "“Stol på os.”",
       eigin: "Eigin, open source",
       items: [
-        "Hvor den gemmer dine data",
-        "Hvordan sync virker",
+        "Hvordan den gemmer data",
+        "Hvordan den synkroniserer",
         "Hvad den må gøre",
         "Hvor den sender data hen",
         "Alt det andet",
@@ -151,17 +151,16 @@ const content: TrustContent = {
     },
   },
   limits: {
-    // A no-break space keeps "ikke kan" together when the title wraps.
-    title: "Hvad Eigin ikke\u00a0kan",
+    title: "Begrænsninger",
     introduction: "Intet system beskytter mod alt. Her kan du se, hvor grænserne går.",
     items: [
       {
-        title: "Cloud-modeller læser din aktuelle samtale",
-        body: "For at svare dig skal en cloud-model læse det, du sender. Vores cloud-AI-modeller gemmer aldrig dine samtaler, men hos din egen udbyder gælder dens vilkår.",
+        title: "Cloud-modeller kan læse din aktuelle samtale",
+        body: "For at svare dig skal en cloud-model læse det, du sender. Vores cloud-AI-modeller gemmer ikke dine samtaler, men hos din egen udbyder gælder dens vilkår.",
       },
       {
         title: "Din enhed er pengeskabet",
-        body: "Dine data er lige så sikre som din enhed. Alle, der kan åbne din enhed, kan læse dine chats.",
+        body: "Dine data er lige så sikre som din enhed. Hvis nogen kan åbne din enhed, kan de læse dine chats.",
       },
       {
         title: "Indhold kan prøve at narre agenten",
@@ -173,26 +172,26 @@ const content: TrustContent = {
       },
       {
         title: "AI kan tage fejl",
-        body: "Enhver model kan tage fejl og lyde sikker. Tjek svaret, før du stoler på det.",
+        body: "Enhver AI-model kan tage fejl og lyde sikker. Tjek svaret, før du stoler på det.",
       },
     ],
   },
   responsible: {
-    title: "Hvem har ansvaret",
-    body: "Eigin er lavet af Eigin ApS, et lille dansk team i København og Aarhus. Du ved, hvem vi er, og du kan altid få fat i os.",
+    title: "Menneskerne",
+    body: "Eigin er lavet af Eigin ApS, et dansk team med base i København og Aarhus. Du ved, hvem vi er, og du kan altid få fat i os.",
     people: [
       { name: "Daniel Rothmann", role: "Medstifter og CTO", photo: daniel },
       { name: "Therkel Sand Therkelsen", role: "Medstifter og CEO", photo: therkel },
     ],
   },
   transparency: {
-    title: "Kortene på bordet",
+    title: "Gennemsigtighed",
     groups: [
       {
         title: "Kode",
         links: [
           { label: "Kildekode", href: "https://code.eigin.ai/dev/eigin" },
-          { label: "Dokumentation", href: `${docs}/privacy.md` },
+          { label: "Teknisk dokumentation", href: `${docs}/privacy.md` },
           {
             label: "Sikkerhedspolitik",
             href: "https://code.eigin.ai/dev/eigin/-/blob/main/SECURITY.md",

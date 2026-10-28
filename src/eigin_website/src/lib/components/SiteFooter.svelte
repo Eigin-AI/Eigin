@@ -1,15 +1,16 @@
 <script lang="ts">
+  import { FloatingPicker, PickerRow, Icon, LinkButton, type IconName } from "@eigin/ui";
   import { page } from "$app/state";
   import type { SiteContent } from "../content/site";
   import { locales, languageNames, siteHref, type Locale } from "../locales";
   import SiteBrand from "./SiteBrand.svelte";
   let { copy, locale }: { copy: SiteContent; locale: Locale } = $props();
   const pagePath = $derived(page.url.pathname.replace(/^\/[^/]+/, ""));
-  const socials = [
-    { label: "Matrix", href: "https://chat.eigin.ai" },
-    { label: "GitLab", href: "https://code.eigin.ai/dev/eigin" },
-    { label: "GitHub", href: "https://github.com/eigin-ai" },
-    { label: "LinkedIn", href: "https://www.linkedin.com/company/eigin" },
+  const socials: { label: string; href: string; icon: IconName }[] = [
+    { label: "LinkedIn", href: "https://www.linkedin.com/company/eigin", icon: "service/linkedin" },
+    { label: "Matrix", href: "https://chat.eigin.ai", icon: "service/matrix" },
+    { label: "GitLab", href: "https://code.eigin.ai/dev/eigin", icon: "service/gitlab" },
+    { label: "GitHub", href: "https://github.com/eigin-ai", icon: "service/github" },
   ];
 </script>
 
@@ -39,20 +40,31 @@
     </div>
     <div class="footer-bottom">
       <p class="t-miniLabel muted">{copy.footer.copyright}</p>
-      <nav class="language-links" aria-label={copy.languageNavigation}>
-        {#each locales as language}
-          <a
-            class="t-body"
-            href="/{language}{pagePath}"
-            lang={language}
-            hreflang={language}
-            aria-current={locale === language ? "page" : undefined}>{languageNames[language]}</a
-          >
-        {/each}
-      </nav>
-      <nav class="social-links" aria-label={copy.footer.socialNavigation}>
-        {#each socials as link}<a class="t-description" href={link.href}>{link.label}</a>{/each}
-      </nav>
+      <div class="footer-controls">
+        <nav class="language-links" aria-label={copy.languageNavigation}>
+          <FloatingPicker label={copy.languageNavigation} side="top" iconOnly>
+            {#snippet trigger()}<Icon name="functional/globe" size={24} />{/snippet}
+            {#snippet children(dismiss)}
+              {#each locales as language}
+                <PickerRow
+                  href="/{language}{pagePath}"
+                  lang={language}
+                  hreflang={language}
+                  selected={locale === language}
+                  onclick={dismiss}
+                >
+                  <span class="t-body">{languageNames[language]}</span>
+                </PickerRow>
+              {/each}
+            {/snippet}
+          </FloatingPicker>
+        </nav>
+        <nav class="social-links" aria-label={copy.footer.socialNavigation}>
+          {#each socials as link}
+            <LinkButton {...link} variant="secondary" size="extraSmall" />
+          {/each}
+        </nav>
+      </div>
     </div>
   </div>
 </footer>

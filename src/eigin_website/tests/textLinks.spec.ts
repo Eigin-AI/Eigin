@@ -47,7 +47,7 @@ for (const locale of ["en", "da"]) {
       await expectFeedback(page.locator(".picker-panel a.picker-row").first(), page, browserName);
       await summary.click();
     }
-    for (const selector of [".footer-links a", ".language-links a", ".social-links a"]) {
+    for (const selector of [".footer-links a"]) {
       await expectFeedback(page.locator(selector).first(), page, browserName);
     }
   });
@@ -56,7 +56,7 @@ for (const locale of ["en", "da"]) {
 test("text links change color without animation under reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/en/");
-  const link = page.locator(".language-links a").first();
+  const link = page.locator(".footer-links a").first();
   const restingColor = await link.evaluate((element) => getComputedStyle(element).color);
   await link.hover();
   await expect(link).toHaveCSS("transition-duration", "0s");

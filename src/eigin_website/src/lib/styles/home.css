@@ -144,20 +144,20 @@
 }
 
 .team-section {
-  background: var(--color-surface-impact-elevated);
-  color: var(--color-text-impact-base);
+  background: var(--color-surface-impact-coral);
+  color: var(--color-icon-standard-base);
 }
 
-.team-section .visual-placeholder {
+.team-section .team-diagram {
   order: -1;
 }
 
 .team-section :is(.section-title, .section-intro, .eyebrow) {
-  color: var(--color-text-impact-base);
+  color: var(--color-icon-standard-base);
 }
 
 .team-section .feature-bullet-icon {
-  color: var(--color-surface-impact-alternative);
+  color: var(--color-icon-standard-base);
 }
 
 .visual-placeholder {
@@ -200,6 +200,10 @@
   align-content: start;
   gap: var(--spacing-n20);
   padding-block: var(--spacing-n40);
+}
+
+a.plan {
+  text-decoration: none;
 }
 
 .open-mark {
@@ -407,6 +411,23 @@
   .plans {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .privacy .promises {
+    margin-top: var(--spacing-n48);
+  }
+  .plans {
+    margin-top: var(--spacing-n40);
+    row-gap: 0;
+  }
+  .plan {
+    gap: var(--spacing-n16);
+    padding-block: var(--spacing-n24);
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1199px) {
+  .plan:nth-child(n + 3) {
+    border-top: 1px solid var(--color-border-standard-base);
+  }
 }
 
 @media (max-width: 850px) {
@@ -416,7 +437,7 @@
   .feature-grid > * {
     grid-column: auto;
   }
-  .team-section .visual-placeholder {
+  .team-section .team-diagram {
     order: 0;
   }
   .section-heading {
@@ -457,12 +478,20 @@
   .faq-items {
     grid-column: 1 / -1;
   }
+  .promises,
   .plans,
   .open-links {
     grid-template-columns: 1fr;
   }
   .promises {
-    gap: var(--spacing-n40);
+    column-gap: var(--spacing-n24);
+    row-gap: var(--spacing-n32);
+  }
+  .privacy .promises {
+    margin-top: var(--spacing-n40);
+  }
+  .promise-mark {
+    margin-bottom: var(--spacing-n16);
   }
   .plan {
     border-bottom: 1px solid var(--color-border-standard-base);

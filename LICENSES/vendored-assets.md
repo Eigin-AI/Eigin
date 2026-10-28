@@ -8,7 +8,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 | @scalar/api-reference (standalone browser bundle) | https://github.com/scalar/scalar | 1.65.1 | MIT | `src/eigin_relay/assets/scalar-api-reference.js`, served same-origin from `GET /docs` |
 | MingCute Icon | https://github.com/MingcuteDesign/MingCute | 3.x | Apache-2.0 | `design/assets/icons/functional/*.svg` |
 | SnapshotHelper.swift | https://github.com/fastlane/fastlane | 1.30 | MIT | `src/eigin_ios/EiginUITests/SnapshotHelper.swift`, drives fastlane snapshot from the screenshot UI tests |
-| Simple Icons | https://github.com/simple-icons/simple-icons | 15.x | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
+| Simple Icons | https://github.com/simple-icons/simple-icons | 15.x; footer marks 11.15.0 | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
 | Provider brand marks | Sourced from each provider's own brand assets | — | Trademarks of their owners | `design/assets/icons/provider/*.svg`, marks for the AI providers Eigin can connect to |
 
 ## Brand marks
@@ -27,3 +27,8 @@ Microsoft's trademark.
 Either way the marks themselves stay the trademarks of their owners. Eigin
 shows them only to identify which service a connection points at, which is
 nominative use and not a claim of endorsement or affiliation.
+
+The footer marks `service/linkedin.svg`, `service/matrix.svg`, `service/gitlab.svg`
+and `service/github.svg` come from [Simple Icons 11.15.0](https://github.com/simple-icons/simple-icons/tree/11.15.0/icons),
+under [CC0-1.0](simple-icons-cc0.md). Their colour and view boxes are adjusted for
+monochrome display and optical sizing. Brand trademarks remain with their owners.

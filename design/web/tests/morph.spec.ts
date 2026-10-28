@@ -106,6 +106,17 @@ test.describe("morph intensity", () => {
     }
   });
 
+  test("custom easing duration carries through interrupted transitions", () => {
+    const rising = MorphIntensity.none.transitionedTo(true, 0, 0.65);
+    expect(rising.value(0.325)).toBeCloseTo(0.5);
+    expect(rising.value(0.65)).toBe(1);
+
+    const falling = rising.transitionedTo(false, 0.325);
+    expect(falling.value(0.325)).toBeCloseTo(0.5);
+    expect(falling.value(0.65)).toBeCloseTo(0.25);
+    expect(falling.value(0.975)).toBe(0);
+  });
+
   test("a still blob is exactly the resting circle", () => {
     const figure = figureOf({ from: 5, to: 7, progress: 0.5 }, 0);
     expect(figure.width).toBe(32);

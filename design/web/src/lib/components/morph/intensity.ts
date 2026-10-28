@@ -15,6 +15,7 @@ export class MorphIntensity {
     /** Seconds on the same clock the blob uses. */
     private readonly changedAt: number,
     start?: number,
+    private readonly duration = RAMP,
   ) {
     this.start = start ?? (engaged ? 0 : 1);
   }
@@ -24,9 +25,9 @@ export class MorphIntensity {
   /** Never engaged for the whole of time. */
   static readonly none = new MorphIntensity(false, -Infinity, 0);
 
-  /** A new state anchored at `change`, resuming from the current value. */
-  transitionedTo(engaged: boolean, change: number): MorphIntensity {
-    return new MorphIntensity(engaged, change, this.value(change));
+  /** A new state anchored at `change`, with an optional easing duration in seconds. */
+  transitionedTo(engaged: boolean, change: number, duration = this.duration): MorphIntensity {
+    return new MorphIntensity(engaged, change, this.value(change), duration);
   }
 
   value(at: number): number {
@@ -34,9 +35,9 @@ export class MorphIntensity {
     const elapsed = at - this.changedAt;
     // Snap the settled ends: the curve is flat there, and clock arithmetic
     // can land a hair inside the ramp.
-    if (elapsed >= RAMP - 1e-6) return target;
+    if (elapsed >= this.duration - 1e-6) return target;
     if (elapsed <= 0) return this.start;
-    const progress = Math.min(Math.max(elapsed / RAMP, 0), 1);
+    const progress = Math.min(Math.max(elapsed / this.duration, 0), 1);
     const eased = progress * progress * (3 - 2 * progress);
     return this.start + (target - this.start) * eased;
   }

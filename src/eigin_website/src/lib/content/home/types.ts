@@ -23,6 +23,14 @@ export type ChatLabels = {
   examples: string;
 };
 
+/** Localized labels for the shared team knowledge illustration. */
+export type TeamDiagramLabels = {
+  context: [string, string];
+  description: string;
+  pause: string;
+  play: string;
+};
+
 export type FeatureContent = {
   id: "personal" | "teams";
   label: string;
@@ -32,8 +40,13 @@ export type FeatureContent = {
   body: string;
   placeholder: string;
 } & (
-  | { examples: [ChatExample, ...ChatExample[]]; chat: ChatLabels; bullets?: never }
-  | { bullets: string[]; examples?: never; chat?: never }
+  | {
+      examples: [ChatExample, ...ChatExample[]];
+      chat: ChatLabels;
+      bullets?: never;
+      diagram?: never;
+    }
+  | { bullets: string[]; diagram: TeamDiagramLabels; examples?: never; chat?: never }
 );
 
 export type HomeContent = {
@@ -53,7 +66,8 @@ export type HomeContent = {
     title: string;
     body: string;
     action: string;
-    plans: { name: string; price: string; detail: string; status?: string }[];
+    actionHref?: string;
+    plans: { name: string; price: string; detail: string; status?: string; href?: string }[];
   };
   open: { title: string; body: string; links: { label: string; detail: string; href: string }[] };
   faq: {

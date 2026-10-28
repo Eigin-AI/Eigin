@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Icon, Tag } from "@eigin/ui";
   import type { FeatureContent } from "../content/home/types";
-  import VisualPlaceholder from "./VisualPlaceholder.svelte";
+  import TeamDiagram from "./diagrams/TeamDiagram.svelte";
+  import AnimatedIllustration from "./AnimatedIllustration.svelte";
   import ChatPlayback from "./chat/ChatPlayback.svelte";
   let { feature }: { feature: FeatureContent } = $props();
   let current = $state(0);
@@ -35,7 +36,10 @@
               >
                 <span class="feature-bullet-icon" aria-hidden="true"
                   ><Icon name="functional/arrow/right" size={12} /></span
-                ><span>{example.label}</span>
+                ><span class="feature-tab-label">
+                  <span>{example.label}</span>
+                  <strong aria-hidden="true">{example.label}</strong>
+                </span>
               </button>
             </li>
           {/each}
@@ -59,8 +63,12 @@
         bind:index={current}
         id="{feature.id}-chat"
       />
-    {:else}
-      <VisualPlaceholder label={feature.placeholder} />
+    {:else if feature.diagram}
+      <AnimatedIllustration class="team-diagram" labels={feature.diagram} controlVariant="open">
+        {#snippet children(active)}
+          <TeamDiagram labels={feature.diagram!} {active} />
+        {/snippet}
+      </AnimatedIllustration>
     {/if}
   </div>
 </section>

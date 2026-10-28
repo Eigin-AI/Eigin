@@ -32,52 +32,28 @@ const content: SiteContent = {
   footer: {
     tagline: "AI så personlig, at den skal være din.",
     comingSoon: "Kommer snart",
-    copyright: "© Eigin ApS 2026 · Skabt i Europa",
+    copyright: "© Eigin ApS 2026",
     socialNavigation: "Sociale links",
     groups: [
       {
-        title: "Kom i gang",
-        links: [
-          {
-            label: "Hent Eigin til iPhone",
-            href: "#get",
-          },
-          {
-            label: "Åbn i browseren",
-          },
-          {
-            label: "Priser",
-            href: "#pricing",
-          },
-        ],
-      },
-      {
         title: "Eigin",
         links: [
-          {
-            label: "Til dig",
-            href: "#personal",
-          },
-          {
-            label: "Til teams",
-            href: "#teams",
-          },
-          {
-            label: "Enterprise",
-            href: "mailto:hello@eigin.ai",
-          },
+          { label: "Hent Eigin", href: "#get" },
+          { label: "Til dig", href: "#personal" },
+          { label: "Til teams", href: "#teams" },
+          { label: "Priser", href: "#pricing" },
         ],
       },
       {
         title: "Læs mere",
         links: [
           {
-            label: "Roadmap",
-            href: "/da/roadmap/",
-          },
-          {
             label: "Tillid",
             href: "/da/trust/",
+          },
+          {
+            label: "Roadmap",
+            href: "/da/roadmap/",
           },
           {
             label: "Spørgsmål",

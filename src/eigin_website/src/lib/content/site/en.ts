@@ -32,52 +32,28 @@ const content: SiteContent = {
   footer: {
     tagline: "AI so personal, it has to be yours.",
     comingSoon: "Coming soon",
-    copyright: "© Eigin ApS 2026 · Made in Europe",
+    copyright: "© Eigin ApS 2026",
     socialNavigation: "Social links",
     groups: [
       {
-        title: "Get started",
-        links: [
-          {
-            label: "Get Eigin for iPhone",
-            href: "#get",
-          },
-          {
-            label: "Open in browser",
-          },
-          {
-            label: "Pricing",
-            href: "#pricing",
-          },
-        ],
-      },
-      {
         title: "Eigin",
         links: [
-          {
-            label: "For you",
-            href: "#personal",
-          },
-          {
-            label: "For teams",
-            href: "#teams",
-          },
-          {
-            label: "Enterprise",
-            href: "mailto:hello@eigin.ai",
-          },
+          { label: "Get Eigin", href: "#get" },
+          { label: "For you", href: "#personal" },
+          { label: "For teams", href: "#teams" },
+          { label: "Pricing", href: "#pricing" },
         ],
       },
       {
         title: "Learn",
         links: [
           {
-            label: "Roadmap",
-            href: "/en/roadmap/",
-          },
-          {
             label: "Trust",
             href: "/en/trust/",
+          },
+          {
+            label: "Roadmap",
+            href: "/en/roadmap/",
           },
           {
             label: "Questions",

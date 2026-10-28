@@ -9,6 +9,7 @@ for (const locale of ["en", "da"]) {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
     const next = locale === "en" ? "da" : "en";
+    await page.locator("footer .language-links .picker-trigger").click();
     await page.locator(`footer a[hreflang="${next}"]`).click();
     await expect(page.locator("html")).toHaveAttribute("lang", next);
     await context.close();
@@ -37,11 +38,13 @@ test("footer language links respect explicit choice and keyboard navigation", as
   // WebKit follows the platform's full keyboard access setting for links.
   await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
   await expect(page.locator('a[href="#main"]')).toBeFocused();
+  await page.locator("footer .language-links .picker-trigger").click();
   const danish = page.locator('footer a[hreflang="da"]');
   await danish.focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/da\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "da");
+  await page.locator("footer .language-links .picker-trigger").click();
   await expect(page.locator('footer a[hreflang="da"]')).toHaveAttribute("aria-current", "page");
   await expect(page.locator('footer a[hreflang="en"]')).not.toHaveAttribute("aria-current");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -255,5 +258,64 @@ test("feature copy and promises share the same grid", async ({ page }) => {
         .evaluate((element) => getComputedStyle(element).fontSize);
       await expect(page.locator("#personal .feature-list")).toHaveCSS("font-size", introduction);
     }
+  }
+});
+
+for (const locale of ["en", "da"]) {
+  test(`${locale} pricing links lead to downloads, questions and email enquiries`, async ({
+    page,
+  }) => {
+    await page.goto(`/${locale}/`);
+    const pricing = page.locator("#pricing");
+    await pricing.locator(".section-heading a").click();
+    await expect(page).toHaveURL(/#faq$/);
+    const plans = pricing.locator("a.plan");
+    await expect(plans).toHaveCount(4);
+    await plans.nth(0).click();
+    await expect(page).toHaveURL(/#get$/);
+    await plans.nth(1).click();
+    await expect(page).toHaveURL(/#faq$/);
+    const teamHref =
+      locale === "en"
+        ? "mailto:hello@eigin.ai?subject=Eigin%20for%20teams%20early%20access"
+        : "mailto:hello@eigin.ai?subject=Eigin%20til%20teams%20early%20access";
+    await expect(plans.nth(2)).toHaveAttribute("href", teamHref);
+    await expect(page.locator('#faq a[href*="early%20access"]')).toHaveAttribute("href", teamHref);
+    await expect(plans.nth(3)).toHaveAttribute(
+      "href",
+      locale === "en"
+        ? "mailto:hello@eigin.ai?subject=Eigin%20for%20organisations"
+        : "mailto:hello@eigin.ai?subject=Eigin%20til%20organisationer",
+    );
+  });
+}
+
+test("root selects a language before application JavaScript loads and preserves the destination", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "languages", { get: () => ["de-DE", "da-DK", "en-GB"] });
+  });
+  await page.route("**/*", (route) => {
+    const request = route.request();
+    return request.resourceType() === "script" ? route.abort() : route.continue();
+  });
+  await page.goto("/?source=test#pricing");
+  await expect(page).toHaveURL(/\/da\/\?source=test#pricing$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "da");
+  await expect(page.locator("#pricing")).toBeVisible();
+});
+
+test("root offers both languages without JavaScript", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Eigin", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "English", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Dansk", exact: true }).click();
+    await expect(page).toHaveURL(/\/da\/$/);
+  } finally {
+    await context.close();
   }
 });
