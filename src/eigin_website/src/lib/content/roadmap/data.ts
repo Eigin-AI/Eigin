@@ -12,8 +12,7 @@ export const roadmapData: RoadmapData = {
         },
         da: {
           title: "Eigin SDK",
-          description:
-            "Implementér personlige agenter overalt med et fælles SDK på tværs af platforme.",
+          description: "Byg personlige agenter overalt med et fælles SDK på tværs af platforme.",
         },
       },
     },
@@ -70,7 +69,7 @@ export const roadmapData: RoadmapData = {
             da: {
               title: "Eigin til iOS",
               description:
-                "En personlig agent på din iPhone, med dit valg af model og hukommelsen gemt på din enhed.",
+                "En personlig agent på din iPhone med en model, du vælger, og hukommelsen gemt på din enhed.",
             },
           },
           version: { label: "1.0" },

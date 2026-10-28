@@ -45,7 +45,8 @@
   visibility: hidden;
 }
 
-.chat-screen:is([data-phase="compose"], [data-phase="sending"]) .chat-compose {
+.chat-screen:is([data-phase="compose"], [data-phase="sending"], [data-phase="switching"])
+  .chat-compose {
   visibility: visible;
 }
 
@@ -76,15 +77,12 @@
 
 .chat-tool {
   position: absolute;
-  top: var(--spacing-n8);
-  left: var(--spacing-n56);
+  top: var(--spacing-n20);
+  transform: translateY(-50%);
+  left: var(--spacing-n64);
   margin: 0;
   color: var(--color-text-standard-muted);
-  visibility: hidden;
-}
-
-.chat-tool.shown {
-  visibility: visible;
+  opacity: var(--tool);
 }
 
 .chat-response {
@@ -156,15 +154,45 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-text-standard-base);
+  --tab-color: var(--color-text-standard-base);
+  color: var(--tab-color);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: color var(--motion-fast) var(--motion-easing-smooth);
 }
 
-.feature-tabs button:is(:hover, :focus-visible, [aria-pressed="true"]) {
-  color: var(--color-text-standard-base);
+.feature-tabs button[aria-pressed="true"] {
+  --tab-color: var(--color-icon-standard-base);
+}
+
+.feature-tabs button:is(:hover, :focus-visible) {
+  color: color-mix(in srgb, var(--tab-color) 75%, transparent);
+}
+
+.feature-tab-label {
+  display: grid;
+}
+
+.feature-tab-label > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--motion-fast) var(--motion-easing-smooth);
+}
+
+.feature-tab-label > strong {
+  opacity: 0;
+}
+
+.feature-tabs button[aria-pressed="true"] .feature-tab-label > span {
+  opacity: 0;
+}
+
+.feature-tabs button[aria-pressed="true"] .feature-tab-label > strong {
+  opacity: 1;
+}
+
+.feature-tabs .feature-bullet-icon {
+  transition: opacity var(--motion-fast) var(--motion-easing-smooth);
 }
 
 .feature-tabs button:not([aria-pressed="true"]) .feature-bullet-icon {
@@ -182,7 +210,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chat-screen *,
-  .feature-tabs button {
+  .feature-tabs button,
+  .feature-tabs button * {
     animation: none !important;
     transition: none !important;
   }
@@ -199,6 +228,7 @@
 /* Reserve the complete prompt's height so typing never resizes the input. */
 .chat-stage .chat-compose .text-area::after {
   content: var(--chat-prompt);
+  overflow-wrap: anywhere;
   visibility: hidden;
   white-space: normal;
   text-box: normal;
@@ -212,6 +242,7 @@
 
 .chat-stage .chat-compose .collapsed > span {
   white-space: normal;
+  overflow-wrap: anywhere;
   text-overflow: clip;
 }
 

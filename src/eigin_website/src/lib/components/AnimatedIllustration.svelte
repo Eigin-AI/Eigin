@@ -8,10 +8,12 @@
   let {
     class: className = "",
     labels,
+    controlVariant = "elevated",
     children,
   }: {
     class?: string;
     labels: { pause: string; play: string };
+    controlVariant?: "elevated" | "open";
     children: Snippet<[boolean]>;
   } = $props();
   let paused = $state(false);
@@ -34,7 +36,7 @@
         icon={paused ? "brand/play" : "brand/pause"}
         label={paused ? labels.play : labels.pause}
         size="extraSmall"
-        variant="elevated"
+        variant={controlVariant}
         onclick={() => (paused = !paused)}
       />
     </div>

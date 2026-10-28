@@ -43,7 +43,7 @@ for (const locale of ["en", "da"]) {
           slug === "contact" ? "Sig hej" : "Skriv til os",
         );
         await expect(page.locator(".document-prose").first()).toContainText(
-          slug === "contact" ? "Sådan får du fat i os." : "Er der noget, der ikke virker?",
+          slug === "contact" ? "Sådan får du fat i os." : "Virker noget ikke?",
         );
       }
       const links = await page.locator(".document-prose a").evaluateAll((nodes) =>
@@ -140,6 +140,7 @@ for (const locale of ["en", "da"]) {
     await page.locator(`.site-footer .footer-links a[href="/${locale}/privacy/"]`).click();
     await expect(page).toHaveURL(new RegExp(`/${locale}/privacy/$`));
     const other = locale === "en" ? "da" : "en";
+    await page.locator("footer .language-links .picker-trigger").click();
     await page.locator(`.language-links a[href="/${other}/privacy/"]`).click();
     await expect(page).toHaveURL(new RegExp(`/${other}/privacy/$`));
     await page.setViewportSize({ width: 390, height: 844 });
@@ -256,6 +257,7 @@ for (const locale of ["en", "da"]) {
       "mailto:support@eigin.ai?subject=Eigin%20support%20request",
     );
     const other = locale === "en" ? "da" : "en";
+    await page.locator("footer .language-links .picker-trigger").click();
     await page.locator(`.language-links a[href="/${other}/support/"]`).click();
     await expect(page).toHaveURL(new RegExp(`/${other}/support/$`));
     await expect(page.locator("main")).toHaveAttribute("lang", other);
@@ -312,7 +314,7 @@ for (const locale of ["en", "da"]) {
     await expect(page.locator(".reach-copy")).toContainText(
       locale === "en"
         ? "feedback and support requests directly from the app."
-        : "feedback og supporthenvendelser direkte fra appen.",
+        : "feedback og bede om hjælp direkte fra appen.",
     );
     await expect(
       page.getByRole("heading", {
@@ -350,7 +352,7 @@ for (const locale of ["en", "da"]) {
     await expect(page.locator(".support-privacy-note")).toContainText(
       locale === "en"
         ? "Avoid sending us your conversations if you can."
-        : "Undgå at sende os dine samtaler, hvis du kan.",
+        : "Undlad så vidt muligt at sende dine samtaler.",
     );
     await expect(page.locator('.reach-hero a[href="https://chat.eigin.ai"]')).toHaveCount(0);
     await expect(page.locator(".reach-support-other a")).toHaveCount(3);

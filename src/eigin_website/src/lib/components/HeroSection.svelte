@@ -43,6 +43,7 @@
 
   .hero-title {
     font-size: inherit;
+    color: var(--color-icon-standard-base);
   }
 
   .hero-first-line {
@@ -53,7 +54,7 @@
   .hero-bird {
     display: flex;
     position: absolute;
-    color: var(--color-text-standard-base);
+    color: var(--color-icon-standard-base);
     pointer-events: none;
   }
 

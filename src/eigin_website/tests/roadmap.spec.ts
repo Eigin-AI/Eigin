@@ -40,6 +40,7 @@ for (const locale of ["en", "da"] as const) {
       const relay = (await page.locator("#roadmap-relay").boundingBox())!;
       expect(Math.abs(relay.y - ios.y - ios.height)).toBeLessThan(1);
       const next = locale === "en" ? "da" : "en";
+      await page.locator("footer .language-links .picker-trigger").click();
       await page.locator(`footer a[hreflang="${next}"]`).click();
       await expect(page).toHaveURL(new RegExp(`/${next}/roadmap/$`));
       await expect(page.locator("html")).toHaveAttribute("lang", next);
@@ -68,8 +69,10 @@ for (const locale of ["en", "da"] as const) {
   test(`${locale} roadmap locale switch preserves the page`, async ({ page }) => {
     await page.goto(`/${locale}/roadmap/`);
     const next = locale === "en" ? "da" : "en";
+    await page.locator("footer .language-links .picker-trigger").click();
     await page.locator(`footer a[hreflang="${next}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/${next}/roadmap/$`));
+    await page.locator("footer .language-links .picker-trigger").click();
     await expect(page.locator(`footer a[hreflang="${next}"]`)).toHaveAttribute(
       "aria-current",
       "page",

@@ -3,6 +3,7 @@
   import { autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
   import Icon from "../icon/Icon.svelte";
   import { scaleGroups } from "../../generated/tokens";
+  import "../button/button.css";
 
   const spacing = scaleGroups.find((group) => group.name === "spacing")!.tokens;
   const triggerGap = spacing.find((token) => token.name === "n8")!.value;
@@ -14,9 +15,15 @@
     trigger,
     children,
     rowGap = defaultRowGap,
+    side = "bottom",
+    iconOnly = false,
   }: {
     /** Accessible label for the trigger. */
     label: string;
+    /** Preferred opening side; flips when space is limited. */
+    side?: "top" | "bottom";
+    /** Circular secondary button without a disclosure indicator. */
+    iconOnly?: boolean;
     /** Space between supplied rows in pixels. */
     rowGap?: number;
     /** Compact content shown beside the disclosure indicator. */
@@ -76,7 +83,7 @@
       // Position the full surface so its side stays stable throughout the reveal.
       floating.style.height = `${body.getBoundingClientRect().height}px`;
       void computePosition(reference, floating, {
-        placement: "bottom-start",
+        placement: `${side}-start`,
         strategy: "fixed",
         middleware: [
           offset(triggerGap),
@@ -137,10 +144,10 @@
 
 {#snippet triggerContent()}
   {@render trigger()}
-  <span class="chevron" class:show-up={open} aria-hidden="true">
-    <span class="chevron-down"><Icon name="functional/chevron/down" size={12} /></span>
-    <span class="chevron-up"><Icon name="functional/chevron/up" size={12} /></span>
-  </span>
+  {#if !iconOnly}<span class="chevron" class:show-up={open} aria-hidden="true">
+      <span class="chevron-down"><Icon name="functional/chevron/down" size={12} /></span>
+      <span class="chevron-up"><Icon name="functional/chevron/up" size={12} /></span>
+    </span>{/if}
 {/snippet}
 
 {#snippet floatingContent()}
@@ -162,11 +169,12 @@
   </div>
 {/snippet}
 
-<div class="floating-picker" class:enhanced bind:this={root}>
+<div class="floating-picker" class:enhanced data-side={side} bind:this={root}>
   {#if enhanced}
     <button
       type="button"
-      class="picker-trigger"
+      class={iconOnly ? "picker-trigger eigin-btn action secondary extraSmall" : "picker-trigger"}
+      title={iconOnly ? label : undefined}
       bind:this={summary}
       aria-label={label}
       aria-expanded={open}
@@ -177,7 +185,11 @@
     {#if present}{@render floatingContent()}{/if}
   {:else}
     <details bind:this={fallback}>
-      <summary class="picker-trigger" aria-label={label}>{@render triggerContent()}</summary>
+      <summary
+        class={iconOnly ? "picker-trigger eigin-btn action secondary extraSmall" : "picker-trigger"}
+        aria-label={label}
+        title={iconOnly ? label : undefined}>{@render triggerContent()}</summary
+      >
       {@render floatingContent()}
     </details>
   {/if}
@@ -206,10 +218,21 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  .picker-trigger.eigin-btn {
+    min-width: var(--btn-action-size);
+    min-height: var(--btn-action-size);
+    padding: 0;
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+  }
+  .floating-picker[data-side="top"] .picker-panel:not([popover]) {
+    top: auto;
+    bottom: calc(100% + var(--spacing-n8));
+  }
   .picker-trigger::-webkit-details-marker {
     display: none;
   }
-  .picker-trigger:hover {
+  .picker-trigger:not(.eigin-btn):hover {
     background: var(--color-interaction-light-hover);
   }
   .picker-trigger:focus-visible {

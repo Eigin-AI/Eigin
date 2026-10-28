@@ -11,7 +11,7 @@ const reveal = (elapsed: number, start: number, duration = 150) => {
 
 /** Each reveal waits for the preceding movement to settle. Times are milliseconds. */
 export function timeline(example: ChatExample) {
-  const lift = 1200;
+  const lift = 650;
   const compose = lift + 700;
   const typeStart = compose + 200;
   const send = typeStart + example.ask.length * 30 + 1500;
@@ -20,7 +20,7 @@ export function timeline(example: ChatExample) {
   const reply = ask + 700;
   const ending = reply + words(example.reply).length * 65 + 250;
   const leave = ending + Math.max(4500, words(example.reply).length * 160) + 2000;
-  const home = leave + 200;
+  const home = leave + 150;
   return {
     lift,
     compose,
@@ -32,7 +32,7 @@ export function timeline(example: ChatExample) {
     ending,
     leave,
     home,
-    end: home + 700,
+    end: home + 500,
   };
 }
 
@@ -69,6 +69,7 @@ export function frame(example: ChatExample, line: Timeline, elapsed: number) {
       .join(""),
     draft: example.ask.slice(0, Math.max(0, Math.floor((elapsed - line.typeStart) / 30))),
     composer: reveal(elapsed, line.compose) * (1 - reveal(elapsed, line.send)),
+    tool: reveal(elapsed, line.ask) * (1 - clearing),
     question: reveal(elapsed, line.ask) * (1 - clearing),
     answer: reveal(elapsed, line.reply) * (1 - clearing),
     ending: reveal(elapsed, line.ending) * (1 - clearing),
@@ -82,10 +83,11 @@ export function blobPose(
   width: number,
   height: number,
   answerY: number,
+  answerX = 36,
 ) {
   const center = { x: width / 2, y: height / 2, scale: 1 };
   const above = { x: width / 2, y: height * 0.25, scale: 0.48 };
-  const beside = { x: 36, y: answerY, scale: 0.28 };
+  const beside = { x: answerX, y: answerY, scale: 0.28 };
   let from = center;
   let to = above;
   let time = (elapsed - line.lift) / 1000;
@@ -97,9 +99,7 @@ export function blobPose(
     return { ...center, stretchX: 1 + crouch * 0.1, stretchY: 1 - crouch * 0.09 };
   }
   if (elapsed >= line.home) {
-    from = beside;
-    to = center;
-    time = (elapsed - line.home) / 1000;
+    return homePose({ ...beside, stretchX: 1, stretchY: 1 }, elapsed - line.home, width, height);
   } else if (elapsed >= line.move) {
     from = above;
     to = beside;
@@ -122,6 +122,25 @@ export function blobPose(
     scale: from.scale + (to.scale - from.scale) * progress,
     stretchX,
     stretchY,
+  };
+}
+
+/** The same spring returns the blob home after automatic and selected case changes. */
+export function homePose(
+  from: { x: number; y: number; scale: number; stretchX: number; stretchY: number },
+  elapsed: number,
+  width: number,
+  height: number,
+) {
+  if (elapsed <= 0) return from;
+  const time = (elapsed / 1000) * 1.4;
+  const progress = time >= 0.7 ? 1 : rise(time);
+  return {
+    x: from.x + (width / 2 - from.x) * progress,
+    y: from.y + (height / 2 - from.y) * progress,
+    scale: from.scale + (1 - from.scale) * progress,
+    stretchX: from.stretchX + (1 - from.stretchX) * progress,
+    stretchY: from.stretchY + (1 - from.stretchY) * progress,
   };
 }
 

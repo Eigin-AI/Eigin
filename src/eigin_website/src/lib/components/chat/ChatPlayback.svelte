@@ -3,7 +3,7 @@
   import { ActionButton, CardSurface, Icon, ChatInput, ChatUserMessage } from "@eigin/ui";
   import type { ChatExample, ChatLabels } from "../../content/home/types";
   import AgentBlob from "./AgentBlob.svelte";
-  import { blobPose, frame, timeline } from "./timeline";
+  import { blobPose, frame, homePose, timeline } from "./timeline";
 
   /** A conceptual exchange, paused off-screen and readable without animation. */
   let {
@@ -13,7 +13,8 @@
     id,
   }: { examples: ChatExample[]; labels: ChatLabels; index?: number; id?: string } = $props();
 
-  const example = $derived(examples[index]);
+  let displayedIndex = $state(untrack(() => index));
+  const example = $derived(examples[displayedIndex]);
   const line = $derived(timeline(example));
   let elapsed = $state(0);
   let mounted = $state(false);
@@ -26,22 +27,67 @@
   let screenWidth = $state(500);
   let screenHeight = $state(440);
   let turnHeight = $state(360);
+  let turnWidth = $state(468);
   const running = $derived(mounted && inView && pageVisible && !reduced && !paused);
   const time = $derived(!mounted || reduced ? line.leave - 1 : elapsed);
-  const now = $derived(frame(example, line, time));
-  const pose = $derived(
+  const sampled = $derived(frame(example, line, time));
+  const sampledPose = $derived(
     blobPose(
       line,
       time,
       screenWidth,
       screenHeight,
       (screenHeight - turnHeight) / 2 + askHeight + 44,
+      (screenWidth - turnWidth) / 2 + 20,
     ),
   );
+  let switching = $state<{
+    elapsed: number;
+    frame: ReturnType<typeof frame>;
+    pose: ReturnType<typeof blobPose>;
+  } | null>(null);
+  const exitDuration = 600;
+  const fade = $derived(switching ? ease(switching.elapsed / 160) : 0);
+  const now = $derived(
+    switching
+      ? {
+          ...switching.frame,
+          phase: "switching",
+          wobbling: false,
+          composer: switching.frame.composer * (1 - fade),
+          question: switching.frame.question * (1 - fade),
+          tool: switching.frame.tool * (1 - fade),
+          answer: switching.frame.answer * (1 - fade),
+          ending: switching.frame.ending * (1 - fade),
+        }
+      : sampled,
+  );
+  const pose = $derived(
+    switching
+      ? homePose(switching.pose, switching.elapsed - 100, screenWidth, screenHeight)
+      : sampledPose,
+  );
+
+  function ease(value: number): number {
+    const t = Math.max(0, Math.min(1, value));
+    return t * t * (3 - 2 * t);
+  }
 
   $effect.pre(() => {
-    void index;
-    elapsed = untrack(() => (paused ? line.leave - 1 : 0));
+    const next = index;
+    untrack(() => {
+      if (next === displayedIndex) {
+        switching = null;
+        return;
+      }
+      if (!running) {
+        displayedIndex = next;
+        elapsed = paused ? timeline(examples[next]).leave - 1 : 0;
+        switching = null;
+      } else if (!switching) {
+        switching = { elapsed: 0, frame: sampled, pose: sampledPose };
+      }
+    });
   });
 
   $effect(() => {
@@ -68,14 +114,33 @@
   });
 
   $effect(() => {
+    if (!reduced) return;
+    untrack(() => {
+      displayedIndex = index;
+      switching = null;
+    });
+  });
+
+  $effect(() => {
     if (!running) return;
     let last = performance.now();
     let frameId = requestAnimationFrame(function step(time) {
-      elapsed += Math.min(time - last, 100);
+      const delta = Math.min(time - last, 100);
       last = time;
-      if (elapsed >= line.end) {
-        index = (index + 1) % examples.length;
-        elapsed = 0;
+      if (switching) {
+        switching.elapsed += delta;
+        if (switching.elapsed >= exitDuration) {
+          displayedIndex = index;
+          elapsed = 0;
+          switching = null;
+        }
+      } else {
+        elapsed += delta;
+        if (elapsed >= line.end) {
+          displayedIndex = (displayedIndex + 1) % examples.length;
+          index = displayedIndex;
+          elapsed = 0;
+        }
       }
       frameId = requestAnimationFrame(step);
     });
@@ -102,6 +167,7 @@
     data-phase={now.phase}
     data-ready={mounted || undefined}
     style:--composer={now.composer}
+    style:--tool={now.tool}
     style:--question={now.question}
     style:--answer={now.answer}
     style:--ending={now.ending}
@@ -124,12 +190,12 @@
     <div class="chat-compose t-chatMessageUser" style:--chat-prompt={JSON.stringify(example.ask)}>
       <ChatInput value={now.draft} placeholder={labels.placeholder} isSendEnabled={!!now.draft} />
     </div>
-    <div class="chat-turn" bind:clientHeight={turnHeight}>
+    <div class="chat-turn" bind:clientHeight={turnHeight} bind:clientWidth={turnWidth}>
       <div class="chat-ask" bind:clientHeight={askHeight}>
         <ChatUserMessage text={example.ask} />
       </div>
       <div class="chat-answer">
-        <p class="chat-tool t-body" class:shown={now.phase === "thinking"}>{example.tools[0]}</p>
+        <p class="chat-tool t-body">{example.tools[0]}</p>
         <div class="chat-response">
           <p class="t-standfirst chat-reply">
             <span>{now.said}</span><span class="chat-unsaid"

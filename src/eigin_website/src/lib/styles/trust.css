@@ -10,9 +10,12 @@
 }
 
 .trust-intro {
-  max-width: 40rem;
   display: grid;
   gap: var(--spacing-n32);
+}
+
+.trust-intro > p {
+  max-width: 40rem;
 }
 
 .trust-title {

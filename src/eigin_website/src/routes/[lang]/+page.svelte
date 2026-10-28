@@ -86,21 +86,25 @@
           <p class="t-standfirst muted section-intro">{copy.pricing.body}</p>
         </div>
         <LinkButton
-          href="mailto:hello@eigin.ai?subject=Eigin%20plans"
+          href={copy.pricing.actionHref ?? "mailto:hello@eigin.ai?subject=Eigin%20plans"}
           label={copy.pricing.action}
           size="extraSmall"
           variant="outline"
         />
       </div>
       <div class="content-grid plans">
-        {#each copy.pricing.plans as plan}<div class="plan">
+        {#each copy.pricing.plans as plan}<svelte:element
+            this={plan.href ? "a" : "div"}
+            class="plan"
+            href={plan.href}
+          >
             <div class="plan-label">
               <h3 class="t-miniLabel eyebrow muted">{plan.name}</h3>
               {#if plan.status}<Tag label={plan.status} disabled />{/if}
             </div>
             <p class="t-titleM">{plan.price}</p>
             <p class="t-body muted">{plan.detail}</p>
-          </div>{/each}
+          </svelte:element>{/each}
       </div>
     </div>
   </section>
@@ -141,13 +145,14 @@
           {copy.get.more} <a href={copy.get.roadmap.href}>{copy.get.roadmap.label}</a>
         </p>
       </div>
-      <AnimatedIllustration class="get-stage" labels={copy.get.motion}>
+      <AnimatedIllustration class="get-stage" labels={copy.get.motion} controlVariant="open">
         {#snippet children(active)}
           <span class="get-shape" aria-hidden="true">
             <MorphBlob
               tempo={0.25}
-              intensity={active ? MorphIntensity.full : MorphIntensity.none}
-              breath={active ? MorphIntensity.full : MorphIntensity.none}
+              animateEntry={false}
+              paused={!active}
+              breath={MorphIntensity.full}
               breathPeriod={8}
               color="currentColor"
             />

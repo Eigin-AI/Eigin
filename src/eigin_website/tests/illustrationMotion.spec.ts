@@ -8,11 +8,16 @@ for (const locale of ["en", "da"]) {
       await page.goto(`/${locale}/${route}`);
       const regions = page.locator(".animated-illustration");
       for (const region of await regions.all()) {
+        const subject = (await region.evaluate((element) =>
+          element.classList.contains("team-diagram"),
+        ))
+          ? "diagram"
+          : "illustration";
         await region.scrollIntoViewIfNeeded();
         await expect(region).toHaveAttribute("data-active", "true");
         await region
           .getByRole("button", {
-            name: locale === "en" ? "Pause illustration" : "Sæt illustration på pause",
+            name: locale === "en" ? `Pause ${subject}` : `Sæt ${subject} på pause`,
           })
           .click();
         await expect(region).toHaveAttribute("data-active", "false");
@@ -38,7 +43,7 @@ for (const locale of ["en", "da"]) {
         await expect(region).toHaveAttribute("data-active", "false");
         await region
           .getByRole("button", {
-            name: locale === "en" ? "Play illustration" : "Afspil illustration",
+            name: locale === "en" ? `Play ${subject}` : `Afspil ${subject}`,
           })
           .click();
         await expect(region).toHaveAttribute("data-active", "true");

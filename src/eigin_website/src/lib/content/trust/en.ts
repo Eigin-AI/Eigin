@@ -7,20 +7,20 @@ const docs = "https://code.eigin.ai/dev/eigin/-/blob/main/docs/src";
 const content: TrustContent = {
   title: "Trust — Eigin",
   description:
-    "How Eigin keeps personal AI private and safe, in plain language, with the evidence to check it.",
+    "How Eigin is built around your privacy and safety, keeping you in control of your data and your AI.",
   heading: "Why trust Eigin?",
   introduction:
-    "Here's how Eigin handles your data, what it can do, and where to check each claim yourself.",
+    "See how Eigin is built around your privacy and safety, so you can use personal AI with confidence.",
   more: "How it works",
   claims: [
     {
       id: "data",
       diagram: "device",
       title: "Your data",
-      summary: "Your conversations and your agent's memory are stored on your device, not with us.",
+      summary: "Your conversations and your agent's data are stored on your device, not ours.",
       details: [
-        "Chats, memory, goals and settings are stored on your device. Cloud requests can include relevant memories and connected data.",
-        "Your voice is processed on your device and never leaves it.",
+        "Your data is stored on your device. Cloud requests can include memories and connected data.",
+        "Your voice is processed on your device and doesn't leave it.",
         "Connected accounts are reached from your device, not through us.",
       ],
     },
@@ -32,8 +32,8 @@ const content: TrustContent = {
         "Your messages only go to the AI model you choose, and only after you've allowed it.",
       details: [
         "Eigin asks before anything goes to a cloud model for the first time.",
-        "Our cloud AI keeps nothing and needs no account.",
-        "Local inference runs on your device. Separately permitted tools can still contact connected services.",
+        "Our cloud AI doesn't store your chats and doesn't need an account.",
+        "Local models run on your device. Separately permitted tools can still contact connected services.",
       ],
     },
     {
@@ -43,21 +43,21 @@ const content: TrustContent = {
       summary:
         "It can only use the tools you give it, and it asks before it changes or sends anything.",
       details: [
-        "It has no computer of its own, so it can't write or run its own code.",
+        "It doesn't have a “virtual computer”, so it can't write or run its own code.",
         "Each tool has permissions that you control.",
-        "Anything risky asks you first, by default.",
+        "By default, Eigin asks you before any action with consequences.",
       ],
     },
     {
       id: "sync",
       diagram: "sync",
-      title: "Sync",
+      title: "Synchronisation",
       status: "Coming soon",
       summary: "When Eigin syncs, only you and the people you share with can read it.",
       details: [
         "Sync between your devices and your team is end-to-end encrypted.",
         "Only you and the people you share with hold the keys.",
-        "We pass your data along, but we can't read it.",
+        "Eigin Relay can pass your data along, but it can't read it.",
       ],
     },
     {
@@ -79,8 +79,8 @@ const content: TrustContent = {
         "Eigin is open source, so you can see how it handles your data and what it's allowed to do.",
       details: [
         "The code is public under the AGPL licence.",
-        "Without us, it keeps working with a local model or your own key.",
-        "You can self-host our cloud services, too.",
+        "Eigin doesn’t depend on our company to keep working. You can use a local model or connect your own provider.",
+        "For complete control, you can self-host our cloud services too.",
       ],
     },
   ],
@@ -152,16 +152,16 @@ const content: TrustContent = {
     },
   },
   limits: {
-    title: "What Eigin can't do",
+    title: "Limitations",
     introduction: "No system protects against everything. Here's where the limits are.",
     items: [
       {
-        title: "Cloud models read your current conversation",
-        body: "To answer you, a cloud model has to read what you send. Our cloud AI models never store your conversations, but with your own provider, its terms apply.",
+        title: "Cloud models can read your current conversation",
+        body: "To answer you, a cloud model has to read what you send. Our cloud AI models don't store your conversations, but with your own provider, its terms apply.",
       },
       {
         title: "Your device is the vault",
-        body: "Your data is as safe as your device. Anyone who can open your device can read your chats.",
+        body: "Your data is as safe as your device. If someone can open your device, they can read your chats.",
       },
       {
         title: "Content can try to trick the agent",
@@ -173,20 +173,20 @@ const content: TrustContent = {
       },
       {
         title: "AI can make mistakes",
-        body: "Any model can be confidently wrong. Check the output before you rely on it.",
+        body: "Any AI model can be confidently wrong. Check the output before you rely on it.",
       },
     ],
   },
   responsible: {
-    title: "Who's responsible",
-    body: "Eigin is made by Eigin ApS, a small Danish team in Copenhagen and Aarhus. You know who we are, and you can always reach us.",
+    title: "People",
+    body: "Eigin is made by Eigin ApS, a Danish team based in Copenhagen and Aarhus. You know who we are, and you can always reach us.",
     people: [
       { name: "Daniel Rothmann", role: "Co-founder and CTO", photo: daniel },
       { name: "Therkel Sand Therkelsen", role: "Co-founder and CEO", photo: therkel },
     ],
   },
   transparency: {
-    title: "Cards on the table",
+    title: "Transparency",
     groups: [
       {
         title: "Code",

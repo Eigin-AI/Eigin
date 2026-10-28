@@ -5,7 +5,7 @@ const content: DocumentContent = {
   description: "Sådan kommer du i kontakt med Eigin.",
   introduction: [
     {
-      html: `<p>Spørgsmål, feedback, presse, samarbejde eller bare nysgerrig? Sådan får du fat i os.</p>`,
+      html: `<p>Spørgsmål, feedback, presse eller samarbejde? Måske bare nysgerrig? Sådan får du fat i os.</p>`,
     },
     { action: { label: "Sig hej", href: "mailto:hello@eigin.ai" } },
     { html: `<p>Eller skriv til os på hello@eigin.ai.</p>` },
@@ -14,12 +14,12 @@ const content: DocumentContent = {
     {
       id: "support",
       title: "Support",
-      html: `<p>Har du problemer med appen? Gå til <a href="/support/">supportsiden</a>.</p>`,
+      html: `<p>Har du problemer med appen? Besøg <a href="/support/">supportsiden</a>.</p>`,
     },
     {
       id: "community",
       title: "Fællesskab",
-      html: `<p>Vær med i vores <a href="https://chat.eigin.ai" target="_blank" rel="noopener">Matrix-chat</a>, eller følg koden på <a href="https://code.eigin.ai" target="_blank" rel="noopener">code.eigin.ai</a>.</p>`,
+      html: `<p>Deltag i vores <a href="https://chat.eigin.ai" target="_blank" rel="noopener">Matrix-chat</a>, eller følg udviklingen på <a href="https://code.eigin.ai" target="_blank" rel="noopener">code.eigin.ai</a>.</p>`,
     },
     {
       id: "company",
