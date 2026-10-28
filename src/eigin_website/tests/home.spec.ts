@@ -122,7 +122,27 @@ for (const locale of ["en", "da"]) {
     await expect(page.locator("#teams")).toBeInViewport();
     await page.locator('.hero a[href="#get"]').click();
     await expect(page).toHaveURL(new RegExp(`/${locale}/#get$`));
-    await expect(page.locator('#get a[href^="https://apps.apple.com"]').first()).toBeVisible();
+    const badge = page.locator("#get .get-badge");
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveAttribute("href", "https://tally.so/r/rDDpKM");
+    await expect(badge).toHaveAttribute("target", "_blank");
+    await expect(badge).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(badge).toHaveAccessibleName(
+      locale === "en"
+        ? "Join the Eigin iPhone beta on TestFlight"
+        : "Prøv Eigin-betaen til iPhone via TestFlight",
+    );
+    await expect(page.locator("#get .get-beta")).toHaveText(
+      locale === "en"
+        ? "Sign up for early access on iPhone."
+        : "Tilmeld dig tidlig adgang på iPhone.",
+    );
+    await expect(page.locator("#get .get-more")).toContainText(
+      locale === "en" ? "Coming soon to more platforms." : "Snart på flere platforme.",
+    );
+    await expect(page.locator('#get a[href^="https://apps.apple.com"]')).toHaveCount(0);
+    await badge.focus();
+    await expect(badge).toBeFocused();
   });
 }
 

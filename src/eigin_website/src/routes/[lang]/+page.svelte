@@ -6,7 +6,7 @@
   import FeatureSection from "#lib/components/FeatureSection.svelte";
   import HeroSection from "#lib/components/HeroSection.svelte";
   import Disclosure from "#lib/components/Disclosure.svelte";
-  import appStoreBadge from "#lib/assets/badges/app-store-white.svg";
+  import testflightIcon from "#lib/assets/badges/testflight.png";
   import getVisual from "#lib/assets/get-eigin.webp";
   import type { PageData } from "./$types";
   let { data }: { data: PageData } = $props();
@@ -138,9 +138,20 @@
     <div class="container section-space content-grid get-layout">
       <div class="get-copy">
         <h2 class="t-display section-title" id="get-title">{copy.get.title}</h2>
-        <a class="get-badge" href="https://apps.apple.com/app/eigin/id6801064030">
-          <img src={appStoreBadge} alt={copy.get.badge} width="180" height="60" />
+        <a
+          class="get-badge"
+          href="https://tally.so/r/rDDpKM"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={copy.get.badge.accessibleLabel}
+        >
+          <img src={testflightIcon} alt="" width="36" height="36" />
+          <span class="get-badge-text">
+            <span class="get-badge-eyebrow">{copy.get.badge.eyebrow}</span>
+            <span class="get-badge-label">{copy.get.badge.label}</span>
+          </span>
         </a>
+        <p class="get-beta t-body">{copy.get.instructions}</p>
         <p class="t-body muted get-more">
           {copy.get.more} <a href={copy.get.roadmap.href}>{copy.get.roadmap.label}</a>
         </p>

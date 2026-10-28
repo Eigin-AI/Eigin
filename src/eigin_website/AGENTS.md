@@ -63,11 +63,15 @@ update owner-approved entries without changing markup. Planned capabilities must
 remain labeled as planned.
 Unavailable product destinations stay unlinked. Pricing follows the owner-approved
 published offer; team plans are marked as coming soon.
-The main CTA leads to the iPhone App Store listing. Company footer links are ordered
+The main CTA leads to a hosted Tally signup form, which provides the iPhone TestFlight beta invitation. Company footer links are ordered
 Contact, Support, Privacy, Terms, with local routes in both locales. Contact and
 Support are translated into Danish. Privacy and Terms stay in English, with an
 English-content notice on their Danish routes.
-No analytics, signup service, or production deployment is configured here.
+No analytics, embedded signup service, or production deployment is configured here.
 Future hosting needs its own opt-in Terraform root/state and release pipeline,
 independent of relay and web app deployment. Existing Scaleway resources must
 be migrated deliberately rather than recreated.
+
+The TestFlight service badge is an owner-approved exception to site typography,
+colours, and corner geometry: use platform system fonts and download-badge proportions.
+Use shared spacing tokens around and within it. Keep this exception local to the badge.

@@ -378,20 +378,55 @@ a.plan {
   }
 }
 
+/* This service badge uses owner-approved platform typography and proportions. */
 .get-badge {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-n12);
+  min-height: 60px;
+  padding: var(--spacing-n8) var(--spacing-n16);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   margin-top: var(--spacing-n16);
+  border: 1px solid #a6a6a6;
+  border-radius: 8px;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
   transition: opacity var(--motion-fast) var(--motion-easing-smooth);
 }
 
 .get-badge img {
-  display: block;
-  width: 180px;
-  height: auto;
+  flex-shrink: 0;
 }
 
-.get-badge:is(:hover, :focus-visible) {
+.get-badge-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.get-badge-eyebrow {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.get-badge-label {
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.get-badge:hover {
   opacity: 0.85;
+}
+
+.get-badge:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+.get-beta {
+  max-width: 42ch;
 }
 
 .get-more {

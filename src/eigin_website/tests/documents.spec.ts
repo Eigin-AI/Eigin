@@ -203,7 +203,7 @@ test("printing keeps the complete text and removes site navigation", async ({ pa
   await expect(page.locator(".site-header")).toBeHidden();
   await expect(page.locator(".site-footer")).toBeHidden();
   await expect(page.locator(".document-sidebar")).toBeHidden();
-  await expect(page.locator(".document-section")).toHaveCount(11);
+  await expect(page.locator(".document-section")).toHaveCount(12);
   await expect(page.locator("h2#changes")).toBeVisible();
 });
 

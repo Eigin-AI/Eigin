@@ -48,3 +48,14 @@ Eigin mitigates this in layers:
 3. OS restrictions bound system-level actions.
 
 This doesn't eliminate the risk, but an injection can't silently cause damage: it would have to clear multiple permission gates first.
+
+## Early access signup
+
+The website links to a hosted Tally form that collects an email address and optional
+newsletter consent. Eigin administers beta signups; Tally processes the form data.
+Newsletter consent is optional and does not affect access.
+
+Beta-only submissions and exports are deleted when the public beta ends, or earlier
+on request. Newsletter contacts are kept until unsubscribe. See the
+[signup processing inventory](./compliance/gdpr.md#early-access-signup) and
+[public privacy notice](https://eigin.ai/en/privacy/#early-access).

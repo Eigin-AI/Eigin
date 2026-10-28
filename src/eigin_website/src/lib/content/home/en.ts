@@ -224,7 +224,12 @@ const content: HomeContent = {
     motion: { pause: "Pause illustration", play: "Play illustration" },
     title: "Make AI yours.\nStarting now.",
     visual: "Eigin on an iPhone, offering to fill in a school trip form.",
-    badge: "Download on the App Store",
+    badge: {
+      eyebrow: "Join the beta",
+      label: "TestFlight",
+      accessibleLabel: "Join the Eigin iPhone beta on TestFlight",
+    },
+    instructions: "Sign up for early access on iPhone.",
     more: "Coming soon to more platforms.",
     roadmap: { label: "See our roadmap", href: "/en/roadmap/" },
   },

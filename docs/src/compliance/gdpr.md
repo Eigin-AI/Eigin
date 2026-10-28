@@ -26,9 +26,10 @@ Eigin's role differs per data flow, because most processing does not reach Eigin
 | **Connected accounts**: Google, Microsoft, IMAP, Aula | None | Read and written on-device with the user's own credentials, held in the Keychain. Content reaches Eigin ApS only if the user sends it for inference through the Relay, covered below |
 | **User's own inference provider** | None | The App calls the provider directly with the user's key, under the provider's terms |
 | **Eigin Relay**: inference, search, credits, model downloads | Controller (Art. 4(7)) | Eigin ApS decides the purposes and means of the service, and contracts the providers behind it |
+| **Early access signup**: email and optional newsletter choice | Controller (Art. 4(7)) | Eigin administers beta signups and decides who receives product news; Tally processes the form |
 | **Self-hosted Relay** | None | The operator is the controller of their instance |
 
-The rest of this document therefore assesses the Relay.
+The Relay assessment below is supplemented by the early access signup inventory.
 
 ### Special categories
 
@@ -47,6 +48,23 @@ Prompts can contain anything a person tells their agent, including health, belie
 Content and queries foreseeably contain personal data, so they are treated as such throughout.
 
 The Relay stores no names, emails, accounts, or device identifiers. A wallet is keyed by a hash of its App Store transaction or grant ID ([`redeem.rs`](https://code.eigin.ai/dev/eigin/-/blob/main/src/eigin_relay/src/credits/redeem.rs)).
+
+## Early access signup
+
+| Item | Handling |
+|---|---|
+| Collection | Hosted Tally form; email address and optional, unchecked newsletter choice |
+| Beta administration | Legitimate interest (Art. 6(1)(f)): keep track of beta requests. Limited to email and signup choice; no profiling. People can object or request deletion |
+| Product news | Separate consent (Art. 6(1)(a)); access is available without newsletter consent |
+| Retention | Delete beta-only submissions and exports when the public beta ends, or earlier on request. Keep newsletter contacts and consent records until unsubscribe |
+| Deletion owner | Eigin account owner deletes Tally responses and exports, including on unsubscribe; no automated deletion is configured in this repository |
+| Processor | Tally, Belgium; form responses stored in Europe. Owner confirmed review/acceptance of its DPA on 2026-10-28 |
+| Provider deletion | Tally documents backup deletion within 90 days after form-data deletion |
+| Rights | Requests to hello@eigin.ai; identify signup records by email |
+| Launch check | Link the published privacy notice from the hosted form; verify access without newsletter consent. Form configuration is managed outside this repository |
+
+Source: [Tally GDPR documentation](https://tally.so/help/gdpr).
+The assessment tables below concern the Relay; signup processing is recorded above and in the annexes.
 
 ## Principles (Art. 5)
 
@@ -88,12 +106,14 @@ Record kept under Art. 30(1). Controller: Eigin ApS, CVR 46428765, Denmark, hell
 | Credit wallets | Purchasers and grant recipients | Purchase or grant hash, token digest, balance | Hosting provider (EU) | None | Wallet on request; bookkeeping per Danish law | [CASA](./casa.md) |
 | Model asset mirror | App users downloading a local model | IP address | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
 | Service operations | Relay users | Wallet ID, error text, IP address in platform logs | Hosting provider (EU) | None | Platform log retention | [CASA](./casa.md) |
+| Early access signup | Prospective beta testers | Email, newsletter choice | Tally | Provider DPA governs subprocessors and transfers | Beta-only records at beta end; newsletter records on unsubscribe; backups within 90 days after deletion | Tally documents encryption in transit and at rest; account owner manages access |
 | Contributor agreements | Contributors to the source code | GitLab user ID and username, agreement version, date, sign comment. For entities, the signed agreement and covered accounts | None | None | Kept while the contribution is distributed, as proof of the license (Art. 17(3)(e)) | Private GitLab project, maintainers only |
 
 ## Annex B: Processors
 
 | Processor | Role | Location | Terms |
 |---|---|---|---|
+| Tally | Hosted early access form | Belgium; form storage in Europe | [DPA](https://tally.so/help/data-processing-agreement), owner acceptance confirmed 2026-10-28 |
 | Scaleway | Hosting: containers, database, object storage, logs | EU | [DPA](https://www.scaleway.com/en/contracts/) |
 | TensorX | Hosted inference | Ireland, Finland | [DPA](https://tensorx.ai/dpa/), no retention, no training |
 | Mistral | Hosted inference | France | [DPA](https://legal.mistral.ai/terms/data-processing-addendum), zero data retention |

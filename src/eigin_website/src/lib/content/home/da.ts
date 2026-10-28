@@ -224,8 +224,12 @@ const content: HomeContent = {
     motion: { pause: "Sæt illustration på pause", play: "Afspil illustration" },
     title: "Ej din AI.\nFra nu af.",
     visual: "Eigin på en iPhone, der tilbyder at udfylde en blanket til en skoletur.",
-    // The badge artwork is English, so its description is too.
-    badge: "Download on the App Store",
+    badge: {
+      eyebrow: "Prøv betaen",
+      label: "TestFlight",
+      accessibleLabel: "Prøv Eigin-betaen til iPhone via TestFlight",
+    },
+    instructions: "Tilmeld dig tidlig adgang på iPhone.",
     more: "Snart på flere platforme.",
     roadmap: { label: "Se vores roadmap", href: "/da/roadmap/" },
   },

@@ -81,7 +81,8 @@ export type HomeContent = {
     motion: { pause: string; play: string };
     title: string;
     visual: string;
-    badge: string;
+    badge: { eyebrow: string; label: string; accessibleLabel: string };
+    instructions: string;
     more: string;
     roadmap: { label: string; href: string };
   };
