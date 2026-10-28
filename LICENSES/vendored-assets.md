@@ -38,5 +38,6 @@ monochrome display and optical sizing. Brand trademarks remain with their owners
 `src/eigin_website/src/lib/assets/badges/testflight.png` is Apple's TestFlight
 app icon, sourced from https://testflight.apple.com/images/tf-web-ios-512-dark.png.
 Apple retains rights to the artwork and TestFlight mark; it is not covered by
-this repository's open-source license. The website uses it to identify the beta
-installation service. The surrounding badge is custom, not an Apple-issued badge.
+this repository's open-source license. The website and the README badge at
+`docs/src/images/testflight-badge.svg` use it to identify the beta installation
+service. The surrounding badge is custom, not an Apple-issued badge.
