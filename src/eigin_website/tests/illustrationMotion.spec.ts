@@ -84,3 +84,28 @@ test("illustrations remain still with reduced motion or without JavaScript", asy
     await context.close();
   }
 });
+
+test("diagrams play while partially visible and pause when mostly outside the viewport", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/en/trust/");
+    const diagram = page.locator(".animated-illustration").nth(2);
+    const reveal = async (fraction: number) => {
+      await diagram.evaluate((element, visible) => {
+        const bounds = element.getBoundingClientRect();
+        window.scrollTo(0, window.scrollY + bounds.top - innerHeight + bounds.height * visible);
+      }, fraction);
+    };
+    await reveal(0.6);
+    await expect(diagram).toHaveAttribute("data-active", "true");
+    await reveal(0.3);
+    await expect(diagram).toHaveAttribute("data-active", "false");
+    await reveal(0.6);
+    await expect(diagram).toHaveAttribute("data-active", "true");
+    await reveal(-0.1);
+    await expect(diagram).toHaveAttribute("data-active", "false");
+  }
+});

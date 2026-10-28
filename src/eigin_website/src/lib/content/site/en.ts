@@ -9,7 +9,7 @@ const content: SiteContent = {
   action: "Get Eigin",
   navigation: [
     {
-      label: "For people",
+      label: "For you",
       href: "#personal",
     },
     {

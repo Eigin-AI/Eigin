@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "#lib/components/PageHead.svelte";
   import { LinkButton, Icon, MorphBlob, MorphIntensity, Tag } from "@eigin/ui";
   import SiteHeader from "#lib/components/SiteHeader.svelte";
   import SiteFooter from "#lib/components/SiteFooter.svelte";
@@ -14,13 +15,7 @@
   const site = $derived(data.site);
 </script>
 
-<svelte:head>
-  <title>{copy.title}</title>
-  <meta name="description" content={copy.description} />
-  <link rel="alternate" hreflang="en" href="/en/" />
-  <link rel="alternate" hreflang="da" href="/da/" />
-  <link rel="alternate" hreflang="x-default" href="/" />
-</svelte:head>
+<PageHead title={copy.title} description={copy.description} locale={data.locale} path="" />
 
 <a class="skip t-body" href="#main">{site.skip}</a>
 <SiteHeader locale={data.locale} copy={site} />

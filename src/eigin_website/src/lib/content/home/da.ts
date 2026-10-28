@@ -1,7 +1,7 @@
 import type { HomeContent } from "./types";
 
 const content: HomeContent = {
-  title: "Eigin — AI så personlig, at den skal være din.",
+  title: "Eigin",
   description: "Personlig AI, der tilhører dig. Åben teknologi, bygget i Europa.",
   hero: {
     headline: "AI så personlig,\nat den skal være din",
@@ -17,7 +17,7 @@ const content: HomeContent = {
   },
   personal: {
     id: "personal",
-    label: "Til mennesker",
+    label: "Til dig",
     title: "Agenten, der kender dig bedst",
     body: "Bare tal med den. Den lærer, hvad du går op i, og hjælper med stort og småt på dine vilkår.",
     placeholder: "Chatvisning",

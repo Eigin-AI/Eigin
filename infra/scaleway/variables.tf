@@ -161,3 +161,9 @@ variable "presign_expiry_seconds" {
   default     = 86400
 }
 
+
+variable "website_domains" {
+  description = "Custom website hostnames served with managed TLS."
+  type        = list(string)
+  default     = []
+}

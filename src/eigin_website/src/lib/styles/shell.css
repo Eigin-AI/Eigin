@@ -15,13 +15,19 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-surface-standard-elevated);
+  padding-top: var(--site-safe-top);
+  background-color: var(--color-surface-standard-elevated);
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-surface-standard-base) var(--site-safe-top),
+    transparent calc(var(--site-safe-top) + var(--spacing-n24))
+  );
   border-bottom: 1px solid var(--color-border-standard-base);
 }
 
 @supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
   .site-header {
-    background: color-mix(in srgb, var(--color-surface-standard-elevated) 84%, transparent);
+    background-color: color-mix(in srgb, var(--color-surface-standard-elevated) 84%, transparent);
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
   }
@@ -29,7 +35,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .site-header {
-    background: var(--color-surface-standard-elevated);
+    background-color: var(--color-surface-standard-elevated);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -81,7 +87,7 @@
 
 .footer-inner {
   padding-top: var(--spacing-n80);
-  padding-bottom: var(--spacing-n40);
+  padding-bottom: max(var(--spacing-n40), var(--site-safe-bottom));
 }
 
 .footer-grid {

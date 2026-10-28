@@ -79,11 +79,11 @@ for (const locale of ["en", "da"] as const) {
     );
     await expect(page.locator('head link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
       "href",
-      "/en/roadmap/",
+      "https://eigin.ai/en/roadmap/",
     );
     await expect(page.locator('head link[rel="alternate"][hreflang="da"]')).toHaveAttribute(
       "href",
-      "/da/roadmap/",
+      "https://eigin.ai/da/roadmap/",
     );
   });
 }

@@ -5,7 +5,7 @@ import therkel from "../../assets/team/therkel-sand-therkelsen.jpg";
 const docs = "https://code.eigin.ai/dev/eigin/-/blob/main/docs/src";
 
 const content: TrustContent = {
-  title: "Tillid — Eigin",
+  title: "Tillid · Eigin",
   description:
     "Sådan er Eigin bygget til at beskytte dit privatliv og give dig kontrol over dine data og din AI.",
   heading: "Hvorfor stole på Eigin?",

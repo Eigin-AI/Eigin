@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "#lib/components/PageHead.svelte";
   import SectionHeading from "#lib/components/SectionHeading.svelte";
   import { Icon } from "@eigin/ui";
   import SiteHeader from "#lib/components/SiteHeader.svelte";
@@ -11,13 +12,7 @@
   const statuses = ["active", "planned"] as const;
 </script>
 
-<svelte:head>
-  <title>{copy.title}</title>
-  <meta name="description" content={copy.description} />
-  <link rel="alternate" hreflang="en" href="/en/roadmap/" />
-  <link rel="alternate" hreflang="da" href="/da/roadmap/" />
-  <link rel="alternate" hreflang="x-default" href="/en/roadmap/" />
-</svelte:head>
+<PageHead title={copy.title} description={copy.description} locale={data.locale} path="roadmap/" />
 
 <a class="skip t-body" href="#main">{data.site.skip}</a>
 <SiteHeader locale={data.locale} copy={data.site} />

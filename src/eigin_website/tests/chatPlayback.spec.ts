@@ -36,6 +36,8 @@ for (const locale of ["en", "da"]) {
         const agent = (await page.locator(".chat-agent").boundingBox())!;
         const blob = (await page.locator(".chat-agent .morph-blob path").boundingBox())!;
         const tool = (await page.locator(".chat-tool").boundingBox())!;
+        expect(blob.width).toBeLessThanOrEqual(agent.width + 1);
+        expect(blob.height).toBeLessThanOrEqual(agent.height + 1);
         expect(Math.abs(agent.x + agent.width / 2 - turn.x - 20)).toBeLessThan(1);
         expect(tool.x - blob.x - blob.width).toBeGreaterThanOrEqual(8);
         const ending = (await page.locator(".chat-ending").boundingBox())!;

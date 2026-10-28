@@ -154,19 +154,34 @@ build target="all" env="staging" verbose="false":
 
 # --- Release ---
 
-# `env`/`track` default to the least public target: no args means staging beta.
-[doc('Build, sign and upload a release (target: ios, env: staging | production, track: beta | metadata | iap | screenshots | sync-screenshots)')]
-release target="ios" env="staging" track="beta": generate
+# No arguments releases iOS staging beta; website explicitly selects production publishing.
+[doc('Publish a release (ios [staging|production] [track] | website [production]); iOS defaults to staging beta')]
+release target="ios" env="" track="":
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ "{{ target }}" != "ios" ]; then echo "Unknown release target: {{ target }}"; exit 1; fi
-    case "{{ track }}" in
+    target={{ quote(target) }}
+    environment={{ quote(env) }}
+    release_track={{ quote(track) }}
+    if [ "$target" = "website" ]; then
+        if [ -n "$environment" ] && [ "$environment" != "production" ]; then echo "Website releases support production only"; exit 1; fi
+        if [ -n "$release_track" ]; then echo "Website releases do not accept an iOS track"; exit 1; fi
+        vars="$({{ tools }} config export tf-vars production)"
+        eval "$vars"
+        {{ tools }} website release
+        exit 0
+    fi
+    if [ "$target" != "ios" ]; then echo "Unknown release target: $target"; exit 1; fi
+    environment="${environment:-staging}"
+    release_track="${release_track:-beta}"
+    case "$environment" in staging|production) ;; *) echo "Unknown release environment: $environment"; exit 1 ;; esac
+    just generate
+    case "$release_track" in
         beta)        lane=beta ;;
         metadata)    lane=sync_metadata ;;
         iap)         lane=sync_iap ;;
         screenshots) lane=screenshots ;;
         sync-screenshots) lane=sync_screenshots ;;
-        *) echo "Unknown release track: {{ track }}"; exit 1 ;;
+        *) echo "Unknown release track: $release_track"; exit 1 ;;
     esac
     # fastlane reads BUNDLE_ID / DEVELOPMENT_TEAM / ASC_* from the environment.
     vars="$({{ tools }} config export ios)"
@@ -175,8 +190,8 @@ release target="ios" env="staging" track="beta": generate
     if [ -z "${DEVELOPMENT_TEAM:-}" ]; then
         echo "DEVELOPMENT_TEAM is not set in .env — required to sign a release."; exit 1
     fi
-    {{ tools }} exec --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ({{ env }}/{{ track }})" -- \
-        sh -c 'cd {{ ios_dir }} && bundle exec fastlane ios '"$lane"' env:{{ env }}'
+    {{ tools }} exec --log "{{ log_dir }}/ios-release.log" --label "Releasing Eigin for iOS ($environment/$release_track)" -- \
+        sh -c 'cd {{ ios_dir }} && bundle exec fastlane ios "$1" "env:$2"' sh "$lane" "$environment"
 
 # --- Grants ---
 

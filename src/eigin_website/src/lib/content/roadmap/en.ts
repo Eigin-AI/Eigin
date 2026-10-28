@@ -1,7 +1,7 @@
 import type { RoadmapContent } from "./types";
 
 const content: RoadmapContent = {
-  title: "Roadmap — Eigin",
+  title: "Roadmap · Eigin",
   description: "Follow what is active, planned, and launched as we build Eigin in the open.",
   heading: "Roadmap",
   introduction:

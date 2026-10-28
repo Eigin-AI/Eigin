@@ -37,3 +37,13 @@ module "relay" {
   webhook_rate_limit_requests       = var.webhook_rate_limit_requests
   webhook_rate_limit_window_seconds = var.webhook_rate_limit_window_seconds
 }
+
+# Website resources belong only to the existing production workspace/state.
+module "website" {
+  source = "./modules/website"
+  count  = terraform.workspace == "production" ? 1 : 0
+
+  project_name = "${var.project_name}-website"
+  region       = var.scw_region
+  domains      = var.website_domains
+}

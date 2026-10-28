@@ -141,3 +141,6 @@ node_modules/
 .svelte-kit/
 src/eigin_website/build/
 playwright-report/
+
+# Local website recovery artifacts
+infra/scaleway/website-releases/
