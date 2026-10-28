@@ -3,10 +3,10 @@ import type { DocumentContent } from "../types";
 const content: DocumentContent = {
   title: "Privacy Policy",
   description: "How Eigin handles your data. Which is, as little as possible.",
-  updated: "Last updated: 21 October 2026",
+  updated: "Last updated: 28 October 2026",
   introduction: [
     {
-      html: `<p>Eigin keeps your data on your device. We aim to know as little about you as possible.</p>`,
+      html: `<p>The Eigin app keeps your data on your device. We aim to know as little about you as possible.</p>`,
     },
   ],
   sections: [
@@ -120,8 +120,20 @@ const content: DocumentContent = {
       html: `<p>You must be 18 or older to use Eigin.</p>`,
     },
     {
+      id: "early-access",
+      title: "11. Early access signup",
+      html: `<ul>
+        <li><strong>What we collect.</strong> Your email address and optional newsletter choice when you submit our early access form.</li>
+        <li><strong>Why.</strong> We keep track of beta signups based on our legitimate interest in administering the public beta (GDPR Art. 6(1)(f)).</li>
+        <li><strong>Product news.</strong> We email news and product updates only with your separate consent (Art. 6(1)(a)). This is optional and does not affect beta access. You can unsubscribe at any time or email <a href="mailto:hello@eigin.ai">hello@eigin.ai</a>.</li>
+        <li><strong>Where it goes.</strong> Tally, our form processor based in Belgium, stores form responses in Europe. The form opens on Tally's website. See <a href="https://tally.so/help/privacy-policy">Tally's privacy policy</a>.</li>
+        <li><strong>Retention.</strong> We delete beta-only signup records and exports when the public beta ends, or earlier on request. Newsletter contact details and consent records are kept until you unsubscribe. Tally states that deleted form data is removed from its backups within 90 days.</li>
+        <li><strong>Your rights.</strong> Contact us to access, correct, delete, or object to processing of your signup data, as described in section 9.</li>
+      </ul>`,
+    },
+    {
       id: "changes",
-      title: "11. Changes",
+      title: "12. Changes",
       html: `<p>We may update this policy. The date at the top tells you the current version.</p>`,
     },
   ],

@@ -32,3 +32,11 @@ The footer marks `service/linkedin.svg`, `service/matrix.svg`, `service/gitlab.s
 and `service/github.svg` come from [Simple Icons 11.15.0](https://github.com/simple-icons/simple-icons/tree/11.15.0/icons),
 under [CC0-1.0](simple-icons-cc0.md). Their colour and view boxes are adjusted for
 monochrome display and optical sizing. Brand trademarks remain with their owners.
+
+## TestFlight icon
+
+`src/eigin_website/src/lib/assets/badges/testflight.png` is Apple's TestFlight
+app icon, sourced from https://testflight.apple.com/images/tf-web-ios-512-dark.png.
+Apple retains rights to the artwork and TestFlight mark; it is not covered by
+this repository's open-source license. The website uses it to identify the beta
+installation service. The surrounding badge is custom, not an Apple-issued badge.
