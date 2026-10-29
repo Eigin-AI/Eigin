@@ -32,18 +32,22 @@ struct OnboardingInference: View {
     @State private var connectStep = ProviderConnectSheetContent.Step.start
 
     private var offlineAvailable: Bool {
-        gemmaManager.isSupported && gemmaManager.state == .notDownloaded
+        gemmaManager.isSupported && offersAction
     }
 
-    private var isFailed: Bool {
-        if case .failed = gemmaManager.state { return true }
-        return false
+    /// Whether the sheet offers an action while nothing is under way: a first
+    /// download, or another go after a failure or a blocked attempt. Only
+    /// supported hardware can retry a blocked attempt.
+    private var offersAction: Bool {
+        switch gemmaManager.state {
+        case .notDownloaded, .failed: true
+        case .unavailable: gemmaManager.isSupported
+        default: false
+        }
     }
 
-    /// The sheet offers an action while nothing is under way: a first
-    /// download, or another go after a failure.
-    private var offerable: Bool {
-        offlineAvailable || isFailed
+    private var offersFirstDownload: Bool {
+        gemmaManager.state == .notDownloaded
     }
 
     private var connectSheetTitle: String {
@@ -192,7 +196,7 @@ struct OnboardingInference: View {
             AssetRow(asset: gemmaManager, showsAction: false)
 
             Text(
-                offerable
+                offersAction
                     ? Localized.Onboarding.Inference.offlineSheetText
                     : Localized.Onboarding.Inference.offlineDownloadingText
             )
@@ -200,11 +204,11 @@ struct OnboardingInference: View {
             .foregroundStyle(colors.text.standard.muted)
             .fixedSize(horizontal: false, vertical: true)
 
-            if offerable {
+            if offersAction {
                 AppButton(
-                    isFailed
-                        ? Localized.Common.Actions.retry
-                        : Localized.Common.Actions.download
+                    offersFirstDownload
+                        ? Localized.Common.Actions.download
+                        : Localized.Common.Actions.retry
                 ) {
                     Haptics.light()
                     Task { await gemmaManager.download() }

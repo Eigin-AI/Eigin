@@ -31,6 +31,21 @@ struct AssetDownloadProgress: Equatable, Sendable {
     }
 }
 
+/// One asset transfer: start a download, observe its progress, and cancel
+/// or check it mid-flight.
+@MainActor
+protocol AssetDownloading {
+    func download(_ request: AssetDownloadRequest) async throws
+    func observeProgress(
+        assetID: String,
+        _ update: @escaping @MainActor (AssetDownloadProgress, AssetDownloader.Phase) -> Void
+    ) -> Task<Void, Never>
+    func cancel(assetID: String)
+    func isDownloading(assetID: String) -> Bool
+}
+
+extension AssetDownloader: AssetDownloading {}
+
 /// Downloads mirror assets on the app's single background `URLSession`.
 ///
 /// Up to `maxInFlight` requests run at once; large files are split into byte

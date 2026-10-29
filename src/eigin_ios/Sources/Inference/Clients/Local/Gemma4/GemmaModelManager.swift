@@ -56,6 +56,10 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
     private var compileTask: Task<Void, Never>?
     private let declinedKey = StorageKey.gemmaDeclined
 
+    /// Injectable so tests don't reach the network through the shared
+    /// background session.
+    private let downloader: any AssetDownloading
+
     /// Minimum device RAM to run the local model. A real session — long-context
     /// conversation plus a concurrently-loaded voice model — sits around 3 GB of
     /// resident memory, so a 4 GB device (e.g. iPhone 13) would be fully consumed
@@ -74,10 +78,12 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
         deviceInfo: any DeviceInfoService = DefaultDeviceInfoService(),
         mirrorSizeFetcher: @escaping (String) async -> Int64? = {
             await ModelAssetService.totalBytes(for: $0)
-        }
+        },
+        downloader: any AssetDownloading = AssetDownloader.shared
     ) {
         self.deviceInfo = deviceInfo
         self.mirrorSizeFetcher = mirrorSizeFetcher
+        self.downloader = downloader
         ModelStorage.excludeFromBackup()
         startMemoryPressureMonitor()
         resumeIfInProgress()
@@ -219,7 +225,7 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
     /// nobody awaiting it; re-attach so the UI reflects it and completion is
     /// handled. Skips the resource checks — the bytes are already committed.
     private func resumeIfInProgress() {
-        guard AssetDownloader.shared.isDownloading(assetID: GemmaModelStore.assetID) else { return }
+        guard downloader.isDownloading(assetID: GemmaModelStore.assetID) else { return }
         startDownload()
     }
 
@@ -229,14 +235,14 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
 
         downloadTask = Task {
             do {
-                let progressTask = AssetDownloader.shared.observeProgress(
+                let progressTask = downloader.observeProgress(
                     assetID: GemmaModelStore.assetID
                 ) { [weak self] progress, phase in
                     self?.recordTransfer(progress: progress, phase: phase)
                 }
                 defer { progressTask.cancel() }
 
-                try await AssetDownloader.shared.download(
+                try await downloader.download(
                     .init(assetID: GemmaModelStore.assetID, directory: GemmaModelStore.directory)
                 )
 
@@ -339,13 +345,13 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
     func cancel() {
         downloadTask?.cancel()
         downloadTask = nil
-        AssetDownloader.shared.cancel(assetID: GemmaModelStore.assetID)
+        downloader.cancel(assetID: GemmaModelStore.assetID)
         transient = .idle
     }
 
     func delete() {
         // An in-flight download removes its own directory once its tasks drain.
-        let wasDownloading = AssetDownloader.shared.isDownloading(assetID: GemmaModelStore.assetID)
+        let wasDownloading = downloader.isDownloading(assetID: GemmaModelStore.assetID)
         cancel()
         unload()
         if !wasDownloading {
