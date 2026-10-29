@@ -152,8 +152,14 @@ final class GemmaModelManager: GemmaModelManaging, @unchecked Sendable {
 
     func hasRequiredDiskSpace() -> Bool {
         let required = Self.minimumRequiredFreeSpaceBytes
-        guard let free = deviceInfo.freeDiskSpaceBytes() else { return false }
-        return free >= required
+        guard let available = deviceInfo.availableDiskSpaceBytes() else {
+            AppLogger.warning(
+                "Gemma: disk capacity query failed — blocking model download",
+                category: .chat
+            )
+            return false
+        }
+        return available >= required
     }
 
     func hasRequiredRAM() -> Bool {

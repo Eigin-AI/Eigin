@@ -12,7 +12,7 @@ struct OpenFoodFactsClientTests {
         var build: String = "42"
         var system: String = "26.0"
 
-        func freeDiskSpaceBytes() -> Int64? {
+        func availableDiskSpaceBytes() -> Int64? {
             nil
         }
 
