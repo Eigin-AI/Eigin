@@ -46,3 +46,7 @@ tempfile = "3"
 http-body = "0.4"
 futures-util = "0.3"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+
+# Temporary bounded-return fix for #348; provenance and removal in vendor/sqlx-core/PATCH.md.
+[patch.crates-io]
+sqlx-core = { path = "vendor/sqlx-core" }
