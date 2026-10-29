@@ -7,6 +7,8 @@ struct ProviderPreset: Identifiable, Hashable {
         case oAuthPKCE
         /// Sign in with ChatGPT — OpenAI subscription OAuth (SIWC).
         case chatGPTSubscription
+        /// Sign in with Infercom — PKCE login + RFC 8693 API-token exchange.
+        case infercomSignIn
         case none
     }
 
@@ -74,32 +76,6 @@ struct ProviderPreset: Identifiable, Hashable {
     /// Bundled logo from the asset catalog, falling back to nil if not found.
     var logo: UIImage? {
         UIImage(named: "Icons/provider/\(id)")
-    }
-
-    /// Whether this provider runs on-device (no API key, no network).
-    static func isLocal(_ baseURL: String) -> Bool {
-        baseURL.hasPrefix("local://")
-    }
-
-    /// Whether this provider routes inference through the Eigin relay (authorized by credits, not a
-    /// keychain API key).
-    static func isRelay(_ baseURL: String) -> Bool {
-        baseURL.hasPrefix(relayBaseURL)
-    }
-
-    /// The address every Eigin relay provider is saved with.
-    static let relayBaseURL = "eigin-relay://"
-
-    /// Whether this provider connects via ChatGPT subscription sign-in (SIWC). Inference goes to
-    /// the Responses API on `api.openai.com`, authorized by a refreshable OAuth token rather than
-    /// a keychain key.
-    static func isChatGPTSubscription(_ baseURL: String) -> Bool {
-        baseURL.hasPrefix("openai-chatgpt://")
-    }
-
-    /// Whether this provider runs on Anthropic's API (different wire format).
-    static func isAnthropic(_ baseURL: String) -> Bool {
-        baseURL.contains("api.anthropic.com")
     }
 
     static let all: [ProviderPreset] = [
@@ -209,6 +185,7 @@ struct ProviderPreset: Identifiable, Hashable {
             helpText: Localized.Provider.Setup.Infercom.instruction,
             apiKeyURL: "https://cloud.infercom.ai/apis",
             privacyPolicyURL: "https://infercom.ai/privacypolicy/",
+            authMethod: .infercomSignIn,
             region: .europe
         ),
         ProviderPreset(

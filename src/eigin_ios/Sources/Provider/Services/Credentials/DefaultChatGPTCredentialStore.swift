@@ -13,21 +13,41 @@ import Foundation
 /// previous token fails terminally and destroys the connection. The actor
 /// queues refreshes so concurrent requests share one in-flight refresh
 /// instead of racing.
+/// Storage contract shared by every refreshable provider credential used by
+/// the inference path: hand out a valid access token, clear on sign-out.
+/// Credentials differ per provider (ChatGPT's carries an ID token and issued
+/// client ID; Infercom's is the exchanged API token), so the save path and
+/// the credential-specific reads are typed sub-protocols
+/// (``ChatGPTCredentialStoring`` / ``InfercomCredentialStoring``), not members
+/// here — the stores never meet except through this contract.
 protocol ProviderCredentialStoring: Sendable {
     /// A valid access token for this provider, refreshing first when needed.
     /// `nil` when nothing is stored or the refresh failed — terminal refresh
     /// failures clear the store, which is the durable "sign in again" signal.
     func validAccessToken(providerID: UUID) async -> String?
-    func save(_ credential: ChatGPTCredential, providerID: UUID) async
     /// Clears all stored credential data for the provider.
     func clear(providerID: UUID) async
+}
+
+/// The ChatGPT-specific members: SIWC saves a validated ID token and issues
+/// per-install identifiers the sign-in flow reads back.
+protocol ChatGPTCredentialStoring: ProviderCredentialStoring {
+    func save(_ credential: ChatGPTCredential, providerID: UUID) async
     func clientID(providerID: UUID) async -> String?
     func idToken(providerID: UUID) async -> String?
     /// The stable per-install host ID sent as `ext_agent_host_id`.
     func hostID() async -> String?
 }
 
-actor DefaultChatGPTCredentialStore: ProviderCredentialStoring {
+/// The Infercom-specific members: save the exchanged credential, and revoke
+/// the refresh token server-side on sign-out (no logout endpoint exists).
+protocol InfercomCredentialStoring: ProviderCredentialStoring {
+    func save(_ credential: InfercomCredential, providerID: UUID) async
+    /// Revokes the stored refresh token (best-effort) and clears the store.
+    func revokeAndClear(providerID: UUID) async
+}
+
+actor DefaultChatGPTCredentialStore: ChatGPTCredentialStoring {
     enum Suffix {
         static let accessToken = "access_token"
         static let refreshToken = "refresh_token"

@@ -61,6 +61,7 @@ struct ProviderConnectSheetContent: View {
     @Environment(\.colors) private var colors
     @Injected(\.keychainService) private var keychainService
     @Injected(\.chatGPTCredentialStore) private var chatGPTCredentialStore
+    @Injected(\.infercomCredentialStore) private var infercomCredentialStore
     @Injected(\.aiConsentStore) private var consentStore
 
     let mode: Mode
@@ -98,7 +99,7 @@ struct ProviderConnectSheetContent: View {
     }
 
     private var route: Route {
-        if preset != nil, method == .oAuthPKCE || method == .chatGPTSubscription { return .signIn }
+        if preset != nil, method.isSignIn { return .signIn }
         if preset != nil { return .apiKey }
         return .address
     }
@@ -118,6 +119,8 @@ struct ProviderConnectSheetContent: View {
     @State private var pendingBaseURL: String?
     /// ChatGPT sign-in: full credential held until Done commits the provider.
     @State private var pendingChatGPTCredential: ChatGPTCredential?
+    /// Infercom sign-in: exchanged credential held until Done commits.
+    @State private var pendingInfercomCredential: InfercomCredential?
     /// One state for the consent screen — a two-state (flag + URL) sheet
     /// can present blank when SwiftUI snapshots the content before the URL
     /// lands. Dismissal cancels the in-flight flow.
@@ -366,9 +369,22 @@ struct ProviderConnectSheetContent: View {
         }
     }
 
+    /// Created on demand for the same reason as the ChatGPT service.
+    private var infercomService: (any InfercomSignInService)? {
+        if case .preset(let preset, _) = mode, preset.authMethod == .infercomSignIn {
+            DefaultInfercomSignInService()
+        } else {
+            nil
+        }
+    }
+
     private func startOAuth() {
         if chatGPTService != nil {
             startChatGPTSignIn()
+            return
+        }
+        if infercomService != nil {
+            startInfercomSignIn()
             return
         }
         guard let oauthService, !isAuthenticating else { return }
@@ -462,6 +478,46 @@ struct ProviderConnectSheetContent: View {
         }
     }
 
+    // MARK: - Infercom sign-in
+
+    /// Sign in with Infercom: PKCE login in the system browser (via the
+    /// shared `PKCEOAuthFlow`), then the RFC 8693 exchange that turns the
+    /// login access token into the API Bearer token. Nothing is saved until
+    /// the check passes and the user consents.
+    private func startInfercomSignIn() {
+        guard let infercomService, !isAuthenticating else { return }
+        isAuthenticating = true
+        connectionError = nil
+        step = .working
+        connectAttempt += 1
+        let attempt = connectAttempt
+
+        Task {
+            func isCurrent() -> Bool {
+                attempt == connectAttempt
+            }
+            defer { isAuthenticating = false }
+            do {
+                let credential = try await infercomService.authenticate()
+                guard isCurrent() else { return }
+                pendingInfercomCredential = credential
+                Haptics.success()
+                await createProviderAndContinue(
+                    apiToken: credential.apiToken,
+                    attempt: attempt
+                )
+            } catch InfercomSignInError.userCancelled, is CancellationError {
+                guard isCurrent() else { return }
+                step = .start
+            } catch {
+                guard isCurrent() else { return }
+                connectionError = ConnectionError(from: error)
+                Haptics.error()
+                step = .failed
+            }
+        }
+    }
+
     // MARK: - Checks and creation
 
     /// The check is the connect: fetching the model list and a one-token
@@ -488,7 +544,14 @@ struct ProviderConnectSheetContent: View {
         }
         let speculativeBaseURL: String = switch mode {
         case .preset(let preset, _):
-            preset.baseURL
+            // Signed-in Infercom is checked and saved with the sentinel so
+            // the credential resolver can tell it from manual-key Infercom;
+            // the client factory maps the sentinel to the real base URL.
+            if method == .infercomSignIn {
+                ProviderPreset.infercomSignInBaseURL
+            } else {
+                preset.baseURL
+            }
         case .custom:
             // A bare host is assumed to be https.
             ConnectIntegrationSheet.normalizedAddress(address)
@@ -553,7 +616,15 @@ struct ProviderConnectSheetContent: View {
                 ? createdModels
                 : known
 
-        if let credential = pendingChatGPTCredential {
+        if let credential = pendingInfercomCredential {
+            // Save before the provider becomes visible, same kill-window
+            // argument as the ChatGPT credential above.
+            Task {
+                await infercomCredentialStore.save(credential, providerID: provider.id)
+                modelContext.insert(provider)
+                onComplete(provider)
+            }
+        } else if let credential = pendingChatGPTCredential {
             // Save before the provider becomes visible: a kill between insert
             // and save would leave a connection that looks signed in but is
             // not. The credential store is fast; Done can afford the await.

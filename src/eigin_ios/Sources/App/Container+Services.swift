@@ -128,7 +128,7 @@ extension Container {
     }
 
     /// Keychain-backed storage and refresh for ChatGPT sign-in credentials.
-    var chatGPTCredentialStore: Factory<any ProviderCredentialStoring> {
+    var chatGPTCredentialStore: Factory<any ChatGPTCredentialStoring> {
         self {
             DefaultChatGPTCredentialStore(
                 keychain: self.keychainService(),
@@ -137,10 +137,20 @@ extension Container {
         }.singleton
     }
 
+    /// Keychain-backed storage and refresh for Infercom sign-in credentials.
+    var infercomCredentialStore: Factory<any InfercomCredentialStoring> {
+        self {
+            DefaultInfercomCredentialStore(keychain: self.keychainService())
+        }.singleton
+    }
+
     /// Resolves the refreshable credential store a provider needs, by provider.
     var providerCredentialResolver: Factory<any ProviderCredentialResolving> {
         self {
-            DefaultProviderCredentialResolver(chatGPT: self.chatGPTCredentialStore())
+            DefaultProviderCredentialResolver(
+                chatGPT: self.chatGPTCredentialStore(),
+                infercom: self.infercomCredentialStore()
+            )
         }.singleton
     }
 

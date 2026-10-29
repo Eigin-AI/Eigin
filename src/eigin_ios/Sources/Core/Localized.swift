@@ -1113,6 +1113,23 @@ enum Localized {
             }
         }
 
+        enum Infercom {
+            /// Suggestion when Infercom sign-in could not be completed
+            static var signinFailedSuggestion: String {
+                Localized.get("errors.infercom.signinFailedSuggestion")
+            }
+
+            /// Suggestion when the Infercom account's email is unverified
+            static var unverifiedEmailSuggestion: String {
+                Localized.get("errors.infercom.unverifiedEmailSuggestion")
+            }
+
+            /// Error title when the Infercom account's email is unverified
+            static var unverifiedEmailTitle: String {
+                Localized.get("errors.infercom.unverifiedEmailTitle")
+            }
+        }
+
         enum Network {
             /// Short error title when the device has no internet connection
             static var noConnection: String {
