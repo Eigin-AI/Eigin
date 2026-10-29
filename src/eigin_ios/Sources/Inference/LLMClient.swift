@@ -41,6 +41,14 @@ enum LLMClientFactory {
             // access token. The sentinel never reaches the wire.
             return ResponsesAPIClient(apiToken: apiToken)
         }
+        if ProviderPreset.isInfercomSignIn(baseURL) {
+            // Infercom sign-in: OpenAI-compatible API with the exchanged,
+            // refreshable Bearer token. The sentinel never reaches the wire.
+            return OpenAICompatibleClient(
+                baseURL: InfercomSignInConstants.apiBaseURL,
+                apiToken: apiToken
+            )
+        }
         return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken)
     }
 }

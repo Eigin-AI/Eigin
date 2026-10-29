@@ -23,11 +23,11 @@ protocol ChatGPTSignInService: Sendable {
 }
 
 struct DefaultChatGPTSignInService: ChatGPTSignInService {
-    private let credentialStore: any ProviderCredentialStoring
+    private let credentialStore: any ChatGPTCredentialStoring
     private let urlSession: URLSession
 
     init(
-        credentialStore: any ProviderCredentialStoring,
+        credentialStore: any ChatGPTCredentialStoring,
         urlSession: URLSession = .shared
     ) {
         self.credentialStore = credentialStore

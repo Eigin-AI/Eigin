@@ -3409,6 +3409,57 @@
         }
       }
     },
+    "errors.infercom.signinFailedSuggestion": {
+      "comment": "Suggestion when Infercom sign-in could not be completed",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login kunne ikke fuldføres. Tjek din forbindelse, og prøv igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in couldn't be completed. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "errors.infercom.unverifiedEmailSuggestion": {
+      "comment": "Suggestion when the Infercom account's email is unverified",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infercom kunne ikke verificere din konto. Tjek din indbakke for bekræftelsesmailen fra Infercom, bekræft din adresse, og prøv igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infercom couldn't verify your account. Check your inbox for the verification email from Infercom, confirm your address, then try again."
+          }
+        }
+      }
+    },
+    "errors.infercom.unverifiedEmailTitle": {
+      "comment": "Error title when the Infercom account's email is unverified",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekræft din e-mail for at fuldføre login"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verify your email to finish sign-in"
+          }
+        }
+      }
+    },
     "errors.network.noConnection": {
       "comment": "Short error title when the device has no internet connection",
       "localizations": {

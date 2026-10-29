@@ -188,7 +188,9 @@ enum PKCEOAuthFlow {
         return try JSONDecoder().decode(TokenResponse.self, from: data)
     }
 
-    private static func formEncode(_ params: [String: String]) -> String {
+    /// Strict form encoding per RFC 6749: only alphanumerics and `-._~`
+    /// survive unescaped.
+    static func formEncode(_ params: [String: String]) -> String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
         return params.map { key, value in

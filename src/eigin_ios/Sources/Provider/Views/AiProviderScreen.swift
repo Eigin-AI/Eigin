@@ -15,6 +15,7 @@ struct AiProviderScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Injected(\.keychainService) private var keychainService
+    @Injected(\.infercomCredentialStore) private var infercomCredentialStore
 
     @Bindable var provider: Provider
 
@@ -32,15 +33,25 @@ struct AiProviderScreen: View {
     }
 
     private var connectsVia: String {
-        preset?.authMethod == .oAuthPKCE || preset?.authMethod == .chatGPTSubscription
+        // OAuth-swap records carry the preset's real base URL, so a matching
+        // preset with .oAuthPKCE means sign-in. True credential sign-ins are
+        // recognized from the sentinel instead — same preset as manual key.
+        preset?.authMethod == .oAuthPKCE || isSignedInProvider
             ? Localized.Provider.Connect.viaSignIn
             : Localized.Provider.Connect.viaApiKey
     }
 
-    /// ChatGPT subscription sign-in carries a refreshable credential, not a
-    /// static key — nothing to mask, and replacement means signing in again.
-    private var isChatGPTProvider: Bool {
-        ProviderPreset.isChatGPTSubscription(provider.baseURL)
+    /// How this record routes. Sign-in records carry a sentinel base URL;
+    /// everything else is a plain key (or no credential at all). Everything
+    /// below branches on this one value.
+    private var signInKind: ProviderPreset.SignInKind? {
+        ProviderPreset.signInKind(provider.baseURL)
+    }
+
+    /// Whether this record carries a refreshable credential instead of a
+    /// static keychain key — nothing to mask, replacement means signing in.
+    private var isSignedInProvider: Bool {
+        signInKind != nil
     }
 
     var body: some View {
@@ -69,7 +80,7 @@ struct AiProviderScreen: View {
 
                 facts
 
-                if isChatGPTProvider {
+                if signInKind == .chatGPTSubscription {
                     signInRefresh
                 }
 
@@ -163,7 +174,7 @@ struct AiProviderScreen: View {
                     value: connectsVia,
                     accessory: .none
                 ),
-            ] + (isChatGPTProvider ? [] : [
+            ] + (isSignedInProvider ? [] : [
                 AppRowSpec(
                     title: Localized.Provider.AiScreen.Facts.key,
                     value: maskedKey,
@@ -388,8 +399,14 @@ struct AiProviderScreen: View {
 
     private func removeProvider() {
         keychainService.delete(key: keychainService.providerKey(for: provider.id))
-        if isChatGPTProvider {
+        switch signInKind {
+        case .chatGPTSubscription:
             Task { await chatGPTCredentialStore.clear(providerID: provider.id) }
+        case .infercomSignIn:
+            // Revoke the refresh token server-side, then drop local tokens.
+            Task { await infercomCredentialStore.revokeAndClear(providerID: provider.id) }
+        case nil:
+            break
         }
         modelContext.delete(provider)
         dismiss()

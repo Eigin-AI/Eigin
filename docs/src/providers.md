@@ -8,7 +8,7 @@ A built-in provider backed by Eigin's cloud inference proxy. It's the easiest wa
 
 ## Cloud providers
 
-Bring your own key to a third-party provider. Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom, Corti. Each preset bundles a base URL, logo, help text, and a link to get an API key. You can also add a custom provider with any OpenAI-compatible base URL. Or skip keys entirely: link a provider with an account you already have — EUrouter, OpenRouter, or OpenAI through a ChatGPT Plus or Pro subscription.
+Third-party providers connect in three ways: a manual API key, an OAuth sign-in that issues you a provider API key (OpenRouter, EUrouter), or a full account sign-in where the app holds refreshable OAuth tokens — a subscription (ChatGPT) or a provider account (Infercom). Built-in presets: OpenAI, Anthropic, Google (AI Studio), Mistral, OpenRouter, EUrouter, Berget, Infercom, Corti. Each preset bundles a base URL, logo, help text, and a link to get an API key where one applies. You can also add a custom provider with any OpenAI-compatible base URL, and every sign-in provider may also accept a manual key.
 
 ## Local providers
 
