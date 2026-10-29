@@ -5,7 +5,12 @@ test.use({ javaScriptEnabled: false });
 for (const locale of ["en", "da"] as const) {
   test(`${locale} pages expose complete metadata before JavaScript`, async ({ page }) => {
     for (const [path, title] of [
-      ["", "Eigin"],
+      [
+        "",
+        locale === "en"
+          ? "Eigin · Personal AI that belongs to you"
+          : "Eigin · Personlig AI, der tilhører dig",
+      ],
       ["trust/", `${locale === "en" ? "Trust" : "Tillid"} · Eigin`],
       ["roadmap/", "Roadmap · Eigin"],
       ["contact/", `${locale === "en" ? "Contact" : "Kontakt"} · Eigin`],
@@ -20,6 +25,7 @@ for (const locale of ["en", "da"] as const) {
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", canonical);
       await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", canonical);
       await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
+      await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
       const description = await page.locator('meta[name="description"]').getAttribute("content");
       expect(description?.length).toBeGreaterThan(10);
       await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
@@ -49,7 +55,13 @@ for (const locale of ["en", "da"] as const) {
 
 test("root URL has a branded preview without following its language redirect", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle("Eigin");
+  await expect(page).toHaveTitle("Eigin · Personal AI that belongs to you");
+  for (const selector of ['meta[property="og:title"]', 'meta[name="twitter:title"]']) {
+    await expect(page.locator(selector)).toHaveAttribute(
+      "content",
+      "Eigin · Personal AI that belongs to you",
+    );
+  }
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://eigin.ai/");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",

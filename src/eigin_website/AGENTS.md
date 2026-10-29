@@ -29,9 +29,9 @@ Tests use port 5274; override with `WEBSITE_TEST_PORT`. Check English/Danish and
 
 ## Metadata and assets
 
-`PageHead.svelte` prerenders titles and social metadata. Homepage title: `Eigin`; other pages: `Page name · Eigin`. Shared card copy and public origin live in `src/lib/content/social.json`.
+`PageHead.svelte` prerenders titles and social metadata. Homepage titles: `Eigin · Personal AI that belongs to you` (English) and `Eigin · Personlig AI, der tilhører dig` (Danish); other pages: `Page name · Eigin`. Shared card copy and public origin live in `src/lib/content/social.json`.
 
-Regenerate committed favicon/social assets with `cargo run --manifest-path tools/Cargo.toml -- website assets`. This requires brand fonts in `design/assets/fonts/`; keep raw fonts out of `static/`.
+Regenerate committed favicon/social assets with `cargo run --manifest-path tools/Cargo.toml -- website assets`. The bird artwork is shared across locales and needs no fonts. Keep raw fonts out of `static/`.
 
 ## Publishing
 

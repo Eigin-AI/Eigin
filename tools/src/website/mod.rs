@@ -20,7 +20,7 @@ pub struct Args {
 
 #[derive(clap::Subcommand, Clone, Copy, PartialEq)]
 enum Action {
-    /// Regenerate favicon and social images from the brand sources and installed fonts.
+    /// Regenerate favicon and social images from the brand sources.
     Assets,
     /// Build and publish using production Terraform outputs; never apply infrastructure.
     Release,
