@@ -6,8 +6,10 @@ import Testing
 @MainActor
 @Suite("GemmaModelManager")
 struct GemmaModelManagerTests {
-    /// Fake ``DeviceInfoService`` for deterministic capability tests.
-    struct FakeDeviceInfoService: DeviceInfoService {
+    /// Fake ``DeviceInfoService`` for deterministic capability tests. A class
+    /// so a running manager can observe capacity changes (e.g. storage freed
+    /// up) without being rebuilt.
+    final class FakeDeviceInfoService: DeviceInfoService, @unchecked Sendable {
         var diskBytes: Int64?
         var ramBytes: UInt64
         var identifier: String
@@ -54,7 +56,34 @@ struct GemmaModelManagerTests {
     /// Manager under test with no mirror-size fetch — gating tests don't need
     /// the relay, and the real fetcher would reach the network.
     private func makeManager(deviceInfo: FakeDeviceInfoService) -> GemmaModelManager {
-        GemmaModelManager(deviceInfo: deviceInfo, mirrorSizeFetcher: { _ in nil })
+        GemmaModelManager(
+            deviceInfo: deviceInfo,
+            mirrorSizeFetcher: { _ in nil },
+            downloader: FakeAssetDownloader()
+        )
+    }
+
+    /// In-memory ``AssetDownloading`` — no background session, no network.
+    @MainActor
+    private final class FakeAssetDownloader: AssetDownloading {
+        private(set) var downloadCount = 0
+
+        func download(_: AssetDownloadRequest) async throws {
+            downloadCount += 1
+        }
+
+        func observeProgress(
+            assetID: String,
+            _: @escaping @MainActor (AssetDownloadProgress, AssetDownloader.Phase) -> Void
+        ) -> Task<Void, Never> {
+            Task {}
+        }
+
+        func cancel(assetID _: String) {}
+
+        func isDownloading(assetID _: String) -> Bool {
+            false
+        }
     }
 
     // MARK: – RAM gating
@@ -151,6 +180,54 @@ struct GemmaModelManagerTests {
         )
 
         #expect(manager.hasRequiredDiskSpace())
+    }
+
+    /// A blocked storage preflight must leave the manager in `.unavailable`,
+    /// not any busy state that would read as “downloading”.
+    @Test func blockedStoragePreflightLeavesNoBusyState() async {
+        let manager = makeManager(
+            deviceInfo: FakeDeviceInfoService(diskBytes: 1)
+        )
+        await manager.download()
+
+        guard case .unavailable = manager.state else {
+            Issue.record("Expected .unavailable state, got \(manager.state)")
+            return
+        }
+        #expect(!manager.state.isBusy)
+    }
+
+    /// After the storage shortfall is resolved, retrying from `.unavailable`
+    /// must start the download. The fake downloader records the attempt so the
+    /// test never touches the shared background session.
+    @Test func retryAfterStorageFreesUpStartsTheDownload() async {
+        let deviceInfo = FakeDeviceInfoService(diskBytes: 1)
+        let downloader = FakeAssetDownloader()
+        let manager = GemmaModelManager(
+            deviceInfo: deviceInfo,
+            mirrorSizeFetcher: { _ in nil },
+            downloader: downloader
+        )
+        await manager.download()
+
+        guard case .unavailable = manager.state else {
+            Issue.record("Expected .unavailable after blocked preflight, got \(manager.state)")
+            return
+        }
+
+        // The manager holds the fake by reference, so freeing space on the
+        // fake is visible to the retry.
+        deviceInfo.diskBytes = GemmaModelManager.minimumRequiredFreeSpaceBytes + 1
+        await manager.download()
+
+        #expect(manager.state.isBusy)
+
+        // The state flips synchronously, but the download request reaches the
+        // fake from the manager's task; yield until it lands.
+        for _ in 0 ..< 100 where downloader.downloadCount == 0 {
+            await Task.yield()
+        }
+        #expect(downloader.downloadCount == 1)
     }
 
     /// A failed capacity query blocks the download explicitly, not silently.
