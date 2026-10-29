@@ -3,8 +3,10 @@ import Foundation
 
 /// Abstracts device hardware queries so services stay testable.
 protocol DeviceInfoService: Sendable {
-    /// Available free space on the device's primary file system, in bytes.
-    func freeDiskSpaceBytes() -> Int64?
+    /// Capacity iOS can make available for user-requested downloads, in bytes:
+    /// purgeable data included — the figure iPhone Storage shows. Nil when the
+    /// query fails.
+    func availableDiskSpaceBytes() -> Int64?
     /// Total physical RAM installed in the device, in bytes.
     func physicalMemoryBytes() -> UInt64
     /// Hardware model identifier, e.g. "iPhone16,1".
@@ -21,10 +23,12 @@ protocol DeviceInfoService: Sendable {
 
 /// Production implementation that queries hardware directly.
 struct DefaultDeviceInfoService: DeviceInfoService {
-    func freeDiskSpaceBytes() -> Int64? {
-        (try? FileManager.default.attributesOfFileSystem(
-            forPath: NSHomeDirectory()
-        )[.systemFreeSize]) as? Int64
+    func availableDiskSpaceBytes() -> Int64? {
+        // Queried on the home directory, which shares the data volume with
+        // Documents where downloaded models land.
+        try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+        ).volumeAvailableCapacityForImportantUsage
     }
 
     func physicalMemoryBytes() -> UInt64 {

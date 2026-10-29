@@ -22,7 +22,7 @@ struct GemmaModelManagerTests {
             self.identifier = identifier
         }
 
-        func freeDiskSpaceBytes() -> Int64? {
+        func availableDiskSpaceBytes() -> Int64? {
             diskBytes
         }
 
@@ -151,5 +151,19 @@ struct GemmaModelManagerTests {
         )
 
         #expect(manager.hasRequiredDiskSpace())
+    }
+
+    /// A failed capacity query blocks the download explicitly, not silently.
+    @Test func downloadTurnsUnavailableWhenCapacityIsUnreadable() async {
+        let manager = makeManager(
+            deviceInfo: FakeDeviceInfoService(diskBytes: nil)
+        )
+        await manager.download()
+
+        if case .unavailable(let message) = manager.state {
+            #expect(message.contains("GB"))
+        } else {
+            Issue.record("Expected .unavailable state, got \(manager.state)")
+        }
     }
 }

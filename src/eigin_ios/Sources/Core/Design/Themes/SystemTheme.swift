@@ -13,6 +13,7 @@ struct SystemTheme: Theme {
             impact: .init(
                 alternative: .orange,
                 base: .green,
+                coral: Color(hex: "#FE6C3B"),
                 elevated: Color(red: 0.26, green: 0.40, blue: 0.29),
                 subtle: .brown
             ),
