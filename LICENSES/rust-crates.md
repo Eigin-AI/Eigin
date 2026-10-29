@@ -19,6 +19,13 @@
 | http | https://github.com/hyperium/http | 1 | MIT OR Apache-2.0 |
 | minio | https://github.com/minio/minio-rs | 0.4 | Apache-2.0 |
 
+## Vendored SQLx core
+
+The relay includes `sqlx-core` 0.8.6 (MIT OR Apache-2.0) from
+https://github.com/launchbadge/sqlx, with a local pool-return timeout patch.
+Source, full license texts, provenance, and modification details are in
+[`src/eigin_relay/vendor/sqlx-core`](../src/eigin_relay/vendor/sqlx-core/PATCH.md).
+
 ## Notes
 
 - License types listed are as of the date this file was last updated (2026-05-07).

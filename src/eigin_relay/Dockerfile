@@ -5,6 +5,7 @@ RUN rustup target add x86_64-unknown-linux-musl
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
+COPY vendor ./vendor
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release --target x86_64-unknown-linux-musl && rm -rf src
 
