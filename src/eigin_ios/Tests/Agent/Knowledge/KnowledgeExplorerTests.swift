@@ -23,6 +23,38 @@ struct KnowledgeExplorerTests {
         #expect(KnowledgePresentation(entity("actor.user")).summary == nil)
     }
 
+    @Test(arguments: [
+        ("strategy_2026", "Strategy 2026"),
+        ("john_doe", "John doe"),
+        ("release_2026_10_23", "Release 2026 10 23"),
+        ("release_2026-10-23", "Release 2026-10-23"),
+        ("release_v1.2.3", "Release v1.2.3"),
+        ("initiative.q3_2026", "Initiative.q3 2026"),
+        ("q_3_2026", "Q 3 2026"),
+        ("draft_v_1", "Draft v 1"),
+        ("phase-2_plan", "Phase-2 plan"),
+        ("API_v2", "API v2"),
+        ("årsplan_2026", "Årsplan 2026"),
+    ])
+    func fallbackNameFormatsIDs(id: String, expected: String) {
+        let presentation = KnowledgePresentation(entity("note.\(id)"))
+        #expect(presentation.name == expected)
+    }
+
+    @Test func storedNameOverridesFallbackFormatting() {
+        let presentation = KnowledgePresentation(entity("note.strategy_2026", fields: [
+            FirmField(name: "name", value: .string(value: "2026 Strategy: API_v2")),
+        ]))
+        #expect(presentation.name == "2026 Strategy: API_v2")
+    }
+
+    @Test func blankNameUsesFormattedID() {
+        let presentation = KnowledgePresentation(entity("note.strategy_2026", fields: [
+            FirmField(name: "name", value: .string(value: " \n ")),
+        ]))
+        #expect(presentation.name == "Strategy 2026")
+    }
+
     @Test func connectionRangeFormatsCountsAsText() {
         let formatted = Localized.Knowledge.Graph.connectionRange("7", "12", "18")
         #expect(formatted.contains("7–12"))

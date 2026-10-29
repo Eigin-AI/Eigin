@@ -77,11 +77,9 @@ struct KnowledgePresentation {
         let id = Self.shortID(entity)
         if let storedName = string("name") {
             name = storedName
-        } else if id.range(of: "^[a-z]+(?:_[a-z]+)*$", options: .regularExpression) != nil {
+        } else {
             let words = id.replacingOccurrences(of: "_", with: " ")
             name = words.prefix(1).uppercased() + words.dropFirst()
-        } else {
-            name = id
         }
         let primary: String? = switch entity.entityType {
         case "fact": "claim"
