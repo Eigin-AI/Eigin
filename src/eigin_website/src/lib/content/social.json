@@ -2,14 +2,12 @@
   "origin": "https://eigin.ai",
   "en": {
     "locale": "en_GB",
-    "tagline": ["AI that feels personal,", "because it is yours."],
-    "description": "Personal AI that belongs to you. Open technology, built in Europe.",
-    "imageAlt": "Eigin — AI that feels personal, because it is yours."
+    "description": "Your personal AI agent for ideas, questions and everyday tasks. Built to protect your privacy and keep you in control.",
+    "imageAlt": "Eigin’s charcoal bird on an olive-green background."
   },
   "da": {
     "locale": "da_DK",
-    "tagline": ["AI så personlig,", "at den skal være din."],
-    "description": "Personlig AI, der tilhører dig. Åben teknologi, bygget i Europa.",
-    "imageAlt": "Eigin — AI så personlig, at den skal være din."
+    "description": "Din personlige AI-agent til idéer, spørgsmål og hverdagens opgaver. Bygget til at værne om dit privatliv og din kontrol.",
+    "imageAlt": "Eigins koksgrå fugl på en olivengrøn baggrund."
   }
 }

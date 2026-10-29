@@ -6,7 +6,12 @@
   import { site } from "#lib/content/site/index.ts";
 </script>
 
-<PageHead title="Eigin" description={social.en.description} locale="en" root />
+<PageHead
+  title="Eigin · Personal AI that belongs to you"
+  description={social.en.description}
+  locale="en"
+  root
+/>
 <main class="language-page">
   <div class="language-content">
     <span class="language-brand" aria-hidden="true"><Icon name="brand/avatar" size={64} /></span>

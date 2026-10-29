@@ -1,8 +1,9 @@
 import type { HomeContent } from "./types";
 
 const content: HomeContent = {
-  title: "Eigin",
-  description: "Personal AI that belongs to you. Open technology, built in Europe.",
+  title: "Eigin · Personal AI that belongs to you",
+  description:
+    "Your personal AI agent for ideas, questions and everyday tasks. Built to protect your privacy and keep you in control.",
   hero: {
     headline: "AI so personal,\nit has to be yours",
     body: "Eigin is a personal AI agent built to be private, safe and under your control.",
