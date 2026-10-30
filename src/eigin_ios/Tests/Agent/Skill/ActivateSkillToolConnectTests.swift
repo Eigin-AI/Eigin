@@ -9,6 +9,7 @@ import Testing
 @Suite("ActivateSkillTool - connecting a capability", .serialized)
 @MainActor
 struct ActivateSkillToolConnectTests {
+    private let connectionGate = SkillConnectionGate()
     private let declines = DeclinedCapabilities(defaults: .isolated())
     private let calendarService = FakeCalendarService()
     private let reminderService = FakeReminderService()
@@ -43,6 +44,7 @@ struct ActivateSkillToolConnectTests {
         container.mainContext.insert(agent)
         let chat = Chat(agentID: agent.id)
         container.mainContext.insert(chat)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
         return (agent, chat, container)
     }
 
@@ -55,7 +57,9 @@ struct ActivateSkillToolConnectTests {
         let tool = ActivateSkillTool(
             chatID: chat.id,
             onConnectCapability: handler,
-            capabilityDeclines: declines
+            capabilityDeclines: declines,
+            connectionGate: connectionGate,
+            userMessageID: connectionGate.messageID(chatID: chat.id)
         )
         return await tool.execute(
             ToolCall(
@@ -67,8 +71,140 @@ struct ActivateSkillToolConnectTests {
         )
     }
 
+    private func requestAndReply(chat: Chat, agent: Agent) async {
+        let first = await activate("health", chat: chat, agent: agent) { _ in
+            Issue.record("Initial attempt must not open a sheet")
+            return .cancelled
+        }
+        #expect(first.content.contains("confirmation_required"))
+        #expect(!chat.isSkillActive("health"))
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+    }
+
+    @Test func initialAndSameTurnRetriesNeverOpenASheet() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        let asks = Asks()
+        for _ in 0 ..< 3 {
+            let result = await activate("health", chat: chat, agent: agent) { request in
+                asks.requests.append(request)
+                return .connected
+            }
+            #expect(result.content.contains("confirmation_required"))
+        }
+        #expect(asks.requests.isEmpty)
+        #expect(!chat.isSkillActive("health"))
+    }
+
+    @Test func cancellationRequiresAFreshHandshake() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        await requestAndReply(chat: chat, agent: agent)
+        let asks = Asks()
+        let handler: ConnectCapabilityHandler = { request in
+            asks.requests.append(request)
+            return .cancelled
+        }
+        let cancelled = await activate("health", chat: chat, agent: agent, handler: handler)
+        #expect(cancelled.content.contains("stopped"))
+        _ = await activate("health", chat: chat, agent: agent, handler: handler)
+        #expect(asks.requests.count == 1)
+        #expect(!declines.isDeclined(.health))
+        #expect(!chat.isSkillActive("health"))
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let fresh = await activate("health", chat: chat, agent: agent, handler: handler)
+        #expect(fresh.content.contains("confirmation_required"))
+        #expect(asks.requests.count == 1)
+    }
+
+    @Test func unknownUserBoundaryCannotOpenASheet() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        let asks = Asks()
+        let tool = ActivateSkillTool(chatID: chat.id, onConnectCapability: { request in
+            asks.requests.append(request)
+            return .connected
+        }, capabilityDeclines: declines, connectionGate: SkillConnectionGate())
+        let result = await tool.execute(ToolCall(
+            id: "unknown", type: "function",
+            function: .init(
+                name: "activate_skill",
+                arguments: #"{"skill_id":"health","confirm":true}"#
+            )
+        ), agent: agent)
+        #expect(result.content.contains("confirmation_required"))
+        #expect(asks.requests.isEmpty)
+    }
+
+    @Test func incompleteConnectionCannotImmediatelyReopenTheSheet() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        await requestAndReply(chat: chat, agent: agent)
+        let asks = Asks()
+        let handler: ConnectCapabilityHandler = { request in
+            asks.requests.append(request)
+            return .connected
+        }
+        let result = await activate("health", chat: chat, agent: agent, handler: handler)
+        #expect(result.content.contains("still need"))
+        _ = await activate("health", chat: chat, agent: agent, handler: handler)
+        #expect(asks.requests.count == 1)
+        #expect(!chat.isSkillActive("health"))
+    }
+
+    @Test func staleActiveSkillStillRequiresAReply() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        SkillActivation.activate(skillID: "health", on: chat, activatingToolCallID: "old")
+        let result = await activate("health", chat: chat, agent: agent) { _ in
+            Issue.record("Stale skill must not bypass confirmation")
+            return .connected
+        }
+        #expect(result.content.contains("confirmation_required"))
+        #expect(!chat.isSkillActive("health"))
+    }
+
+    @Test func delayedToolConstructionCannotBorrowANewerUserReply() async throws {
+        let (agent, chat, container) = try makeFixture()
+        _ = container
+        let initiatingMessage = connectionGate.messageID(chatID: chat.id)
+        _ = await activate("health", chat: chat, agent: agent) { _ in .cancelled }
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        // A registry rebuilt for the old turn must retain its initiating boundary.
+        let tool = ActivateSkillTool(
+            chatID: chat.id,
+            onConnectCapability: { _ in
+                Issue.record("An old turn must not consume a newer reply")
+                return .cancelled
+            },
+            capabilityDeclines: declines,
+            connectionGate: connectionGate,
+            userMessageID: initiatingMessage
+        )
+        let result = await tool.execute(ToolCall(
+            id: "delayed", type: "function",
+            function: .init(name: "activate_skill", arguments: #"{"skill_id":"health"}"#)
+        ), agent: agent)
+        #expect(result.content.contains("confirmation_required"))
+    }
+
+    @Test func aPendingRequestDoesNotAuthorizeAnotherChat() async throws {
+        let (agent, chat, container) = try makeFixture()
+        await requestAndReply(chat: chat, agent: agent)
+        let other = Chat(agentID: agent.id)
+        container.mainContext.insert(other)
+        connectionGate.beginUserTurn(chatID: other.id, messageID: UUID().uuidString)
+        let result = await activate("health", chat: other, agent: agent) { _ in
+            Issue.record("Another chat needs its own handshake")
+            return .connected
+        }
+        #expect(result.content.contains("confirmation_required"))
+        #expect(!other.isSkillActive("health"))
+    }
+
     @Test func connectingActivatesTheSkill() async throws {
         let (agent, chat, container) = try makeFixture()
+        await requestAndReply(chat: chat, agent: agent)
         let asks = Asks()
 
         let result = await activate("health", chat: chat, agent: agent) { request in
@@ -94,6 +230,7 @@ struct ActivateSkillToolConnectTests {
     /// model would read as the activation failing (#296).
     @Test func activationReportsTheToolsTheSkillUnlocks() async throws {
         let (agent, chat, container) = try makeFixture()
+        await requestAndReply(chat: chat, agent: agent)
 
         let result = await activate("health", chat: chat, agent: agent) { _ in
             container.mainContext.insert(Integration(
@@ -189,6 +326,7 @@ struct ActivateSkillToolConnectTests {
 
     @Test func notNowIsRememberedSoItAsksOnce() async throws {
         let (agent, chat, container) = try makeFixture()
+        await requestAndReply(chat: chat, agent: agent)
         _ = container
         let asks = Asks()
         let handler: ConnectCapabilityHandler = { request in

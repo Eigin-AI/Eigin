@@ -3,6 +3,7 @@ import Factory
 import Foundation
 import SwiftData
 import Testing
+import UIKit
 
 @Suite("ChatViewModel", .serialized)
 struct ChatViewModelTests {
@@ -305,6 +306,107 @@ struct ChatViewModelTests {
         #expect(userCountAfter == userCountBefore, "retry must not duplicate the user message")
         #expect(vm.window.messages.last?.role == "assistant")
         #expect(vm.messageText.isEmpty)
+    }
+
+    @Test("retry preserves image files and replays the original attachment references")
+    @MainActor
+    func retryPreservesAttachments() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.throwOnEventStream(URLError(.cannotConnectToHost))
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = DefaultChatAttachmentStore(root: root)
+        Container.shared.chatAttachmentStore.register { store }
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10)).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+        }
+        let attachment = try store.save(
+            imageData: #require(image.jpegData(compressionQuality: 0.9)),
+            id: UUID()
+        )
+        vm.stagedAttachments = [attachment]
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        #expect(vm.chatError != nil)
+        let original = try #require(vm.window.messages.last)
+        service.enqueueEventStream([.contentDelta("I can see the image"), .finished(.stop)])
+        vm.retryLastTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        #expect(store.load(id: attachment.id) != nil)
+        #expect(store.loadThumbnail(id: attachment.id) != nil)
+        let replayed = try #require(service.capturedEventMessages
+            .last(where: { $0.role == "user" }))
+        #expect(replayed.localID == original.localID)
+        #expect(vm.window.messages.first(where: { $0.role == "user" })?.attachments?.first?
+            .id == attachment.id)
+        let rows = try container.mainContext.fetch(FetchDescriptor<Message>())
+        #expect(rows.first(where: { $0.role == "user" })?.attachments?.first?.id == attachment.id)
+    }
+
+    @Test("retry after confirmation guidance and a failed response cannot open a connection sheet")
+    @MainActor
+    func retryDoesNotCountAsConnectionConsent() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "connect-health",
+            type: "function",
+            function: .init(
+                name: "activate_skill",
+                arguments: #"{"skill_id":"health"}"#
+            )
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventFailure(URLError(.cannotConnectToHost))
+        chat.title = "Connection confirmation"
+        chat.titleOrigin = .edited
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        Container.shared.healthService.register { FakeHealthService() }
+        DeclinedCapabilities().clear(.health)
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        #expect(vm.chatError != nil)
+        #expect(service.capturedEventMessages
+            .contains {
+                $0.role == "tool" && ($0.content?.contains("confirmation_required") ?? false)
+            })
+        let originalID = try #require(vm.window.messages.last?.localID)
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventStream([
+            .contentDelta("May I open the connection screen?"),
+            .finished(.stop),
+        ])
+        vm.retryLastTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        // A broken gate waits on a sheet here; stop it so the regression fails without hanging.
+        for _ in 0 ..< 1000 {
+            if !vm.isTurnInProgress || vm.chatLoop.pendingConnection != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let openedOnRetry = vm.chatLoop.pendingConnection != nil
+        if vm.isTurnInProgress { vm.handleStop() }
+        await vm.streamTask?.value
+        #expect(!openedOnRetry)
+        #expect(vm.window.messages.first(where: { $0.role == "user" })?.localID == originalID)
+        #expect(service.capturedEventMessages
+            .contains {
+                $0.role == "tool" && ($0.content?.contains("confirmation_required") ?? false)
+            })
+
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventStream([.contentDelta("Okay"), .finished(.stop)])
+        vm.messageText = "Yes, open it"
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        for _ in 0 ..< 1000 {
+            if !vm.isTurnInProgress || vm.chatLoop.pendingConnection != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(vm.chatLoop.pendingConnection?.capabilities == [.health])
+        vm.chatLoop.resolveConnection(.cancelled)
+        if vm.isTurnInProgress, vm.chatLoop.pendingConnection != nil { vm.handleStop() }
+        await vm.streamTask?.value
     }
 
     // MARK: - continueTurn

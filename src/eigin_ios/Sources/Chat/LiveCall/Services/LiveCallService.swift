@@ -83,6 +83,7 @@ final class LiveCallService: @unchecked Sendable {
 
     /// Permission policy inherited from the parent chat (with prompting disabled).
     private var permissionPolicy: AgentPermissionPolicy?
+    private let skillConnectionGate = SkillConnectionGate()
     /// Chat ID inherited from the parent chat for chat-scoped tools.
     private var chatID: UUID?
     /// Space ID inherited from the parent chat for space-scoped tools.
@@ -617,6 +618,9 @@ final class LiveCallService: @unchecked Sendable {
         guard let gatekeeper else { return }
 
         let userMessage = ChatMessage(role: "user", content: text)
+        if let chatID {
+            skillConnectionGate.beginUserTurn(chatID: chatID, messageID: userMessage.localID)
+        }
         messages.append(userMessage)
         onPersist?([userMessage])
 
@@ -707,7 +711,9 @@ final class LiveCallService: @unchecked Sendable {
                 mode: .liveCall,
                 hasSpaces: false,
                 needsCompaction: false,
-                onConnectCapability: connectHandler
+                onConnectCapability: connectHandler,
+                skillConnectionGate: skillConnectionGate,
+                userMessageID: userMessage.localID
             )
 
             // Auto-compact if approaching context limits (silent, no progress UI)
@@ -758,7 +764,9 @@ final class LiveCallService: @unchecked Sendable {
                     mcpTools: mcpTools,
                     mcpSkills: turn.mcpSkills,
                     integrationToolsByCapability: integrationToolsByCapability,
-                    onConnectCapability: connectHandler
+                    onConnectCapability: connectHandler,
+                    skillConnectionGate: skillConnectionGate,
+                    userMessageID: userMessage.localID
                 )
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)
             }

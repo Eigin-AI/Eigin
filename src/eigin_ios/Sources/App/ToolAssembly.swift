@@ -63,7 +63,9 @@ extension ToolRegistry {
         integrationToolsByCapability: [Capability: [any Tool]] = [:],
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil,
-        onConnectCapability: ConnectCapabilityHandler? = nil
+        onConnectCapability: ConnectCapabilityHandler? = nil,
+        skillConnectionGate: SkillConnectionGate? = nil,
+        userMessageID: String? = nil
     ) -> ToolRegistry {
         let context = ToolContext(
             voiceNames: voiceNames,
@@ -72,7 +74,9 @@ extension ToolRegistry {
             canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
             onBrowse: onBrowse,
             onPresentOptions: onPresentOptions,
-            onConnectCapability: onConnectCapability
+            onConnectCapability: onConnectCapability,
+            skillConnectionGate: skillConnectionGate,
+            userMessageID: userMessageID
         )
         var tools = allChatTools(context: context)
         tools += mcpTools

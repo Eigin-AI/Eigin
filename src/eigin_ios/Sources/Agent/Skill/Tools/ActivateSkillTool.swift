@@ -31,11 +31,18 @@ struct ActivateSkillTool: Tool {
     private let onConnectCapability: ConnectCapabilityHandler?
     private let capabilityDeclines: DeclinedCapabilities
 
-    init(
+    private let connectionGate: SkillConnectionGate?
+    private let userMessageID: String?
+
+    @MainActor init(
         chatID: UUID? = nil,
         onConnectCapability: ConnectCapabilityHandler? = nil,
-        capabilityDeclines: DeclinedCapabilities = DeclinedCapabilities()
+        capabilityDeclines: DeclinedCapabilities = DeclinedCapabilities(),
+        connectionGate: SkillConnectionGate? = nil,
+        userMessageID: String? = nil
     ) {
+        self.connectionGate = connectionGate
+        self.userMessageID = userMessageID
         self.chatID = chatID
         self.onConnectCapability = onConnectCapability
         self.capabilityDeclines = capabilityDeclines
@@ -155,6 +162,7 @@ struct ActivateSkillTool: Tool {
                     toolCallID: id
                 )
             }
+            connectionGate?.clear(chatID: chat.id, skillID: skill.id)
             SkillActivation.activate(
                 skillID: skill.id,
                 on: chat,
@@ -255,10 +263,17 @@ struct ActivateSkillTool: Tool {
         }
         let missing = missingCapabilities(of: skill, context: context)
         if !missing.isEmpty,
-           let unconnected = await connect(missing, agent: agent, context: context, toolCallID: id)
+           let unconnected = await connect(
+               missing,
+               skillID: skill.id,
+               agent: agent,
+               context: context,
+               toolCallID: id
+           )
         {
             return unconnected
         }
+        connectionGate?.clear(chatID: chat.id, skillID: skill.id)
         SkillActivation.activate(
             skillID: skill.id,
             on: chat,
@@ -274,6 +289,7 @@ struct ActivateSkillTool: Tool {
     /// these are errors: a no is an answer, and the agent carries on without.
     @MainActor private func connect(
         _ missing: Set<Capability>,
+        skillID: String,
         agent: Agent,
         context: ModelContext,
         toolCallID id: String
@@ -302,20 +318,69 @@ struct ActivateSkillTool: Tool {
             )
         }
 
+        guard let chatID, let connectionGate else {
+            return notConnected(
+                Prompt.Skills.connectionUnavailable,
+                toolCallID: id
+            )
+        }
+        let attempt: UUID
+        switch connectionGate.request(
+            chatID: chatID,
+            skillID: skillID,
+            missing: missing,
+            messageID: userMessageID
+        ) {
+        case .askUser, .waitForUser:
+            return confirmationRequired(missing, names: names, toolCallID: id)
+        case .connect(let reservation):
+            attempt = reservation
+        }
+        defer { connectionGate.finish(chatID: chatID, skillID: skillID, attempt: attempt) }
+        guard !Task.isCancelled else {
+            return notConnected(
+                Prompt.Skills.connectionCancelled(connections: names),
+                toolCallID: id
+            )
+        }
         let request = CapabilityRequest(
             capabilities: missing,
             providerIDs: providers.map(\.id),
             agentName: agent.name
         )
-        switch await onConnectCapability(request) {
+        return await connectionOutcome(
+            onConnectCapability(request), missing: missing, names: names,
+            context: context, toolCallID: id
+        )
+    }
+
+    @MainActor private func confirmationRequired(
+        _ missing: Set<Capability>, names: String, toolCallID id: String
+    ) -> ToolResult {
+        ToolResult(
+            toolCallID: id,
+            content: ToolHelpers.output(result: [
+                "activated": false,
+                "status": "confirmation_required",
+                "capabilities": missing.map(\.rawValue).sorted(),
+                "reason": Prompt.Skills.connectionConfirmation(connections: names),
+            ]),
+            isError: false
+        )
+    }
+
+    @MainActor private func connectionOutcome(
+        _ outcome: CapabilityConnectResult,
+        missing: Set<Capability>, names: String,
+        context: ModelContext, toolCallID id: String
+    ) -> ToolResult? {
+        switch outcome {
         case .connected:
             missing.forEach(capabilityDeclines.clear)
-            // A skill needs all of its capabilities. If the person stopped
-            // part way (one provider of several), name what's left — the
-            // next activation asks for it.
+            // Verify every requested capability before activating.
             if let remaining = notConnectedAfterConnect(missing, context: context) {
                 return notConnected(
-                    "\(remaining) still need to be connected to use this skill. Activate it again to ask for them.",
+                    Prompt.Skills.connectionIncomplete(connections: remaining),
                     toolCallID: id
                 )
             }
@@ -327,7 +392,10 @@ struct ActivateSkillTool: Tool {
                 toolCallID: id
             )
         case .cancelled:
-            return notConnected("The user stopped before connecting \(names).", toolCallID: id)
+            return notConnected(
+                Prompt.Skills.connectionCancelled(connections: names),
+                toolCallID: id
+            )
         }
     }
 
