@@ -372,4 +372,27 @@ struct KnowledgeServiceEntityIDTests {
             try await !service.isRetired(type: "note", id: "chain_new", spaceID: nil, agentID: nil)
         )
     }
+
+    @Test func explicitAccessIsDebouncedAcrossQualifiedAndNormalizedIDs() async throws {
+        let service = try makeService()
+        try await service.addEntity(
+            note("access_draft_v1", content: "Read tracking"),
+            spaceID: nil,
+            agentID: nil
+        )
+        func count() async throws -> Double {
+            let sources = try await service.allVisibleSources(spaceID: nil, agentID: nil)
+            return try #require(sources.first { $0.path.contains("access_draft") }).accessCount
+        }
+        let initial = try await count()
+        await service.recordAccess(type: "note", id: "access_draft_v1", spaceID: nil, agentID: nil)
+        #expect(try await count() == initial + 1)
+        await service.recordAccess(
+            type: "note",
+            id: "note.access_draft_v_1",
+            spaceID: nil,
+            agentID: nil
+        )
+        #expect(try await count() == initial + 1)
+    }
 }

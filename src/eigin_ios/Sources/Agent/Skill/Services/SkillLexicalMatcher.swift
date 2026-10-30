@@ -41,9 +41,7 @@ enum SkillLexicalMatcher {
 
     /// Lowercased alphanumeric word tokens, dropping short words and fillers.
     static func tokens(_ text: String) -> [String] {
-        text.lowercased()
-            .split { !$0.isLetter && !$0.isNumber }
-            .map(String.init)
+        LexicalTokens.words(text)
             .filter { $0.count >= minimumPrefixLength && !stopwords.contains($0) }
     }
 
@@ -107,13 +105,7 @@ enum SkillLexicalMatcher {
     /// Consecutive-equivalent token sequence, so multi-word names
     /// ("Pull Reminders") only match as whole phrases.
     private static func containsPhrase(_ tokens: [String], _ phrase: [String]) -> Bool {
-        guard !phrase.isEmpty, tokens.count >= phrase.count else { return false }
-        for start in 0 ... (tokens.count - phrase.count)
-            where Array(tokens[start ..< start + phrase.count]) == phrase
-        {
-            return true
-        }
-        return false
+        LexicalTokens.containsPhrase(tokens, phrase)
     }
 
     /// The tool's own name from a namespaced capability key (`…__list_issues`),

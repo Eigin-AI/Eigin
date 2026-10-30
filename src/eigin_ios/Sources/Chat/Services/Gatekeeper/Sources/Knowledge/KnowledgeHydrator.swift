@@ -130,7 +130,7 @@ enum KnowledgeHydrator {
 
         let topScored = bestScored
             .values
-            .sorted { $0.score > $1.score }
+            .sorted(by: KnowledgeSearchEngine.ranksBefore)
             .prefix(maxEntries)
 
         var results: [RelevantKnowledgeEntry] = []
@@ -194,6 +194,7 @@ enum KnowledgeHydrator {
                         entity: entity,
                         qualifiedID: qualifiedID,
                         score: ratio,
+                        relevance: ratio,
                         chatID: nil
                     )
                 )

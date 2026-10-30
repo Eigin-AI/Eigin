@@ -24,7 +24,7 @@ All types share relationship fields (`relates_to`, `belongs_to`, `uses`, `descri
 
 | Tool | What it does |
 |---|---|
-| **Search** | Ranked results by relevance and use (see [Ranking](#ranking)); an empty query returns an overview. |
+| **Search** | Find relevant entries or look one up by ID (see [Ranking](#ranking)); an empty query returns an overview. |
 | **Get** | Full detail for one entry, optionally with expanded relations and chat context. |
 | **Add** | Create an entry; schema errors return the expected field structure. |
 | **Update** | Merge-update fields on an entry. |
@@ -38,12 +38,17 @@ Forget is the everyday way to retire a memory; delete is the rare, permanent one
 
 ## Ranking
 
-Results rank on relevance plus lightweight signals about how each memory is used:
+Search and hints use five signals:
 
-- **Recency and frequency** — a memory used recently, or used often, ranks ahead of one that's been sitting untouched.
-- **Importance** — rare but critical facts (an allergy, say) are protected so they surface when needed, even if they almost never come up.
+- **Words** — matches on IDs, names, and all the query's words rank highest.
+- **Meaning** — related entries can surface even when they use different words.
+- **Recency** — recently opened entries get a small lift.
+- **Frequency** — often-opened entries get a small lift, up to a limit. Past use fades over time.
+- **Importance** — critical facts get a small lift even when rarely opened.
 
-**Relevance always comes first.** An unrelated memory never outranks a clearly relevant one, no matter how important or frequently used — the signals only decide order among memories that are already a close match. New memories start on neutral footing and earn their standing through use.
+Searching by exact ID puts that entry first, within the current space and search filters.
+Opening an entry with `get_knowledge` counts as use. Search results leave its use history unchanged.
+Use and importance only adjust the order of close matches.
 
 ## Hydration
 

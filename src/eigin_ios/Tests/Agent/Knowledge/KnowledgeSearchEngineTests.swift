@@ -8,7 +8,7 @@ struct KnowledgeSearchEngineTests {
     // MARK: - Fixtures
 
     /// Make a bare entity with a name field.
-    private func namedEntity(type: String, id: String, name: String) -> FirmEntity {
+    func namedEntity(type: String, id: String, name: String) -> FirmEntity {
         FirmEntity(
             id: "\(type).\(id)",
             entityType: type,
@@ -17,7 +17,7 @@ struct KnowledgeSearchEngineTests {
     }
 
     /// Make a FirmSource with a fixed embedding vector.
-    private func source(type: String, id: String, embedding: [Double]) -> FirmSource {
+    func source(type: String, id: String, embedding: [Double]) -> FirmSource {
         let path = BundledKnowledge.entityPath(
             prefix: BundledKnowledge.knowledgePrefix, type: type, id: id
         )
@@ -27,7 +27,7 @@ struct KnowledgeSearchEngineTests {
     }
 
     /// Make a FirmSource with an embedding and memory signals set.
-    private func source(
+    func source(
         type: String,
         id: String,
         embedding: [Double],
@@ -46,14 +46,14 @@ struct KnowledgeSearchEngineTests {
 
     /// Fake with two same-axis actors so both score identical relevance and
     /// only the memory boosts differ.
-    private func twoActorsSameAxis() -> FakeKnowledgeService {
+    func twoActorsSameAxis() -> FakeKnowledgeService {
         let fake = FakeKnowledgeService()
         fake.entities["actor.a"] = namedEntity(type: "actor", id: "a", name: "A")
         fake.entities["actor.b"] = namedEntity(type: "actor", id: "b", name: "B")
         return fake
     }
 
-    private func scoreOf(
+    func scoreOf(
         _ results: [KnowledgeSearchEngine.ScoredEntity],
         _ qid: String
     ) -> Double? {
@@ -62,7 +62,7 @@ struct KnowledgeSearchEngineTests {
 
     /// Unit vector along axis `i` in a 3-dim vector space. Cosine similarity
     /// between any two such vectors is 1 if the same axis, 0 if different.
-    private func unit(_ i: Int) -> [Double] {
+    func unit(_ i: Int) -> [Double] {
         var v = [0.0, 0.0, 0.0]
         v[i] = 1.0
         return v
@@ -70,7 +70,7 @@ struct KnowledgeSearchEngineTests {
 
     /// Build a fake seeded with three entities along orthogonal axes so
     /// cosine similarity is fully deterministic for tests.
-    private func seededFake() -> FakeKnowledgeService {
+    func seededFake() -> FakeKnowledgeService {
         let fake = FakeKnowledgeService()
         let alice = namedEntity(type: "actor", id: "alice", name: "Alice")
         let bob = namedEntity(type: "actor", id: "bob", name: "Bob")
@@ -133,7 +133,7 @@ struct KnowledgeSearchEngineTests {
     @Test func scoreKeywordNeedleMatchesName() async throws {
         let fake = seededFake()
         // Empty query embedding → no cosine signal. Keyword "alice" hits the
-        // name field → 0.5 score.
+        // name field → protected lexical score.
         let results = try await KnowledgeSearchEngine.score(
             queryEmbedding: [],
             keywordNeedle: "alice",
@@ -141,13 +141,16 @@ struct KnowledgeSearchEngineTests {
             spaceID: nil,
             agentID: nil
         )
-        #expect(results.contains { $0.qualifiedID == "actor.alice" && $0.score == 0.5 })
+        #expect(results
+            .contains {
+                $0.qualifiedID == "actor.alice" && $0.score == KnowledgeLexicalMatcher.exactIDScore
+            })
     }
 
     @Test func scoreTakesMaxOfEmbeddingAndKeyword() async throws {
         let fake = seededFake()
         // Query on axis 0 (cosine 1.0 for alice) AND keyword "alice"
-        // (0.5) — max = 1.0
+        // — the protected lexical tier wins.
         let results = try await KnowledgeSearchEngine.score(
             queryEmbedding: unit(0),
             keywordNeedle: "alice",
@@ -156,7 +159,7 @@ struct KnowledgeSearchEngineTests {
             agentID: nil
         )
         let alice = results.first { $0.qualifiedID == "actor.alice" }
-        #expect(alice?.score == 1.0)
+        #expect(alice?.score == KnowledgeLexicalMatcher.exactIDScore)
     }
 
     @Test func scoreTypeFilterRestrictsResults() async throws {
@@ -259,7 +262,7 @@ struct KnowledgeSearchEngineTests {
         // Query (unit length) + needle "max".
         let query = [0.6, 0.8, 0.0]
         fake.sources = [
-            // actor.max: no cosine signal (orthogonal), keyword match → 0.5.
+            // actor.max: no cosine signal; exact identity matches lexically.
             source(
                 type: "actor", id: "max", embedding: unit(2),
                 accessCount: 0, lastAccessedAt: nil
@@ -354,7 +357,7 @@ struct KnowledgeSearchEngineTests {
             spaceID: nil,
             agentID: nil
         )
-        // Keyword match hits alice (0.5); threshold 0.4 keeps it; limit 5
+        // Exact identity hits alice; threshold 0.4 keeps it; limit 5
         // is generous.
         #expect(results.contains { $0.qualifiedID == "actor.alice" })
     }
