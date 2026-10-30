@@ -31,6 +31,17 @@ final class DefaultAulaProvider: AulaProvider, @unchecked Sendable {
         self.healthMonitor = healthMonitor
     }
 
+    /// Checks stored authorization and refreshes an expired token without opening sign-in UI.
+    func prepareForBackground() async throws {
+        let current = try session()
+        guard current.accessToken?.isEmpty == false || !current.cookies.isEmpty else {
+            throw AulaProviderError.sessionExpired
+        }
+        if tokenExpired(current) {
+            _ = try await refreshedSession(current)
+        }
+    }
+
     // MARK: - AulaProvider
 
     func children() async throws -> [AulaChild] {

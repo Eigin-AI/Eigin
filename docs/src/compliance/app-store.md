@@ -73,7 +73,7 @@ Eigin ships no content of its own. Text in the App is written by the user or gen
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 1.4.1 | Met | Not a medical app. No accuracy claims for health measurements. The App reads and logs Health data only when the user asks. The AI is instructed that it is not a substitute for medical advice and to encourage the user to consult a professional ([health instructions](https://code.eigin.ai/dev/eigin/-/blob/main/design/prompts/skills/health/instruction.jinja)) |
+| 1.4.1 | Met | Not a medical app. No accuracy claims for health measurements. The App reads and logs Health data for user requests and initiative work under the user’s existing tool permissions. Background Health access requires a connected Apple Health integration and **Always allow** for each tool ([initiative](../agents/initiative.md#skills-and-connections)). The AI is instructed that it is not a substitute for medical advice and to encourage the user to consult a professional ([health instructions](https://code.eigin.ai/dev/eigin/-/blob/main/design/prompts/skills/health/instruction.jinja)) |
 | 1.4.2 – 1.4.5 | N/A | No drug dosage, substance, DUI, or dare content |
 
 ### 1.5 Developer information
@@ -244,7 +244,7 @@ This guideline covers software a host app offers that is not part of its binary.
 |---|---|---|
 | (i) Privacy policy | Met | Linked in App Store Connect and from Settings in the App. The policy states what data Eigin's service processes, which third parties receive it, how long it is kept, and how to request deletion ([GDPR](./gdpr.md)) |
 | (ii) Permission | Met | Permissions are requested progressively: the OS prompt appears the first time a feature needs it, never up front, with a purpose string. Health, calendar and reminders are connected as integrations: a sheet says what Eigin will read and save before the OS prompt, whether opened from Settings or from a chat that needs it, and a declined connection isn't asked for again. No analytics or usage data is collected; no analytics, crash, or telemetry SDK is included. Paid functionality does not depend on any data grant. Consent is withdrawn in iOS Settings |
-| (iii) Data minimisation | Met | Photos use the system picker. Calendar and reminders need full access because the AI reads and creates entries on request. Health read types are limited to what the health features use. No Contacts access |
+| (iii) Data minimisation | Met | Photos use the system picker. Calendar and reminders need full access for user requests and authorized initiative work. Health read types are limited to what the health features use. No Contacts access |
 | (iv) Access | Met | Every permission is optional. If declined, only the feature that needs it is unavailable |
 | (v) Account sign-in | Met | No login exists and the App works fully without one, so account deletion does not arise. Connected accounts can be disconnected in-app, which deletes their credentials from the device. Credentials are stored only on the device and used only to call that service directly from the App ([integrations](../integrations/README.md)) |
 | (vi) | Met | The App does not covertly discover passwords or private data |
@@ -280,12 +280,12 @@ SwiftPM dependencies that call required-reason APIs either ship their own manife
 
 ### 5.1.3 Health and health research
 
-The AI can read and write Health data when the user asks, once the user has connected Apple Health. Connecting shows what is read and saved before the HealthKit prompt. Each health action asks for approval before it runs.
+The AI can read and write Health data once the user has connected Apple Health. Connecting shows what is read and saved before the HealthKit prompt.
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| (i) | Met | Health data is used only to answer the user. Never for advertising, marketing, or data mining, and Eigin ApS never sees it. If the user has chosen a hosted model, health data the AI read is part of the conversation sent for inference, under zero-retention terms ([GDPR Annex B](./gdpr.md#annex-b-processors)). The purpose strings state which health data is read |
-| (ii) | Met | Writes to Health reflect what the user logged and are approved by them. No health data is stored in iCloud; the App has no iCloud container |
+| (i) | Met | Health data is used for user requests and authorized initiative work. Never for advertising, marketing, or data mining, and Eigin ApS never sees it. If the user has chosen a hosted model, health data the AI read is part of the conversation sent for inference, under zero-retention terms ([GDPR Annex B](./gdpr.md#annex-b-processors)). The purpose strings state which health data is read |
+| (ii) | Met | Writes to Health follow the user’s tool permissions; background writes require an existing **Always allow** grant. No health data is stored in iCloud; the App has no iCloud container |
 | (iii), (iv) | N/A | No human-subject research |
 
 ### 5.1.4 Kids

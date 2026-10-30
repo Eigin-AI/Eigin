@@ -48,7 +48,6 @@ enum WatchTurnRunner {
             permissionPolicy: context.permissionPolicy,
             spaceID: nil,
             chatID: context.chat.id,
-            mcpServers: context.mcpServers,
             integrations: context.integrations,
             activeSkills: activeSkills,
             gatekeeper: gatekeeper,

@@ -7,12 +7,18 @@ import Observation
 /// Lazily connects on the first chat send, caches connections for the session.
 @Observable
 final class MCPServerManager: @unchecked Sendable {
+    private let httpConfiguration: URLSessionConfiguration
     private let keychainService: any KeychainService
     private let oauthService: any MCPOAuthService
     private var connections: [UUID: MCPServerConnection] = [:]
     private(set) var connectionErrors: [UUID: String] = [:]
 
-    init(keychainService: any KeychainService, oauthService: any MCPOAuthService) {
+    init(
+        keychainService: any KeychainService,
+        oauthService: any MCPOAuthService,
+        httpConfiguration: URLSessionConfiguration = .default
+    ) {
+        self.httpConfiguration = httpConfiguration
         self.keychainService = keychainService
         self.oauthService = oauthService
     }
@@ -66,7 +72,8 @@ final class MCPServerManager: @unchecked Sendable {
         let connection = MCPServerConnection(
             serverName: server.name,
             endpoint: endpoint,
-            authProvider: authProvider
+            authProvider: authProvider,
+            httpConfiguration: httpConfiguration
         )
 
         // Bound the connect on the activation/turn path so a slow or dead server
@@ -144,6 +151,20 @@ final class MCPServerManager: @unchecked Sendable {
             }
         }
         return proxies
+    }
+
+    /// Proxies for one activated server, without changing other connections.
+    func toolProxies(serverID: UUID) async -> [MCPToolProxy] {
+        guard let connection = connections[serverID] else { return [] }
+        let tools = await connection.tools().map {
+            MCPToolProxy(mcpTool: $0, serverName: connection.serverName, connection: connection)
+        }
+        await MainActor.run {
+            for tool in tools {
+                ToolRegistry.dynamicDisplayNames[tool.name] = tool.displayName
+            }
+        }
+        return tools
     }
 
     /// Disconnects a specific server.

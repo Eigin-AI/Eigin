@@ -12,11 +12,12 @@ enum SkillToolKit: ToolKit {
         [
             ActivateSkillTool(
                 chatID: context.chatID,
+                skillSession: context.skillSession,
                 onConnectCapability: context.onConnectCapability,
                 connectionGate: context.skillConnectionGate,
                 userMessageID: context.userMessageID
             ),
-            SearchSkillsTool(chatID: context.chatID),
+            SearchSkillsTool(chatID: context.chatID, skillSession: context.skillSession),
             StartFlowTool(chatID: context.chatID),
             AdvanceFlowTool(chatID: context.chatID),
         ]

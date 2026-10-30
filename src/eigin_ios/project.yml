@@ -424,7 +424,7 @@ targets:
         SWIFT_VERSION: "6.0"
         # Marks the dev target; the screenshot test doubles key on it (they are
         # also compiled into the app target, where `@testable import` is invalid).
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: EIGIN_DEV
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) EIGIN_DEV"
         GENERATE_INFOPLIST_FILE: true
         MARKETING_VERSION: "1.0.0"
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Dev

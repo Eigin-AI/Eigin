@@ -58,6 +58,7 @@ extension ToolRegistry {
         agentID: UUID? = nil,
         permissionPolicy: ToolPermissionPolicy,
         activeSkills: [Skill] = [],
+        skillSession: SkillSession? = nil,
         mcpTools: [any Tool] = [],
         mcpSkills: [Skill] = [],
         integrationToolsByCapability: [Capability: [any Tool]] = [:],
@@ -72,6 +73,7 @@ extension ToolRegistry {
             accessPolicy: accessPolicy,
             spaceID: spaceID, chatID: chatID, agentID: agentID,
             canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
+            skillSession: skillSession,
             onBrowse: onBrowse,
             onPresentOptions: onPresentOptions,
             onConnectCapability: onConnectCapability,
@@ -80,6 +82,9 @@ extension ToolRegistry {
         )
         var tools = allChatTools(context: context)
         tools += mcpTools
+        tools += skillSession?.tools() ?? []
+        let activeSkills = skillSession
+            .map { BundledSkill.alwaysActive + $0.activeSkills } ?? activeSkills
 
         // Filter to tools required by active skills (union of all requiredTools).
         // Tools not claimed by any skill (bundled or MCP-projected — e.g.
@@ -214,12 +219,14 @@ extension ToolRegistry {
         permissionPolicy: (any ToolPermissionPolicy)? = nil,
         agentID: UUID? = nil,
         additionalTools: [any Tool] = [],
+        skillSession: SkillSession? = nil,
         onSignal: @escaping @Sendable (BackgroundToolSignal) -> Void
     ) -> ToolRegistry {
         let context = ToolContext(
             accessPolicy: accessPolicy,
             agentID: agentID,
-            canPromptUser: false
+            canPromptUser: false,
+            skillSession: skillSession
         )
         var tools = allChatTools(context: context)
 
