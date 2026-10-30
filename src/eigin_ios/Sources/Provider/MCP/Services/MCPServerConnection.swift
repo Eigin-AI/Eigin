@@ -13,6 +13,7 @@ import MCP
 /// with a fresh token before retrying.
 actor MCPServerConnection {
     nonisolated let serverName: String
+    private let httpConfiguration: URLSessionConfiguration
     private let endpoint: URL
     private let authProvider: any MCPAuthProvider
 
@@ -37,7 +38,11 @@ actor MCPServerConnection {
         }
     }
 
-    init(serverName: String, endpoint: URL, authProvider: any MCPAuthProvider) {
+    init(
+        serverName: String, endpoint: URL, authProvider: any MCPAuthProvider,
+        httpConfiguration: URLSessionConfiguration = .default
+    ) {
+        self.httpConfiguration = httpConfiguration
         self.serverName = serverName
         self.endpoint = endpoint
         self.authProvider = authProvider
@@ -53,6 +58,7 @@ actor MCPServerConnection {
         let cache = tokenCache
         let transport = HTTPClientTransport(
             endpoint: endpoint,
+            configuration: httpConfiguration,
             streaming: false,
             requestModifier: { request in
                 var req = request
@@ -96,6 +102,7 @@ actor MCPServerConnection {
         let cache = tokenCache
         let transport = HTTPClientTransport(
             endpoint: endpoint,
+            configuration: httpConfiguration,
             streaming: false,
             requestModifier: { request in
                 var req = request

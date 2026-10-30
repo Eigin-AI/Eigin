@@ -574,14 +574,7 @@ final class LiveCallService: @unchecked Sendable {
         return (try? context.fetch(descriptor))?.first
     }
 
-    @MainActor
-    private func fetchSelections() -> [CapabilityProviderSelection] {
-        guard let agent, let context = agent.modelContext else { return [] }
-        return (try? context.fetch(FetchDescriptor<CapabilityProviderSelection>())) ?? []
-    }
-
-    /// Current enabled integrations — re-fetched so a provider swap mid-call
-    /// takes effect on the next turn round, mirroring the text-chat rebuild.
+    /// Enabled integrations used when preparing the next turn.
     @MainActor
     private func fetchEnabledIntegrations() -> [Integration] {
         guard let agent, let context = agent.modelContext else { return [] }
@@ -703,7 +696,6 @@ final class LiveCallService: @unchecked Sendable {
                 messages: messages, agent: agent, space: space,
                 permissionPolicy: policy,
                 spaceID: spaceID, chatID: chatID,
-                mcpServers: mcpServers,
                 integrations: fetchEnabledIntegrations(),
                 activeSkills: activeSkills,
                 activeFlow: fetchChat(agent: agent)?.activeFlow,
@@ -737,33 +729,16 @@ final class LiveCallService: @unchecked Sendable {
                 guard let self else {
                     return (tools: turn.registry.definitions, executor: turn.registry)
                 }
-                let updatedSkills = loadActiveSkills(agent: agent)
-                // Connect only the MCP servers backing active skills — turn.mcpTools
-                // reflects only what was active at turn start.
-                let activeMCPSkillIDs = Set(updatedSkills.map(\.id))
-                    .intersection(turn.mcpSkills.map(\.id))
-                nonisolated(unsafe) let activeMCPServers = activeMCPSkillIDs.compactMap {
-                    MCPServerSkill.server(forSkillID: $0, servers: mcpServers)
-                }
-                let mcpTools = await Container.shared.mcpServerManager()
-                    .prepareTools(servers: activeMCPServers)
-                // Fresh integration tools, mirroring the text-chat rebuild —
-                // so reactivation or a provider swap mid-call takes effect.
-                let integrationToolsByCapability = Container.shared.integrationManager()
-                    .toolsByCapability(
-                        integrations: fetchEnabledIntegrations(),
-                        selections: fetchSelections(),
-                        context: ToolContext(spaceID: spaceID, chatID: chatID, agentID: agent.id)
-                    )
+                await turn.skillSession.prepareActiveSkills(agent: agent)
+                let updatedSkills = turn.skillSession.activeSkills
                 let updatedRegistry = ToolRegistry.chat(
                     spaceID: spaceID, chatID: chatID,
                     agentID: agent.id,
                     permissionPolicy: policy,
                     activeSkills: BundledSkill.alwaysActive
                         + updatedSkills.filter { !$0.alwaysActive },
-                    mcpTools: mcpTools,
-                    mcpSkills: turn.mcpSkills,
-                    integrationToolsByCapability: integrationToolsByCapability,
+                    skillSession: turn.skillSession,
+                    mcpSkills: turn.skillSession.mcpSkills(context: agent.modelContext),
                     onConnectCapability: connectHandler,
                     skillConnectionGate: skillConnectionGate,
                     userMessageID: userMessage.localID

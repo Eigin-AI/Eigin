@@ -15,7 +15,7 @@ Some on-demand skills also declare a required [capability](../integrations/READM
 
 The active skill set is additive. Each active skill contributes its instruction to the system hint and its tools to the turn; the agent can call the union of all active skills' tools.
 
-A skill usually owns a coherent group of tools but can reuse another skill's when its framing calls for it: planning reuses the calendar skill's calendar tools and the reminders skill's reminder tools. Because the tool set is a union, a shared tool is offered once no matter how many skills require it. Activation takes effect next turn.
+A skill usually owns a coherent group of tools but can reuse another skill's when its framing calls for it: planning reuses the calendar skill's calendar tools and the reminders skill's reminder tools. Because the tool set is a union, a shared tool is offered once no matter how many skills require it. Newly activated tools become available on the next model round, including within the current turn.
 
 A skill needs all the capabilities it requires — its instructions describe tools each one provides, so it only advertises when every one of them is connected. Capabilities that improve it without being necessary are optional: planning takes calendar and reminders as optional, working with whatever is connected and never asking.
 

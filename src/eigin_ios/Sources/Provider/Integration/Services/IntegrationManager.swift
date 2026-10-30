@@ -104,6 +104,44 @@ final class IntegrationManager {
         return result
     }
 
+    /// Checks existing credentials and platform access, allowing silent refresh only.
+    func authorizationError(for integration: Integration) async -> String? {
+        guard let type = BundledIntegrationType.type(forID: integration.typeID) else {
+            return "Unknown integration"
+        }
+        do {
+            switch type.authKind {
+            case .oauth(let config):
+                guard let token = try await oauthService.validToken(
+                    config: config(), integrationID: integration.id
+                ), !token.isEmpty else { return "Sign in again in Settings → Connections" }
+            case .imap:
+                guard let settings = imapCredentialStore.read(for: integration.id),
+                      !settings.password.isEmpty
+                else {
+                    return "Add account credentials in Settings → Connections"
+                }
+            case .webSession:
+                let provider = DefaultAulaProvider(
+                    integrationID: integration.id,
+                    credentialStore: aulaCredentialStore,
+                    apiClient: AulaAPIClient(http: URLSessionAulaHTTP())
+                )
+                try await provider.prepareForBackground()
+            case .platform(let source):
+                guard case .allowed(let notAllowed) = await source.permission().access() else {
+                    return "Allow access in Settings → Connections"
+                }
+                guard notAllowed.isEmpty else {
+                    return "Full access is required for background use. Review the integration in Settings → Connections"
+                }
+            }
+            return nil
+        } catch {
+            return "Reconnect in Settings → Connections: \(error.localizedDescription)"
+        }
+    }
+
     /// Disconnects an integration: clears its stored credentials across every
     /// credential store and removes the model. Every clear is unconditional —
     /// whichever ones don't apply to this integration's auth kind are simply

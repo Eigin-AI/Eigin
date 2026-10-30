@@ -31,24 +31,32 @@ struct SearchSkillsTool: Tool {
         .always
     }
 
+    private let skillSession: SkillSession?
     private let chatID: UUID?
     private let skillIndex: any SkillIndexing
 
     @MainActor
-    init(chatID: UUID? = nil, skillIndex: any SkillIndexing = Container.shared.skillIndex()) {
+    init(
+        chatID: UUID? = nil,
+        skillSession: SkillSession? = nil,
+        skillIndex: any SkillIndexing = Container.shared.skillIndex()
+    ) {
         self.chatID = chatID
+        self.skillSession = skillSession
         self.skillIndex = skillIndex
     }
 
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: """
-            Search the skill catalog for skills matching a need. Returns matching \
-            skill IDs — activate one with `activate_skill`. A match with `needs` \
-            asks the user to connect that integration when activated, so activate \
-            it only when their request depends on it.
-            """,
+            description: skillSession?.toolAccess == .unattended
+                ? Prompt.Skills.backgroundSearch
+                : """
+                Search the skill catalog for skills matching a need. Returns matching \
+                skill IDs — activate one with `activate_skill`. A match with `needs` \
+                asks the user to connect that integration when activated, so activate \
+                it only when their request depends on it.
+                """,
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -111,7 +119,9 @@ struct SearchSkillsTool: Tool {
             ]
             if let needed = SkillCatalog.connectionNeeded(for: scored.skill, connected: connected) {
                 // Offer-framing: see AvailableSkillsSource.line.
-                match["connecting"] = "activating this skill asks the user to connect \(needed)"
+                match["connecting"] = skillSession?.toolAccess == .unattended
+                    ? Prompt.Skills.backgroundConnectionUnavailable(connections: needed)
+                    : "activating this skill asks the user to connect \(needed)"
             }
             return match
         }
@@ -125,42 +135,24 @@ struct SearchSkillsTool: Tool {
     /// Activatable candidates: bundled + MCP skills, minus already-active.
     /// Skills that need connecting are included, declined or not: searching
     /// is asking, so the agent can find them and activation answers for them.
+    @MainActor private func session(agent: Agent) -> SkillSession {
+        skillSession ?? SkillSession(
+            chatID: chatID, permissionPolicy: AlwaysAllowPolicy(),
+            accessPolicy: SpaceAccessPolicy(currentSpaceID: nil, publicSpaceIDs: []),
+            agentID: agent.id
+        )
+    }
+
     @MainActor private func activatableSkills(agent: Agent) -> [Skill] {
-        guard let chatID, let context = agent.modelContext else {
+        guard skillSession != nil || chatID != nil else {
             return SkillCatalog.activatable(
-                from: BundledSkill.all.filter { !$0.alwaysActive },
-                activeIDs: [],
-                connectedCapabilities: []
+                from: BundledSkill.all, activeIDs: [], connectedCapabilities: []
             )
         }
-
-        let targetChatID = chatID
-        var descriptor = FetchDescriptor<Chat>(
-            predicate: #Predicate { $0.id == targetChatID }
-        )
-        descriptor.fetchLimit = 1
-        let chat = (try? context.fetch(descriptor))?.first
-
-        let servers = (try? context.fetch(FetchDescriptor<MCPServer>())) ?? []
-        let activeIDs = Set(chat?.activeSkillEntries.map(\.skillID) ?? [])
-
-        return SkillCatalog.activatable(
-            from: BundledSkill.all + MCPServerSkill.project(servers: servers),
-            activeIDs: activeIDs,
-            connectedCapabilities: connectedCapabilities(context: context)
-        )
+        return session(agent: agent).candidates(context: agent.modelContext)
     }
 
-    /// Capabilities connected for the agent's store; none without one.
     @MainActor private func connectedCapabilities(agent: Agent) -> Set<Capability> {
-        agent.modelContext.map(connectedCapabilities(context:)) ?? []
-    }
-
-    /// Capabilities provided by at least one connected, enabled integration.
-    @MainActor private func connectedCapabilities(context: ModelContext) -> Set<Capability> {
-        let integrations = ((try? context.fetch(FetchDescriptor<Integration>())) ?? [])
-            .filter(\.isEnabled)
-        return Container.shared.integrationManager()
-            .connectedCapabilities(integrations: integrations)
+        session(agent: agent).connectedCapabilities(context: agent.modelContext)
     }
 }

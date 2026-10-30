@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 
 /// Thread-safe holder for the background tool signal.
-private final class SignalBox: @unchecked Sendable {
+final class BackgroundSignalBox: @unchecked Sendable {
     private let lock = NSLock()
     private var _value: BackgroundToolSignal?
 
@@ -185,10 +185,18 @@ enum BackgroundPromptService {
         }
 
         // Build tool registry - includes tools the agent has .always permission for.
-        let signalBox = SignalBox()
+        let signalBox = BackgroundSignalBox()
+        let skillSession = await MainActor.run {
+            mode == .initiative ? SkillSession(
+                toolAccess: .unattended,
+                permissionPolicy: permissionPolicy, accessPolicy: accessPolicy, agentID: agentRef.id
+            ) : nil
+        }
         let registry = await ToolRegistry.background(
             accessPolicy: accessPolicy,
             permissionPolicy: permissionPolicy,
+            agentID: mode == .initiative ? agentRef.id : nil,
+            skillSession: skillSession,
             onSignal: { signalBox.set($0) }
         )
 
@@ -212,7 +220,10 @@ enum BackgroundPromptService {
             agent: agentRef,
             provider: providerRef,
             chatService: chatService,
-            signalBox: signalBox
+            signalBox: signalBox,
+            skillSession: skillSession,
+            accessPolicy: accessPolicy,
+            permissionPolicy: permissionPolicy
         )
 
         recordRun(mode: mode)
@@ -315,14 +326,18 @@ enum BackgroundPromptService {
         "initiativeFocusHistory_\(agentID.uuidString)"
     }
 
+    /// Runs a background tool loop, refreshing initiative tools after each round.
     @MainActor
-    private static func runChatLoop(
+    static func runChatLoop(
         apiMessages: [ChatMessage],
         registry: ToolRegistry,
         agent: Agent,
         provider: Provider,
         chatService: ChatService,
-        signalBox: SignalBox
+        signalBox: BackgroundSignalBox,
+        skillSession: SkillSession?,
+        accessPolicy: SpaceAccessPolicy,
+        permissionPolicy: any ToolPermissionPolicy
     ) async -> ([ChatMessage], Int) {
         let chatLoop = AgenticChatLoop(
             isBootstrap: false,
@@ -330,6 +345,21 @@ enum BackgroundPromptService {
             permissionPolicy: AlwaysAllowPolicy()
         )
         chatLoop.shouldTerminate = { signalBox.value != nil }
+        if let skillSession {
+            chatLoop.onToolsChanged = {
+                await skillSession.prepareActiveSkills(agent: agent)
+                let tools = skillSession.tools()
+                let updated = ToolRegistry.background(
+                    accessPolicy: accessPolicy,
+                    permissionPolicy: permissionPolicy,
+                    agentID: agent.id,
+                    additionalTools: tools,
+                    skillSession: skillSession,
+                    onSignal: { signalBox.set($0) }
+                )
+                return (updated.definitions, updated)
+            }
+        }
         do {
             let produced = try await chatLoop.run(
                 messages: apiMessages,

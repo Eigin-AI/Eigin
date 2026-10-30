@@ -324,7 +324,6 @@ final class ChatViewModel {
                 agent: agent, model: routedModel, space: space,
                 permissionPolicy: policy,
                 spaceID: chat?.spaceID, chatID: chat?.id,
-                mcpServers: servers,
                 integrations: integrations,
                 activeSkills: activeSkills,
                 activeFlow: chat?.activeFlow,
@@ -367,58 +366,29 @@ final class ChatViewModel {
             }
             self.chatLoop.onToolsChanged = { [weak self] in
                 guard let self else { return (tools: registry.definitions, executor: registry) }
-                let currentIntegrations = ((try? modelContext.fetch(
-                    FetchDescriptor<Integration>()
-                )) ?? []).filter(\.isEnabled)
-                let updatedSkills = resolvedActiveSkills(
-                    integrations: currentIntegrations,
-                    mcpServers: servers
-                )
+                await turn.skillSession.prepareActiveSkills(agent: agent)
+                let updatedSkills = turn.skillSession.activeSkills
 
                 let contextWindow = KnownModelCatalog.lookup(routedModel)?.contextWindow ?? 128_000
                 let isSmallContext = contextWindow <= MessagePipeline.SmallContext.windowLimit
 
                 let activeOnDemand = updatedSkills.last
-                let updatedRegistry: ToolRegistry
-                if isSmallContext {
-                    updatedRegistry = ToolRegistry.smallChat(
+                let updatedRegistry = if isSmallContext {
+                    ToolRegistry.smallChat(
                         chatID: chat?.id,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkill: activeOnDemand
                     )
                 } else {
-                    // Connect only the MCP servers backing active skills (e.g. one
-                    // just activated by this round's tool call) and gather fresh
-                    // tool proxies — turn.mcpTools reflects only what was active
-                    // at turn start.
-                    let activeMCPSkillIDs = Set(updatedSkills.map(\.id))
-                        .intersection(turn.mcpSkills.map(\.id))
-                    nonisolated(unsafe) let activeMCPServers = activeMCPSkillIDs.compactMap {
-                        MCPServerSkill.server(forSkillID: $0, servers: servers)
-                    }
-                    let mcpTools = await Container.shared.mcpServerManager()
-                        .prepareTools(servers: activeMCPServers)
-                    let integrationManager = Container.shared.integrationManager()
-                    let selections = (try? modelContext.fetch(
-                        FetchDescriptor<CapabilityProviderSelection>()
-                    )) ?? []
-                    let integrationToolsByCapability = integrationManager.toolsByCapability(
-                        integrations: currentIntegrations,
-                        selections: selections,
-                        context: ToolContext(
-                            spaceID: chat?.spaceID, chatID: chat?.id, agentID: agent.id
-                        )
-                    )
-                    updatedRegistry = ToolRegistry.chat(
+                    ToolRegistry.chat(
                         spaceID: chat?.spaceID, chatID: chat?.id,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkills: BundledSkill.alwaysActive
                             + updatedSkills.filter { !$0.alwaysActive },
-                        mcpTools: mcpTools,
-                        mcpSkills: turn.mcpSkills,
-                        integrationToolsByCapability: integrationToolsByCapability,
+                        skillSession: turn.skillSession,
+                        mcpSkills: turn.skillSession.mcpSkills(context: agent.modelContext),
                         onBrowse: browseHandler,
                         onPresentOptions: optionsHandler,
                         onConnectCapability: connectHandler,

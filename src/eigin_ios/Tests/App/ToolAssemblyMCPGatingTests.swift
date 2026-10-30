@@ -106,4 +106,37 @@ struct ToolAssemblyMCPGatingTests {
         #expect(names.contains(toolName))
         #expect(!names.contains("mcp__linear__list_tickets"))
     }
+
+    @Test @MainActor func backgroundMCPToolsRequireAlwaysAndRejectDirectCalls() async {
+        let allowed = "mcp__gitlab__list_issues"
+        let asked = "mcp__gitlab__read_file"
+        let denied = "mcp__gitlab__delete_issue"
+        let unknown = "mcp__gitlab__new_tool"
+        let policy = AgentPermissionPolicy(
+            builtInGrants: [:],
+            discoveredGrants: [allowed: .always, asked: .ask, denied: .never],
+            chatGrants: [], canPromptUser: false
+        )
+        let registry = ToolRegistry.background(
+            permissionPolicy: policy,
+            additionalTools: [allowed, asked, denied, unknown].map {
+                FakeMCPTool(name: $0, displayName: $0)
+            },
+            onSignal: { _ in }
+        )
+        let names = Set(registry.definitions.map(\.function.name))
+        #expect(names.contains(allowed))
+        let agent = Agent(name: "Wren", providerID: UUID(), model: "test")
+        for name in [allowed, asked, denied, unknown] {
+            let call = ToolCall(
+                id: name, type: "function", function: .init(name: name, arguments: "{}")
+            )
+            let result = await registry.execute(call, agent: agent)
+            #expect(result.isError == (name != allowed))
+            if name != allowed {
+                #expect(!names.contains(name))
+                #expect(result.content.contains("Unknown tool"))
+            }
+        }
+    }
 }
