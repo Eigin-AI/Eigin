@@ -36,12 +36,14 @@ Location has no tools of its own. The awareness tools (time and place, weather, 
 
 ## Connecting from a chat
 
-A skill needs all the capabilities it requires: the calendar skill needs `calendar`, the reminders skill needs `reminders`, and the health skill needs `health`. The agent finds such a skill even when it isn't connected: skill search and hints mark it as needing a connection. Activating it is what asks:
+Skills require capabilities such as `calendar`, `reminders`, or `health`. Search and hints identify skills that need a connection.
 
-1. `activate_skill` waits, and a connect sheet opens over the chat: the integration's own sheet when one provides it, or a list to pick from when several do (email).
-2. **Connect, then Continue:** the skill activates and the turn carries on with its tools.
-3. **Not now:** the agent is told the person declined, and answers without it.
+1. First activation returns `confirmation_required`, prompting the agent to explain the connection and ask permission.
+2. After a later user reply, a matching retry opens the connection sheet. The agent interprets consent.
+3. **Connect, then Continue:** activates the skill. **Not now:** records a decline and the agent answers without it.
 
-It asks once. A no (Not now, or removing the integration) is remembered per capability in `DeclinedCapabilities`. After that, activation answers straight away that the person declined, the skill drops out of hints, and the agent says where to connect it instead. Connecting clears the no.
+Pending requests live in memory, scoped to the conversation, skill, and missing capabilities. Text and live voice share this flow. Cancellation or incomplete connection requires a fresh handshake on a later turn. Already-connected skills activate immediately.
 
-It only asks where someone can answer. In a background turn or from the watch, activation answers at once that connecting needs the user. If iOS has already refused, it says that instead. During a call, the sheet shows only while the call is on screen.
+`DeclinedCapabilities` remembers **Not now** and removed connections per capability. Declined skills drop out of hints; connecting clears the decline.
+
+Connection sheets require an interactive foreground chat or visible call. Background and watch turns report that the user must connect separately. iOS refusals direct the user to Settings.

@@ -6,6 +6,7 @@ final class FakeChatService: ChatService, @unchecked Sendable {
     private let lock = NSLock()
     private var _eventSequences: [[[ChatStreamEvent]]] = []
     private var _callIndex = 0
+    private var _eventFailures: [Int: Error] = [:]
 
     // Token stream support for chatCompletionStream
     private var _tokenSequences: [Result<[String], Error>] = []
@@ -44,6 +45,14 @@ final class FakeChatService: ChatService, @unchecked Sendable {
     func enqueueEventStream(_ events: [ChatStreamEvent]) {
         lock.withLock {
             _eventSequences.append([events])
+        }
+    }
+
+    /// Enqueues a request failure after any already-scripted responses.
+    func enqueueEventFailure(_ error: Error) {
+        lock.withLock {
+            _eventFailures[_eventSequences.count] = error
+            _eventSequences.append([[]])
         }
     }
 
@@ -178,6 +187,14 @@ final class FakeChatService: ChatService, @unchecked Sendable {
             return e
         }) {
             throw thrown
+        }
+
+        if let error = lock.withLock({ () -> Error? in
+            guard let error = _eventFailures.removeValue(forKey: _callIndex) else { return nil }
+            _callIndex += 1
+            return error
+        }) {
+            throw error
         }
 
         let events: [ChatStreamEvent] = lock.withLock {

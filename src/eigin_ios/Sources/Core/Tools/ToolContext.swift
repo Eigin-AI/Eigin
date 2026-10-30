@@ -14,4 +14,6 @@ struct ToolContext {
     var onBrowse: BrowseHandler?
     var onPresentOptions: OptionsHandler?
     var onConnectCapability: ConnectCapabilityHandler?
+    var skillConnectionGate: SkillConnectionGate?
+    var userMessageID: String?
 }

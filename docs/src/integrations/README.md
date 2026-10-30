@@ -25,4 +25,6 @@ Integration tools appear in the normal [permissions](../tools/permissions.md) sc
 
 ## Connecting from a chat
 
-A skill that needs a capability nothing provides can still be found and activated. Activating it opens a connect sheet over the chat and waits for the answer, then carries on with the skill or without it. It asks once per capability. See [platform integrations](./platform.md#connecting-from-a-chat).
+A skill with a missing capability can still be found. On first activation, the agent is prompted to confirm with the user. After confirmation, a matching retry can open the connect sheet.
+
+Connecting activates the skill. Declining or cancelling leaves it inactive; a decline is remembered per capability. Already-connected skills activate immediately. See [platform integrations](./platform.md#connecting-from-a-chat).

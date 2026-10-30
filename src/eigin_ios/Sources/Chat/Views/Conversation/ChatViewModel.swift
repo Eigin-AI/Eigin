@@ -34,6 +34,7 @@ final class ChatViewModel {
     var chat: Chat?
     var messageText = ""
     var window = MessageWindow()
+    private let skillConnectionGate = SkillConnectionGate()
     var chatLoop = AgenticChatLoop(isBootstrap: false)
     var streamTask: Task<Void, Never>?
     private(set) var chatError: ConnectionError?
@@ -214,6 +215,7 @@ final class ChatViewModel {
             content: text.isEmpty ? nil : text,
             attachments: pendingAttachments.isEmpty ? nil : pendingAttachments
         )
+        skillConnectionGate.beginUserTurn(chatID: chatID, messageID: userMessage.localID)
         window.messages.append(userMessage)
         if !text.isEmpty { seedTitle(from: text) }
         messageText = ""
@@ -269,6 +271,7 @@ final class ChatViewModel {
         mcpServers: [MCPServer],
         integrations: [Integration]
     ) {
+        let initiatingUserMessageID = skillConnectionGate.messageID(chatID: chatID)
         chatError = nil
 
         let hasSpaces = spaces.contains(where: { $0.agentID == agent.id })
@@ -337,7 +340,9 @@ final class ChatViewModel {
                     guard let self else { return .dismissed }
                     return await chatLoop.presentOptions(optionSet)
                 },
-                onConnectCapability: connectHandler
+                onConnectCapability: connectHandler,
+                skillConnectionGate: self.skillConnectionGate,
+                userMessageID: initiatingUserMessageID
             )
 
             // Persist the user message before compaction: the summary row lands
@@ -416,7 +421,9 @@ final class ChatViewModel {
                         integrationToolsByCapability: integrationToolsByCapability,
                         onBrowse: browseHandler,
                         onPresentOptions: optionsHandler,
-                        onConnectCapability: connectHandler
+                        onConnectCapability: connectHandler,
+                        skillConnectionGate: skillConnectionGate,
+                        userMessageID: initiatingUserMessageID
                     )
                 }
                 return (tools: updatedRegistry.definitions, executor: updatedRegistry)
@@ -504,19 +511,7 @@ final class ChatViewModel {
         persistMessages(checkpoint)
     }
 
-    /// Re-runs the trailing user message as a fresh turn.
-    ///
-    /// Rewinds: removes the last user message from the in-memory window, the
-    /// persisted cache, and SwiftData, then delegates to `send` with the text
-    /// restored to `messageText`. `send` re-appends and re-persists the message
-    /// exactly as if the user had typed it fresh — the turn pipeline runs
-    /// unmodified.
-    ///
-    /// No-op unless the last message is a user message with non-empty content
-    /// and no turn is in progress. If `handleStop` left a partial assistant
-    /// reply as the last message, that message is last — not the user message —
-    /// so this bails out and the footer is hidden (the user sends a new message
-    /// instead).
+    /// Replays the trailing user message while preserving its connection-confirmation boundary.
     func retryLastTurn(
         agent: Agent,
         provider: Provider,
@@ -535,14 +530,8 @@ final class ChatViewModel {
 
         if chatLoop.isAwaitingUserInteraction { handleStop() }
 
-        // Ask the window to rewind the trailing user message; `send` re-appends and
-        // re-persists it exactly as if typed fresh. The window owns the counting
-        // invariant; here we only clean up the persisted row it hands back.
         guard let rewound = window.rewindTrailingUserMessage() else { return }
         if let persisted = rewound.persisted {
-            if let attachments = persisted.attachments {
-                attachmentStore.deleteAll(attachments)
-            }
             modelContext.delete(persisted)
         }
         chat.updatedAt = .now
@@ -550,8 +539,12 @@ final class ChatViewModel {
         if window.hasNewerMessages { window.snapToBottom() }
         chatError = nil
 
-        messageText = content
-        send(
+        window.messages.append(last)
+        messageText = ""
+        runTurn(
+            userMessage: last,
+            context: .text,
+            sentAt: .now,
             agent: agent,
             provider: provider,
             space: space,
