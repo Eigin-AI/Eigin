@@ -182,15 +182,25 @@ struct ConnectionsView: View {
                 .buttonStyle(.plain)
             }
 
-            if let preset = localPreset, gemmaManager.isSupported {
+            if let preset = localPreset {
                 RowHairline()
-                NavigationLink {
-                    LocalProviderView(preset: preset)
-                        .hidesTabBar()
-                } label: {
-                    AppRow(localRowSpec)
+                if gemmaManager.isSupported {
+                    NavigationLink {
+                        LocalProviderView(preset: preset)
+                            .hidesTabBar()
+                    } label: {
+                        AppRow(localRowSpec)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    AppRow(
+                        AppRowSpec(
+                            title: Localized.Provider.Local.title,
+                            description: "\(Localized.Provider.Local.unsupportedDescription) \(Localized.Provider.Local.hardwareGuidance)",
+                            accessory: .none
+                        )
+                    )
                 }
-                .buttonStyle(.plain)
             }
 
             RowHairline()

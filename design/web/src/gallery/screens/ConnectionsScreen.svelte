@@ -1,7 +1,17 @@
 <script lang="ts">
   import { ActionButton, ContentGroup, NavigationHeader, Row, StatusLine } from "@lib";
   import ScreenScroll from "@gallery/screens/ScreenScroll.svelte";
+  import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
+  import { useStageControls } from "@gallery/screens/stageControls.svelte";
+  import { hardwareGuidance, unsupportedDescription } from "@gallery/screens/localModel";
+
+  let hardware = $state("supported device");
+  useStageControls(() => controls);
 </script>
+
+{#snippet controls()}
+  <OptionSelector options={["supported device", "unsupported device"]} bind:value={hardware} />
+{/snippet}
 
 <!--
   The connections hub: two questions, not four mechanisms.
@@ -26,7 +36,19 @@
     <ContentGroup label="AI providers">
       <Row title="Eigin Relay" description="Private cloud AI" onclick={() => {}} />
       <Row title="Anthropic" description="7 models" onclick={() => {}} />
-      <Row title="Local model" description="On this phone" onclick={() => {}} />
+      {#if hardware === "supported device"}
+        <Row
+          title="Local model"
+          description="On this phone"
+          onclick={() => (location.hash = "#/screens/local-model")}
+        />
+      {:else}
+        <Row
+          title="Local model"
+          description={`${unsupportedDescription} ${hardwareGuidance}`}
+          accessory="none"
+        />
+      {/if}
       <Row title="Add provider" onclick={() => {}} accessory="plus" tone="accent" />
     </ContentGroup>
 

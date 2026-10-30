@@ -9879,7 +9879,7 @@
       }
     },
     "onboarding.inference.continueButton": {
-      "comment": "Button to dismiss the offline sheet after download has started.",
+      "comment": "Button to dismiss the local model explanation and return to cloud onboarding choices.",
       "localizations": {
         "da": {
           "stringUnit": {
@@ -9895,53 +9895,53 @@
         }
       }
     },
-    "onboarding.inference.offlineDownloadingText": {
-      "comment": "Body text in the offline model sheet while the model is already downloading.",
+    "onboarding.inference.offlineLink": {
+      "comment": "Link to learn about local model availability on any device.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Downloader nu. Den er klar lidt senere. Vælg foreløbig, hvordan du vil køre denne første samtale."
+            "value": "Brug Eigin offline"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Downloading now. It’ll be ready a bit later. For now, pick how you want to run this first conversation."
+            "value": "Use Eigin offline"
           }
         }
       }
     },
-    "onboarding.inference.offlineLink": {
-      "comment": "Link text to open the offline model download sheet.",
+    "onboarding.inference.offlineSheetDescription": {
+      "comment": "Short description of the local model sheet on supported devices.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opsæt en offlinemodel"
+            "value": "Du kan downloade en lokal model for at bruge Eigin offline."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up an offline model"
+            "value": "You can download a local model to use Eigin offline."
           }
         }
       }
     },
     "onboarding.inference.offlineSheetText": {
-      "comment": "Body text in the offline model sheet when the model has not yet been downloaded.",
+      "comment": "Body below the asset row explaining background download and post-onboarding use, regardless of download state.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kør en model på din enhed, uden internet og uden at noget forlader din telefon. Den downloades i baggrunden mens du kommer i gang, og du kan begynde at bruge den, når den er klar."
+            "value": "Den downloades i baggrunden, mens du kommer i gang. Efter opsætningen kan du skifte til den lokale model, når den er klar."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Run a model on your device, with no internet and nothing leaving your phone. It downloads in the background while you get started, and you can start using it once it’s ready."
+            "value": "It downloads in the background while you get started. After onboarding, you can switch to the local model once it’s ready."
           }
         }
       }
@@ -13295,6 +13295,23 @@
         }
       }
     },
+    "provider.local.hardwareGuidance": {
+      "comment": "Device guidance for local models, shared by onboarding and Settings on unsupported devices.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin er beregnet til iPhone 15 eller nyere til lokale modeller. Du kan stadig bruge Eigin med AI i skyen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigin targets iPhone 15 or later for local models. You can still use Eigin with cloud AI."
+          }
+        }
+      }
+    },
     "provider.local.info.chosenBody": {
       "comment": "Info row body: deliberate choice.",
       "localizations": {
@@ -13546,6 +13563,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Local model"
+          }
+        }
+      }
+    },
+    "provider.local.unsupportedDescription": {
+      "comment": "Short explanation of local model unavailability on unsupported devices.",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne enhed understøttes ikke."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device isn’t supported."
           }
         }
       }

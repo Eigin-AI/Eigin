@@ -31,17 +31,13 @@ struct OnboardingInference: View {
     /// (see `ProviderConnectSheetContent.Step`).
     @State private var connectStep = ProviderConnectSheetContent.Step.start
 
-    private var offlineAvailable: Bool {
-        gemmaManager.isSupported && offersAction
-    }
-
     /// Whether the sheet offers an action while nothing is under way: a first
     /// download, or another go after a failure or a blocked attempt. Only
     /// supported hardware can retry a blocked attempt.
     private var offersAction: Bool {
-        switch gemmaManager.state {
-        case .notDownloaded, .failed: true
-        case .unavailable: gemmaManager.isSupported
+        guard gemmaManager.isSupported else { return false }
+        return switch gemmaManager.state {
+        case .notDownloaded, .failed, .unavailable: true
         default: false
         }
     }
@@ -70,14 +66,12 @@ struct OnboardingInference: View {
         VStack(spacing: Spacing.n16) {
             Spacer()
 
-            if offlineAvailable {
-                Button { showDownload = true } label: {
-                    Text(Localized.Onboarding.Inference.offlineLink)
-                        .typography(Typography.navTab)
-                        .foregroundStyle(colors.text.standard.link)
-                }
-                .buttonStyle(.plain)
+            Button { showDownload = true } label: {
+                Text(Localized.Onboarding.Inference.offlineLink)
+                    .typography(Typography.navTab)
+                    .foregroundStyle(colors.text.standard.link)
             }
+            .buttonStyle(.plain)
 
             VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                 AppButton(Localized.Onboarding.Inference.useEiginButton) { useEigin() }
@@ -119,6 +113,9 @@ struct OnboardingInference: View {
         .appSheet(
             isPresented: $showDownload,
             title: Localized.Onboarding.Inference.offlineSheetTitle,
+            description: gemmaManager.isSupported
+                ? Localized.Onboarding.Inference.offlineSheetDescription
+                : Localized.Provider.Local.unsupportedDescription,
             detents: [.medium],
             fitsContent: true
         ) {
@@ -188,17 +185,17 @@ struct OnboardingInference: View {
         }
     }
 
-    /// The offline download sheet: the Gemma asset row, the pitch, and one
-    /// button. Layout never moves — the copy and the button swap in place
-    /// once the download starts.
+    /// Explains local availability and offers downloads only on supported devices.
     private var offlineSheet: some View {
         VStack(spacing: Spacing.n24) {
-            AssetRow(asset: gemmaManager, showsAction: false)
+            if gemmaManager.isSupported {
+                AssetRow(asset: gemmaManager, showsAction: false)
+            }
 
             Text(
-                offersAction
+                gemmaManager.isSupported
                     ? Localized.Onboarding.Inference.offlineSheetText
-                    : Localized.Onboarding.Inference.offlineDownloadingText
+                    : Localized.Provider.Local.hardwareGuidance
             )
             .typography(Typography.description)
             .foregroundStyle(colors.text.standard.muted)
