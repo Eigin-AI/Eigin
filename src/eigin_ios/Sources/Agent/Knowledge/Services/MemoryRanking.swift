@@ -15,12 +15,15 @@ import Foundation
 /// deliberately small so boosts reorder near-ties rather than override strong
 /// cue matches. They're first guesses — tune in the offline sandbox.
 enum MemoryRanking {
+    /// Maximum adjustment before relevance weighting; keeps history within near-ties.
+    static let maximumAdjustment = 0.05
+
     /// Weight on the recency × frequency activation term (max contribution).
-    static let activationWeight = 0.3
+    static let activationWeight = maximumAdjustment * 0.3 / 0.65
 
     /// Weight on the importance term. Sized so a rare-but-critical fact can
     /// clear everyday high-frequency trivia — the safety net has to win.
-    static let importanceWeight = 0.35
+    static let importanceWeight = maximumAdjustment * 0.35 / 0.65
 
     /// Half-life in days for decaying the access count: accesses this many
     /// days old count half as much toward frequency as current ones.
@@ -30,6 +33,9 @@ enum MemoryRanking {
     /// so each additional access keeps mattering for longer.
     static let frequencySaturation = 4.0
 
+    /// Maximum historical count used for ranking before time decay.
+    static let maximumAccessCount = 16.0
+
     /// Combined boost added to a memory's relevance score. Zero for a neutral
     /// (never-accessed, default-importance) memory.
     static func boost(accessCount: Double, lastAccessedAt: Date?, importance: Double, now: Date)
@@ -38,7 +44,7 @@ enum MemoryRanking {
         activationWeight * activation(
             accessCount: accessCount, lastAccessedAt: lastAccessedAt, now: now
         )
-            + importanceWeight * importanceLift(importance)
+            + importanceWeight * importanceLift(min(1, max(0, importance)))
     }
 
     /// Importance mapped to a boost multiplier, centred on the default `0.5`.
@@ -54,7 +60,7 @@ enum MemoryRanking {
 
     /// Recency × frequency activation in `[0, 1)`. Zero when never accessed.
     ///
-    /// The stored access count is decayed by the recency half-life — an access
+    /// The capped access count is decayed by the recency half-life — an access
     /// 14 days ago counts half, 28 days ago a quarter — so frequency measures
     /// *recent* use, and a memory whose accesses stop fades toward zero
     /// without needing another access. Decayed count then saturates, so each
@@ -63,7 +69,8 @@ enum MemoryRanking {
         guard accessCount > 0, let last = lastAccessedAt else { return 0 }
 
         let elapsedDays = max(0, now.timeIntervalSince(last)) / 86400
-        let effectiveCount = accessCount * exp(-elapsedDays / recencyHalfLifeDays * log(2))
+        let effectiveCount = min(accessCount, maximumAccessCount) *
+            exp(-elapsedDays / recencyHalfLifeDays * log(2))
         return effectiveCount / (effectiveCount + frequencySaturation)
     }
 }

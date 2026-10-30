@@ -42,7 +42,7 @@ struct MemoryRankingTests {
             accessCount: 1_000_000, lastAccessedAt: now, now: now
         )
         #expect(act < 1.0)
-        #expect(act > 0.99)
+        #expect(isApprox(act, 0.8))
     }
 
     @Test func oneHalfLifeHalvesTheCount() {
@@ -54,7 +54,7 @@ struct MemoryRankingTests {
 
     @Test func starvedAccessHistoryFadesTowardZero() {
         // After ten half-lives an old access history is effectively gone.
-        let act = activation(accessCount: 20, daysSinceLastAccess: 140, now: now)
+        let act = activation(accessCount: 1_000_000, daysSinceLastAccess: 140, now: now)
         #expect(act < 0.01)
     }
 
@@ -64,6 +64,28 @@ struct MemoryRankingTests {
             let act = activation(accessCount: 10, daysSinceLastAccess: days, now: now)
             #expect(act < last)
             last = act
+        }
+    }
+
+    @Test func historicalCountCapAppliesBeforeDecay() {
+        for days in [0.0, 14, 28, 140] {
+            #expect(isApprox(
+                activation(accessCount: 1_000_000, daysSinceLastAccess: days, now: now),
+                activation(
+                    accessCount: MemoryRanking.maximumAccessCount,
+                    daysSinceLastAccess: days,
+                    now: now
+                )
+            ))
+        }
+    }
+
+    @Test func outOfRangeImportanceCannotEscapeAdjustmentBound() {
+        for importance in [-100.0, 0, 0.5, 1, 100] {
+            let boost = MemoryRanking.boost(
+                accessCount: 1_000_000, lastAccessedAt: now, importance: importance, now: now
+            )
+            #expect(abs(boost) <= MemoryRanking.maximumAdjustment)
         }
     }
 }

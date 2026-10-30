@@ -101,14 +101,12 @@ struct KnowledgeAutoLinkerTests {
         func recordAccess(
             type: String,
             id: String,
-            kind: KnowledgeAccessKind,
             spaceID: UUID?,
             agentID: UUID?
         ) async {}
 
         func recordAccess(
             _ entities: [(type: String, id: String)],
-            kind: KnowledgeAccessKind,
             spaceID: UUID?,
             agentID: UUID?
         ) async {}

@@ -215,10 +215,10 @@ func linkSuggestions(
 
     let filtered = scored
         .filter {
-            $0.score > linkSuggestionMinScore && $0.qualifiedID != entity.id && !seen
+            $0.relevance > linkSuggestionMinScore && $0.qualifiedID != entity.id && !seen
                 .contains($0.qualifiedID)
         }
-        .sorted { $0.score > $1.score }
+        .sorted(by: KnowledgeSearchEngine.ranksBefore)
 
     for item in filtered.prefix(remaining) {
         suggestions.append([

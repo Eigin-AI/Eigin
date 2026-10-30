@@ -2,21 +2,6 @@ import Foundation
 import os.lock
 import SwiftData
 
-/// How deliberate a knowledge retrieval was. Direct recall (fetch by ID) is a
-/// stronger signal of usefulness than being surfaced by search or the hydrator,
-/// so it counts for more toward a memory's activation.
-enum KnowledgeAccessKind: Sendable {
-    case direct
-    case indirect
-
-    var weight: Double {
-        switch self {
-        case .direct: 1.0
-        case .indirect: 0.3
-        }
-    }
-}
-
 /// Manages the agent's unified knowledge base backed by Firm.
 ///
 /// Loads bundled schemas and seed entities first, then user/agent-created
@@ -67,15 +52,13 @@ protocol KnowledgeService: Sendable {
     func recordAccess(
         type: String,
         id: String,
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async
-    /// Batch variant of ``recordAccess(type:id:kind:spaceID:agentID:)``.
-    /// Records several accesses of the same kind in one write transaction.
+    /// Batch variant of ``recordAccess(type:id:spaceID:agentID:)``.
+    /// Records several explicit retrievals in one write transaction.
     func recordAccess(
         _ entities: [(type: String, id: String)],
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async
@@ -108,7 +91,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     /// SwiftData excludes from Sendable; access is serialised by the lock and
     /// the models are only read for fields, as elsewhere in this class.
     private struct SharedState: @unchecked Sendable {
-        var recentAccess: [String: (weight: Double, at: Date)] = [:]
+        var recentAccess: [String: Date] = [:]
         /// Cached visible-source snapshot for the active scope. One fetch
         /// serves every read in an operation (a search runs six scope
         /// scans). Cleared on any source save — including recordAccess, since
@@ -688,19 +671,17 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     /// Record a retrieval of a memory, bumping its use signals.
     ///
     /// Resolves the shadow-winner ``FirmSource`` for `(type, id)` in the active
-    /// scope, adds the access weight to `accessCount`, and refreshes
+    /// scope, increments `accessCount`, and refreshes
     /// `lastAccessedAt`. Debounced per turn: repeat accesses to the same memory
-    /// within ``accessDebounceWindow`` are coalesced, keeping the strongest kind
-    /// (direct beats indirect). Failures are swallowed — access tracking must
+    /// within ``accessDebounceWindow`` are coalesced. Failures are swallowed — access tracking must
     /// never break a retrieval.
     func recordAccess(
         type: String,
         id: String,
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async {
-        await recordAccess([(type: type, id: id)], kind: kind, spaceID: spaceID, agentID: agentID)
+        await recordAccess([(type: type, id: id)], spaceID: spaceID, agentID: agentID)
     }
 
     /// Record retrievals of memories, bumping their use signals in a single
@@ -711,12 +692,10 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     /// access bump in one background-context save.
     ///
     /// Debounced per turn: repeat accesses to the same memory within
-    /// ``accessDebounceWindow`` are coalesced, keeping the strongest kind
-    /// (direct beats indirect). Failures are swallowed — access tracking must
+    /// ``accessDebounceWindow`` are coalesced. Failures are swallowed — access tracking must
     /// never break a retrieval.
     func recordAccess(
         _ entities: [(type: String, id: String)],
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async {
@@ -726,9 +705,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
             return
         }
 
-        // Per-turn debounce, keeping the strongest kind. If we already counted
-        // this memory this turn at an equal-or-stronger weight, skip; if this
-        // access is stronger (indirect → direct), apply only the upgrade delta.
+        // Count repeated explicit retrievals once within the debounce window.
         let spaceLabel = spaceID?.uuidString ?? "nil"
         let agentLabel = agentID?.uuidString ?? "nil"
         let now = Date()
@@ -739,14 +716,12 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
                     ? String(entity.id.dropFirst(entity.type.count + 1)) : entity.id
                 let targetKey = FirmIDNormalization.normalize("\(entity.type).\(shortID)")
                 let debounceKey = "\(spaceLabel)|\(agentLabel)|\(targetKey)"
-                var deltaWeight = kind.weight
                 if let prior = state.recentAccess[debounceKey],
-                   now.timeIntervalSince(prior.at) < accessDebounceWindow
+                   now.timeIntervalSince(prior) < accessDebounceWindow
                 {
-                    if kind.weight <= prior.weight { continue }
-                    deltaWeight = kind.weight - prior.weight
+                    continue
                 }
-                deltas[targetKey] = deltaWeight
+                deltas[targetKey] = 1
             }
             return deltas
         }
@@ -785,10 +760,7 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
 
         sharedState.withLock { state in
             for targetKey in deltas.keys {
-                state.recentAccess["\(spaceLabel)|\(agentLabel)|\(targetKey)"] = (
-                    weight: kind.weight,
-                    at: now
-                )
+                state.recentAccess["\(spaceLabel)|\(agentLabel)|\(targetKey)"] = now
             }
         }
     }
@@ -998,14 +970,12 @@ struct PreviewKnowledgeService: KnowledgeService {
     func recordAccess(
         type: String,
         id: String,
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async {}
 
     func recordAccess(
         _ entities: [(type: String, id: String)],
-        kind: KnowledgeAccessKind,
         spaceID: UUID?,
         agentID: UUID?
     ) async {}

@@ -1,46 +1,28 @@
 import Foundation
 
-/// Shared scoring primitive for knowledge entity ranking.
-///
-/// Consolidates the inner "scan every visible entity, score it against a
-/// query, filter and rank" loop that used to live duplicated across
-/// ``SearchKnowledgeTool``, ``KnowledgeAutoLinker``, and the link-suggestion
-/// helpers. Both a pre-computed-embedding path (for multi-query callers like
-/// ``KnowledgeHydrator``) and a single-query convenience wrapper are
-/// exposed.
-///
-/// Scoring is the existing `max(cosineSimilarity, keywordScore)` formula.
-/// Call sites that disable the keyword path (by passing `keywordNeedle: nil`)
-/// get pure cosine ranking, which preserves behaviour for the auto-linker and
-/// link-suggestion helpers.
+/// Ranks knowledge entries for search, hints, and suggested links.
 enum KnowledgeSearchEngine {
-    /// One scored entity result with its backing source metadata.
+    /// Keeps memory adjustments within each match tier.
+    private static let maximumTierAdjustment = 0.09
+
+    /// A matching knowledge entry with its rank and source chat.
     struct ScoredEntity: Sendable {
         let entity: FirmEntity
-        /// Normalised `type.shortID` form, regardless of whether the
-        /// underlying ``FirmEntity/id`` is already qualified.
+        /// Entry ID including its type, such as `actor.user`.
         let qualifiedID: String
-        /// Cue relevance `max(cosine, keyword)` plus memory boosts (recency ×
-        /// frequency + importance). Relevance stays primary; boosts reorder
-        /// near-ties. See ``MemoryRanking``.
+        /// Sort priority; higher values appear first.
         let score: Double
-        /// Chat the underlying entity was created in, if any.
+        /// Match strength used to decide whether to include the entry.
+        let relevance: Double
+        /// Chat where the entry was created, if known.
         let chatID: UUID?
     }
 
     // MARK: - Primary APIs
 
-    /// Scores every visible entity against a pre-computed query embedding.
-    ///
-    /// Use this when a single caller wants to run multiple queries against
-    /// the same candidate set and avoid re-tokenising or re-embedding the
-    /// same text twice — for example the NER + full-message passes inside
-    /// ``KnowledgeHydrator``.
-    ///
-    /// Pass `keywordNeedle: nil` (or an empty string) to disable the
-    /// keyword-match path and rely purely on cosine similarity. Results are
-    /// unsorted and zero-scored entries are dropped; callers apply their own
-    /// thresholds and limits.
+    /// Scores visible entries using a query vector and optional keywords.
+    /// Results are unsorted; callers apply thresholds and limits.
+    /// Pass `keywordNeedle: nil` for meaning-only matching.
     static func score(
         queryEmbedding: [Double],
         keywordNeedle: String? = nil,
@@ -65,11 +47,7 @@ enum KnowledgeSearchEngine {
         }
 
         let now = Date()
-        let needle: String? = if let n = keywordNeedle?.lowercased(), !n.isEmpty {
-            n
-        } else {
-            nil
-        }
+        let lexicalQuery = KnowledgeLexicalMatcher.Query(keywordNeedle ?? "")
 
         var results: [ScoredEntity] = []
 
@@ -83,12 +61,6 @@ enum KnowledgeSearchEngine {
             )
 
             for entity in entities {
-                let keywordScore: Double = if let needle {
-                    entityKeywordScore(entity, needle: needle)
-                } else {
-                    0
-                }
-
                 var embeddingScore = 0.0
                 let shortID = knowledgeShortID(from: entity.id, type: schemaName)
                 let path = BundledKnowledge.entityPath(
@@ -103,8 +75,10 @@ enum KnowledgeSearchEngine {
                     )
                 }
 
-                // Cue relevance gates ranking: only cue-matched memories are
-                // considered, then reordered by their memory boosts.
+                let qualifiedID = "\(schemaName).\(shortID)"
+                let keywordScore = KnowledgeLexicalMatcher.score(
+                    entity: entity, qualifiedID: qualifiedID, query: lexicalQuery
+                )
                 let relevance = max(embeddingScore, keywordScore)
                 guard relevance > 0 else { continue }
 
@@ -122,11 +96,11 @@ enum KnowledgeSearchEngine {
                     0
                 }
 
-                let qualifiedID = "\(schemaName).\(shortID)"
                 results.append(ScoredEntity(
                     entity: entity,
                     qualifiedID: qualifiedID,
-                    score: relevance + boost,
+                    score: rankingScore(relevance: relevance, adjustment: boost),
+                    relevance: relevance,
                     chatID: source?.chatID
                 ))
             }
@@ -135,13 +109,7 @@ enum KnowledgeSearchEngine {
         return results
     }
 
-    /// Convenience wrapper: embed the query string once, score, threshold,
-    /// sort, and limit.
-    ///
-    /// Used by ``SearchKnowledgeTool`` and link-suggestion helpers where the
-    /// call site only has a query string and wants a ready-to-render list.
-    /// The keyword path is always enabled here, matching the behaviour of
-    /// the original `searchResult` implementation.
+    /// Embeds a query and returns ranked entries within the threshold and limit.
     static func search(
         query: String,
         typeFilter: String? = nil,
@@ -165,9 +133,9 @@ enum KnowledgeSearchEngine {
         )
 
         if threshold > 0 {
-            scored = scored.filter { $0.score >= threshold }
+            scored = scored.filter { $0.relevance >= threshold }
         }
-        scored.sort { $0.score > $1.score }
+        scored.sort(by: ranksBefore)
         if let limit, scored.count > limit {
             scored = Array(scored.prefix(limit))
         }
@@ -219,47 +187,15 @@ enum KnowledgeSearchEngine {
         }
     }
 
-    // MARK: - Keyword scoring (lifted from SearchKnowledgeTool)
-
-    /// Fixed score assigned when any text field on an entity matches the
-    /// keyword needle. Distinct from embedding scores so the two paths
-    /// contribute at a known, stable level to the `max(cosine, keyword)`
-    /// formula.
-    private static let keywordMatchScore: Double = 0.5
-
-    /// Returns ``keywordMatchScore`` if any text-like field on the entity
-    /// matches the needle, else 0.
-    private static func entityKeywordScore(_ entity: FirmEntity, needle: String) -> Double {
-        if textMatches(entity.id, needle: needle) { return keywordMatchScore }
-        for field in entity.fields {
-            if fieldValueContains(field.value, needle: needle) { return keywordMatchScore }
-        }
-        return 0
+    /// Clamp adjustments inside disjoint relevance bands even when memory weights change.
+    static func rankingScore(relevance: Double, adjustment: Double) -> Double {
+        let weighted = adjustment * min(1, relevance)
+        // Adjacent protected tiers are at least 0.2 apart.
+        return relevance + min(maximumTierAdjustment, max(-maximumTierAdjustment, weighted))
     }
 
-    private static func fieldValueContains(_ value: FirmFieldValue, needle: String) -> Bool {
-        switch value {
-        case .string(let v): textMatches(v, needle: needle)
-        case .enum(let v): textMatches(v, needle: needle)
-        case .entityReference(let id): textMatches(id, needle: needle)
-        case .list(let items): items.contains { fieldValueContains($0, needle: needle) }
-        default: false
-        }
-    }
-
-    /// Match if the text contains the needle as a substring, or if any word
-    /// shares a common prefix of 4+ characters with the needle.
-    private static func textMatches(_ text: String, needle: String) -> Bool {
-        let lower = text.lowercased()
-        if lower.contains(needle) { return true }
-
-        guard needle.count >= 4 else { return false }
-        let words = lower.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
-        let minPrefix = min(needle.count, 4)
-        for word in words {
-            let shared = zip(word, needle).prefix { $0 == $1 }.count
-            if shared >= minPrefix { return true }
-        }
-        return false
+    /// Stable ordering for identical evidence and memory signals.
+    static func ranksBefore(_ lhs: ScoredEntity, _ rhs: ScoredEntity) -> Bool {
+        lhs.score == rhs.score ? lhs.qualifiedID < rhs.qualifiedID : lhs.score > rhs.score
     }
 }

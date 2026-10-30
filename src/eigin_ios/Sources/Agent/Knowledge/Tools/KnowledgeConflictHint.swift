@@ -61,8 +61,8 @@ enum KnowledgeConflictHint {
         }
 
         return scored
-            .filter { $0.qualifiedID != selfID && $0.score > threshold }
-            .sorted { $0.score > $1.score }
+            .filter { $0.qualifiedID != selfID && $0.relevance > threshold }
+            .sorted(by: KnowledgeSearchEngine.ranksBefore)
             .prefix(maxHints)
             .map { ["id": $0.entity.id, "summary": knowledgeSummary(for: $0.entity)] }
     }

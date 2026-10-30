@@ -33,7 +33,7 @@ struct SearchKnowledgeTool: Tool {
         if isSmallContext {
             return ToolDefinition(
                 name: name,
-                description: "Search your knowledge base.",
+                description: "Search your knowledge base. Use get_knowledge for details.",
                 parameters: JSONSchema(
                     type: "object",
                     properties: [
@@ -49,6 +49,7 @@ struct SearchKnowledgeTool: Tool {
             Search your knowledge base. \
             With a query: returns ranked results scored by semantic similarity and keyword match. \
             Without a query: returns an overview of what you know (counts and recent entries per type). \
+            An exact ID query ranks its entry first within the active scope and filters. \
             Results are summaries — use get_knowledge to retrieve full details. \
             By default, expired (forgotten or superseded) entries are hidden. \
             Set include_expired to true to search them too.
@@ -202,14 +203,6 @@ struct SearchKnowledgeTool: Tool {
             includeExpired: includeExpired,
             limit: limit,
             knowledgeService: knowledgeService,
-            spaceID: spaceID,
-            agentID: agentID
-        )
-
-        // Surfacing by search is an indirect use signal for each result shown.
-        await knowledgeService.recordAccess(
-            scored.map { (type: $0.entity.entityType, id: $0.qualifiedID) },
-            kind: .indirect,
             spaceID: spaceID,
             agentID: agentID
         )

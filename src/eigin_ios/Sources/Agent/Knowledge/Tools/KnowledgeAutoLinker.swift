@@ -187,8 +187,8 @@ enum KnowledgeAutoLinker {
         }
 
         let filtered = scored
-            .filter { $0.score > semanticThreshold && !seen.contains($0.qualifiedID) }
-            .sorted { $0.score > $1.score }
+            .filter { $0.relevance > semanticThreshold && !seen.contains($0.qualifiedID) }
+            .sorted(by: KnowledgeSearchEngine.ranksBefore)
 
         var results: [String] = []
         for item in filtered.prefix(limit) {

@@ -144,7 +144,6 @@ struct GetKnowledgeTool: Tool {
             await knowledgeService.recordAccess(
                 type: entityType,
                 id: entityID,
-                kind: .direct,
                 spaceID: spaceID,
                 agentID: agentID
             )
