@@ -270,7 +270,7 @@ export const screenEntries: ScreenEntry[] = [
     component: OnboardingFlow,
     props: { start: "inference" },
     about:
-      "Gives the agent a brain. Eigin's cloud is the default and asks for credits first if you have none; your own provider is second; the offline model downloads in the background.",
+      "Preview supported and unsupported devices, plus local download states. The local-model sheet explains downloading now and switching after onboarding.",
   },
   {
     id: "onboarding-conversation",

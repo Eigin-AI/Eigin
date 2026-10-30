@@ -3,6 +3,7 @@
   import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
   import { useStageControls } from "@gallery/screens/stageControls.svelte";
   import InferenceStep from "@gallery/screens/onboarding/InferenceStep.svelte";
+  import { downloadStates, type DownloadStage } from "@gallery/screens/localModel";
   import NameStep from "@gallery/screens/onboarding/NameStep.svelte";
   import OnboardingChat from "@gallery/screens/onboarding/OnboardingChat.svelte";
   import OnboardingScaffold from "@gallery/screens/onboarding/OnboardingScaffold.svelte";
@@ -36,6 +37,8 @@
   let name = $state(startsPastName ? "Alex" : "");
   let priority = $state(priorities[0].title);
   let credits = $state<"has credits" | "no credits">("has credits");
+  let hardware = $state("supported device");
+  let downloadStage = $state<DownloadStage>("not installed");
   const speeds = { "1×": 1, "½×": 0.5, "¼×": 0.25 };
   let speed = $state<keyof typeof speeds>("1×");
   let introduction = $state<IntroductionLength>("typical");
@@ -62,6 +65,10 @@
   {/if}
   {#if step === "inference"}
     <OptionSelector options={["has credits", "no credits"]} bind:value={credits} />
+    <OptionSelector options={["supported device", "unsupported device"]} bind:value={hardware} />
+    {#if hardware === "supported device"}
+      <OptionSelector options={Object.keys(downloadStates)} bind:value={downloadStage} />
+    {/if}
   {/if}
 {/snippet}
 
@@ -116,6 +123,8 @@
       {:else if step === "inference"}
         <InferenceStep
           hasCredits={credits === "has credits"}
+          isSupported={hardware === "supported device"}
+          bind:downloadStage
           onUseCloud={() => (step = "conversation")}
         />
       {/if}

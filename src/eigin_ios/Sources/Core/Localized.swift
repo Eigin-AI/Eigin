@@ -3272,22 +3272,24 @@ enum Localized {
                 Localized.get("onboarding.inference.connectOwnButton")
             }
 
-            /// Button to dismiss the offline sheet after download has started.
+            /// Button to dismiss the local model explanation and return to cloud onboarding
+            /// choices.
             static var continueButton: String {
                 Localized.get("onboarding.inference.continueButton")
             }
 
-            /// Body text in the offline model sheet while the model is already downloading.
-            static var offlineDownloadingText: String {
-                Localized.get("onboarding.inference.offlineDownloadingText")
-            }
-
-            /// Link text to open the offline model download sheet.
+            /// Link to learn about local model availability on any device.
             static var offlineLink: String {
                 Localized.get("onboarding.inference.offlineLink")
             }
 
-            /// Body text in the offline model sheet when the model has not yet been downloaded.
+            /// Short description of the local model sheet on supported devices.
+            static var offlineSheetDescription: String {
+                Localized.get("onboarding.inference.offlineSheetDescription")
+            }
+
+            /// Body below the asset row explaining background download and post-onboarding use,
+            /// regardless of download state.
             static var offlineSheetText: String {
                 Localized.get("onboarding.inference.offlineSheetText")
             }
@@ -4434,6 +4436,12 @@ enum Localized {
                 Localized.get("provider.local.deleteModel")
             }
 
+            /// Device guidance for local models, shared by onboarding and Settings on unsupported
+            /// devices.
+            static var hardwareGuidance: String {
+                Localized.get("provider.local.hardwareGuidance")
+            }
+
             /// Description of the local model info sheet.
             static var infoDescription: String {
                 Localized.get("provider.local.infoDescription")
@@ -4452,6 +4460,11 @@ enum Localized {
             /// Title of the local model screen and hub row.
             static var title: String {
                 Localized.get("provider.local.title")
+            }
+
+            /// Short explanation of local model unavailability on unsupported devices.
+            static var unsupportedDescription: String {
+                Localized.get("provider.local.unsupportedDescription")
             }
 
             enum Info {
