@@ -1,3 +1,4 @@
+import EiginSDK
 import Factory
 import SwiftData
 import SwiftUI
@@ -19,6 +20,18 @@ struct EiginApp: App {
         UserDefaults.standard.register(defaults: [
             StorageKey.logSinkToFile: true,
         ])
+
+        Task {
+            do {
+                try await EiginSDK.initialize()
+                AppLogger.info("Eigin SDK initialized", category: .general)
+            } catch {
+                AppLogger.error(
+                    "SDK initialization failed: \(private: error.localizedDescription)",
+                    category: .general
+                )
+            }
+        }
 
         PendingDestinationMigrator.migrateLegacyKeys()
 

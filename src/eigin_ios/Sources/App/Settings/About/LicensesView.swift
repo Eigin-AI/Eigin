@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Settings > About > Licenses: attribution list for every third-party package
-/// shipped in the app. Mirrors `LICENSES/swift-packages.md`; tap a package for
+/// shipped in the app. Mirrors `LICENSES/eigin_ios.md`; tap a package for
 /// its full license text (App Store Guideline 5.2.1).
 struct LicensesView: View {
     @Environment(\.colors) private var colors
@@ -144,6 +144,15 @@ private struct LicenseDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                    if let notice = entry.notice {
+                        AppCardSurface {
+                            Text(notice)
+                                .typography(Typography.tag)
+                                .foregroundStyle(colors.text.standard.base)
+                                .multilineTextAlignment(.leading)
+                        }
+                    }
+
                     AppCardSurface {
                         Text(entry.kind.licenseText())
                             .typography(Typography.tag)

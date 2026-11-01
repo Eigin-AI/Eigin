@@ -1,0 +1,4 @@
+rust:
+  directory: ../crates/eigin_sdk
+wasm2:
+  ts: ../target/web-bindings

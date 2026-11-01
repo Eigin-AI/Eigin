@@ -15,6 +15,8 @@ mod knowledge;
 mod lint;
 mod localize;
 mod prompts;
+mod sdk;
+mod sdk_fixtures;
 mod security;
 mod watermark;
 mod website;
@@ -30,6 +32,8 @@ struct Cli {
 enum Command {
     /// Run all code generation tasks for the project.
     Generate(generate::GenerateArgs),
+    /// Check test-only SDK bindings for web or Apple.
+    CheckSdkBindings(sdk_fixtures::Args),
     /// Manage and upload self-hosted model assets.
     Assets(assets::AssetsArgs),
     /// Format all code in the repo.
@@ -64,6 +68,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Generate(args) => generate::run(args),
+        Command::CheckSdkBindings(args) => sdk_fixtures::run_check(args),
         Command::Assets(args) => assets::run(args),
         Command::Format(args) => format::run(args),
         Command::Grant(args) => grant::run(args),

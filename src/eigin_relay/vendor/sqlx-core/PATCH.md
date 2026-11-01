@@ -59,6 +59,6 @@ When an upstream release includes a bounded entire return operation:
 1. Remove `[patch.crates-io]` from the relay manifest.
 2. Upgrade SQLx and regenerate the lockfile.
 3. Run the recovery checks and full relay tests against that release.
-4. Delete this directory and update `LICENSES/rust-crates.md`.
+4. Delete this directory and update `LICENSES/eigin_relay.md`.
 
 Do not remove the regression checks with the override.

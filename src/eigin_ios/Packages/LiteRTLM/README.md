@@ -48,7 +48,7 @@ package is consumed and remains handled by the post-build script.
    vendored copy to carry forward any other local changes).
 4. Update `Package.swift`'s `binaryTarget` url/checksum.
 5. Update the revision/version noted at the top of this file and in
-   `LICENSES/swift-packages.md`.
+   `LICENSES/eigin_ios.md`.
 6. Run `just generate && just build ios && just test ios`.
 
 Keep these sources verbatim in upstream's style so the diff against a new tag

@@ -1,4 +1,4 @@
-# Swift Package Licenses
+# Eigin iOS dependencies
 
 | Package | Repository | Version | License |
 |---------|-----------|---------|---------|
@@ -15,6 +15,12 @@
 | swift-nio-imap (SwiftMail dependency) | https://github.com/apple/swift-nio-imap | resolved transitively | Apache 2.0 |
 | swift-nio-ssl (SwiftMail dependency) | https://github.com/apple/swift-nio-ssl | resolved transitively | Apache 2.0 |
 | LiteRT-LM (vendored, `src/eigin_ios/Packages/LiteRTLM`) | https://github.com/google-ai-edge/LiteRT-LM | 0.16.0 | Apache 2.0 |
+
+
+## SDK consumer
+
+The app consumes [Eigin SDK](eigin_sdk.md). Its Rust and browser dependency inventory belongs to the SDK.
+The app’s licenses view also displays [UniFFI notices](uniffi/README.md) because the SDK runtime ships in the app.
 
 ## Notes
 

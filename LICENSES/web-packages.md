@@ -1,6 +1,7 @@
 # Web package licenses
 
-Direct runtime and development dependencies of the gallery and website.
+Direct runtime and development dependencies of the gallery, website, and browser test host.
+SDK browser runtime dependencies are owned by [Eigin SDK](eigin_sdk.md).
 Resolved versions and transitive dependency licenses are recorded in the root lockfile.
 
 | Package | License |

@@ -8,21 +8,28 @@ use crate::knowledge;
 use crate::localize;
 use crate::prompts;
 
-/// Generate all outputs, iOS outputs, or shared web design assets.
+/// Generate host SDK artifacts and application outputs.
 ///
-/// - All/iOS: localization, design tokens, prompts and knowledge.
-/// - Web: shared tokens, typography, fonts and icons only.
-/// - With xcodegen installed: the Xcode project from project.yml. xcodegen
-///   itself doesn't need Xcode, only the Swift runtime.
-/// - With Xcode available: the build server config for IDE/LSP support.
-///
-/// Each Xcode step is skipped with a note when its tool is absent, so relay and
-/// tooling work needs only Rust.
+/// iOS generation needs Apple SDK tooling; web and SDK web targets stay portable.
+/// XcodeGen and build-server configuration follow source and binding generation.
 #[derive(clap::Args, Default)]
 pub struct GenerateArgs {
-    /// Generation target: all (default), ios, web, or docs.
+    /// Generation target: all (default), ios, web, docs, or sdk.
     #[arg(value_enum, default_value_t = GenerateTarget::All)]
     target: GenerateTarget,
+    /// SDK host artifacts (only valid after sdk).
+    #[arg(value_enum)]
+    sdk_target: Option<crate::sdk::SdkTarget>,
+}
+
+impl GenerateArgs {
+    /// Select only the outputs required by the iOS application.
+    pub fn ios() -> Self {
+        Self {
+            target: GenerateTarget::Ios,
+            sdk_target: None,
+        }
+    }
 }
 
 /// Independently selectable generation outputs.
@@ -32,16 +39,28 @@ enum GenerateTarget {
     All,
     Ios,
     Web,
+    Sdk,
     Docs,
 }
 
 pub fn run(args: GenerateArgs) -> Result<()> {
     let root = config::repo_root()?;
-    if args.target == GenerateTarget::Web {
-        return design::web::generate_assets(&root);
+    if args.target == GenerateTarget::Sdk {
+        return crate::sdk::generate(&root, args.sdk_target.unwrap_or_default());
+    }
+    if args.sdk_target.is_some() {
+        anyhow::bail!("SDK host selector requires `generate sdk [apple | web | all]`");
     }
     if args.target == GenerateTarget::Docs {
         return design::web::generate_docs(&root);
+    }
+    if args.target == GenerateTarget::Web {
+        design::web::generate_assets(&root)?;
+        return crate::sdk::generate(&root, crate::sdk::SdkTarget::Web);
+    }
+    crate::sdk::generate(&root, crate::sdk::SdkTarget::Apple)?;
+    if args.target == GenerateTarget::All {
+        crate::sdk::generate(&root, crate::sdk::SdkTarget::Web)?;
     }
     let ios_dir = format!("{root}/src/eigin_ios");
 
@@ -51,7 +70,9 @@ pub fn run(args: GenerateArgs) -> Result<()> {
     match args.target {
         GenerateTarget::All => design::generate_all(&root)?,
         GenerateTarget::Ios => design::generate_ios(&root)?,
-        GenerateTarget::Web | GenerateTarget::Docs => unreachable!("generation returned above"),
+        GenerateTarget::Web | GenerateTarget::Sdk | GenerateTarget::Docs => {
+            unreachable!("target returned above")
+        }
     }
     prompts::generate_all(&root)?;
     knowledge::generate_all(&root)?;
@@ -141,9 +162,17 @@ mod tests {
             (vec!["generate", "all"], GenerateTarget::All),
             (vec!["generate", "ios"], GenerateTarget::Ios),
             (vec!["generate", "web"], GenerateTarget::Web),
+            (vec!["generate", "docs"], GenerateTarget::Docs),
+            (vec!["generate", "sdk"], GenerateTarget::Sdk),
         ] {
             assert_eq!(Cli::try_parse_from(args).unwrap().args.target, expected);
         }
+        for selector in ["apple", "web", "all"] {
+            let parsed = Cli::try_parse_from(["generate", "sdk", selector]).unwrap();
+            assert_eq!(parsed.args.target, GenerateTarget::Sdk);
+            assert!(parsed.args.sdk_target.is_some());
+        }
+        assert!(Cli::try_parse_from(["generate", "sdk", "invalid"]).is_err());
         assert!(Cli::try_parse_from(["generate", "relay"]).is_err());
         assert!(Cli::try_parse_from(["generate", "--web"]).is_err());
     }

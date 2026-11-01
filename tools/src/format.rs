@@ -39,6 +39,44 @@ pub fn run(_args: FormatArgs) -> Result<()> {
         "cargo fmt (tools)",
     )?;
 
+    for manifest in ["src/eigin_sdk/Cargo.toml", "src/eigin_cli/Cargo.toml"] {
+        run_cmd(
+            Command::new("cargo").args([
+                "+1.99.1",
+                "fmt",
+                "--manifest-path",
+                &format!("{root}/{manifest}"),
+                "--all",
+            ]),
+            "cargo fmt (SDK/CLI)",
+        )?;
+    }
+    run_cmd(
+        Command::new("swiftformat")
+            .arg(format!(
+                "{root}/src/eigin_sdk/apple/EiginSDK/Sources/EiginSDK"
+            ))
+            .arg(format!("{root}/src/eigin_sdk/apple/EiginSDK/Tests"))
+            .arg(format!("{root}/src/eigin_sdk/apple/EiginSDK/Package.swift"))
+            .arg(format!("{root}/src/eigin_sdk/tests")),
+        "swiftformat (SDK)",
+    )?;
+    if web_installed(&root) {
+        run_cmd(
+            Command::new("npx")
+                .args([
+                    "prettier",
+                    "--write",
+                    "src/eigin_web",
+                    "src/eigin_sdk/web",
+                    "--ignore-path",
+                    ".gitignore",
+                ])
+                .current_dir(&root),
+            "prettier (SDK/app)",
+        )?;
+    }
+
     let web = format!("{root}/design/web");
     if web_installed(&root) {
         run_cmd(

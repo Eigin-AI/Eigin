@@ -142,6 +142,15 @@ node_modules/
 src/eigin_website/build/
 playwright-report/
 
+# SDK generated artifacts
+src/eigin_sdk/target/
+src/eigin_sdk/web/src/generated/
+src/eigin_sdk/apple/EiginSDK/Artifacts/
+src/eigin_sdk/apple/EiginSDK/Sources/EiginSDKBindings/
+src/eigin_cli/target/
+src/eigin_web/dist/
+src/eigin_sdk/web/tests/generated/
+
 # Local website recovery artifacts
 infra/scaleway/website-releases/
 

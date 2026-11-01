@@ -42,7 +42,9 @@ Read about the [architecture](https://docs.eigin.ai/system-context.html) and [se
 
 ## Build it yourself
 
-Install [Rust](https://rustup.rs) and [just](https://github.com/casey/just#installation). For iOS, you also need macOS, Xcode 26 with the iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it).
+For the Rust SDK, browser app, and headless CLI, see the [SDK development guide](src/eigin_sdk/README.md).
+
+Install [Rust](https://rustup.rs) and [just](https://github.com/casey/just#installation). For all-target generation, also install Node.js 22.17+ and npm 10+. For iOS, you also need macOS, Xcode 26 with the iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it).
 
 ```sh
 just hooks               # install git hooks (one-time)

@@ -16,6 +16,7 @@ use super::logs::{self, Since};
 pub enum WebTarget {
     Gallery,
     Site,
+    App,
 }
 
 impl WebTarget {
@@ -23,24 +24,28 @@ impl WebTarget {
         match self {
             Self::Gallery => 5173,
             Self::Site => 5174,
+            Self::App => 5175,
         }
     }
     fn directory(self) -> &'static str {
         match self {
             Self::Gallery => "design/web",
             Self::Site => "src/eigin_website",
+            Self::App => "src/eigin_web",
         }
     }
     fn workspace(self) -> &'static str {
         match self {
             Self::Gallery => "@eigin/ui",
             Self::Site => "@eigin/website",
+            Self::App => "@eigin/app",
         }
     }
     fn identity(self) -> &'static str {
         match self {
             Self::Gallery => "web",
             Self::Site => "website",
+            Self::App => "app",
         }
     }
 }
@@ -52,7 +57,8 @@ pub fn parse(args: &[String]) -> Result<WebTarget> {
         [] => Ok(WebTarget::Gallery),
         [value] if value.as_str() == "gallery" => Ok(WebTarget::Gallery),
         [value] if value.as_str() == "site" => Ok(WebTarget::Site),
-        _ => bail!("Expected web [gallery | site]"),
+        [value] if value.as_str() == "app" => Ok(WebTarget::App),
+        _ => bail!("Expected web [gallery | site | app]"),
     }
 }
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
@@ -69,23 +75,6 @@ fn web_dir(root: &str, target: WebTarget) -> PathBuf {
     PathBuf::from(root).join(target.directory())
 }
 
-/// Install node_modules when they're missing, so a fresh checkout just works.
-fn ensure_dependencies(root: &str) -> Result<()> {
-    if PathBuf::from(root).join("node_modules/.bin/vite").exists() {
-        return Ok(());
-    }
-    println!("→ Installing web dependencies (npm install)…");
-    let status = Command::new("npm")
-        .args(["install", "--no-fund", "--no-audit"])
-        .current_dir(root)
-        .status()
-        .context("running npm install")?;
-    if !status.success() {
-        bail!("npm install failed");
-    }
-    Ok(())
-}
-
 /// Start a web dev server, replacing the tracked instance for this surface.
 pub fn start(root: &str, target: WebTarget) -> Result<()> {
     if !web_dir(root, target).exists() {
@@ -96,12 +85,15 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
     }
     fs::create_dir_all(PathBuf::from(root).join("logs")).context("creating the logs directory")?;
 
-    ensure_dependencies(root)?;
+    crate::sdk::ensure_web_dependencies(root)?;
 
     // Fresh tokens before the server starts. The web target is in-process —
     // running full codegen (localize, xcodegen, build server) would be
     // far too slow for a dev-server start.
     crate::design::web::generate_assets(root)?;
+    if target == WebTarget::App {
+        crate::sdk::generate(root, crate::sdk::SdkTarget::Web)?;
+    }
 
     stop_running(root, target)?;
     reclaim_port(target.port(), root, target)?;
@@ -327,7 +319,7 @@ mod tests {
     fn selectors_are_explicit() {
         assert_eq!(parse(&[]).unwrap(), WebTarget::Gallery);
         assert_eq!(parse(&["site".into()]).unwrap(), WebTarget::Site);
-        assert!(parse(&["app".into()]).is_err());
+        assert_eq!(parse(&["app".into()]).unwrap(), WebTarget::App);
         assert!(parse(&["site".into(), "production".into()]).is_err());
     }
     #[test]
@@ -335,6 +327,7 @@ mod tests {
         for (target, sibling) in [
             (WebTarget::Site, WebTarget::Gallery),
             (WebTarget::Gallery, WebTarget::Site),
+            (WebTarget::App, WebTarget::Site),
         ] {
             let command = format!(
                 "node /repo/{}/node_modules/.bin/vite --port {} --strictPort",

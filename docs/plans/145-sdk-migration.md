@@ -188,7 +188,18 @@ Keep the main sections current; retain superseded decisions here. Link future en
 
 ## Implementation log
 
-No SDK increments have been completed under this plan yet.
+### #330 — Initialization across hosts (awaiting human review)
+
+- **Issue / MR:** [#330](https://code.eigin.ai/dev/eigin/-/issues/330); MR pending.
+- **Responsibility moved:** Rust owns a minimal, repeatable async initialization entry point. No agent behavior moved.
+- **Integration:** iOS calls `EiginSDK.initialize()` during startup; the new Svelte app loads `@eigin/sdk`; `eigin init` calls Rust directly. Swift retains existing services and orchestration.
+- **Bindings:** UniFFI 0.31.0 for Swift; released `uniffi-bindgen-react-native` / `@ubjs` 0.31.0-6 using `wasm2` for browsers. Host packages keep generated bindings internal.
+- **Local verification:** native SDK checks/tests/clippy, WASM compilation, CLI process tests, independent Swift package test, typed Rust error fixtures in Swift and all three browser engines, browser host tests and production-app smoke tests. Chromium 151, Firefox 153, and Playwright WebKit 26.5 passed. Simulator app launched and logged initialization success; embedded framework signature verified. Unsigned generic iOS device build passed. Existing iOS suite passed 1,665 tests in 190 suites. All 21 production artifact files matched SHA-256 hashes after deleting and regenerating ignored outputs.
+- **Properties exercised:** basic awaited calls, typed failures, browser module loading, repeated/concurrent initialization, and build integration. Streaming, cancellation, reactive state, and thread-dependent work remain unproven.
+- **Removed code:** none; no Swift agent implementation was replaced.
+- **Lessons / next decisions:** package the Apple SDK as a dynamic XCFramework to isolate Rust runtime symbols from Firm’s current static library. Firm remains separate until a future extraction. Browser support has tested versions rather than a promised minimum; manual Safari and app-flow checks remain. After merging main, the user confirmed device launch and the SDK initialization log, plus simulator launch without a captured initialization log. Release signing and App Store archive validation remain unverified. Remote CI is deferred to its separate issue.
+- **Review follow-ups:** shared product versioning #355; scalable host/error and WASM runtime testing #356; diagnostics ownership #357. Rust toolchain upgraded to 1.99.1; UniFFI stays on the 0.31 line required by the released browser generator. The error fixture now suspends before returning to exercise future wakeups.
+- **Development guide:** [`src/eigin_sdk/README.md`](../../src/eigin_sdk/README.md).
 
 For each completed increment, add:
 

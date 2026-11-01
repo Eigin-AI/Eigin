@@ -29,7 +29,7 @@ pub struct RunArgs {
 pub struct StopArgs {
     /// relay | web
     target: String,
-    /// Web surface: gallery | site.
+    /// Web surface: gallery | site | app.
     args: Vec<String>,
 }
 
@@ -160,8 +160,26 @@ pub fn run(args: RunArgs) -> Result<()> {
                 _ => ios::run_device(slots.name.as_deref(), env, &root),
             }
         }
+        "cli" => {
+            let status = std::process::Command::new("cargo")
+                .args([
+                    "+1.99.1",
+                    "run",
+                    "--locked",
+                    "--manifest-path",
+                    "src/eigin_cli/Cargo.toml",
+                    "--",
+                ])
+                .args(args.args.iter().filter(|arg| !arg.is_empty()))
+                .current_dir(&root)
+                .status()?;
+            if !status.success() {
+                bail!("Eigin CLI exited with {status}");
+            }
+            Ok(())
+        }
         "web" => web::start(&root, web::parse(&args.args)?),
-        other => bail!("Unknown run target: {other} (use relay | ios | web)"),
+        other => bail!("Unknown run target: {other} (use relay | ios | web | cli)"),
     }
 }
 
@@ -231,7 +249,7 @@ pub fn logs(args: LogsArgs) -> Result<()> {
                 _ => ios::simulator_logs(env, &since, args.follow, &root),
             }
         }
-        other => bail!("Unknown logs target: {other} (use relay | ios | web)"),
+        other => bail!("Unknown logs target: {other} (use relay | ios | web | cli)"),
     }
 }
 
