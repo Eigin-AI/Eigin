@@ -22,7 +22,7 @@ to clients that hold the relay key.
 | **Original HuggingFace** | https://huggingface.co/kyutai/pocket-tts |
 | **CoreML adaptation** | FluidInference |
 | **CoreML HuggingFace** | https://huggingface.co/FluidInference/pocket-tts-coreml |
-| **Library** | FluidAudio (Apache 2.0) — see swift-packages.md |
+| **Library** | FluidAudio (Apache 2.0) — see eigin_ios.md |
 | **Model license** | CC BY 4.0 |
 
 ---
@@ -36,7 +36,7 @@ to clients that hold the relay key.
 | **Original HuggingFace** | https://huggingface.co/syvai/plapre-pico |
 | **CoreML adaptation** | 42futures |
 | **CoreML HuggingFace** | https://huggingface.co/42futures/plapre-pico-coreml |
-| **Tokenizer** | swift-transformers (Apache 2.0) — see swift-packages.md |
+| **Tokenizer** | swift-transformers (Apache 2.0) — see eigin_ios.md |
 | **Model license** | CC BY 4.0 |
 
 ---
@@ -50,5 +50,5 @@ to clients that hold the relay key.
 | **Original HuggingFace** | https://huggingface.co/google/gemma-4-E2B-it-qat-mobile-transformers |
 | **LiteRT-LM build** | litert-community |
 | **LiteRT-LM HuggingFace** | https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm |
-| **Runtime** | LiteRT-LM (Apache 2.0) — see swift-packages.md |
+| **Runtime** | LiteRT-LM (Apache 2.0) — see eigin_ios.md |
 | **Model license** | Gemma Terms of Use |

@@ -1,0 +1,25 @@
+{
+  "name": "@eigin/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "npm run check && npm run build && playwright test"
+  },
+  "dependencies": {
+    "@eigin/sdk": "*",
+    "svelte": "^5.57.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tsconfig/svelte": "^5.0.5",
+    "svelte-check": "^4.3.4",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.12"
+  }
+}

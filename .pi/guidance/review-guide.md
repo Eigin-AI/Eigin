@@ -113,7 +113,7 @@ A license we can ship, no known vulnerabilities.
 ## Compliance
 
 ### Check new dependencies are recorded.
-Row in `LICENSES/`, and the matching entry in the app's licenses view (`LicenseEntry.swift` mirrors `LICENSES/swift-packages.md`).
+Record dependencies in the source project's `LICENSES/` inventory; dependencies shipped in the iOS app also need an in-app licenses entry (`LicenseEntry.swift`; see `LICENSES/eigin_ios.md`).
 
 ### Check the change against `docs/src/compliance/`.
 If it contradicts a claim (GDPR, AI Act, App Store, CASA), the change gets fixed. If the claim is stale, flag the doc for human review.

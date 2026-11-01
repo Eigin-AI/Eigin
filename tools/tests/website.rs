@@ -308,26 +308,56 @@ fn website_failed_or_cancelled_publish_has_no_success_receipt() {
 }
 
 #[test]
-fn website_asset_regeneration_requires_brand_fonts_without_overwriting_artwork() {
+fn website_asset_regeneration_succeeds_without_fonts_and_preserves_source_artwork() {
     let site = Site::new();
-    fs::create_dir_all(site.root().join("design/assets/icons/brand")).unwrap();
-    fs::write(
-        site.root().join("design/tokens.json"),
-        include_str!("../../design/tokens.json"),
-    )
-    .unwrap();
-    fs::write(
-        site.root().join("design/assets/icons/brand/avatar.svg"),
-        include_str!("../../design/assets/icons/brand/avatar.svg"),
-    )
-    .unwrap();
-    let icon = site.root().join("src/eigin_website/static/favicon.svg");
-    fs::create_dir_all(icon.parent().unwrap()).unwrap();
-    fs::write(&icon, "existing committed icon").unwrap();
+    let sources = [
+        (
+            "design/tokens.json",
+            include_str!("../../design/tokens.json"),
+        ),
+        (
+            "design/assets/icons/brand/avatar.svg",
+            include_str!("../../design/assets/icons/brand/avatar.svg"),
+        ),
+        (
+            "design/assets/icons/illustration/hero-bird.svg",
+            include_str!("../../design/assets/icons/illustration/hero-bird.svg"),
+        ),
+    ];
+    for (path, contents) in sources {
+        let path = site.root().join(path);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, contents).unwrap();
+    }
+    let assets = site.root().join("src/eigin_website/static");
+    fs::create_dir_all(&assets).unwrap();
+    fs::write(assets.join("favicon.svg"), "existing committed icon").unwrap();
     let output = site.run("assets", "", &[]);
-    assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("Install brand font"));
-    assert_eq!(fs::read_to_string(icon).unwrap(), "existing committed icon");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        fs::read_to_string(assets.join("favicon.svg"))
+            .unwrap()
+            .starts_with("<svg")
+    );
+    for (file, width, height) in [
+        ("favicon-32.png", 32, 32),
+        ("apple-touch-icon.png", 180, 180),
+        ("social/en.png", 1200, 630),
+        ("social/da.png", 1200, 630),
+    ] {
+        let image = resvg::tiny_skia::Pixmap::load_png(assets.join(file)).unwrap();
+        assert_eq!((image.width(), image.height()), (width, height), "{file}");
+    }
+    for (path, contents) in sources {
+        assert_eq!(
+            fs::read_to_string(site.root().join(path)).unwrap(),
+            contents
+        );
+    }
     assert!(!site.log().contains("terraform "));
     assert!(!site.log().contains("aws "));
 }

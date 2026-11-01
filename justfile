@@ -12,15 +12,17 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
-[doc('Regenerate outputs (all | ios | web | docs; default all)')]
-generate target="all":
+[doc('Regenerate outputs (all | ios | web | docs | sdk [apple|web|all]; default all)')]
+generate target="all" sdk_target="":
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ {{ quote(target) }} != "web" ] && [ {{ quote(target) }} != "docs" ]; then
+    if [ {{ quote(target) }} != "web" ] && [ {{ quote(target) }} != "docs" ] && [ {{ quote(target) }} != "sdk" ]; then
         vars="$({{ tools }} config export ios)"
         eval "$vars"
     fi
-    {{ tools }} generate {{ quote(target) }}
+    args=({{ quote(target) }})
+    if [ -n {{ quote(sdk_target) }} ]; then args+=({{ quote(sdk_target) }}); fi
+    {{ tools }} generate "${args[@]}"
 
 [doc('Config (init | check | secret <NAME> <env> | export ios|relay|tf-vars [env])')]
 config *args="check":
@@ -56,7 +58,7 @@ docs command="build":
 # --- Test ---
 
 [private]
-_test-ios env="staging" verbose="false": generate
+_test-ios env="staging" verbose="false": (generate "ios")
     #!/usr/bin/env bash
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
@@ -80,7 +82,7 @@ _test-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Run tests (target: all | ios | relay | web | website, variant: unit | postgres)')]
+[doc('Run tests (target: all | ios | relay | web | website | sdk | cli, variant: unit | postgres)')]
 test target="all" variant="unit" env="staging" verbose="false":
     #!/usr/bin/env bash
     set -e
@@ -92,6 +94,8 @@ test target="all" variant="unit" env="staging" verbose="false":
             just _test-relay {{ verbose }}
         fi
     fi
+    if [ "{{ target }}" = "sdk" ] || [ "{{ target }}" = "all" ]; then just _test-sdk; fi
+    if [ "{{ target }}" = "cli" ] || [ "{{ target }}" = "all" ]; then just _test-cli; fi
     if [ "{{ target }}" = "website" ]; then just _test-website; fi
     if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _test-web; fi
 
@@ -99,7 +103,7 @@ test target="all" variant="unit" env="staging" verbose="false":
 [private]
 _test-web:
     {{ tools }} generate web
-    npm run test --workspaces
+    npm run test --workspaces --if-present
 
 [private]
 _test-website:
@@ -110,7 +114,7 @@ _test-website:
 [private]
 _build-web:
     {{ tools }} generate web
-    npm run build --workspaces
+    npm run build --workspaces --if-present
 
 [private]
 _test-relay-postgres:
@@ -126,7 +130,7 @@ _test-relay-postgres:
 # --- Build ---
 
 [private]
-_build-ios env="staging" verbose="false": generate
+_build-ios env="staging" verbose="false": (generate "ios")
     #!/usr/bin/env bash
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
     if [ "{{ verbose }}" = "true" ]; then
@@ -148,11 +152,37 @@ _build-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Build all targets (target: all | ios | relay | web)')]
+[doc('Build all targets (target: all | ios | relay | web | sdk | cli)')]
 build target="all" env="staging" verbose="false":
     @if [ "{{ target }}" = "ios"   ] || [ "{{ target }}" = "all" ]; then just _build-ios {{ env }} {{ verbose }}; fi
     @if [ "{{ target }}" = "relay" ] || [ "{{ target }}" = "all" ]; then just _build-relay {{ verbose }}; fi
     @if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _build-web; fi
+    @if [ "{{ target }}" = "sdk" ] || [ "{{ target }}" = "all" ]; then just _build-sdk; fi
+    @if [ "{{ target }}" = "cli" ] || [ "{{ target }}" = "all" ]; then just _build-cli; fi
+
+[private]
+_build-sdk:
+    cargo +1.99.1 build --locked --manifest-path src/eigin_sdk/Cargo.toml -p eigin_sdk
+    cargo +1.99.1 build --locked --manifest-path src/eigin_sdk/Cargo.toml -p eigin_sdk --target wasm32-unknown-unknown
+
+[private]
+_build-cli:
+    cargo +1.99.1 build --locked --manifest-path src/eigin_cli/Cargo.toml
+
+[private]
+_test-sdk: _build-sdk
+    cargo +1.99.1 test --locked --manifest-path src/eigin_sdk/Cargo.toml --features binding-tests
+    cargo +1.99.1 clippy --locked --manifest-path src/eigin_sdk/Cargo.toml --all-targets -- -D warnings
+    cargo +1.99.1 fmt --manifest-path src/eigin_sdk/Cargo.toml --all -- --check
+
+[private]
+_test-cli:
+    cargo +1.99.1 test --locked --manifest-path src/eigin_cli/Cargo.toml
+
+[doc('Test the Apple SDK package independently of the iOS application')]
+test-sdk-apple: (generate "sdk" "apple")
+    {{ tools }} check-sdk-bindings apple
+    swift test --package-path src/eigin_sdk/apple/EiginSDK
 
 # --- Release ---
 
@@ -252,15 +282,15 @@ assets *args:
 # CLI; these recipes name the arguments and hand them over. Slots are quoted
 # because a device can be called "Daniel's iPhone (2)".
 
-[doc('Run a target detached (target: relay | web | ios). web: [site | gallery]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
+[doc('Run a target (target: relay | web | ios | cli; cli runs in foreground). web: [site | gallery | app]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
 run target="relay" mode="" value="" env="":
     @{{ tools }} run {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }}
 
-[doc('Stop a detached target (target: relay | web; web: [site | gallery])')]
+[doc('Stop a detached target (target: relay | web; web: [site | gallery | app])')]
 stop target="relay" mode="":
     @{{ tools }} stop {{ quote(target) }} {{ quote(mode) }}
 
-[doc('Show target logs (target: relay | web | ios). web: [site | gallery]. ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
+[doc('Show target logs (target: relay | web | ios). web: [site | gallery | app]. ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
 [arg("follow", short="f", long="follow", value="true")]
 [arg("since", long="since")]
 logs target="relay" mode="" value="" env="" since="" follow="false":

@@ -1,111 +1,81 @@
 # Build from source
 
-Eigin is a monorepo. Install the toolchain for the part you want to work on:
+Install the toolchain for the source project you want to work on:
 
-- **iOS app**: macOS only. Targets iOS 26, drives `xcodebuild`.
-- **Relay and tooling**: anywhere Rust runs, including a Linux container.
-- **Website and web gallery**: Node.js on macOS or Linux; shared components live in `design/web/`.
+| Project | Development host | Toolchain |
+|---|---|---|
+| iOS app | macOS | Rust, Xcode 26 / iOS 26 SDK, XcodeGen, SwiftFormat |
+| SDK | macOS or Linux | Rust 1.99.1; Node/npm for browser bindings, Xcode for Apple bindings |
+| CLI | macOS or Linux | Rust 1.99.1 |
+| Relay and repository tools | Anywhere Rust runs | Rust; Docker for database tests |
+| Website, web test host, design gallery | macOS or Linux | Rust, Node.js 22.17+, npm 10+ |
 
 ## Prerequisites
 
-Required for everything:
-
-- [Rust](https://rustup.rs): every recipe runs through the Rust `tools/` CLI, so it's needed even for iOS-only work.
-- [just](https://github.com/casey/just#installation): `cargo install just`, or see the link for other package managers.
-
-For iOS (macOS only):
-
-- [Xcode 26](https://developer.apple.com/xcode/) with the iOS 26 SDK and the **iPhone 17 Pro** simulator.
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing): `brew install xcodegen`.
-- [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it): `brew install swiftformat`.
-- Then: `xcode-select -s /Applications/Xcode.app/Contents/Developer`.
-
-For the website and web gallery:
-
-- [Node.js](https://nodejs.org/) **22.17 or newer**, with npm **10 or newer**. With [nvm](https://github.com/nvm-sh/nvm): `nvm install 24 && nvm use 24`.
-- Run `npm ci` from the repository root to install both workspaces from the shared lockfile.
-- For browser tests: `npx playwright install chromium webkit` (add `--with-deps` on Linux).
-
-Optional:
-
-- [mdBook](https://rust-lang.github.io/mdBook/guide/installation.html): build these docs.
-- [Docker](https://docs.docker.com/get-docker/): Postgres tests, deploy image.
-- [Terraform](https://developer.hashicorp.com/terraform/install): `just infra`.
+| Tool | Installation / setup |
+|---|---|
+| [Rustup](https://rustup.rs) | Required by repository commands; SDK and CLI toolchains are pinned |
+| [just](https://github.com/casey/just#installation) | `cargo install just` |
+| [Xcode 26](https://developer.apple.com/xcode/) | Install iOS 26 SDK and iPhone 17 Pro simulator; run `xcode-select -s /Applications/Xcode.app/Contents/Developer` |
+| [XcodeGen](https://github.com/yonaskolb/XcodeGen#installing) | `brew install xcodegen` |
+| [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#how-do-i-install-it) | `brew install swiftformat` |
+| [Node.js](https://nodejs.org/) | With nvm: `nvm install 24 && nvm use 24` |
+| Browser test engines | After web generation: `npx playwright install chromium firefox webkit`; add `--with-deps` on Linux |
+| Optional tools | [mdBook](https://rust-lang.github.io/mdBook/guide/installation.html) for docs, Docker for Postgres tests, Terraform for infrastructure work |
 
 ## Setup
 
-From the repo root, after cloning, run these three:
+Run from the repository root:
 
-```
-just hooks         # install git hooks (one-time)
-just config init   # create your .env
-just generate      # run code generation
-```
+| Command | Purpose |
+|---|---|
+| `just hooks` | Install git hooks once |
+| `just config init` | Create `.env` |
+| `just generate ios` | Prepare Apple SDK artifacts, iOS sources, and Xcode project |
+| `just generate web` | Restore missing npm tooling, generate web assets and browser SDK artifacts |
+| `just generate sdk web` | Prepare browser SDK artifacts only |
+| `just generate` | Generate all targets; requires both Apple and web toolchains |
+| `just config` | Show configuration status |
 
-You can build straight after this. **No secrets need filling in.** App
-configuration lives in `config/app.toml`; `.env` is for secrets, and features
-that need one are simply inactive until you add it.
+Web generation runs `npm ci` when required tooling is missing. Run `npm ci` explicitly after changing the npm lockfile.
+Relay-only work requires no generation. SDK setup details are in the [SDK guide](https://code.eigin.ai/dev/eigin/-/blob/main/src/eigin_sdk/README.md).
 
-`just generate` always produces localization, design tokens, prompts and
-knowledge. It also generates the Xcode project when XcodeGen is installed, and
-the build server config when Xcode is available. Each Xcode step is skipped with
-a note when its tool is missing, so relay and tooling work needs only Rust.
-
-To see where you stand at any point:
-
-```
-just config
-```
-
-```
-iOS app      builds, with limits:
-               - EIGIN_RELAY_PRIMARY_KEY_STAGING not set — the staging app will
-                 build, but relay features (inference, search, credits) won't work
-Local relay  unavailable (...) — expected unless you maintain the relay
-Infra        unavailable — expected unless you deploy Eigin
-```
-
-The relay and infra secrets are Eigin's own; contributors aren't expected to
-have them. Add your own inference provider key in the app at runtime to do real
-work without the relay.
-
-Set `DEVELOPMENT_TEAM` in `.env` when you want to build for a physical device;
-simulator builds don't need it.
+App configuration lives in `config/app.toml`; `.env` holds secrets. Features needing missing secrets stay inactive. Contributors can add their own inference provider key in the app without relay credentials.
+Set `DEVELOPMENT_TEAM` in `.env` for physical-device builds; simulator builds do not need it.
 
 ## Build and test
 
-From the repo root; arguments are positional. In a Linux container, scope to `relay` (no `xcodebuild`).
+Arguments are positional; build and test default to all targets. On Linux, select `relay`, `sdk`, `cli`, or `web`.
 
-- `just build [ios|relay|web]`: default all; `web` builds the gallery and static website.
-- `just test [ios|relay|web|website]`: default all; `web` checks/builds both workspaces, `website` also runs the website browser tests.
-- `just generate [all|ios|web]`: default all; `web` generates shared web assets only.
-- `just format`: auto-format.
-- `just --list`: see everything.
+| Command | Scope |
+|---|---|
+| `just build [ios\|relay\|web\|sdk\|cli]` | Build the selected target; `web` builds all npm workspaces |
+| `just test [ios\|relay\|web\|website\|sdk\|cli]` | Run target checks; `website` includes website browser tests |
+| `just test-sdk-apple` | Independent Swift package and binding tests |
+| `just generate [all\|ios\|web\|sdk]` | Generate selected outputs; `sdk [apple\|web\|all]` selects host artifacts |
+| `just format` | Format source code |
+| `just --list` | List all commands |
 
 ## Run
 
-`just run` starts a target and returns, `just logs` reads its output, `just stop` ends it.
+UI and server commands start a detached process. The CLI runs in the foreground.
 
-```
-just run relay [env]                            # detached, logs to logs/relay.log
-just run ios simulator [env]                    # the iPhone 17 Pro simulator
-just run ios device [device] [env]              # a paired iPhone, over the network
-just stop relay
-just logs relay [since] [--follow]
-just logs ios simulator [env] [since] [--follow]
-just logs ios device [device] [env] [since]
-just run web gallery                           # gallery on localhost:5173
-just run web site                              # website on localhost:5174
-just logs web [gallery|site]
-just stop web [gallery|site]
-```
+| Command | Target |
+|---|---|
+| `just run ios simulator [env]` | iPhone 17 Pro simulator |
+| `just run ios device [device] [env]` | Paired iPhone |
+| `just run relay [env]` | Local relay |
+| `just run web gallery` | Design gallery at localhost:5173; default web target |
+| `just run web site` | Website at localhost:5174 |
+| `just run web app` | SDK browser test host at localhost:5175 |
+| `just run cli init` | Headless SDK initialization |
+| `just logs web [gallery\|site\|app]` | Web logs |
+| `just stop web [gallery\|site\|app]` | Stop web target |
+| `just logs relay [since] [--follow]` | Relay logs |
+| `just stop relay` | Stop relay |
+| `just logs ios simulator [env] [since] [--follow]` | Simulator logs |
+| `just logs ios device [device] [env] [since]` | Device logs |
 
-`since` is a duration (`30s`, `10m`, `2h`, `7d`) or a date, and defaults to the
-last 10 minutes. Arguments are recognised by shape, so their order is free.
-
-The website and gallery run independently. See [Design system — Web](../design.md#web) for builds, content guidance, and browser tests.
-
-Device runs need `DEVELOPMENT_TEAM` and a phone that's unlocked, awake and on
-the same network. Name it once and it's remembered (`logs/device-default`);
-`EIGIN_DEVICE` overrides for a session, and several paired phones with no
-default means you're asked.
+`since` accepts durations such as `10m` or a date, and defaults to the last ten minutes.
+Device runs need an unlocked, awake phone on the same network. The selected device is remembered; `EIGIN_DEVICE` overrides it for a session.
+For web components and browser tests, see [Design system — Web](../design.md#web).

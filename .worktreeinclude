@@ -4,6 +4,7 @@
 
 .env
 .pi/model-roles.json
+src/eigin_ios/fastlane/AuthKey/
 src/eigin_relay/config/grant/
 infra/**/backend.tf
 

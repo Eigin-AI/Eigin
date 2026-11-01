@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SDK error fixture</title>
+  </head>
+  <body>
+    <script type="module">
+      import {
+        uniffiInitAsync,
+        failInitializationFixture,
+        InitializationError,
+      } from "./generated";
+      window.checkTypedError = async () => {
+        await uniffiInitAsync(
+          new URL("./generated/eigin_sdk.wasm", import.meta.url),
+        );
+        try {
+          await failInitializationFixture();
+          return false;
+        } catch (error) {
+          return (
+            InitializationError.Unavailable.instanceOf(error) &&
+            InitializationError.Unavailable.getInner(error).reason ===
+              "binding fixture"
+          );
+        }
+      };
+    </script>
+  </body>
+</html>

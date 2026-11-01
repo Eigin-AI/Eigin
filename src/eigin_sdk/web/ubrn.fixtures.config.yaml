@@ -1,0 +1,6 @@
+rust:
+  directory: ../crates/eigin_sdk
+wasm2:
+  features:
+    - binding-tests
+  ts: tests/generated
