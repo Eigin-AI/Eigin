@@ -394,3 +394,15 @@ pub fn generate_assets(root: &str) -> anyhow::Result<()> {
     let installed = super::ios::fonts::install(root, &tokens)?;
     generate(root, &tokens, installed.as_ref())
 }
+
+/// Generate shared docs tokens and bundle verified fonts.
+pub fn generate_docs(repo_root: &str) -> Result<()> {
+    super::docs::bundle_fonts(repo_root)?;
+    let tokens = tokens::load_tokens(repo_root)?;
+    let path = Path::new(repo_root).join("docs/theme/tokens.css");
+    fs::write(
+        &path,
+        css::render_with_dark_selector(&tokens, ":root.coal")?,
+    )
+    .with_context(|| format!("writing {}", path.display()))
+}

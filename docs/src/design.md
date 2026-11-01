@@ -107,3 +107,19 @@ Export with the Export JPEG or PNG buttons while the gallery runs, or headlessly
 Screen copy must stay fictional, as the [App Store rules](./compliance/app-store.md) require.
 
 `design/assets/showcase/readme/` holds the README banner and deck renderers, which write to `docs/src/images/`.
+
+## Docs theme
+
+`just docs build` and `just docs serve` generate `docs/theme/tokens.css` from
+`design/tokens.json` using the same CSS renderer as the web hosts. The generator
+also bundles verified fonts from `design/assets/fonts/` into the docs assets.
+CI obtains these files from GitLab Secure Files before running the same generator.
+Generated CSS and font binaries are ignored by Git.
+See [Docs releases](./runbooks/docs-deployment.md) for font setup.
+
+`docs/theme/custom.css` maps shared color, spacing, radius, letter-spacing, and
+font-family tokens onto mdBook. Heading sizes and prose line spacing remain
+docs-specific. The Coal theme selects the shared dark color values.
+
+Use mdBook 0.5.3 and mdbook-mermaid 0.17.0 to match CI, including the current-page
+sidebar outline. For a direct mdBook invocation, first run `just generate docs`.

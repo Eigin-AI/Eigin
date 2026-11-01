@@ -9,7 +9,7 @@ default-theme = "coal"
 preferred-dark-theme = "coal"
 git-repository-url = "https://code.eigin.ai"
 git-repository-icon = "fab-gitlab"
-additional-css = ["theme/custom.css"]
+additional-css = ["theme/tokens.css", "theme/custom.css"]
 no-section-label = true
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
