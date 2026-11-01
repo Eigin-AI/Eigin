@@ -1,5 +1,6 @@
 //! Design codegen: `design/` sources in, platform code out.
 
+pub mod docs;
 pub mod ios;
 pub mod tokens;
 pub mod web;

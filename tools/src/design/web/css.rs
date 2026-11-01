@@ -15,6 +15,11 @@ use crate::design::tokens::{
 use super::fmt_num;
 
 pub fn render(tokens: &Value) -> Result<String> {
+    render_with_dark_selector(tokens, "[data-color-scheme=\"dark\"]")
+}
+
+/// Render shared tokens with a consumer-specific dark theme selector.
+pub fn render_with_dark_selector(tokens: &Value, dark_selector: &str) -> Result<String> {
     let mut light = String::new();
     let mut dark = String::new();
 
@@ -64,7 +69,7 @@ pub fn render(tokens: &Value) -> Result<String> {
     let dark_block = if dark.is_empty() {
         String::new()
     } else {
-        format!("\n[data-color-scheme=\"dark\"] {{\n{dark}}}\n")
+        format!("\n{dark_selector} {{\n{dark}}}\n")
     };
 
     // Motion collapses to zero when the reader asks for reduced motion.
@@ -304,6 +309,11 @@ mod tests {
         let dark = css.split("[data-color-scheme=\"dark\"]").nth(1).unwrap();
         assert!(dark.contains("--color-surface-base: #000000;"));
         assert!(!dark.contains("surface-text"));
+
+        let docs = render_with_dark_selector(&tokens, ":root.coal").unwrap();
+        let dark = docs.split(":root.coal").nth(1).unwrap();
+        assert!(dark.contains("--color-surface-base: #000000;"));
+        assert!(!docs.contains("[data-color-scheme=\"dark\"]"));
     }
 
     #[test]

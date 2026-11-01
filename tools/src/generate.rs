@@ -20,7 +20,7 @@ use crate::prompts;
 /// tooling work needs only Rust.
 #[derive(clap::Args, Default)]
 pub struct GenerateArgs {
-    /// Generation target: all (default), ios, or web.
+    /// Generation target: all (default), ios, web, or docs.
     #[arg(value_enum, default_value_t = GenerateTarget::All)]
     target: GenerateTarget,
 }
@@ -32,12 +32,16 @@ enum GenerateTarget {
     All,
     Ios,
     Web,
+    Docs,
 }
 
 pub fn run(args: GenerateArgs) -> Result<()> {
     let root = config::repo_root()?;
     if args.target == GenerateTarget::Web {
         return design::web::generate_assets(&root);
+    }
+    if args.target == GenerateTarget::Docs {
+        return design::web::generate_docs(&root);
     }
     let ios_dir = format!("{root}/src/eigin_ios");
 
@@ -47,7 +51,7 @@ pub fn run(args: GenerateArgs) -> Result<()> {
     match args.target {
         GenerateTarget::All => design::generate_all(&root)?,
         GenerateTarget::Ios => design::generate_ios(&root)?,
-        GenerateTarget::Web => unreachable!("web generation returned above"),
+        GenerateTarget::Web | GenerateTarget::Docs => unreachable!("generation returned above"),
     }
     prompts::generate_all(&root)?;
     knowledge::generate_all(&root)?;

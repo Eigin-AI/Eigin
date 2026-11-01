@@ -12,11 +12,11 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
-[doc('Regenerate outputs (all | ios | web; default all)')]
+[doc('Regenerate outputs (all | ios | web | docs; default all)')]
 generate target="all":
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ {{ quote(target) }} != "web" ]; then
+    if [ {{ quote(target) }} != "web" ] && [ {{ quote(target) }} != "docs" ]; then
         vars="$({{ tools }} config export ios)"
         eval "$vars"
     fi
@@ -45,6 +45,8 @@ hooks:
 [doc('Build or serve the docs (build | serve)')]
 docs command="build":
     #!/usr/bin/env bash
+    set -euo pipefail
+    {{ tools }} generate docs
     case "{{ command }}" in
         build) cd docs && mdbook build ;;
         serve) cd docs && mdbook serve ;;

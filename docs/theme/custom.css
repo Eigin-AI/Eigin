@@ -1,58 +1,78 @@
 @font-face {
-    font-family: "North East CN";
-    src: url("https://www.eigin.ai/assets/fonts/NorthEastCN-ExtraBold.otf") format("opentype");
-    font-weight: 800;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "North East CN";
-    src: url("https://www.eigin.ai/assets/fonts/NorthEastCN-Bold.otf") format("opentype");
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Five Serif Text";
-    src: url("https://www.eigin.ai/assets/fonts/FiveSerifText-Regular.otf") format("opentype");
+    font-family: "FiraCode";
+    src: url("../fonts/FiraCode-Regular.ttf") format("truetype");
     font-weight: 400;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: "Five Serif Text";
-    src: url("https://www.eigin.ai/assets/fonts/FiveSerifText-Light.otf") format("opentype");
+    font-family: "NorthEastCN";
+    src: url("../fonts/NorthEastCN-ExtraBold.otf") format("opentype");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "NorthEastCN";
+    src: url("../fonts/NorthEastCN-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "FiveSerifText";
+    src: url("../fonts/FiveSerifText-Regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "FiveSerifText";
+    src: url("../fonts/FiveSerifText-Light.otf") format("opentype");
     font-weight: 300;
     font-style: normal;
     font-display: swap;
 }
 
+@font-face {
+    font-family: "FiveSerifText";
+    src: url("../fonts/FiveSerifText-DemiBold.otf") format("opentype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "FiveSerifText";
+    src: url("../fonts/FiveSerifText-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
-    /* Design tokens — dark mode (from design/tokens.json) */
-    --bg-primary: #232323;      /* color.surface.standard.base dark */
-    --bg-secondary: #1B1B1B;    /* color.surface.standard.alternative dark */
-    --bg-elevated: #1B1B1B;     /* color.surface.standard.alternative dark */
-    --accent: #A7B04E;          /* palette.brand.primary — links, active */
-    --accent-warm: #B39779;     /* palette.brand.accent — decorative */
-    --text-primary: #EFEFEF;    /* palette.neutral.800 dark */
-    --text-secondary: #E8E8E8;  /* palette.neutral.700 dark */
-    --text-muted: rgba(255, 255, 255, 0.5); /* color.text.standard.muted dark */
-    --border: #4C4C4A;          /* palette.neutral.400 dark */
+    /* Shared tokens are generated from design/tokens.json before each build. */
+    --bg-primary: var(--color-surface-standard-base);
+    --bg-secondary: var(--color-surface-standard-alternative);
+    --bg-elevated: var(--color-surface-standard-alternative);
+    --accent: var(--color-text-standard-link);
+    --accent-warm: var(--color-accent);
+    --text-primary: var(--color-text-standard-base);
+    --text-secondary: var(--color-text-standard-base);
+    --text-muted: var(--color-text-standard-muted);
+    --border: var(--color-border-standard-base);
+    --font-family: var(--font-ui);
+    --mono-font: var(--font-mono);
 
-    --font-family: "Five Serif Text", Georgia, serif;
-    --font-display: "North East CN", "Helvetica Neue", sans-serif;
-    --font-mono: "Menlo", "Monaco", "Courier New", monospace;
-
-    /* Spacing and radius (from design/tokens.json) */
-    --space-8: 8px;
-    --space-16: 16px;
-    --space-24: 24px;
-    --space-32: 32px;
-    --space-48: 48px;
-    --radius-card: 24px;
+    --space-8: var(--spacing-n8);
+    --space-16: var(--spacing-n16);
+    --space-24: var(--spacing-n24);
+    --space-32: var(--spacing-n32);
+    --space-48: var(--spacing-n48);
 }
 
 /* Override mdBook coal theme */
@@ -87,12 +107,18 @@
 body {
     font-family: var(--font-family);
     font-size: 17px;
-    line-height: 1.4;
-    letter-spacing: 0.5px;
+    font-weight: 300;
+    line-height: 1.55;
+    letter-spacing: var(--letter-spacing-s);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg-primary);
     color: var(--text-primary);
+}
+
+strong,
+b {
+    font-weight: 700;
 }
 
 h1,
@@ -105,7 +131,7 @@ h6 {
     font-weight: 700;
     font-feature-settings: "ss01";
     line-height: 0.95;
-    letter-spacing: 0px;
+    letter-spacing: var(--letter-spacing-standard);
     color: var(--text-primary);
 }
 
@@ -123,7 +149,7 @@ h1 {
 h2 {
     font-size: 36px;
     line-height: 1.0;
-    letter-spacing: -0.5px;
+    letter-spacing: var(--letter-spacing-xs);
     margin-top: var(--space-48);
     margin-bottom: var(--space-16);
 }
@@ -195,7 +221,7 @@ a:hover {
     color: var(--text-muted) !important;
     font-weight: 700;
     font-size: 13px;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--letter-spacing-s);
     text-transform: uppercase;
 }
 
@@ -204,7 +230,7 @@ a:hover {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 13px;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--letter-spacing-s);
     text-transform: uppercase;
     color: var(--text-muted);
     margin-top: var(--space-24);
@@ -246,13 +272,13 @@ ol.section {
 }
 
 .content p {
-    line-height: 1.4;
+    line-height: 1.55;
     margin: 0 0 var(--space-16);
 }
 
 .content ul,
 .content ol {
-    line-height: 1.4;
+    line-height: 1.55;
     margin: 0 0 var(--space-16);
 }
 

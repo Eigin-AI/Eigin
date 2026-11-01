@@ -9,6 +9,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 | MingCute Icon | https://github.com/MingcuteDesign/MingCute | 3.x | Apache-2.0 | `design/assets/icons/functional/*.svg` |
 | SnapshotHelper.swift | https://github.com/fastlane/fastlane | 1.30 | MIT | `src/eigin_ios/EiginUITests/SnapshotHelper.swift`, drives fastlane snapshot from the screenshot UI tests |
 | Simple Icons | https://github.com/simple-icons/simple-icons | 15.x; footer marks 11.15.0 | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
+| Fira Code Regular | https://github.com/tonsky/FiraCode/tree/5.2 | 5.002 (font metadata) | [SIL OFL 1.1](FiraCode-LICENSE.txt) | Bundled docs code font; notice published at `fonts/FiraCode-LICENSE.txt` |
 | Provider brand marks | Sourced from each provider's own brand assets | — | Trademarks of their owners | `design/assets/icons/provider/*.svg`, marks for the AI providers Eigin can connect to |
 
 ## Brand marks
