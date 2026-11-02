@@ -3,6 +3,9 @@
 use std::{fs, os::unix::fs::PermissionsExt, process::Command};
 use tempfile::TempDir;
 
+#[path = "support/version.rs"]
+mod version_support;
+
 fn executable(path: &std::path::Path, script: &str) {
     fs::write(path, script).unwrap();
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
@@ -51,7 +54,7 @@ fn browser_fixture_check_does_not_invoke_native_compilers() {
 
 #[test]
 fn sdk_web_generation_restores_missing_npm_tooling() {
-    let directory = TempDir::new().unwrap();
+    let directory = version_support::fixture();
     let root = directory.path();
     let bin = root.join("bin");
     fs::create_dir_all(&bin).unwrap();

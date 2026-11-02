@@ -30,3 +30,17 @@ cla:
     - sh .gitlab/scripts/check-cla.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "dev/eigin"
+
+versions:
+  image: rust:1-bookworm
+  tags:
+    - shared
+  script:
+    - apt-get update -qq && apt-get install -y -qq nodejs npm
+    - cargo run --locked --manifest-path tools/Cargo.toml -- version check
+    - cargo test --locked --manifest-path tools/Cargo.toml --test version
+    - cargo install just --locked
+    - cargo test --locked --manifest-path tools/Cargo.toml --test releases
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

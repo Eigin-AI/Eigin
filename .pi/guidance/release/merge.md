@@ -9,12 +9,16 @@ Signpost briefly what you expect the user to do — keep the flow tight and self
 
 ## Open the MR
 
+Use the approved product version from `[version].product` in `config/app.toml` for
+`<version>` below, including the numeric tag without a `v` prefix. Record the SDK
+version in the release notes; this product release flow creates only the product tag.
+
 0. Commit, tag, and push the release — the tag must be on the remote before
    the GitLab release can be cut:
     1. `git add -A && git commit -m "chore: release <version>"`
     2. `git tag <version>`
     3. `git push && git push --tags`
-1. Confirm the version bump, changelog, and website roadmap review are complete (Build) and verified (Test). Include approved roadmap changes in the release commit, or note the no-change decision in the MR.
+1. Confirm both approved versions (`just version show`), generated metadata (`just version check`), changelog, and website roadmap review are complete (Build) and verified (Test). Include approved roadmap changes in the release commit, or note the no-change decision in the MR.
 2. Draft the MR description — follow `.gitlab/merge_request_templates/Default.md`,
    matched to the length and tone of this example `.pi/guidance/mr-example.md`.
     - Keep it short and concise.
@@ -33,7 +37,7 @@ Signpost briefly what you expect the user to do — keep the flow tight and self
 
 Once merged:
 
-1. Draft the release notes: pull the plan's "What's new" / "Breaking changes" sections.
+1. Draft the release notes: include the approved product and SDK versions and pull the plan's "What's new" / "Breaking changes" sections.
 2. Check `glab release list` or the GitLab UI for prior releases to match tone/format.
 3. Give the user the command to create it, e.g.
    `glab release create <version> --tag <version> --notes "$(cat <notes-path>)"` —

@@ -3,6 +3,10 @@ use std::{fs, os::unix::fs::PermissionsExt, process::Command};
 use tempfile::TempDir;
 
 fn release(args: &[&str]) -> (std::process::Output, String) {
+    release_with_failure(args, false)
+}
+
+fn release_with_failure(args: &[&str], fail_check: bool) -> (std::process::Output, String) {
     let dir = TempDir::new().unwrap();
     fs::write(dir.path().join("justfile"), include_str!("../../justfile")).unwrap();
     let bin = dir.path().join("bin");
@@ -14,6 +18,7 @@ fn release(args: &[&str]) -> (std::process::Output, String) {
 set -eu
 printf '%s\n' "$*" >> "$RELEASE_TEST_LOG"
 case "$*" in
+  *"version check") [ "${FAIL_VERSION_CHECK:-0}" = 0 ] ;;
   *"config export ios") printf 'export DEVELOPMENT_TEAM=test-team\n' ;;
   *"config export tf-vars production") printf 'export WEBSITE_TEST_CONFIG=production\n' ;;
   *"website release") [ "${WEBSITE_TEST_CONFIG:-}" = production ] ;;
@@ -32,6 +37,7 @@ esac
             format!("{}:{}", bin.display(), std::env::var("PATH").unwrap()),
         )
         .env("RELEASE_TEST_LOG", &log)
+        .env("FAIL_VERSION_CHECK", if fail_check { "1" } else { "0" })
         .output()
         .expect("just must be installed for release dispatch tests");
     (output, fs::read_to_string(log).unwrap_or_default())
@@ -49,6 +55,7 @@ fn website_release_bypasses_ios_generation_and_signing() {
         assert!(log.contains("config export tf-vars production"));
         assert!(log.contains("website release"));
         assert!(!log.contains("generate"));
+        assert!(!log.contains("version check"));
         assert!(!log.contains("config export ios"));
         assert!(!log.contains("fastlane"));
     }
@@ -82,9 +89,18 @@ fn ios_release_keeps_staging_beta_defaults_and_explicit_tracks() {
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        assert!(log.contains("generate all"));
+        assert!(log.find("generate all").unwrap() < log.find("version check").unwrap());
         assert!(log.contains("config export ios"));
         assert!(log.contains(&format!("sh {lane} {environment}")));
         assert!(!log.contains("website release"));
     }
+}
+
+#[test]
+fn ios_release_stops_on_version_drift() {
+    let (output, log) = release_with_failure(&[], true);
+    assert!(!output.status.success());
+    assert!(log.contains("version check"));
+    assert!(log.contains("generate all"));
+    assert!(!log.contains("fastlane"));
 }
