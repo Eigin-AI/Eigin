@@ -20,6 +20,8 @@ struct BackgroundNotifyTool: Tool {
         Self.capability.displayName
     }
 
+    var now: @Sendable () -> Date = { Date() }
+    var calendar: Calendar = .current
     let onSignal: @Sendable (BackgroundToolSignal) -> Void
 
     func definition() -> ToolDefinition {
@@ -43,7 +45,7 @@ struct BackgroundNotifyTool: Tool {
                     ),
                     "deliver_at": .init(
                         type: "string",
-                        description: "Optional ISO 8601 datetime for when to deliver the notification (e.g. \"2025-03-15T09:00:00\"). If omitted, delivers immediately. Use this to schedule timely reminders."
+                        description: "Optional ISO 8601 datetime for when to deliver the notification (e.g. \"2025-03-15T09:00:00\"). Set this to a specific future time when it matches the user's wishes. If omitted, the system picks the next sensible local time to deliver the notification."
                     ),
                 ],
                 required: ["notification_title", "message", "summary"]
@@ -83,8 +85,19 @@ struct BackgroundNotifyTool: Tool {
             )
         }
 
+        let now = now()
         var deliverAt: Date?
-        if let deliverString = args["deliver_at"] as? String, !deliverString.isEmpty {
+        if let providedTime = args["deliver_at"] {
+            guard let deliverString = providedTime as? String, !deliverString.isEmpty else {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers
+                        .output(
+                            errors: ["Use a future ISO 8601 datetime for 'deliver_at', or omit it."]
+                        ),
+                    isError: true
+                )
+            }
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             deliverAt = formatter.date(from: deliverString)
@@ -96,8 +109,10 @@ struct BackgroundNotifyTool: Tool {
             if deliverAt == nil {
                 // Try date + time without timezone (assume local)
                 let local = DateFormatter()
+                local.locale = Locale(identifier: "en_US_POSIX")
+                local.calendar = Calendar(identifier: .gregorian)
                 local.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-                local.timeZone = .current
+                local.timeZone = calendar.timeZone
                 deliverAt = local.date(from: deliverString)
             }
             if deliverAt == nil {
@@ -112,14 +127,30 @@ struct BackgroundNotifyTool: Tool {
             }
         }
 
-        onSignal(.notify(title: title, message: message, summary: summary, deliverAt: deliverAt))
-
-        var result: [String: Any] = ["status": "notification_queued"]
-        if let deliverAt {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime]
-            result["scheduled_for"] = formatter.string(from: deliverAt)
+        if let deliverAt, deliverAt <= now {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers.output(errors: ["'deliver_at' must be in the future."]),
+                isError: true
+            )
         }
+        let scheduledDate = deliverAt ?? NotificationDeliverySchedule.nextDelivery(
+            after: now,
+            calendar: calendar
+        )
+
+        onSignal(.notify(
+            title: title,
+            message: message,
+            summary: summary,
+            deliverAt: scheduledDate
+        ))
+
+        let formatter = ISO8601DateFormatter()
+        let result: [String: Any] = [
+            "status": "notification_queued",
+            "scheduled_for": formatter.string(from: scheduledDate),
+        ]
 
         return ToolResult(
             toolCallID: id,
