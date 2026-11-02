@@ -45,14 +45,15 @@ enum GenerateTarget {
 
 pub fn run(args: GenerateArgs) -> Result<()> {
     let root = config::repo_root()?;
-    if args.target == GenerateTarget::Sdk {
-        return crate::sdk::generate(&root, args.sdk_target.unwrap_or_default());
-    }
-    if args.sdk_target.is_some() {
+    if args.sdk_target.is_some() && args.target != GenerateTarget::Sdk {
         anyhow::bail!("SDK host selector requires `generate sdk [apple | web | all]`");
     }
     if args.target == GenerateTarget::Docs {
         return design::web::generate_docs(&root);
+    }
+    crate::version::generate(std::path::Path::new(&root))?;
+    if args.target == GenerateTarget::Sdk {
+        return crate::sdk::generate(&root, args.sdk_target.unwrap_or_default());
     }
     if args.target == GenerateTarget::Web {
         design::web::generate_assets(&root)?;

@@ -59,8 +59,13 @@ release flow.
 
 ## Version numbers
 
-Marketing version is set by hand in `project.yml`, once per release. Build
+Marketing version comes from `[version].product` in `config/app.toml`. Edit it
+once, run `just generate ios`, review the diff, then run `just version check`.
+Generation synchronizes version metadata; release preparation checks it before publishing. Build
 number is derived automatically (latest TestFlight build + 1).
+
+See [Names and versioning](../contributing/naming.md#versioning) for the shared
+product/SDK policy and release checklist.
 
 ## Store configuration as code
 

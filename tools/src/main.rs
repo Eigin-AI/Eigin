@@ -18,6 +18,7 @@ mod prompts;
 mod sdk;
 mod sdk_fixtures;
 mod security;
+mod version;
 mod watermark;
 mod website;
 
@@ -30,6 +31,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Show, synchronize, or validate product and SDK versions.
+    Version(version::Args),
     /// Run all code generation tasks for the project.
     Generate(generate::GenerateArgs),
     /// Check test-only SDK bindings for web or Apple.
@@ -67,6 +70,7 @@ enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Command::Version(args) => version::run(args),
         Command::Generate(args) => generate::run(args),
         Command::CheckSdkBindings(args) => sdk_fixtures::run_check(args),
         Command::Assets(args) => assets::run(args),

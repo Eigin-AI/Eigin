@@ -48,6 +48,7 @@ impl<T> PerEnv<T> {
 /// Shared, non-secret app configuration from `config/app.toml`.
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
+    pub version: Versions,
     pub identity: Identity,
     pub contact: Contact,
     pub legal: LegalConfig,
@@ -135,4 +136,11 @@ pub struct LocalizeConfig {
 pub struct Config {
     pub app: AppConfig,
     pub tools: ToolsConfig,
+}
+
+/// Product release and independently versioned SDK.
+#[derive(Debug, Deserialize)]
+pub struct Versions {
+    pub product: String,
+    pub sdk: String,
 }

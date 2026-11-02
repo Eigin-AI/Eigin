@@ -11,6 +11,10 @@ use eigin_tools::config::render;
 use eigin_tools::config::resolve::resolve;
 
 const APP_TOML: &str = r#"
+[version]
+product = "1.0.0"
+sdk = "0.1.0"
+
 [identity]
 bundle_id = "ai.example.app"
 

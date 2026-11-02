@@ -1,6 +1,10 @@
 # Shared, non-secret app configuration. Rendered into consumer-specific forms
 # by `just config export <target>`. Secrets live in the gitignored .env.
 
+[version]
+product = "1.0.0"
+sdk = "0.1.0"
+
 [identity]
 bundle_id = "ai.eigin.finch"
 

@@ -13,7 +13,7 @@
 - [Contributor agreement](./contributing/contributor-agreement.md)
   - [Individual agreement](./contributing/individual-agreement.md)
   - [Entity agreement](./contributing/entity-agreement.md)
-- [Naming](./contributing/naming.md)
+- [Names and versioning](./contributing/naming.md)
 
 # Platform
 

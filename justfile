@@ -12,6 +12,10 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
+[doc('Manage product and SDK versions (show | sync | check)')]
+version action="show":
+    {{ tools }} version {{ quote(action) }}
+
 [doc('Regenerate outputs (all | ios | web | docs | sdk [apple|web|all]; default all)')]
 generate target="all" sdk_target="":
     #!/usr/bin/env bash
@@ -207,6 +211,7 @@ release target="ios" env="" track="":
     release_track="${release_track:-beta}"
     case "$environment" in staging|production) ;; *) echo "Unknown release environment: $environment"; exit 1 ;; esac
     just generate
+    {{ tools }} version check
     case "$release_track" in
         beta)        lane=beta ;;
         metadata)    lane=sync_metadata ;;
