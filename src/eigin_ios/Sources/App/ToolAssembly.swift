@@ -121,8 +121,7 @@ extension ToolRegistry {
     ///
     /// Keeps the declaration footprint small and only includes tools the model
     /// can use reliably with simple string parameters: knowledge search and web
-    /// access. Scheduling tools require temporal reasoning the model isn't
-    /// reliable at; they'll be revisited when a simplified date API is designed.
+    /// access, plus explicitly timed follow-up notifications.
     @MainActor static func smallChat(
         chatID: UUID? = nil,
         agentID: UUID? = nil,
@@ -139,7 +138,16 @@ extension ToolRegistry {
         webSearch.isSmallContext = true
         var webFetch = WebFetchTool(onBrowse: onBrowse)
         webFetch.isSmallContext = true
-        let tools: [any Tool] = [searchKnowledge, webSearch, webFetch]
+        let tools: [any Tool] = [
+            searchKnowledge,
+            webSearch,
+            webFetch,
+            FollowUpTool(
+                scheduler: Container.shared.followUpScheduler(),
+                canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?
+                    .canPromptUser ?? true
+            ),
+        ]
         let filtered = tools.filter {
             permissionPolicy.permissionLevel(for: $0.name) != .never
         }
@@ -230,14 +238,15 @@ extension ToolRegistry {
         )
         var tools = allChatTools(context: context)
 
-        // Background can read intents but not create, edit, or resolve them
+        // Background uses its own notification tool and only reads intents.
         let excludedFromBackground: Set<String> = [
+            FollowUpTool.capability.key,
             AddIntentTool.capability.key,
             UpdateIntentTool.capability.key,
             ResolveIntentTool.capability.key,
         ]
-        tools.removeAll { excludedFromBackground.contains($0.name) }
         tools += additionalTools
+        tools.removeAll { excludedFromBackground.contains($0.name) }
 
         // Filter to only .always permission tools
         let alwaysTools = tools.filter { tool in

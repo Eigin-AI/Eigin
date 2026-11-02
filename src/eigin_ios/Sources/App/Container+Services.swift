@@ -210,6 +210,11 @@ extension Container {
         self { DefaultIntentService(modelContainer: self.modelContainer()) }.singleton
     }
 
+    @MainActor
+    var followUpScheduler: Factory<any FollowUpScheduling> {
+        self { @MainActor in DefaultFollowUpScheduler(container: self.modelContainer()) }.singleton
+    }
+
     // MARK: - Schedule & Health
 
     var calendarService: Factory<any CalendarService> {

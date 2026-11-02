@@ -36,3 +36,19 @@ Initiative runs can search for and activate skills to check current information 
 | Missing access | Missing setup, credentials, or sign-in makes the integration unavailable; no permission or connection UI opens |
 | Platform access | Platform integrations need full OS authorization for background use; partial access makes that integration unavailable |
 | Optional connections | Unavailable optional integrations are omitted; the skill can still activate |
+
+## Requested follow-ups
+
+A follow-up delivers a prepared message as a local notification. Opening it starts a new conversation with the message and a self-contained briefing. Delivery uses the saved content without another model run.
+
+| Context | Tool | Approval | Delivery time |
+|---|---|---|---|
+| Regular and small-context chat | `follow_up` | **Ask** by default; normal agent and chat grants apply | A future time is required |
+| Background initiative | `background_notify` | Always allowed within background runs | Explicit future time, or the next sensible local daytime slot |
+
+- Requested follow-ups work at every proactivity level, including **Reactive**.
+- On first approved use in a foreground chat, Eigin asks for iOS notification authorization if it has not been requested. Background runs cannot display this prompt.
+- Denied notification authorization returns an actionable error. Enable notifications in iOS Settings before retrying.
+- The chat tool reports success after iOS accepts the notification request. Background tools acknowledge queueing for the background runner. System settings and Focus modes control presentation.
+- If an explicit delivery time elapses before scheduling, choose a new future time and retry.
+- Use follow-ups for one-off pings, Reminders for tracked tasks, and Calendar for events.

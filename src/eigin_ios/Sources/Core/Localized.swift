@@ -5736,6 +5736,10 @@ enum Localized {
     }
 
     enum Tools {
+        static var followUp: String {
+            Localized.get("tools.followUp")
+        }
+
         /// A label displayed above a list of tools discovered on a server.
         static var sectionTitle: String {
             Localized.get("tools.sectionTitle")
@@ -5988,6 +5992,10 @@ enum Localized {
             /// sheet
             static var finishOnboarding: String {
                 Localized.get("tools.description.finishOnboarding")
+            }
+
+            static var followUp: String {
+                Localized.get("tools.description.followUp")
             }
 
             /// One-sentence description of the forget_knowledge tool, shown in the tool detail

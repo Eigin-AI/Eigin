@@ -94,8 +94,9 @@ enum BackgroundPromptScheduler {
 
         let result = await BackgroundPromptService.run(container: container)
 
+        var deliverySucceeded = true
         if result.didNotify, let agentID = result.agentID {
-            await sendNotification(
+            deliverySucceeded = await sendNotification(
                 container: container,
                 title: result.notificationTitle ?? "New message",
                 body: result.notificationBody ?? "",
@@ -121,9 +122,10 @@ enum BackgroundPromptScheduler {
         }
         reschedule(for: proactivity)
 
-        task.setTaskCompleted(success: true)
+        task.setTaskCompleted(success: deliverySucceeded)
     }
 
+    @discardableResult
     static func sendNotification(
         container: ModelContainer,
         title: String,
@@ -134,68 +136,19 @@ enum BackgroundPromptScheduler {
         deliverAt: Date?,
         agentName: String? = nil,
         agentEmoji: String? = nil
-    ) async {
-        let context = ModelContext(container)
-
-        let initiativeRequest = AgentInitiativeRequest(
-            agentID: agentID,
-            message: message,
-            title: title,
-            summary: summary
-        )
-        context.insert(initiativeRequest)
-        try? context.save()
-
-        let requestID = initiativeRequest.id.uuidString
-
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.userInfo = [
-            "agentID": agentID.uuidString,
-            "notificationTitle": title,
-            "message": message,
-            "initiativeRequestID": requestID,
-        ]
-
-        // Each notification gets its own conversation thread (keyed by the
-        // request id) rather than sharing one per agent — otherwise a new
-        // notification landing on top of an unread one can get silently
-        // folded into that thread instead of alerting on its own.
-        let finalContent: UNNotificationContent = if let name = agentName {
-            await CommunicationNotificationContent.upgrade(
-                content, agentName: name, agentEmoji: agentEmoji, agentID: agentID,
-                conversationID: requestID
-            )
-        } else {
-            content
-        }
-
-        let trigger: UNNotificationTrigger?
-        if let deliverAt, deliverAt > Date() {
-            let components = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute, .second],
-                from: deliverAt
-            )
-            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        } else {
-            trigger = nil // Deliver immediately
-        }
-
-        let request = UNNotificationRequest(
-            identifier: "backgroundprompt-\(UUID().uuidString)",
-            content: finalContent,
-            trigger: trigger
-        )
-
+    ) async -> Bool {
         do {
-            try await UNUserNotificationCenter.current().add(request)
+            _ = try await DefaultFollowUpScheduler(container: container).schedule(
+                title: title, body: body, message: message, summary: summary, deliverAt: deliverAt,
+                agentID: agentID, agentName: agentName, agentEmoji: agentEmoji
+            )
+            return true
         } catch {
             AppLogger.error(
-                "Failed to send notification: \(private: error.localizedDescription)",
+                "Failed to schedule notification: \(private: error.localizedDescription)",
                 category: .backgroundPrompt
             )
+            return false
         }
     }
 }

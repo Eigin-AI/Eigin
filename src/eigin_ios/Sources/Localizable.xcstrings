@@ -22564,6 +22564,38 @@
           }
         }
       }
+    },
+    "tools.followUp": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planlæg opfølgning"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedule follow-up"
+          }
+        }
+      }
+    },
+    "tools.description.followUp": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planlæg en engangsnotifikation og fortsæt i en ny samtale."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedule a one-off notification and continue in a new conversation."
+          }
+        }
+      }
     }
   },
   "version": "1.1"
