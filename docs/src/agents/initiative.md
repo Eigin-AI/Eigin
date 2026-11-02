@@ -21,6 +21,8 @@ Different kinds of background session run at different intervals:
 
 Background sessions use only tools with effective **Always allow** permission. Tools set to **Ask** or **Never** are unavailable.
 
+Notifications arrive at the next sensible local time unless the agent chooses an explicit future delivery time to match the user's wishes.
+
 ## Skills and connections
 
 Initiative runs can search for and activate skills to check current information from configured integrations and MCP servers.
