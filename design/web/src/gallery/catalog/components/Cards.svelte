@@ -3,6 +3,9 @@
   import type { CardSize, OptionChoice, VisualCardVariant } from "../../../lib";
   import OptionSelector from "../OptionSelector.svelte";
 
+  const presentations = ["compact", "visual"] as const;
+  let presentation = $state<(typeof presentations)[number]>("compact");
+
   const cardSizes: CardSize[] = ["large", "small", "compact"];
   const visualVariants: VisualCardVariant[] = ["brand", "warm", "soft", "neutral"];
   const tap = ["inert", "tappable"] as const;
@@ -90,13 +93,14 @@
 
 <h2 class="t-titleM">Options carousel</h2>
 <p class="lede t-description">
-  A choice put as cards you swipe through, cycling the three impact variants. The last card is the
-  way out when none of them fit. Picking one dims the others before the whole run leaves, so nothing
-  vanishes under your finger. Centred, a card snaps to the middle at full size and its neighbours
-  scale back and fade, the way the onboarding priority carousel reads.
+  Horizontal choices in compact or visual cards. Compact cards match the tallest card in the series,
+  with titles aligned at the top. Visual cards cycle the three impact variants. The last card offers
+  a way out. Picking a choice dims the others before the series leaves. Centered focus snaps each
+  card to the middle and scales its neighbours back.
 </p>
 
-<div class="controls">
+<div class="controls" aria-label="Carousel controls">
+  <OptionSelector options={presentations} bind:value={presentation} />
   <OptionSelector options={wayOut} bind:value={escape} />
   <OptionSelector options={focusModes} bind:value={focusMode} />
   <Button
@@ -111,8 +115,9 @@
 </div>
 
 <div class="specimen carousel-specimen">
-  {#key run}
+  {#key `${run}-${presentation}`}
     <OptionsCarousel
+      {presentation}
       options={choices}
       somethingElse={escape === "offered"
         ? { label: "Something else", description: "Write your own answer" }
@@ -120,6 +125,7 @@
       focus={focusMode === "centered" ? "center" : "none"}
       gap={focusMode === "centered" ? "var(--spacing-n16)" : "var(--spacing-n12)"}
       onSelect={(label) => (picked = label)}
+      onSomethingElse={() => (picked = "Something else")}
     />
   {/key}
 </div>

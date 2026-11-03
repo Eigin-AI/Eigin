@@ -73,7 +73,7 @@ test("options cards dim their siblings before the run leaves", async ({ page }) 
   // between animation frames, making the ordering unobservable.
   await page.addStyleTag({ content: ":root { --motion-fast: 800ms; --motion-normal: 400ms; }" });
 
-  const carousel = page.locator(".carousel");
+  const carousel = page.locator(".carousel-specimen .carousel");
   const slots = carousel.locator(".slot");
   // Three choices plus the way out.
   await expect(slots).toHaveCount(4);
@@ -100,8 +100,8 @@ test("the way out can be withheld", async ({ page }) => {
   await page.goto("/#/components/cards");
 
   await page.getByRole("radio", { name: "withheld", exact: true }).click();
-  await expect(page.locator(".carousel .slot")).toHaveCount(3);
-  await expect(page.locator(".carousel")).not.toContainText("Something else");
+  await expect(page.locator(".carousel-specimen .carousel .slot")).toHaveCount(3);
+  await expect(page.locator(".carousel-specimen .carousel")).not.toContainText("Something else");
 });
 
 test("a content group divides every member, not just its rows", async ({ page }) => {

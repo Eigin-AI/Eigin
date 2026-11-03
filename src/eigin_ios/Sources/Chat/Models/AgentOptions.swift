@@ -7,11 +7,18 @@ struct OptionSet: Identifiable, Equatable {
     let id: String // tool call ID
     let question: String?
     let options: [OptionItem]
+    var presentation: OptionsPresentation = .compact
+}
+
+/// Card treatment shared by every choice in a series.
+enum OptionsPresentation: String, CaseIterable {
+    case compact
+    case visual
 }
 
 // MARK: - Single option
 
-/// A single selectable option shown on an `AppVisualCard`.
+/// A single selectable option with a title and description.
 struct OptionItem: Identifiable, Equatable {
     let label: String // short title, returned when selected
     let description: String // 1-2 sentence explainer

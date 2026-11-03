@@ -43,7 +43,7 @@ struct PresentOptionsTool: Tool {
             description: """
             Present the user with a set of selectable options in the chat. \
             The user can pick an option or dismiss by selecting "something else" (this is \
-            automatically provided) to type a custom response.
+            automatically provided) to type a custom response. Every option needs a description.
             """,
             parameters: JSONSchema(
                 type: "object",
@@ -51,6 +51,11 @@ struct PresentOptionsTool: Tool {
                     "question": .init(
                         type: "string",
                         description: "Optional question text displayed above the options"
+                    ),
+                    "presentation": .init(
+                        type: "string",
+                        description: "Presentation for the whole series. Defaults to compact.",
+                        enum: OptionsPresentation.allCases.map { $0.rawValue }
                     ),
                     "options": .init(
                         type: "array",
@@ -72,7 +77,7 @@ struct PresentOptionsTool: Tool {
                                     enum: OptionCategory.allCases.map { $0.rawValue }
                                 ),
                             ],
-                            required: ["label"]
+                            required: ["label", "description"]
                         )
                     ),
                 ],
@@ -102,16 +107,53 @@ struct PresentOptionsTool: Tool {
             )
         }
 
-        let optionItems: [OptionItem] = optionsArray.compactMap { dict in
-            guard let label = dict["label"] as? String else { return nil }
-            let description = dict["description"] as? String ?? ""
+        let presentation: OptionsPresentation
+        if let value = args["presentation"] {
+            guard let raw = value as? String, let parsed = OptionsPresentation(rawValue: raw) else {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers
+                        .output(errors: ["'presentation' must be 'compact' or 'visual'"]),
+                    isError: true
+                )
+            }
+            presentation = parsed
+        } else {
+            presentation = .compact
+        }
+
+        var optionItems: [OptionItem] = []
+        for dict in optionsArray {
+            guard let label = dict["label"] as? String,
+                  !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  let description = dict["description"] as? String,
+                  !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else {
+                return ToolResult(
+                    toolCallID: id,
+                    content: ToolHelpers
+                        .output(
+                            errors: ["Every option requires a non-empty 'label' and 'description'"]
+                        ),
+                    isError: true
+                )
+            }
             let categoryRaw = dict["category"] as? String
             let category = categoryRaw.flatMap { OptionCategory(rawValue: $0) }
-            return OptionItem(label: label, description: description, category: category)
+            optionItems.append(OptionItem(
+                label: label,
+                description: description,
+                category: category
+            ))
         }
 
         let question = args["question"] as? String
-        let optionSet = OptionSet(id: id, question: question, options: optionItems)
+        let optionSet = OptionSet(
+            id: id,
+            question: question,
+            options: optionItems,
+            presentation: presentation
+        )
 
         guard let handler = onPresentOptions else {
             return ToolResult(

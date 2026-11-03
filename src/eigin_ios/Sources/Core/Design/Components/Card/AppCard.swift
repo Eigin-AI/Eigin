@@ -10,6 +10,8 @@ struct AppCard: View {
     /// width.
     let width: CGFloat?
     let action: (() -> Void)?
+    /// Expands compact cards to a shared row height while keeping text at the top.
+    let fillsHeight: Bool
 
     @Environment(\.colors) private var colors
 
@@ -18,8 +20,10 @@ struct AppCard: View {
         _ headline: String,
         explainer: String,
         width: CGFloat? = nil,
+        fillsHeight: Bool = false,
         action: (() -> Void)? = nil
     ) {
+        self.fillsHeight = fillsHeight
         size = .compact
         self.headline = headline
         self.explainer = explainer
@@ -39,6 +43,7 @@ struct AppCard: View {
         height: CGFloat? = nil,
         action: (() -> Void)? = nil
     ) {
+        fillsHeight = false
         self.size = size
         self.headline = headline
         self.explainer = explainer
@@ -161,6 +166,7 @@ struct AppCard: View {
             .padding(.bottom, Sizing.Card.Py.compact)
             .padding(.leading, Sizing.Card.Gap.text + Sizing.Card.Px.small)
             .padding(.trailing, Sizing.Card.Gap.text + Sizing.Card.Px.small)
+            .frame(maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
             .background(colors.surface.standard.elevated)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card))
     }

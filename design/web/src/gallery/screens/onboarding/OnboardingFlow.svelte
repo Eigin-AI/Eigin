@@ -98,6 +98,7 @@
       {:else if step === "priority"}
         <div class="carousel">
           <OptionsCarousel
+            presentation="visual"
             options={priorities.slice(0, 3).map((option) => ({
               label: option.title,
               description: option.explainer,
