@@ -6,7 +6,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 |-------|-----------|---------|---------|---------|
 | cc-stretch (parser/guide port) | https://github.com/pro-vi/cc-stretch | v0.5.0 (045dbb6) | MIT | `.pi/extensions/eigin/stretchtext/parse.ts`, `.pi/guidance/stretchtext.md`, adapted for pi |
 | @scalar/api-reference (standalone browser bundle) | https://github.com/scalar/scalar | 1.65.1 | MIT | `src/eigin_relay/assets/scalar-api-reference.js`, served same-origin from `GET /docs` |
-| MingCute Icon | https://github.com/MingcuteDesign/MingCute | 3.x | Apache-2.0 | `design/assets/icons/functional/*.svg` |
+| MingCute Icon | https://github.com/MingcuteDesign/MingCute | 3.x | Apache-2.0 | `design/assets/icons/functional/*.svg`; `src/eigin_website/static/assets/icons/mingcute/*.svg` |
 | SnapshotHelper.swift | https://github.com/fastlane/fastlane | 1.30 | MIT | `src/eigin_ios/EiginUITests/SnapshotHelper.swift`, drives fastlane snapshot from the screenshot UI tests |
 | Simple Icons | https://github.com/simple-icons/simple-icons | 15.x; footer marks 11.15.0 | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
 | Fira Code Regular | https://github.com/tonsky/FiraCode/tree/5.2 | 5.002 (font metadata) | [SIL OFL 1.1](FiraCode-LICENSE.txt) | Bundled docs code font; notice published at `fonts/FiraCode-LICENSE.txt` |

@@ -1,0 +1,1549 @@
+<p class="kicker">Eigin presentation system</p>
+<h1>Deck authoring guide</h1>
+<p class="lede">
+  Everything you can build with this system, and the rules that decide whether it renders. Written
+  for an AI agent working with someone on a deck: you need this page and a deck folder, nothing
+  else.
+</p>
+
+<ul class="toc">
+  <li><a href="#model">1. How it works</a></li>
+  <li><a href="#loop">2. The editing loop</a></li>
+  <li><a href="#preview">3. Previewing a slide</a></li>
+  <li><a href="#syntax">4. Slide syntax</a></li>
+  <li><a href="#header">5. The header and alignment</a></li>
+  <li><a href="#layouts">6. Layouts and modifiers</a></li>
+  <li><a href="#text">7. Text components</a></li>
+  <li><a href="#blocks">8. Content components</a></li>
+  <li><a href="#diagrams">9. Diagrams</a></li>
+  <li><a href="#art">10. Icons, art and colour</a></li>
+  <li><a href="#media">11. Media</a></li>
+  <li><a href="#breaks">12. What silently breaks a slide</a></li>
+  <li><a href="#voice">13. Keeping a deck consistent</a></li>
+  <li><a href="#copy">14. Writing the copy</a></li>
+  <li><a href="#examples">15. Example slides</a></li>
+</ul>
+
+<h2 id="model">1. How it works</h2>
+
+<p>A deck is <strong>one Markdown file plus a media folder</strong>:</p>
+
+<pre><code>my-deck/
+  deck.md      the presentation
+  media/       images referenced as media/x.png</code></pre>
+
+<p>Open the folder in <a href="/present/">the presentation player</a>. No build step is needed.</p>
+
+<p>
+  Slides are <strong>1280&times;720</strong>. They do not scroll or shrink to fit; overflowing
+  content is clipped.
+</p>
+
+<p>
+  Use Markdown and the HTML components below. Reuse the supplied layouts and styles rather than
+  adding one-off CSS.
+</p>
+
+<h2 id="loop">2. The editing loop</h2>
+
+<p>
+  Edit <code>deck.md</code>, save, and inspect the result. Folder previews reload Markdown and media
+  changes while preserving the selected slide.
+</p>
+
+<p>Use one header and one content block per slide. These are the maximum counts that fit:</p>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Ceiling on one slide</th>
+  </tr>
+  <tr>
+    <td>Cards in a row</td>
+    <td>4</td>
+  </tr>
+  <tr>
+    <td>Feature-list items</td>
+    <td>4</td>
+  </tr>
+  <tr>
+    <td>Stats</td>
+    <td>3</td>
+  </tr>
+  <tr>
+    <td>People</td>
+    <td>7</td>
+  </tr>
+  <tr>
+    <td>Timeline milestones</td>
+    <td>5</td>
+  </tr>
+  <tr>
+    <td>Trailing <code>.overline</code></td>
+    <td>Only if it fits on one line</td>
+  </tr>
+</table>
+
+<p>
+  Put supporting detail in <code>Note:</code>. Speaker notes are hidden on slides and in the PDF.
+</p>
+
+<h2 id="preview">3. Previewing a slide</h2>
+
+<h3>The author presents it</h3>
+
+<p>
+  <strong>Chrome or Edge:</strong> open <a href="/present/">/present/</a>, click
+  <em>Open folder</em>, pick the folder. Arrow keys navigate, <code>Esc</code> opens the slide
+  overview, and <code>M</code> opens the menu. Choose <em>Fullscreen</em> from the menu.
+  <code>S</code> toggles speaker notes. Edits to <code>deck.md</code> reload live.
+</p>
+
+<p>
+  <strong>Safari or any other browser:</strong> zip the folder (<code
+    >zip -r deck.zip deck.md media</code
+  >) and load the zip from the same page. A zip is a snapshot, with no live reload. A single
+  <code>.md</code> also loads, with no media.
+</p>
+
+<p>
+  <strong>PDF:</strong> choose <em>Menu → Export PDF</em>, then <em>Print / Save PDF</em> in the new
+  tab. In the print dialog set <em>Destination: Save as PDF</em>, <em>Layout: Landscape</em>,
+  <em>Margins: None</em>, and <strong>Background graphics: on</strong>. With that off, every filled
+  card and dark slide prints white. PDF export reopens a saved folder. Open the deck as a folder
+  before exporting.
+</p>
+
+<div class="warn">
+  <strong>Use 16:9 paper with background graphics enabled.</strong> Choose a custom size of
+  <strong>13.333 &times; 7.5 in</strong>. A4 adds white bands; keep the deck at 1280&times;720.
+</div>
+
+<h3>Working across separate filesystems</h3>
+
+<p>If your agent cannot write to the folder open in the presenter’s browser:</p>
+<ol>
+  <li>Deliver <code>deck.md</code> and its <code>media/</code> folder.</li>
+  <li>The presenter opens that folder once in Chrome or Edge and leaves the tab open.</li>
+  <li>
+    Return updated Markdown and any changed media. The presenter replaces those files in the same
+    folder.
+  </li>
+</ol>
+<p>Edits in an agent’s sandbox do not update the presenter’s local files.</p>
+
+<h3>Render and inspect local slides as an agent</h3>
+
+<p>
+  Use the <a href="/present/render/">slide renderer</a> with a browser tool that can attach files
+  and capture screenshots. No website checkout or local server is needed.
+</p>
+
+<ol>
+  <li>Package <code>deck.md</code> and its media: <code>zip -r deck.zip deck.md media/</code>.</li>
+  <li>
+    Open <code>https://www.eigin.ai/present/render/?slide=1</code> in a 1280×720 browser viewport.
+  </li>
+  <li>
+    Supply the ZIP to the file input labelled <strong>Choose a presentation file</strong>. A
+    standalone Markdown file works for decks without local media. Files are read in the browser and
+    never uploaded to the website.
+  </li>
+  <li>
+    Wait for the top-level body’s <code>data-render-status</code> to become <code>ready</code> or
+    <code>error</code>. On error, read the visible alert and fix the deck. On ready, capture a
+    screenshot and inspect it.
+  </li>
+  <li>
+    Read <code>data-total-slides</code>. Repeat with <code>?slide=N</code> and the same file bytes
+    to inspect other slides.
+  </li>
+  <li>
+    Edit your local files, rebuild the ZIP, and supply the updated bytes through the same input.
+    Wait for ready and inspect a fresh screenshot.
+  </li>
+</ol>
+
+<p>
+  Example using an existing Playwright <code>page</code>. The only file it reads is your deck ZIP:
+</p>
+
+<pre><code>import { readFile } from 'node:fs/promises';
+
+const bytes = await readFile('deck.zip');
+await page.setViewportSize({ width: 1280, height: 720 });
+await page.goto('https://www.eigin.ai/present/render/?slide=1');
+await page.waitForFunction(() =&gt; document.body.dataset.renderStatus === 'idle');
+await page.getByLabel('Choose a presentation file').setInputFiles({
+  name: 'deck.zip',
+  mimeType: 'application/zip',
+  buffer: bytes,
+});
+await page.waitForFunction(() =&gt;
+  ['ready', 'error'].includes(document.body.dataset.renderStatus)
+);
+if (await page.locator('body').getAttribute('data-render-status') === 'error') {
+  throw new Error(await page.getByRole('alert').innerText());
+}
+const total = Number(await page.locator('body').getAttribute('data-total-slides'));
+await page.screenshot({ path: 'slide-1.png' });</code></pre>
+
+<p>
+  Passing file bytes works when the browser runs on a different machine from the agent. For a
+  browser tool with its own file-attachment command, target the same labelled input. The input
+  remains available to automation after the slides replace the launcher.
+</p>
+
+<table>
+  <tr>
+    <th>Signal</th>
+    <th>Meaning</th>
+  </tr>
+  <tr>
+    <td><code>data-render-status="idle"</code></td>
+    <td>Waiting for a local file.</td>
+  </tr>
+  <tr>
+    <td><code>data-render-status="loading"</code></td>
+    <td>Reading or rendering the deck.</td>
+  </tr>
+  <tr>
+    <td><code>data-render-status="ready"</code></td>
+    <td>The selected slide and its fonts/images are ready to capture.</td>
+  </tr>
+  <tr>
+    <td><code>data-render-status="error"</code></td>
+    <td>Read the alert; fix the content or missing media, then supply the file again.</td>
+  </tr>
+  <tr>
+    <td><code>data-total-slides</code></td>
+    <td>Total slides in flat order, including vertical slides.</td>
+  </tr>
+  <tr>
+    <td><code>data-current-slide</code></td>
+    <td>Selected slide, counted from 1.</td>
+  </tr>
+</table>
+
+<p>
+  <code>?slide=N</code> selects a 1-based slide and clamps to the available range. Omit it to
+  navigate with arrow keys. Local files are snapshots: reattach updated files after edits. Wait for
+  readiness rather than a fixed delay. The browser needs network access to load the public website.
+</p>
+
+<details>
+  <summary>Existing URL-based renderer integrations</summary>
+  <p>
+    The agent route also accepts <code>?src=</code> for Markdown and <code>?zip=</code> for ZIP
+    files on a CORS-enabled server. These parameters are optional. Source URLs watch by default
+    without a selected slide; <code>watch=0</code> disables watching and
+    <code>watch=1</code> enables it. ZIPs are snapshots.
+  </p>
+</details>
+
+<h2 id="syntax">4. Slide syntax</h2>
+
+<table>
+  <tr>
+    <th>You write</th>
+    <th>You get</th>
+  </tr>
+  <tr>
+    <td><code>---</code> on its own line</td>
+    <td>A new slide (blank line before and after)</td>
+  </tr>
+  <tr>
+    <td><code>----</code> on its own line</td>
+    <td>A vertical sub-slide, reached with the down arrow</td>
+  </tr>
+  <tr>
+    <td><code>Note:</code> at the end of a slide</td>
+    <td>A speaker note, hidden from the audience</td>
+  </tr>
+  <tr>
+    <td><code>&lt;!-- .slide: class="…" --&gt;</code></td>
+    <td>Classes on the slide itself</td>
+  </tr>
+</table>
+
+<p>
+  Use a <strong>vertical stack</strong> when several slides share one composition and only the
+  content changes, so pressing down reads as the same picture evolving: a run of quotes, or a
+  product walk-through.
+</p>
+
+<h2 id="header">5. The header and alignment</h2>
+
+<p>Two things the system decides for you, so you do not decide them per slide.</p>
+
+<h4>The header</h4>
+<p>
+  An <code>h1</code> followed by <code>&lt;p class="subhead"&gt;</code> is the standard head on
+  every content slide. The subhead tucks under the title and opens a wider gap before the content.
+  Write the two in sequence and it works.
+</p>
+
+<pre><code># The premise
+
+&lt;p class="subhead"&gt;Personal AI will become essential infrastructure.&lt;/p&gt;</code></pre>
+
+<h4>Vertical alignment follows the content</h4>
+<table>
+  <tr>
+    <th>Content</th>
+    <th>Alignment</th>
+  </tr>
+  <tr>
+    <td>Text: prose, quotes, lists, paragraphs</td>
+    <td>Top — reading starts at the same height every time</td>
+  </tr>
+  <tr>
+    <td>A lone figure: diagram, timeline, grid of cards</td>
+    <td>Centred under the header — a figure has no reading entry point</td>
+  </tr>
+  <tr>
+    <td><code>layout-statement</code>, <code>layout-title</code>, <code>layout-center</code></td>
+    <td>Centred on the slide</td>
+  </tr>
+  <tr>
+    <td>Two or more stacked blocks</td>
+    <td>Top, flowing</td>
+  </tr>
+</table>
+
+<p>
+  A figure only auto-centres when it is the <strong>sole content block</strong> (last child,
+  directly after the header). Put anything after it and the slide reverts to top. Override with
+  <code>.fill</code> on a child or <code>spread</code> on the slide.
+</p>
+
+<h2 id="layouts">6. Layouts and modifiers</h2>
+
+<p>Put on the slide: <code>&lt;!-- .slide: class="layout-… theme-…" --&gt;</code></p>
+
+<table>
+  <tr>
+    <th>Layout</th>
+    <th>Use for</th>
+  </tr>
+  <tr>
+    <td><em>(none)</em></td>
+    <td>Standard content: header plus text or components. Top and left aligned.</td>
+  </tr>
+  <tr>
+    <td><code>layout-cover</code></td>
+    <td>Cover slide. Write the content and the panel builds itself, see below.</td>
+  </tr>
+  <tr>
+    <td><code>layout-title</code></td>
+    <td>Opening slide: centred <code>kicker</code> + big title + <code>lede</code>.</td>
+  </tr>
+  <tr>
+    <td><code>layout-statement</code></td>
+    <td>One big centred statement, nothing competing.</td>
+  </tr>
+  <tr>
+    <td><code>layout-statement lg</code></td>
+    <td>
+      The headline becomes the slide: a few short stacked lines over full-bleed art. For pivot
+      moments only.
+    </td>
+  </tr>
+  <tr>
+    <td><code>layout-hero</code></td>
+    <td>
+      Product walk-through: one device screenshot at full slide height with a short headline beside
+      it.
+    </td>
+  </tr>
+  <tr>
+    <td><code>layout-center</code></td>
+    <td>Centre the content vertically and horizontally.</td>
+  </tr>
+</table>
+
+<h4 id="website-cover">Recommended title slide: website-style cover</h4>
+
+<p>
+  For a branded opening, use a full olive background with the bird at the upper right. Keep the logo
+  and title at the lower left, followed by a two-line introduction and a presenter line. This
+  composition leaves the centre open and gives the title room.
+</p>
+
+<img
+  class="cover-example"
+  src="/assets/images/presentation-title-example.png"
+  width="1280"
+  height="720"
+  alt="Olive title slide with the Eigin bird at the upper right, logo and title at the lower left, and introduction and presenter underneath."
+  loading="lazy"
+/>
+
+<p>
+  Copy this complete example into <code>deck.md</code>. The bird and logo are supplied by the
+  website renderer, so no media files are needed. Replace the introduction and presenter line. The
+  120px title is intended for a short name such as Eigin; use a smaller title size or the simpler
+  cover below for longer headings. Render and inspect the result before presenting.
+</p>
+
+<pre
+  id="website-cover-example"
+><code>&lt;!-- .slide: class=&quot;layout-cover website-cover no-mark&quot; --&gt;
+
+&lt;style&gt;
+.reveal section.website-cover &gt; .slide-frame { display:block; position:relative; background:#A7B04E; color:#1E1E1D; padding:0; text-align:left; }
+.reveal .website-cover .website-hero { position:absolute; inset:0; padding:54px 70px; }
+.reveal .website-cover .website-bird { position:absolute; top:48px; right:62px; width:350px; height:328px; margin:0; border-radius:0; object-fit:contain; }
+.reveal .website-cover .website-title { position:absolute; left:70px; bottom:198px; display:flex; align-items:center; gap:28px; margin:0; max-width:none; font-size:120px; line-height:1; letter-spacing:-1px; color:#1E1E1D; }
+.reveal .website-cover .website-logo { display:block; flex:none; width:1cap; height:1cap; background:currentColor; mask:url(/assets/images/eigin-logo-tight.svg) no-repeat center / contain; }
+.reveal .website-cover .website-wordmark { text-box:trim-both cap alphabetic; }
+.reveal .website-cover .website-intro { position:absolute; left:70px; bottom:108px; margin:0; max-width:660px; font-size:25px; line-height:1.3; color:#1E1E1D; }
+.reveal .website-cover .website-event { position:absolute; left:70px; bottom:48px; margin:0; font-family:var(--r-heading-font); font-size:17px; color:#1E1E1D; }
+&lt;/style&gt;
+
+&lt;div class=&quot;website-hero&quot;&gt;
+&lt;img class=&quot;website-bird plain&quot; src=&quot;/assets/icons/illustration/hero-bird.svg&quot; alt=&quot;&quot; aria-hidden=&quot;true&quot;&gt;
+&lt;h1 class=&quot;website-title&quot;&gt;&lt;span class=&quot;website-logo&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span class=&quot;website-wordmark&quot;&gt;Eigin&lt;/span&gt;&lt;/h1&gt;
+&lt;p class=&quot;website-intro&quot;&gt;A short introduction to your topic,&lt;br&gt;and why it matters.&lt;/p&gt;
+&lt;p class=&quot;website-event&quot;&gt;Your name · Role / Event&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+
+<p>
+  This is an intentional custom cover. Keep its styles scoped to <code>.website-cover</code> and
+  leave them unchanged when editing the copy. <code>no-mark</code> removes the normal corner mark
+  because the title already includes the logo. Use the supplied CSS mask for the logo:
+  <code>currentColor</code> matches the title colour, and <code>1cap</code> matches its
+  capital-letter height. The wordmark’s <code>text-box</code> trim aligns the visible lettering with
+  the mark. Keep both spans; replacing the mask with an image or fixed pixel size loses this
+  matching.
+</p>
+
+<h4>A simpler cover without custom CSS</h4>
+
+<p>
+  For a quick cover without custom styles, write a headline and, optionally, a date and a subtitle.
+  The player sorts them into the olive panel and the meta column for you.
+</p>
+
+<pre><code>&lt;!-- .slide: class="layout-cover" data-art="mountain" --&gt;
+
+# The headline goes here
+
+&lt;p class="subhead"&gt;An optional line under it.&lt;/p&gt;
+
+&lt;p class="kicker"&gt;01.01.2026&lt;/p&gt;
+&lt;p class="muted"&gt;Pitch deck&lt;/p&gt;</code></pre>
+
+<p>
+  The headline, <code>.subhead</code> and <code>.lede</code> go in the panel. Everything else,
+  typically <code>.kicker</code> and <code>.muted</code>, goes in the meta column on the right.
+  <code>data-art</code> is optional and takes any illustration name (see below), cropped by the
+  panel edge behind the headline. Leave it off for a plain olive panel.
+</p>
+
+<p>
+  Do not hand-build <code>.cover-panel</code> and <code>.cover-meta</code> unless you want a
+  composition this does not give you. A hand-built cover is left alone, so both work, but the short
+  version is the one that is hard to get wrong.
+</p>
+
+<div class="warn">
+  <strong>Use <code>layout-cover</code> for slide one, not <code>layout-title</code>.</strong>
+  <code>layout-title</code> is a plain centred title with no panel and no art. It is fine for a
+  section break, but it is not the branded cover and it will look like a placeholder next to the
+  rest of the deck.
+</div>
+
+<p>
+  <strong>Modifiers:</strong> <code>theme-light</code> (dark is the default) ·
+  <code>text-left</code> (keep a statement or cover left-aligned) · <code>no-mark</code> (hide the
+  corner logo) · <code>spread</code> (first block top, last block bottom).
+</p>
+
+<p>
+  <strong>Region splits</strong> divide the area under the header. Cells align to the top, so a
+  header inside a split cell lands on the usual baseline.
+</p>
+
+<table>
+  <tr>
+    <th>Class</th>
+    <th>Columns</th>
+  </tr>
+  <tr>
+    <td><code>split</code></td>
+    <td>Half / half</td>
+  </tr>
+  <tr>
+    <td><code>split thirds-right</code></td>
+    <td>Third / two thirds — text beside big media</td>
+  </tr>
+  <tr>
+    <td><code>split thirds-left</code></td>
+    <td>Two thirds / third — list beside a small aside</td>
+  </tr>
+  <tr>
+    <td><code>split wide-left</code> / <code>wide-right</code></td>
+    <td>Weighted halves</td>
+  </tr>
+  <tr>
+    <td><code>columns</code></td>
+    <td>Equal flex columns, any number</td>
+  </tr>
+</table>
+
+<p>
+  Every slide carries the Eigin logo bottom-right automatically, in the right colour for its theme.
+  Never add one.
+</p>
+
+<h4>Light and dark</h4>
+<p>
+  Slides are dark by default. <code>theme-light</code> flips one to the light palette. Convention:
+  dark for narrative and statements, light for evidence and data.
+</p>
+
+<h2 id="text">7. Text components</h2>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Markup</th>
+  </tr>
+  <tr>
+    <td>Kicker (accent eyebrow)</td>
+    <td><code>&lt;p class="kicker"&gt;07.08.2026&lt;/p&gt;</code></td>
+  </tr>
+  <tr>
+    <td>Overline (label or footnote)</td>
+    <td><code>&lt;p class="overline"&gt;…&lt;/p&gt;</code></td>
+  </tr>
+  <tr>
+    <td>Subhead</td>
+    <td>
+      <code>&lt;p class="subhead"&gt;…&lt;/p&gt;</code>, add <code>bold</code> for a closing
+      statement
+    </td>
+  </tr>
+  <tr>
+    <td>Lede (big intro line)</td>
+    <td><code>&lt;p class="lede"&gt;One strong sentence.&lt;/p&gt;</code></td>
+  </tr>
+  <tr>
+    <td>Muted / accent</td>
+    <td><code>&lt;p class="muted"&gt;</code> · <code>&lt;span class="accent"&gt;</code></td>
+  </tr>
+  <tr>
+    <td>Section number</td>
+    <td><code>&lt;div class="section-index"&gt;02&lt;/div&gt;</code></td>
+  </tr>
+</table>
+
+<h4>Prose — a slide that carries an argument</h4>
+<pre><code>&lt;div class="prose"&gt;
+&lt;p&gt;&lt;strong&gt;Activation is everything.&lt;/strong&gt; Bottom-up dies if the
+first session does not deliver value.&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Wider measure, looser rhythm, <code>&lt;strong&gt;</code> as the paragraph lead-in. Add
+  <code>tight</code> for wordier pages.
+</p>
+
+<h4>Quote</h4>
+<pre><code>&lt;div class="quote lg fill"&gt;
+  &lt;p class="quote-text"&gt;"…"&lt;/p&gt;
+  &lt;span class="quote-cite"&gt;Name · role&lt;/span&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  <code>lg</code> for a quote that gets its own slide, <code>fill</code> to centre it in the content
+  area while keeping the text left-aligned. A run of quotes works well as a vertical stack.
+</p>
+
+<h2 id="blocks">8. Content components</h2>
+
+<h4>Cards — rounded, flat fills, never bordered</h4>
+<pre><code>&lt;div class="cards cols-2"&gt;          &lt;!-- cols-1 … cols-4 --&gt;
+  &lt;div class="card olive"&gt;
+    &lt;span class="card-label"&gt;Optional label&lt;/span&gt;
+    &lt;h3 class="card-title"&gt;Sentence-case title&lt;/h3&gt;
+    &lt;p class="card-body"&gt;Body copy.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Colours: <code>olive</code>, <code>warm</code>, <code>soft</code>, <code>coral</code>,
+  <code>peach</code>, <code>rose</code>, <code>pink</code>, <code>deep</code>,
+  <code>impact</code> (dark). One accent per slide is plenty.
+</p>
+
+<p>
+  Add <code>visual</code> to <code>.cards</code> for tall cards that stretch to fill the slide, with
+  a large icon on top and text pushed to the bottom. Use it when two or three cards would otherwise
+  float in empty space. Wrap the text in a <code>&lt;div&gt;</code> so it groups.
+  <code>tall</code> does the same stretch without an icon.
+</p>
+
+<pre><code>&lt;div class="cards cols-3 visual"&gt;
+  &lt;div class="card olive"&gt;
+    &lt;span class="shape" style="--shape:url(/assets/icons/illustration/butterfly.svg)"&gt;&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h3 class="card-title"&gt;Personal AI agents&lt;/h3&gt;
+      &lt;p class="card-body"&gt;Fastest growing category in consumer tech.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<div class="warn">
+  <strong>Two rows of <code>visual</code> cards will overflow.</strong> Each one is full content
+  height, so the variant is for a single row. For a 2&times;2 grid use plain
+  <code>cards cols-2</code>.
+</div>
+
+<h4>Feature list — the primitive that replaces a wall of text</h4>
+<pre><code>&lt;div class="feature-list marked"&gt;   &lt;!-- also cols-2 / cols-3 --&gt;
+  &lt;div class="feature"&gt;
+    &lt;h4 class="feature-title"&gt;Local-first&lt;/h4&gt;
+    &lt;p class="feature-desc"&gt;Everything stays on your device.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  <code>marked</code> hangs an olive arrow beside each title. Use it when the list <em>is</em> the
+  argument; leave it off when the list is supporting detail. <code>features</code> is the same idea
+  with an icon above each title instead.
+</p>
+
+<h4>Numbered steps</h4>
+<pre><code>&lt;div class="numbered"&gt;
+  &lt;div class="step"&gt;
+    &lt;span class="step-n"&gt;1&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h4 class="step-title"&gt;Title&lt;/h4&gt;
+      &lt;p class="step-desc"&gt;Description.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h4>Stats — a number can replace a paragraph</h4>
+<pre><code>&lt;div class="stat-row"&gt;
+  &lt;div class="stat"&gt;
+    &lt;span class="stat-number"&gt;6&lt;/span&gt;
+    &lt;span class="stat-label"&gt;enterprise sales&lt;/span&gt;
+    &lt;span class="stat-note"&gt;At 400k to 600k DKK each.&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Keep the number short. A long value like <code>15 EUR</code> makes one stat physically wider than
+  its neighbours and throws off the row. Put the unit in the label instead.
+</p>
+
+<h4>People — one uniform team grid</h4>
+<pre><code>&lt;div class="people"&gt;
+  &lt;div class="person"&gt;
+    &lt;img src="media/name.jpg" alt="Name"&gt;
+    &lt;!-- or &lt;span class="avatar" style="--shape:url(…)"&gt;&lt;/span&gt; --&gt;
+    &lt;span class="person-name"&gt;Name&lt;/span&gt;
+    &lt;span class="person-role"&gt;Role&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Everyone is the same size on the same column track; seniority is carried by the role text, not by
+  scale. Rows align even when a name wraps.
+</p>
+
+<h4>Timeline — milestones on a rail</h4>
+<pre><code>&lt;div class="timeline"&gt;
+  &lt;div class="milestone done"&gt;…&lt;/div&gt;
+  &lt;div class="milestone now"&gt;
+    &lt;span class="ms-note"&gt;&lt;/span&gt;      &lt;!-- text label, or empty + a .shape --&gt;
+    &lt;span class="ms-rail"&gt;&lt;span class="ms-dot"&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class="ms-title"&gt;iOS beta&lt;/span&gt;
+    &lt;span class="ms-desc"&gt;Pilots underway.&lt;/span&gt;
+    &lt;span class="ms-date"&gt;Now&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="milestone"&gt;…&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Dot state per milestone: <code>done</code> (shipped, olive), <code>now</code>
+  (current, olive with a halo), default (ahead, grey). The rail colours itself olive up to the
+  current dot and terminates at the end stations. Keep every
+  <code>ms-desc</code> to two lines so the row stays even.
+</p>
+
+<h4>Compare — a feature matrix</h4>
+<pre><code>&lt;table class="compare"&gt;
+  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;&lt;/th&gt;&lt;th class="col-us"&gt;Eigin&lt;/th&gt;&lt;th&gt;Other&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;Local-first&lt;/td&gt;&lt;td class="yes col-us"&gt;&lt;/td&gt;&lt;td class="no"&gt;&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Agentic&lt;/td&gt;&lt;td class="yes col-us"&gt;&lt;/td&gt;&lt;td class="partial"&gt;Partial&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+<p>
+  The tick and cross are drawn by CSS, so those cells stay <strong>empty</strong>.
+  <code>col-us</code> tints our column.
+</p>
+
+<h4>Zones — the trust-boundary picture</h4>
+<pre><code>&lt;div class="zones"&gt;
+  &lt;div class="zone"&gt;
+    &lt;span class="zone-label"&gt;Your device&lt;/span&gt;
+    &lt;div class="zone-body"&gt;
+      &lt;div class="panel"&gt;&lt;span class="panel-title"&gt;Eigin&lt;/span&gt;
+        &lt;ul class="panel-items"&gt;&lt;li&gt;Memory&lt;/li&gt;&lt;li&gt;Tools&lt;/li&gt;&lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="zone"&gt;
+    &lt;span class="zone-label"&gt;The cloud&lt;/span&gt;
+    &lt;div class="zone-body"&gt;&lt;div class="panel muted"&gt;…&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>
+  Panels split by a dotted boundary with an italic label in a left gutter. The bright
+  <code>.panel</code> is what the user owns; <code>.panel.muted</code> is everyone else's.
+</p>
+
+<h2 id="diagrams">9. Diagrams</h2>
+
+<p>
+  Diagrams are built from themed HTML components, not a diagram language. They adapt to light and
+  dark automatically.
+</p>
+
+<table>
+  <tr>
+    <th>Piece</th>
+    <th>Markup</th>
+  </tr>
+  <tr>
+    <td>Node</td>
+    <td>
+      <code
+        >&lt;div class="node"&gt;&lt;span class="n-title"&gt;Label&lt;/span&gt;&lt;span
+        class="n-desc"&gt;detail&lt;/span&gt;&lt;/div&gt;</code
+      >
+      — variants <code>primary</code>, <code>deep</code>, <code>accent</code>
+    </td>
+  </tr>
+  <tr>
+    <td>Group</td>
+    <td>
+      <code
+        >&lt;div class="group"&gt;&lt;span class="group-label"&gt;Your device&lt;/span&gt; …nodes…
+        &lt;/div&gt;</code
+      >
+    </td>
+  </tr>
+  <tr>
+    <td>Flow</td>
+    <td>
+      <code
+        >&lt;div class="flow"&gt; node &lt;span class="arrow"&gt;&lt;/span&gt; node
+        &lt;/div&gt;</code
+      >
+      — arrow variants <code>down</code>, <code>dashed</code>
+    </td>
+  </tr>
+  <tr>
+    <td>Column</td>
+    <td><code>&lt;div class="col"&gt;…&lt;/div&gt;</code></td>
+  </tr>
+  <tr>
+    <td>Stack (layers)</td>
+    <td>
+      <code
+        >&lt;div class="stack"&gt;&lt;div class="layer"&gt;Apps&lt;/div&gt;&lt;div class="layer
+        muted"&gt;Cloud&lt;/div&gt;&lt;/div&gt;</code
+      >
+    </td>
+  </tr>
+  <tr>
+    <td>Pills</td>
+    <td>
+      <code
+        >&lt;div class="pill-row"&gt;&lt;span class="pill on"&gt;Local&lt;/span&gt;&lt;span
+        class="pill"&gt;Cloud&lt;/span&gt;&lt;/div&gt;</code
+      >
+    </td>
+  </tr>
+</table>
+
+<h4>Inline SVG, for anything the components cannot draw</h4>
+
+<p>
+  Curved edges, funnels, charts and flywheels are inline <code>&lt;svg&gt;</code>. Use
+  <code>class="diagram-svg"</code> on the <code>&lt;svg&gt;</code>, <code>class="edge"</code> on
+  connector paths, and CSS variables for every colour so the drawing follows the theme:
+  <code>var(--eigin-primary)</code>, <code>var(--dg-text)</code>, <code>var(--dg-muted)</code>,
+  <code>var(--dg-line)</code>, <code>var(--dg-surface)</code>, <code>var(--dg-panel)</code>.
+</p>
+
+<div class="warn">
+  <strong>Match the viewBox aspect ratio to the space.</strong>
+  The SVG fills the content width and the leftover height. If the viewBox is a different shape, the
+  drawing is letterboxed inside it, so it renders small and floats with big margins. The content
+  area under a header is roughly
+  <code>1140&times;400</code>, so a viewBox near <code>2.85:1</code> fills it.
+</div>
+
+<p>
+  Text in a diagram is set in the heading face by default, which is right for labels. For running
+  sentences, wrap them in a <code>.body-copy</code> group to get the serif body face:
+</p>
+
+<pre><code>&lt;g class="body-copy" font-size="16" fill="var(--dg-muted)"&gt;
+  &lt;text x="0" y="336"&gt;SVG text does not wrap, so break&lt;/text&gt;
+  &lt;text x="0" y="359"&gt;lines yourself with one text per line.&lt;/text&gt;
+&lt;/g&gt;</code></pre>
+
+<p>
+  A <code>font-family</code> attribute on the element will <em>not</em> work here, and neither will
+  an inherited <code>style</code> on the group: the theme sets the font on
+  <code>text</code> directly, and a CSS rule beats both.
+</p>
+
+<h2 id="art">10. Icons, art and colour</h2>
+
+<p>
+  Need a new icon? Choose it from
+  <a href="https://icon-sets.iconify.design/mingcute/">MingCute on Iconify</a>. A website
+  contributor adds its SVG to <code>design/assets/icons/functional/</code>, retains the licence
+  attribution, and runs <code>just generate web</code>. After review and website deployment it
+  becomes available to both the website and slides, and appears automatically in the catalogue. A
+  deck-only agent should request the addition; editing a deck does not change the shared design
+  system.
+</p>
+
+<p>
+  Slides use the same generated icons and illustrations as the website.
+  <a href="/present/guide/icons/">Browse the current design-system asset catalogue</a> for previews
+  and exact <code>/assets/design-icons/…</code> paths. The catalogue and renderer are built from the
+  same registry, so each website release keeps them in sync. Legacy <code>/assets/icons/…</code>
+  paths remain supported for existing decks. Masks inherit the text colour; images preserve the
+  artwork’s colours.
+</p>
+
+<table>
+  <tr>
+    <th>Primitive</th>
+    <th>What it is</th>
+  </tr>
+  <tr>
+    <td><code>&lt;span class="shape brand" style="--shape:url(…)"&gt;</code></td>
+    <td>
+      A masked mark. Sizes <code>sm</code> / <code>lg</code>, or <code>--shape-scale</code> for fine
+      correction. Colours <code>brand</code> / <code>coral</code>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>&lt;span class="icon" style="--shape:url(…)"&gt;</code></td>
+    <td>Inline functional mark that inherits the text colour.</td>
+  </tr>
+  <tr>
+    <td><code>&lt;span class="avatar" style="--shape:url(…)"&gt;</code></td>
+    <td>
+      An olive circle with an inset illustration, where a portrait would go.
+      <code>ink</code> inverts it.
+    </td>
+  </tr>
+  <tr>
+    <td><code>&lt;div class="bleed …"&gt;</code></td>
+    <td>Oversized art cropped by the slide edge, behind the content.</td>
+  </tr>
+  <tr>
+    <td><code>&lt;div class="wash coral"&gt;</code></td>
+    <td>A full-bleed colour field for the slide.</td>
+  </tr>
+</table>
+
+<div class="warn">
+  <strong
+    >On a filled card use a plain <code>.shape</code>; on a white card use
+    <code>.shape brand</code>.</strong
+  >
+  The mark inherits font size, so a stray rule elsewhere on the page can shrink it. If two icons on
+  one row look different sizes, suspect the CSS before you blame the glyph.
+</div>
+
+<h4>Bleed</h4>
+
+<div class="warn">
+  <strong>Do not reach for this unless you can see the slide.</strong> A bleed is meant to be
+  oversized art cropped by the slide edge. At the default size it usually lands fully inside the
+  frame instead, where it reads as a sticker floating behind the text rather than as a composition.
+  Getting it right means adjusting size and offsets while looking at the result, often several
+  times. If you are working blind, leave it off: a clean slide beats a badly placed illustration.
+  For art on a cover, use <code>data-art</code> (above), which is already positioned.
+</div>
+
+<p>
+  If you can see the slide, the rule of thumb is that the shape should be large enough to run off at
+  least one edge, typically <code>--size</code> of 80% or more with a negative offset, and its
+  colour has to sit against the panel or slide behind it. Pink on olive, for instance, fights.
+</p>
+
+<pre><code>&lt;div class="bleed top-left pink"
+     style="--size:32%; --shape:url(/assets/icons/illustration/person-1.svg)"&gt;&lt;/div&gt;</code></pre>
+<p>
+  Positions: <code>left</code>, <code>right</code>, <code>top-left</code>, <code>top-right</code>,
+  <code>bottom-left</code>, <code>bottom-right</code>. Colours: <code>brand</code>,
+  <code>pink</code>, <code>coral</code>, <code>rose</code>, <code>ink</code>.
+  <code>flip</code> mirrors it. For a hard crop, drive it directly:
+  <code>style="--size:124%; left:-12%; top:-54%"</code>. <code>--size</code> and
+  <code>left</code> are percentages of slide <strong>width</strong>, <code>top</code> of slide
+  <strong>height</strong>.
+</p>
+<p>
+  Use a <code>&lt;div&gt;</code>, never a <code>&lt;span&gt;</code>: Markdown wraps a bare inline
+  element in a <code>&lt;p&gt;</code>, which breaks the positioning.
+</p>
+
+<h4>Wash, not background-color</h4>
+<p>
+  <code>&lt;div class="wash coral"&gt;&lt;/div&gt;</code>. Colours: <code>coral</code>,
+  <code>pink</code>, <code>rose</code>, <code>peach</code>, <code>olive</code>, <code>deep</code>,
+  <code>ink</code>, or <code>--wash</code>. It sits under <code>.bleed</code> art, so a wash plus an
+  <code>ink</code> bleed inverts the slide: coloured field, dark illustration.
+</p>
+<div class="warn">
+  Prefer a wash over <code>data-background-color</code>. Reveal paints that across the whole
+  viewport, so the colour leaks into the letterbox around the slide and behind the controls. A wash
+  stops at the slide edge.
+</div>
+
+<h4>Brand colours</h4>
+<p>
+  Primary olive <code>#A7B04E</code> · deep green <code>#42674A</code> · secondary amber
+  <code>#FCAF53</code> · accent tan <code>#B39779</code>.
+</p>
+
+<h4>Illustrations available</h4>
+<p>
+  <code>bird</code> (reserved for Eigin itself), <code>butterfly</code>, <code>cactus</code>,
+  <code>cell</code>, <code>circle</code>, <code>crab</code>, <code>flower</code>,
+  <code>ghost</code>, <code>ink-1</code>, <code>ink-2</code>, <code>moon</code>,
+  <code>mountain</code>, <code>octopus</code>, <code>person-1</code>, <code>person-2</code>,
+  <code>root</code>, <code>snake</code>, <code>tree</code>, <code>volcano</code>, <code>wave</code>.
+</p>
+
+<p>
+  The <code>illustration/</code> marks are an organic decorative family and are not interchangeable
+  with the icon sets. Use <code>-fill</code> icon variants beside <code>brand/</code> icons and
+  <code>-line</code> beside <code>functional/</code> ones, and never mix fill and line on one slide.
+</p>
+
+<h2 id="media">11. Media</h2>
+
+<p>
+  Put files in <code>media/</code> and reference them relatively. Files outside the deck folder are
+  not served and will 404.
+</p>
+
+<pre><code>![Product screenshot](media/screenshot.png)
+&lt;img class="plain" src="media/logo.svg"&gt;      &lt;!-- square corners --&gt;</code></pre>
+
+<p>
+  Media cell inside a split:
+  <code>&lt;div class="split-media"&gt;&lt;img src="media/x.png"&gt;&lt;/div&gt;</code>, plus
+  <code>oversize</code> to let the image outgrow its column and crop at the slide edge.
+</p>
+
+<h4>Device screenshots and <code>layout-hero</code></h4>
+<pre><code>&lt;!-- .slide: class="layout-hero no-mark" --&gt;
+
+&lt;div class="split hero-split fill"&gt;
+&lt;div class="hero-copy"&gt;
+&lt;h1&gt;Stay on top of life&lt;/h1&gt;
+&lt;p class="lede"&gt;The life admin that eats your week.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="shot"&gt;&lt;img src="media/app-04-day.png" alt="…"&gt;&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<ul>
+  <li>
+    <code>hero-split</code> is a 30% / 1fr grid. <code>.shot</code> carries <code>order:-1</code>,
+    so the device renders on the left while the headline stays first in the DOM for screen readers.
+  </li>
+  <li>
+    The <code>h1</code> goes <strong>inside</strong> the column. This is the one sanctioned
+    exception to the header rule: full-width caps the device at ~470px, in-column it gets ~613px.
+    Only worth it when the screenshot is the argument.
+  </li>
+  <li><code>fill</code> hands the split the leftover height. Without it the device collapses.</li>
+  <li>
+    Export device mockups on a transparent background and
+    <strong>do not trim the transparent margin</strong>. The drop shadow extends below the device,
+    so the alpha bounding box is not centred on the phone. Crop to it and the phone sits visibly
+    high on every slide.
+  </li>
+</ul>
+
+<h2 id="breaks">12. What silently breaks a slide</h2>
+
+<p>None of these produce an error. Each one costs an hour the first time.</p>
+
+<table>
+  <tr>
+    <th>Trap</th>
+    <th>What happens</th>
+  </tr>
+  <tr>
+    <td>A blank line inside a raw HTML block</td>
+    <td>Ends the block. The rest leaks out as plain text.</td>
+  </tr>
+  <tr>
+    <td>Missing blank lines around <code>---</code></td>
+    <td>The separator is not recognised and two slides merge into one.</td>
+  </tr>
+  <tr>
+    <td>Two <code>style</code> attributes on one element</td>
+    <td>The second is dropped.</td>
+  </tr>
+  <tr>
+    <td><code>transform</code> or <code>translate</code> on <code>.bleed</code></td>
+    <td>
+      The PDF export prints the art as a solid black rectangle. Position with
+      <code>margin-top</code> instead.
+    </td>
+  </tr>
+  <tr>
+    <td>Content overflowing a hero slide in print</td>
+    <td>
+      Chrome's print rasteriser discards the <em>entire page</em>, text included. It comes out
+      blank.
+    </td>
+  </tr>
+  <tr>
+    <td>An oversized image</td>
+    <td>
+      <code>.reveal img</code> caps every image at <code>max-height:68vh</code> and rounds its
+      corners. Overriding both is on you.
+    </td>
+  </tr>
+  <tr>
+    <td>Assuming 720px of height</td>
+    <td>
+      <code>.slide-frame</code> uses <code>padding: 7% 5.5%</code>, and percentage padding resolves
+      against <strong>width</strong>. Vertical padding is 7% of 1280 (~90px), so a content slide has
+      ~540px of usable height.
+    </td>
+  </tr>
+  <tr>
+    <td>A stretched child inside <code>.fill</code></td>
+    <td>
+      <code>.fill</code> also sets <code>align-content:center</code>, which sizes a grid row to its
+      content, so the child never sees the height.
+    </td>
+  </tr>
+  <tr>
+    <td>Editing <code>deck.md</code> while it is open in an editor</td>
+    <td>
+      An editor buffer can silently revert your write. Re-read the file before editing and confirm
+      the write landed.
+    </td>
+  </tr>
+  <tr>
+    <td>Blind string replacement</td>
+    <td>
+      Curly versus straight apostrophes have failed matches silently. Use a tool that errors on a
+      missed match.
+    </td>
+  </tr>
+</table>
+
+<h2 id="voice">13. Keeping a deck consistent</h2>
+
+<ul>
+  <li>One header pattern on every content slide. Do not hand-place titles.</li>
+  <li>Dark for narrative and statements; light for evidence and data.</li>
+  <li>
+    Bleed art on statement and cover slides only, and only when you can see the result. Use
+    <code>data-art</code> on a cover instead. Shapes inside cards and features only.
+  </li>
+  <li>
+    Uppercase is for <code>h1</code> and <code>h2</code> only. Sub-headings and card titles stay
+    sentence case.
+  </li>
+  <li>
+    Weight hierarchy: <code>h1</code>/<code>h2</code> are Bold; every smaller header
+    (<code>h3</code>/<code>h4</code>, card titles, feature titles, panel titles, subheads, table
+    headers) is DemiBold. No other weights.
+  </li>
+  <li>
+    Let alignment be decided by content type. Reach for <code>.fill</code> only when the rule
+    genuinely gets it wrong.
+  </li>
+  <li>
+    If you want a second exception to a rule, the answer is a documented layout, not a one-off
+    inline style.
+  </li>
+</ul>
+
+<h2 id="copy">14. Writing the copy</h2>
+
+<h3>Make the point</h3>
+<ul>
+  <li>
+    <strong>Clarity first.</strong> Use concrete nouns, active voice, and short sentences. Remove
+    jargon and empty adjectives.
+  </li>
+  <li>
+    <strong>State what is true.</strong> Include relevant limits, costs, and trade-offs. Distinguish
+    shipped features from plans; say what is unknown.
+  </li>
+  <li>
+    <strong>Write to a person.</strong> Use “you” and “your”. Explain the practical effect, without
+    hype or corporate phrasing.
+  </li>
+  <li>
+    <strong>Make the title a claim.</strong> Give the audience the point of the slide rather than a
+    topic label.
+  </li>
+</ul>
+
+<h3>Keep it short</h3>
+<ul>
+  <li>One line for a subhead; two or three lines per body item.</li>
+  <li>Keep items in a row similar in length and grammatical structure.</li>
+  <li>Put explanation and supporting facts in <code>Note:</code>.</li>
+  <li>
+    State the point directly. Avoid “not X, but Y”, empty triads, repetitive lists, and hedging.
+  </li>
+</ul>
+
+<table>
+  <tr>
+    <th>Instead of</th>
+    <th>Write</th>
+    <th>Rule</th>
+  </tr>
+  <tr>
+    <td>None of these ask you to take our word for it.</td>
+    <td>Built so you do not have to trust us.</td>
+    <td>State the claim directly.</td>
+  </tr>
+  <tr>
+    <td>This one scales without us in the room.</td>
+    <td>We are not involved in running it.</td>
+    <td>Prefer a plain operational fact to a quip.</td>
+  </tr>
+  <tr>
+    <td>We use request batching to obfuscate your IP.</td>
+    <td>We aggregate requests so providers don't see your IP.</td>
+    <td>Explain the effect in ordinary language.</td>
+  </tr>
+</table>
+
+<h3>Mechanics</h3>
+<ul>
+  <li>
+    Use sentence case. The theme uppercases <code>h1</code> and <code>h2</code>; do not type titles
+    in caps.
+  </li>
+  <li>Use British spelling: organisation, licence as a noun.</li>
+  <li>No em-dashes or exclamation marks.</li>
+</ul>
+
+<h2 id="examples">15. Example slides</h2>
+
+<p>
+  Copy a complete slide and replace the words. Keep its structure and text budget, then render and
+  check it at 1280&times;720.
+</p>
+
+<h3>Cover</h3>
+<p>The first slide. An olive panel with cropped art, and a meta column for date and title.</p>
+<pre><code>&lt;!-- .slide: class=&quot;layout-cover no-mark&quot; --&gt;
+
+&lt;div class=&quot;cover-panel&quot;&gt;
+&lt;div class=&quot;bleed ink&quot; style=&quot;--size:85%; left:-17%; top:55%; margin-top:calc(var(--size) / -2); --shape:url(/assets/icons/illustration/mountain.svg)&quot;&gt;&lt;/div&gt;
+&lt;h1&gt;A one-line &lt;br/&gt;statement of what this is&lt;/h1&gt;
+&lt;/div&gt;
+&lt;div class=&quot;cover-meta&quot;&gt;
+&lt;p class=&quot;kicker&quot;&gt;01.01.2026&lt;/p&gt;
+&lt;p class=&quot;muted&quot;&gt;Deck title&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Statement</h3>
+<p>One sentence, centred, nothing competing. Use between sections.</p>
+<pre><code>&lt;!-- .slide: class=&quot;layout-statement&quot; --&gt;
+
+# A single sentence that earns its own slide</code></pre>
+
+<h3>Full-bleed statement</h3>
+<p>A pivot moment. Wash plus an <code>ink</code> bleed inverts the slide.</p>
+<pre><code>&lt;!-- .slide: class=&quot;layout-statement lg no-mark&quot; --&gt;
+
+&lt;div class=&quot;wash coral&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;bleed ink&quot; style=&quot;--size:150%; left:-15%; top:-60%; --shape:url(/assets/icons/illustration/person-2.svg)&quot;&gt;&lt;/div&gt;
+
+# The question you want them holding</code></pre>
+
+<h3>Quote</h3>
+<p>Someone's own words. Works best as a vertical stack of two or three.</p>
+<pre><code>&lt;div class=&quot;quote lg fill&quot;&gt;
+  &lt;p class=&quot;quote-text&quot;&gt;&quot;A sentence in someone&#x27;s own words, which is doing work no paraphrase could.&quot;&lt;/p&gt;
+  &lt;span class=&quot;quote-cite&quot;&gt;Name · role&lt;/span&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Two claims side by side</h3>
+<p>The standard content slide: header plus a figure. <code>visual</code> cards stretch to fill.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# Two claims, side by side
+
+&lt;p class=&quot;subhead&quot;&gt;One line that frames both.&lt;/p&gt;
+
+&lt;div class=&quot;cards cols-2 visual&quot;&gt;
+  &lt;div class=&quot;card olive&quot;&gt;
+    &lt;span class=&quot;shape&quot; style=&quot;--shape:url(/assets/icons/mingcute/save-2-fill.svg)&quot;&gt;&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h3 class=&quot;card-title&quot;&gt;First claim&lt;/h3&gt;
+      &lt;p class=&quot;card-body&quot;&gt;Two lines of support. Keep both cards the same length so the titles align.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;card&quot;&gt;
+    &lt;span class=&quot;shape brand&quot; style=&quot;--shape:url(/assets/icons/mingcute/terminal-box-fill.svg)&quot;&gt;&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h3 class=&quot;card-title&quot;&gt;Second claim&lt;/h3&gt;
+      &lt;p class=&quot;card-body&quot;&gt;A white card needs &quot;shape brand&quot; so the mark is olive, not dark.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Four of something</h3>
+<p>Four items on one slide. Plain cards, since two rows of <code>visual</code> overflow.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# Four of something
+
+&lt;p class=&quot;subhead&quot;&gt;Plain cards, because two rows of visual cards overflow.&lt;/p&gt;
+
+&lt;div class=&quot;cards cols-2&quot;&gt;
+  &lt;div class=&quot;card olive&quot;&gt;
+    &lt;div&gt;&lt;h3 class=&quot;card-title&quot;&gt;One&lt;/h3&gt;
+    &lt;p class=&quot;card-body&quot;&gt;Keep every body to the same number of lines and the grid stays even.&lt;/p&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;card warm&quot;&gt;
+    &lt;div&gt;&lt;h3 class=&quot;card-title&quot;&gt;Two&lt;/h3&gt;
+    &lt;p class=&quot;card-body&quot;&gt;Colour carries the count. One accent per slide is plenty.&lt;/p&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;card soft&quot;&gt;
+    &lt;div&gt;&lt;h3 class=&quot;card-title&quot;&gt;Three&lt;/h3&gt;
+    &lt;p class=&quot;card-body&quot;&gt;Cards are flat fills and never bordered.&lt;/p&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;card&quot;&gt;
+    &lt;div&gt;&lt;h3 class=&quot;card-title&quot;&gt;Four&lt;/h3&gt;
+    &lt;p class=&quot;card-body&quot;&gt;The white card is the default on a light slide.&lt;/p&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>A set of claims</h3>
+<p>A run of claims. <code>marked</code> when the list is the argument.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# A set of claims
+
+&lt;p class=&quot;subhead&quot;&gt;When the list is the argument.&lt;/p&gt;
+
+&lt;div class=&quot;feature-list cols-2 marked&quot;&gt;
+  &lt;div class=&quot;feature&quot;&gt;
+    &lt;h4 class=&quot;feature-title&quot;&gt;First&lt;/h4&gt;
+    &lt;p class=&quot;feature-desc&quot;&gt;A sentence of support. Two lines is the comfortable maximum.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;feature&quot;&gt;
+    &lt;h4 class=&quot;feature-title&quot;&gt;Second&lt;/h4&gt;
+    &lt;p class=&quot;feature-desc&quot;&gt;Drop &quot;marked&quot; when the list is supporting detail, not the point.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;feature&quot;&gt;
+    &lt;h4 class=&quot;feature-title&quot;&gt;Third&lt;/h4&gt;
+    &lt;p class=&quot;feature-desc&quot;&gt;Four items is the ceiling at this size.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;feature&quot;&gt;
+    &lt;h4 class=&quot;feature-title&quot;&gt;Fourth&lt;/h4&gt;
+    &lt;p class=&quot;feature-desc&quot;&gt;The arrow sits in its own gutter, so descriptions align to the title.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;p class=&quot;overline&quot;&gt;A single closing line, only if it fits on one line.&lt;/p&gt;</code></pre>
+
+<h3>Numbers</h3>
+<p>When a number says it better than a paragraph.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# Numbers instead of paragraphs
+
+&lt;p class=&quot;subhead&quot;&gt;Three at most, and keep the value short.&lt;/p&gt;
+
+&lt;div class=&quot;stat-row&quot;&gt;
+  &lt;div class=&quot;stat&quot;&gt;
+    &lt;span class=&quot;stat-number&quot;&gt;50k&lt;/span&gt;
+    &lt;span class=&quot;stat-label&quot;&gt;downloads&lt;/span&gt;
+    &lt;span class=&quot;stat-note&quot;&gt;The note says what the number proves, not what it is.&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;stat&quot;&gt;
+    &lt;span class=&quot;stat-number&quot;&gt;10k&lt;/span&gt;
+    &lt;span class=&quot;stat-label&quot;&gt;monthly active users&lt;/span&gt;
+    &lt;span class=&quot;stat-note&quot;&gt;Put units in the label, so the numerals stay the same width.&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;stat&quot;&gt;
+    &lt;span class=&quot;stat-number&quot;&gt;6&lt;/span&gt;
+    &lt;span class=&quot;stat-label&quot;&gt;signed deals&lt;/span&gt;
+    &lt;span class=&quot;stat-note&quot;&gt;Three lines each keeps the row visually even.&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>The team</h3>
+<p>
+  One uniform grid. Swap <code>.avatar</code> for <code>&lt;img&gt;</code> when you have portraits.
+</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# The team
+
+&lt;p class=&quot;subhead&quot;&gt;A short, punchy line.&lt;/p&gt;
+
+&lt;div class=&quot;people&quot;&gt;
+  &lt;div class=&quot;person&quot;&gt;
+    &lt;span class=&quot;avatar&quot; style=&quot;--shape:url(/assets/icons/illustration/bird.svg)&quot;&gt;&lt;/span&gt;
+    &lt;span class=&quot;person-name&quot;&gt;First Person&lt;/span&gt;
+    &lt;span class=&quot;person-role&quot;&gt;Co-founder&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;person&quot;&gt;
+    &lt;span class=&quot;avatar&quot; style=&quot;--shape:url(/assets/icons/illustration/crab.svg)&quot;&gt;&lt;/span&gt;
+    &lt;span class=&quot;person-name&quot;&gt;Second Person&lt;/span&gt;
+    &lt;span class=&quot;person-role&quot;&gt;Co-founder&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;person&quot;&gt;
+    &lt;span class=&quot;avatar&quot; style=&quot;--shape:url(/assets/icons/illustration/moon.svg)&quot;&gt;&lt;/span&gt;
+    &lt;span class=&quot;person-name&quot;&gt;Third Person&lt;/span&gt;
+    &lt;span class=&quot;person-role&quot;&gt;Partner&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;person&quot;&gt;
+    &lt;span class=&quot;avatar&quot; style=&quot;--shape:url(/assets/icons/illustration/octopus.svg)&quot;&gt;&lt;/span&gt;
+    &lt;span class=&quot;person-name&quot;&gt;Fourth Person&lt;/span&gt;
+    &lt;span class=&quot;person-role&quot;&gt;Partner&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;person&quot;&gt;
+    &lt;span class=&quot;avatar&quot; style=&quot;--shape:url(/assets/icons/illustration/tree.svg)&quot;&gt;&lt;/span&gt;
+    &lt;span class=&quot;person-name&quot;&gt;Fifth Person&lt;/span&gt;
+    &lt;span class=&quot;person-role&quot;&gt;Advisor&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Timeline</h3>
+<p>Where you are on a line of work. Dark reads well here.</p>
+<pre><code># Roadmap
+
+&lt;p class=&quot;subhead&quot;&gt;Where we are on the line.&lt;/p&gt;
+
+&lt;div class=&quot;timeline&quot;&gt;
+  &lt;div class=&quot;milestone done&quot;&gt;
+    &lt;span class=&quot;ms-rail&quot;&gt;&lt;span class=&quot;ms-dot&quot;&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;ms-title&quot;&gt;Shipped&lt;/span&gt;
+    &lt;span class=&quot;ms-desc&quot;&gt;Two lines at most, so the row stays even.&lt;/span&gt;
+    &lt;span class=&quot;ms-date&quot;&gt;Q1 2026&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;milestone now&quot;&gt;
+    &lt;span class=&quot;ms-note&quot;&gt;&lt;span class=&quot;shape&quot; style=&quot;--shape:url(/assets/icons/mingcute/arrow-down-fill.svg)&quot;&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;ms-rail&quot;&gt;&lt;span class=&quot;ms-dot&quot;&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;ms-title&quot;&gt;In progress&lt;/span&gt;
+    &lt;span class=&quot;ms-desc&quot;&gt;An empty ms-note holding a shape becomes the marker.&lt;/span&gt;
+    &lt;span class=&quot;ms-date&quot;&gt;Now&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;milestone&quot;&gt;
+    &lt;span class=&quot;ms-rail&quot;&gt;&lt;span class=&quot;ms-dot&quot;&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;ms-title&quot;&gt;Next&lt;/span&gt;
+    &lt;span class=&quot;ms-desc&quot;&gt;Default dots are grey, ahead of the line.&lt;/span&gt;
+    &lt;span class=&quot;ms-date&quot;&gt;Q3 2026&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;milestone&quot;&gt;
+    &lt;span class=&quot;ms-rail&quot;&gt;&lt;span class=&quot;ms-dot&quot;&gt;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;ms-title&quot;&gt;After that&lt;/span&gt;
+    &lt;span class=&quot;ms-desc&quot;&gt;Five milestones is the ceiling.&lt;/span&gt;
+    &lt;span class=&quot;ms-date&quot;&gt;Q4 2026&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Comparison table</h3>
+<p>Head to head against alternatives. Ticks and crosses are CSS.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# How we compare
+
+&lt;p class=&quot;subhead&quot;&gt;The ticks and crosses are drawn by CSS.&lt;/p&gt;
+
+&lt;table class=&quot;compare&quot;&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;&lt;th&gt;&lt;/th&gt;&lt;th class=&quot;col-us&quot;&gt;Us&lt;/th&gt;&lt;th&gt;Alt one&lt;/th&gt;&lt;th&gt;Alt two&lt;/th&gt;&lt;th&gt;Alt three&lt;/th&gt;&lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;First property&lt;/td&gt;&lt;td class=&quot;yes col-us&quot;&gt;&lt;/td&gt;&lt;td class=&quot;no&quot;&gt;&lt;/td&gt;&lt;td class=&quot;yes&quot;&gt;&lt;/td&gt;&lt;td class=&quot;partial&quot;&gt;Partial&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Second property&lt;/td&gt;&lt;td class=&quot;yes col-us&quot;&gt;&lt;/td&gt;&lt;td class=&quot;yes&quot;&gt;&lt;/td&gt;&lt;td class=&quot;no&quot;&gt;&lt;/td&gt;&lt;td class=&quot;no&quot;&gt;&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Third property&lt;/td&gt;&lt;td class=&quot;yes col-us&quot;&gt;&lt;/td&gt;&lt;td class=&quot;no&quot;&gt;&lt;/td&gt;&lt;td class=&quot;partial&quot;&gt;Partial&lt;/td&gt;&lt;td class=&quot;no&quot;&gt;&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p class=&quot;overline&quot;&gt;A line saying what the table means, so nobody has to work it out.&lt;/p&gt;</code></pre>
+
+<h3>Architecture zones</h3>
+<p>A trust boundary between what the user holds and what they do not.</p>
+<pre><code># The architecture
+
+&lt;p class=&quot;subhead&quot;&gt;A trust boundary, drawn.&lt;/p&gt;
+
+&lt;div class=&quot;zones&quot;&gt;
+  &lt;div class=&quot;zone&quot;&gt;
+    &lt;span class=&quot;zone-label&quot;&gt;Your device&lt;/span&gt;
+    &lt;div class=&quot;zone-body&quot;&gt;
+      &lt;div class=&quot;panel&quot;&gt;&lt;span class=&quot;panel-title&quot;&gt;The app&lt;/span&gt;
+        &lt;ul class=&quot;panel-items&quot;&gt;&lt;li&gt;Memory&lt;/li&gt;&lt;li&gt;Tools&lt;/li&gt;&lt;li&gt;Files&lt;/li&gt;&lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;zone&quot;&gt;
+    &lt;span class=&quot;zone-label&quot;&gt;The cloud&lt;/span&gt;
+    &lt;div class=&quot;zone-body&quot;&gt;
+      &lt;div class=&quot;panel muted&quot;&gt;&lt;span class=&quot;panel-title&quot;&gt;Inference only&lt;/span&gt;
+        &lt;ul class=&quot;panel-items&quot;&gt;&lt;li&gt;No account&lt;/li&gt;&lt;li&gt;No history&lt;/li&gt;&lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<h3>Funnel</h3>
+<p>Many at the base, few at the top. A bottom-up motion, drawn.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# A funnel
+
+&lt;p class=&quot;subhead&quot;&gt;Many at the base, few at the top.&lt;/p&gt;
+
+&lt;svg class=&quot;diagram-svg&quot; viewBox=&quot;25 18 875 396&quot; width=&quot;100%&quot; style=&quot;max-height:19em&quot; role=&quot;img&quot; aria-label=&quot;Three-band pyramid&quot;&gt;
+  &lt;polygon points=&quot;40,400 560,400 481.4,288 118.6,288&quot; fill=&quot;var(--dg-surface)&quot;/&gt;
+  &lt;polygon points=&quot;129.9,272 470.1,272 392.8,162 207.2,162&quot; fill=&quot;var(--dg-panel)&quot;/&gt;
+  &lt;polygon points=&quot;218.5,146 381.5,146 300,30&quot; fill=&quot;var(--eigin-primary)&quot;/&gt;
+  &lt;g fill=&quot;var(--eigin-primary)&quot;&gt;
+    &lt;path d=&quot;M300 273 l7 12 h-14 z&quot;/&gt;
+    &lt;path d=&quot;M300 147 l7 12 h-14 z&quot;/&gt;
+  &lt;/g&gt;
+  &lt;g font-size=&quot;15&quot; font-weight=&quot;700&quot; text-anchor=&quot;middle&quot;&gt;
+    &lt;text x=&quot;300&quot; y=&quot;355&quot;&gt;BOTTOM&lt;/text&gt;
+    &lt;text x=&quot;300&quot; y=&quot;227&quot;&gt;MIDDLE&lt;/text&gt;
+    &lt;text x=&quot;300&quot; y=&quot;132&quot; fill=&quot;#1a1a17&quot;&gt;TOP&lt;/text&gt;
+  &lt;/g&gt;
+  &lt;g class=&quot;body-copy&quot; font-size=&quot;15&quot;&gt;
+    &lt;text x=&quot;610&quot; y=&quot;338&quot;&gt;&lt;tspan font-weight=&quot;700&quot;&gt;Thousands&lt;/tspan&gt; arrive here,&lt;/text&gt;
+    &lt;text x=&quot;610&quot; y=&quot;360&quot;&gt;because it is free and open.&lt;/text&gt;
+    &lt;text x=&quot;610&quot; y=&quot;211&quot;&gt;&lt;tspan font-weight=&quot;700&quot;&gt;Some of them&lt;/tspan&gt; carry it&lt;/text&gt;
+    &lt;text x=&quot;610&quot; y=&quot;233&quot;&gt;into their organisation.&lt;/text&gt;
+    &lt;text x=&quot;610&quot; y=&quot;101&quot;&gt;&lt;tspan font-weight=&quot;700&quot;&gt;A few of those&lt;/tspan&gt; become&lt;/text&gt;
+    &lt;text x=&quot;610&quot; y=&quot;123&quot;&gt;deals, licensed and paid for.&lt;/text&gt;
+  &lt;/g&gt;
+&lt;/svg&gt;</code></pre>
+
+<h3>Flywheel</h3>
+<p>A self-reinforcing loop, when the point is that it compounds.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# A loop
+
+&lt;p class=&quot;subhead&quot;&gt;When the point is that it compounds.&lt;/p&gt;
+
+&lt;svg class=&quot;diagram-svg&quot; viewBox=&quot;0 0 900 430&quot; width=&quot;100%&quot; style=&quot;max-height:14em&quot; role=&quot;img&quot; aria-label=&quot;Four-node flywheel&quot;&gt;
+  &lt;defs&gt;
+    &lt;marker id=&quot;fw&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;9&quot; refY=&quot;5&quot; markerWidth=&quot;5&quot; markerHeight=&quot;5&quot; orient=&quot;auto-start-reverse&quot;&gt;
+      &lt;path d=&quot;M0 0 L10 5 L0 10 z&quot; fill=&quot;var(--eigin-primary)&quot;/&gt;
+    &lt;/marker&gt;
+  &lt;/defs&gt;
+  &lt;g class=&quot;edge&quot; fill=&quot;none&quot; stroke-width=&quot;2.5&quot; marker-end=&quot;url(#fw)&quot;&gt;
+    &lt;path d=&quot;M528.2 76.9 A302 143 0 0 1 716.6 147.9&quot;/&gt;
+    &lt;path d=&quot;M716.6 282.1 A302 143 0 0 1 528.2 353.1&quot;/&gt;
+    &lt;path d=&quot;M371.8 353.1 A302 143 0 0 1 183.4 282.1&quot;/&gt;
+    &lt;path d=&quot;M183.4 147.9 A302 143 0 0 1 371.8 76.9&quot;/&gt;
+  &lt;/g&gt;
+  &lt;circle cx=&quot;450&quot; cy=&quot;72&quot; r=&quot;66&quot; fill=&quot;var(--eigin-primary)&quot;/&gt;
+  &lt;g fill=&quot;var(--dg-surface)&quot;&gt;
+    &lt;circle cx=&quot;752&quot; cy=&quot;215&quot; r=&quot;66&quot;/&gt;
+    &lt;circle cx=&quot;450&quot; cy=&quot;358&quot; r=&quot;66&quot;/&gt;
+    &lt;circle cx=&quot;148&quot; cy=&quot;215&quot; r=&quot;66&quot;/&gt;
+  &lt;/g&gt;
+  &lt;g font-size=&quot;14&quot; font-weight=&quot;700&quot; text-anchor=&quot;middle&quot;&gt;
+    &lt;text x=&quot;450&quot; y=&quot;67&quot; fill=&quot;#1a1a17&quot;&gt;FREE FOR&lt;/text&gt;
+    &lt;text x=&quot;450&quot; y=&quot;85&quot; fill=&quot;#1a1a17&quot;&gt;PEOPLE&lt;/text&gt;
+    &lt;text x=&quot;752&quot; y=&quot;210&quot;&gt;TRUST AND&lt;/text&gt;
+    &lt;text x=&quot;752&quot; y=&quot;228&quot;&gt;VISIBILITY&lt;/text&gt;
+    &lt;text x=&quot;450&quot; y=&quot;353&quot;&gt;REVENUE&lt;/text&gt;
+    &lt;text x=&quot;148&quot; y=&quot;210&quot;&gt;A BETTER&lt;/text&gt;
+    &lt;text x=&quot;148&quot; y=&quot;228&quot;&gt;PRODUCT&lt;/text&gt;
+  &lt;/g&gt;
+&lt;/svg&gt;
+
+&lt;p class=&quot;overline&quot;&gt;One line naming what the loop actually buys you.&lt;/p&gt;</code></pre>
+
+<h3>Rising steps</h3>
+<p>A progression where each stage is bigger than the last.</p>
+<pre><code># Rising steps
+
+&lt;p class=&quot;subhead&quot;&gt;A progression, drawn as growth.&lt;/p&gt;
+
+&lt;svg class=&quot;diagram-svg&quot; viewBox=&quot;0 25 1047 366&quot; width=&quot;100%&quot; role=&quot;img&quot; aria-label=&quot;Three rising steps&quot;&gt;
+  &lt;g&gt;
+    &lt;rect x=&quot;0&quot; y=&quot;150&quot; width=&quot;300&quot; height=&quot;80&quot; rx=&quot;10&quot; fill=&quot;var(--dg-line)&quot;/&gt;
+    &lt;rect x=&quot;373&quot; y=&quot;100&quot; width=&quot;300&quot; height=&quot;130&quot; rx=&quot;10&quot; fill=&quot;color-mix(in srgb, var(--eigin-primary) 55%, var(--dg-line))&quot;/&gt;
+    &lt;rect x=&quot;746&quot; y=&quot;35&quot; width=&quot;300&quot; height=&quot;195&quot; rx=&quot;10&quot; fill=&quot;var(--eigin-primary)&quot;/&gt;
+  &lt;/g&gt;
+  &lt;g font-family=&quot;var(--r-heading-font)&quot; font-weight=&quot;600&quot; font-size=&quot;13&quot; letter-spacing=&quot;1.5&quot; fill=&quot;var(--eigin-primary)&quot;&gt;
+    &lt;text x=&quot;0&quot; y=&quot;270&quot;&gt;FIRST&lt;/text&gt;
+    &lt;text x=&quot;373&quot; y=&quot;270&quot;&gt;THEN&lt;/text&gt;
+    &lt;text x=&quot;746&quot; y=&quot;270&quot;&gt;BEYOND&lt;/text&gt;
+  &lt;/g&gt;
+  &lt;g font-family=&quot;var(--r-heading-font)&quot; font-weight=&quot;600&quot; font-size=&quot;20&quot; fill=&quot;var(--dg-text)&quot;&gt;
+    &lt;text x=&quot;0&quot; y=&quot;302&quot;&gt;The lean stage&lt;/text&gt;
+    &lt;text x=&quot;373&quot; y=&quot;302&quot;&gt;The funded step&lt;/text&gt;
+    &lt;text x=&quot;746&quot; y=&quot;302&quot;&gt;The optional one&lt;/text&gt;
+  &lt;/g&gt;
+  &lt;g class=&quot;body-copy&quot; font-size=&quot;16&quot; fill=&quot;var(--dg-muted)&quot;&gt;
+    &lt;text x=&quot;0&quot; y=&quot;336&quot;&gt;Three lines of body copy per&lt;/text&gt;
+    &lt;text x=&quot;0&quot; y=&quot;359&quot;&gt;column, broken by hand because&lt;/text&gt;
+    &lt;text x=&quot;0&quot; y=&quot;382&quot;&gt;SVG text does not wrap.&lt;/text&gt;
+    &lt;text x=&quot;373&quot; y=&quot;336&quot;&gt;Match the viewBox aspect to the&lt;/text&gt;
+    &lt;text x=&quot;373&quot; y=&quot;359&quot;&gt;space or the drawing is&lt;/text&gt;
+    &lt;text x=&quot;373&quot; y=&quot;382&quot;&gt;letterboxed inside it.&lt;/text&gt;
+    &lt;text x=&quot;746&quot; y=&quot;336&quot;&gt;Wrap running sentences in a&lt;/text&gt;
+    &lt;text x=&quot;746&quot; y=&quot;359&quot;&gt;body-copy group to get the serif&lt;/text&gt;
+    &lt;text x=&quot;746&quot; y=&quot;382&quot;&gt;face instead of the heading one.&lt;/text&gt;
+  &lt;/g&gt;
+&lt;/svg&gt;</code></pre>
+
+<h3>Numbered steps</h3>
+<p>A sequence where the order is the point.</p>
+<pre><code>&lt;!-- .slide: class=&quot;theme-light&quot; --&gt;
+
+# Numbered steps
+
+&lt;p class=&quot;subhead&quot;&gt;When order is the point.&lt;/p&gt;
+
+&lt;div class=&quot;numbered&quot;&gt;
+  &lt;div class=&quot;step&quot;&gt;
+    &lt;span class=&quot;step-n&quot;&gt;1&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h4 class=&quot;step-title&quot;&gt;The first thing&lt;/h4&gt;
+      &lt;p class=&quot;step-desc&quot;&gt;One or two lines. Four steps fit comfortably.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;step&quot;&gt;
+    &lt;span class=&quot;step-n&quot;&gt;2&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h4 class=&quot;step-title&quot;&gt;The second thing&lt;/h4&gt;
+      &lt;p class=&quot;step-desc&quot;&gt;The numeral sits in its own gutter.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;step&quot;&gt;
+    &lt;span class=&quot;step-n&quot;&gt;3&lt;/span&gt;
+    &lt;div&gt;
+      &lt;h4 class=&quot;step-title&quot;&gt;The third thing&lt;/h4&gt;
+      &lt;p class=&quot;step-desc&quot;&gt;Use it for a sequence, not for a set of claims.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+<a class="back" href="/present/">← Back to the player</a>
