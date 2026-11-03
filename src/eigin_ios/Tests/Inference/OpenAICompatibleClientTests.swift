@@ -182,6 +182,49 @@ struct OpenAICompatibleClientTests {
         #expect(body["prompt_cache_key"] == nil)
     }
 
+    @Test(arguments: [false, true])
+    func preservesTextAcrossMistralThinkingTransition(structured: Bool) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let chunks = [
+            #"{"choices":[{"delta":{"role":"assistant","content":null}}]}"#,
+            #"{"choices":[{"delta":{"content":[{"type":"thinking","thinking":[{"type":"text","text":"Private reasoning"}]}]}}]}"#,
+            #"{"choices":[{"delta":{"content":[{"type":"thinking","thinking":[{"type":"text","text":"More reasoning"}]},{"type":"text","text":"H"},{"type":"text","text":"e"}]}}]}"#,
+            #"{"choices":[{"delta":{"content":"j æøå!"}}]}"#,
+            #"{"choices":[{"delta":{},"finish_reason":"stop"}]}"#,
+            "[DONE]",
+        ]
+        let sse = chunks.map { "data: \($0)\n\n" }.joined()
+        FakeURLProtocol.stubResponse(
+            for: "https://api.example.com/v1/chat/completions",
+            data: Data(sse.utf8),
+            statusCode: 200
+        )
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+        let messages = [ChatMessage(role: "user", content: "Sig hej")]
+        var deltas: [String] = []
+        if structured {
+            let stream = try await client.chatCompletionEventStream(
+                messages: messages, model: "mistral/mistral-large-4-0"
+            )
+            for try await event in stream {
+                if case .contentDelta(let text) = event { deltas.append(text) }
+            }
+        } else {
+            let stream = try await client.chatCompletionStream(
+                messages: messages, model: "mistral/mistral-large-4-0"
+            )
+            for try await text in stream {
+                deltas.append(text)
+            }
+        }
+        #expect(deltas == ["He", "j æøå!"])
+        #expect(deltas.joined() == "Hej æøå!")
+    }
+
     @Test func trailingSlashBaseURLHandled() async throws {
         let session = FakeURLProtocol.fakeSession()
         let url = "https://api.example.com/v1/models"

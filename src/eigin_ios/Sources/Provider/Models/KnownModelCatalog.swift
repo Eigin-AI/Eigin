@@ -17,7 +17,9 @@ struct KnownModelEntry {
     let family: ModelFamily
     let contextWindow: Int
     let maxOutput: Int?
+    /// Approximate provider input price in USD per million tokens.
     let inputCostPerMillion: Double?
+    /// Approximate provider output price in USD per million tokens, used for relative cost badges.
     let outputCostPerMillion: Double?
     let supportsToolCall: Bool
     let supportsReasoning: Bool
@@ -157,7 +159,8 @@ enum KnownModelCatalog {
     /// a model in the provider's available models.
     static let preferenceRanking: [String] = [
         // Top tier — best cost-quality balance for personal assistants
-        // Corti models lead: fastest good answers for everyday personal use.
+        "mistral-large-4-0",
+        "mistral-large-4",
         "corti-s1",
         "corti-s1-instant",
         "corti-s1-mini",
@@ -815,6 +818,20 @@ enum KnownModelCatalog {
         ),
 
         // Mistral
+        KnownModelEntry(
+            pattern: "mistral-large-4-0",
+            aliases: ["mistral-large-4"],
+            displayName: "Mistral Large 4",
+            family: .mistral,
+            contextWindow: 1_000_000,
+            maxOutput: nil,
+            inputCostPerMillion: 0.70,
+            outputCostPerMillion: 2.10,
+            supportsToolCall: true,
+            supportsReasoning: true,
+            supportsVision: true,
+            isRecommended: true
+        ),
         KnownModelEntry(
             pattern: "mistral-large-latest",
             displayName: "Mistral Large (latest)",
