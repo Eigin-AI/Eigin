@@ -15,7 +15,7 @@ enum CommunicationNotificationContent {
     ///   groups notifications sharing a `conversationIdentifier`, and a new
     ///   notification landing in a thread with an unread one can get folded
     ///   into it silently instead of alerting on its own.
-    static func upgrade(
+    @MainActor static func upgrade(
         _ content: UNMutableNotificationContent,
         agentName: String,
         agentEmoji: String?,

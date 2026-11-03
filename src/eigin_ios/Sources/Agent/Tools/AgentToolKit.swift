@@ -10,6 +10,7 @@ enum AgentToolKit: ToolKit {
         SetProactivityTool.capability,
         ManageVocabularyTool.capability,
         PresentOptionsTool.capability,
+        FollowUpTool.capability,
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
@@ -19,6 +20,10 @@ enum AgentToolKit: ToolKit {
         let vocabularyStore = Container.shared.vocabularyStore()
 
         return [
+            FollowUpTool(
+                scheduler: Container.shared.followUpScheduler(),
+                canPromptUser: context.canPromptUser
+            ),
             ReadCoreTool(),
             EditCoreTool(),
             GetPresentationTool(voiceService: voiceService),

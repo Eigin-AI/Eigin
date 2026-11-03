@@ -22,6 +22,8 @@ struct BackgroundNotifyTool: Tool {
 
     var now: @Sendable () -> Date = { Date() }
     var calendar: Calendar = .current
+    var isAuthorized: @Sendable () async
+        -> Bool = { await NotificationPermission.requestIfNeeded(canPromptUser: false) }
     let onSignal: @Sendable (BackgroundToolSignal) -> Void
 
     func definition() -> ToolDefinition {
@@ -85,59 +87,30 @@ struct BackgroundNotifyTool: Tool {
             )
         }
 
-        let now = now()
-        var deliverAt: Date?
-        if let providedTime = args["deliver_at"] {
-            guard let deliverString = providedTime as? String, !deliverString.isEmpty else {
-                return ToolResult(
-                    toolCallID: id,
-                    content: ToolHelpers
-                        .output(
-                            errors: ["Use a future ISO 8601 datetime for 'deliver_at', or omit it."]
-                        ),
-                    isError: true
-                )
-            }
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            deliverAt = formatter.date(from: deliverString)
-            if deliverAt == nil {
-                // Try without fractional seconds
-                formatter.formatOptions = [.withInternetDateTime]
-                deliverAt = formatter.date(from: deliverString)
-            }
-            if deliverAt == nil {
-                // Try date + time without timezone (assume local)
-                let local = DateFormatter()
-                local.locale = Locale(identifier: "en_US_POSIX")
-                local.calendar = Calendar(identifier: .gregorian)
-                local.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-                local.timeZone = calendar.timeZone
-                deliverAt = local.date(from: deliverString)
-            }
-            if deliverAt == nil {
-                return ToolResult(
-                    toolCallID: id,
-                    content: ToolHelpers
-                        .output(
-                            errors: ["Could not parse 'deliver_at' as a date. Use ISO 8601 format."]
-                        ),
-                    isError: true
-                )
-            }
-        }
-
-        if let deliverAt, deliverAt <= now {
+        let scheduledDate: Date
+        do {
+            scheduledDate = try NotificationDeliveryTime.parse(
+                args["deliver_at"], now: now(), calendar: calendar, required: false
+            )
+        } catch {
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(errors: ["'deliver_at' must be in the future."]),
+                content: ToolHelpers.output(errors: [error.localizedDescription]),
                 isError: true
             )
         }
-        let scheduledDate = deliverAt ?? NotificationDeliverySchedule.nextDelivery(
-            after: now,
-            calendar: calendar
-        )
+        guard await isAuthorized() else {
+            return ToolResult(
+                toolCallID: id,
+                content: ToolHelpers
+                    .output(
+                        errors: [
+                            "Notifications are unavailable. Enable notifications for Eigin in Settings; initial authorization requires opening the app.",
+                        ]
+                    ),
+                isError: true
+            )
+        }
 
         onSignal(.notify(
             title: title,
@@ -148,7 +121,7 @@ struct BackgroundNotifyTool: Tool {
 
         let formatter = ISO8601DateFormatter()
         let result: [String: Any] = [
-            "status": "notification_queued",
+            "status": "queued_for_background_processing",
             "scheduled_for": formatter.string(from: scheduledDate),
         ]
 

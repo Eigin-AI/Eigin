@@ -19,6 +19,7 @@ struct BackgroundNotifyToolTests {
         let tool = BackgroundNotifyTool(
             now: { instant },
             calendar: calendar,
+            isAuthorized: { true },
             onSignal: { signals.set($0) }
         )
         var arguments = [
@@ -99,5 +100,26 @@ struct BackgroundNotifyToolTests {
         let (result, scheduled) = try await run(now: "2026-01-15T04:00:00Z", deliverAt: input)
         #expect(result.isError)
         #expect(scheduled == nil)
+    }
+
+    @Test("Missing authorization emits no background notification signal")
+    @MainActor func deniedAuthorization() async {
+        let tool = BackgroundNotifyTool(isAuthorized: { false }, onSignal: { _ in
+            Issue.record("Unauthorized background notification must not emit a signal")
+        })
+        let call = ToolCall(
+            id: "denied",
+            type: "function",
+            function: .init(
+                name: "background_notify",
+                arguments: #"{"notification_title":"Title","message":"Message","summary":"Briefing"}"#
+            )
+        )
+        let result = await tool.execute(
+            call,
+            agent: Agent(name: "Test", providerID: UUID(), model: "test")
+        )
+        #expect(result.isError)
+        #expect(result.content.contains("Settings"))
     }
 }

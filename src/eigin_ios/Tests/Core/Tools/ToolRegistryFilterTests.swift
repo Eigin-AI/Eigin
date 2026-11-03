@@ -82,4 +82,20 @@ struct ToolRegistryFilterTests {
         let baselineNames = Set(baseline.definitions.map(\.function.name))
         #expect(filteredNames == baselineNames)
     }
+
+    @Test @MainActor func followUpAvailabilityIsSeparateFromBackgroundNotify() {
+        Container.shared.followUpScheduler.register { @MainActor in FakeFollowUpScheduler() }
+        let policy = AlwaysAllowPolicy()
+        let chat = ToolRegistry.chat(permissionPolicy: policy).definitions.map(\.function.name)
+        let small = ToolRegistry.smallChat(permissionPolicy: policy).definitions
+            .map(\.function.name)
+        let background = ToolRegistry.background(permissionPolicy: policy, onSignal: { _ in })
+            .definitions.map(\.function.name)
+        #expect(chat.contains("follow_up"))
+        #expect(small.contains("follow_up"))
+        #expect(!chat.contains("background_notify"))
+        #expect(!small.contains("background_notify"))
+        #expect(!background.contains("follow_up"))
+        #expect(background.contains("background_notify"))
+    }
 }
