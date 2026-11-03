@@ -29,6 +29,7 @@
   {/if}
 
   <OptionsCarousel
+    presentation="visual"
     {options}
     {somethingElse}
     {onSelect}

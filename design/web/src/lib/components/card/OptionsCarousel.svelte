@@ -1,10 +1,12 @@
 <script lang="ts">
+  import Card from "./Card.svelte";
   import VisualCard from "./VisualCard.svelte";
   import type { IconName } from "../../generated/icons";
-  import type { OptionChoice, VisualCardVariant } from "./types";
+  import type { OptionChoice, OptionsPresentation, VisualCardVariant } from "./types";
 
   let {
     options,
+    presentation = "compact",
     somethingElse,
     inset = "0px",
     gap = "var(--spacing-n12)",
@@ -13,6 +15,8 @@
     onSomethingElse,
   }: {
     options: OptionChoice[];
+    /** Compact for ordinary choices; visual for distinct experiences or creative directions. */
+    presentation?: OptionsPresentation;
     /** Trailing neutral card — the way out when none of the options fit. */
     somethingElse?: { label: string; description: string; symbol?: IconName };
     /** Horizontal room around the run, so cards can scroll clear of the edge. */
@@ -91,12 +95,10 @@
   });
 </script>
 
-<!--
-  A horizontal scroller of visual
-  cards with a neutral way out at the end.
--->
+<!-- One presentation per series, with shared selection and dismissal behavior. -->
 <div
   class="carousel"
+  class:compact={presentation === "compact"}
   class:leaving={phase.kind === "collapsing"}
   class:centered={focus === "center"}
   style:--options-inset={inset}
@@ -107,25 +109,45 @@
   <div class="run">
     {#each options as option, index (option.label)}
       <div class="slot" class:dimmed={phase.kind !== "idle" && !chosen(option.label)}>
-        <VisualCard
-          headline={option.label}
-          explainer={option.description}
-          symbol={option.symbol ?? "illustration/circle"}
-          variant={palette[index % palette.length]}
-          action={() => choose(option.label)}
-        />
+        {#if presentation === "compact"}
+          <Card
+            headline={option.label}
+            explainer={option.description}
+            size="compact"
+            width="fill"
+            action={() => choose(option.label)}
+          />
+        {:else}
+          <VisualCard
+            headline={option.label}
+            explainer={option.description}
+            symbol={option.symbol ?? "illustration/circle"}
+            variant={palette[index % palette.length]}
+            action={() => choose(option.label)}
+          />
+        {/if}
       </div>
     {/each}
 
     {#if somethingElse}
       <div class="slot" class:dimmed={phase.kind !== "idle"}>
-        <VisualCard
-          headline={somethingElse.label}
-          explainer={somethingElse.description}
-          symbol={somethingElse.symbol ?? "functional/asterix"}
-          variant="neutral"
-          action={onSomethingElse}
-        />
+        {#if presentation === "compact"}
+          <Card
+            headline={somethingElse.label}
+            explainer={somethingElse.description}
+            size="compact"
+            width="fill"
+            action={onSomethingElse}
+          />
+        {:else}
+          <VisualCard
+            headline={somethingElse.label}
+            explainer={somethingElse.description}
+            symbol={somethingElse.symbol ?? "functional/asterix"}
+            variant="neutral"
+            action={onSomethingElse}
+          />
+        {/if}
       </div>
     {/if}
   </div>
@@ -182,6 +204,16 @@
     transition:
       opacity var(--motion-fast) var(--motion-easing-smooth),
       transform var(--motion-fast) var(--motion-easing-smooth);
+  }
+
+  /* Stretch every compact card to the tallest content, including offscreen choices. */
+  .compact .slot {
+    display: grid;
+    flex: 0 0 300px;
+  }
+
+  .compact .slot :global(.card.compact) {
+    justify-content: flex-start;
   }
 
   .slot.dimmed {

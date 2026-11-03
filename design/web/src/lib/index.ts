@@ -23,7 +23,12 @@ export { default as Card } from "./components/card/Card.svelte";
 export { default as CardSurface } from "./components/card/CardSurface.svelte";
 export { default as OptionsCarousel } from "./components/card/OptionsCarousel.svelte";
 export { default as VisualCard } from "./components/card/VisualCard.svelte";
-export type { CardSize, OptionChoice, VisualCardVariant } from "./components/card/types";
+export type {
+  CardSize,
+  OptionChoice,
+  OptionsPresentation,
+  VisualCardVariant,
+} from "./components/card/types";
 export { default as Switch } from "./components/toggle/Switch.svelte";
 export type { SwitchVariant } from "./components/toggle/types";
 export { default as SegmentedControl } from "./components/segmented/SegmentedControl.svelte";

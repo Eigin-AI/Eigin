@@ -34,7 +34,7 @@ struct OptionsGroupView: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.n12) {
+                cardLayout {
                     ForEach(Array(set.options.enumerated()), id: \.offset) { index, option in
                         optionCard(for: option, index: index)
                     }
@@ -51,10 +51,17 @@ struct OptionsGroupView: View {
 
     // MARK: - Cards
 
+    private var cardLayout: AnyLayout {
+        switch set.presentation {
+        case .compact: AnyLayout(EqualHeightCardRow())
+        case .visual: AnyLayout(HStackLayout(spacing: Spacing.n12))
+        }
+    }
+
     private func optionCard(for option: OptionItem, index: Int) -> some View {
-        AppVisualCard(
+        card(
             option.label,
-            explainer: option.description,
+            description: option.description,
             symbol: option.category?.image ?? Iconography.Illustration.circle,
             variant: cardVariant(forIndex: index)
         ) {
@@ -66,9 +73,9 @@ struct OptionsGroupView: View {
     }
 
     private var somethingElseCard: some View {
-        AppVisualCard(
+        card(
             Localized.Options.somethingElse,
-            explainer: Localized.Options.writeOwnAnswer,
+            description: Localized.Options.writeOwnAnswer,
             symbol: Image(systemName: "pencil"),
             variant: .neutral
         ) {
@@ -78,6 +85,33 @@ struct OptionsGroupView: View {
         .opacity(selectionState == .idle ? 1.0 : 0.35)
         .scaleEffect(selectionState == .idle ? 1.0 : 0.95)
         .animation(.easeInOut(duration: 0.15), value: selectionState)
+    }
+
+    @ViewBuilder private func card(
+        _ title: String,
+        description: String,
+        symbol: Image,
+        variant: AppVisualCardVariant,
+        action: @escaping () -> Void
+    ) -> some View {
+        switch set.presentation {
+        case .compact:
+            AppCard(
+                title,
+                explainer: description,
+                width: .infinity,
+                fillsHeight: true,
+                action: action
+            )
+        case .visual:
+            AppVisualCard(
+                title,
+                explainer: description,
+                symbol: symbol,
+                variant: variant,
+                action: action
+            )
+        }
     }
 
     // MARK: - Selection Logic
