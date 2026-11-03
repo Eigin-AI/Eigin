@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick, type Snippet } from "svelte";
+  import { onMount, tick, untrack, type Snippet } from "svelte";
   import { autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
   import Icon from "../icon/Icon.svelte";
   import { scaleGroups } from "../../generated/tokens";
@@ -17,7 +17,10 @@
     rowGap = defaultRowGap,
     side = "bottom",
     iconOnly = false,
+    open = $bindable(false),
   }: {
+    /** Bind to control the disclosure from an external keyboard shortcut. */
+    open?: boolean;
     /** Accessible label for the trigger. */
     label: string;
     /** Preferred opening side; flips when space is limited. */
@@ -39,10 +42,10 @@
   let content = $state<HTMLElement>();
   let reveal = $state<HTMLElement>();
   let enhanced = $state(false);
-  let open = $state(false);
   let present = $state(false);
   let positioned = $state(false);
   let expanded = $state(false);
+  let interactive = $state(false);
   let placement = $state("bottom-start");
   let closingId = 0;
 
@@ -55,11 +58,28 @@
   });
 
   $effect(() => {
+    const isOpen = open;
+    untrack(() => {
+      if (isOpen || panel?.contains(document.activeElement)) summary?.focus();
+    });
+  });
+
+  $effect(() => {
     const version = ++closingId;
     if (open) {
       present = true;
-      if (positioned) expanded = true;
+      if (positioned) {
+        expanded = true;
+        // Enable pointer hits after the opening surface finishes revealing the rows.
+        void tick().then(async () => {
+          await Promise.allSettled(
+            reveal?.getAnimations({ subtree: true }).map((animation) => animation.finished) ?? [],
+          );
+          if (open && version === closingId) interactive = true;
+        });
+      }
     } else if (present) {
+      interactive = false;
       expanded = false;
       // Keep the surface mounted until its contraction and fade have finished.
       void tick().then(async () => {
@@ -116,6 +136,7 @@
     open = false;
     expanded = false;
     present = false;
+    interactive = false;
     summary?.focus();
   }
 
@@ -158,6 +179,7 @@
     data-positioned={positioned ? "" : undefined}
     data-placement={placement}
     inert={enhanced && !open}
+    style:pointer-events={enhanced && !interactive ? "none" : undefined}
   >
     <div class="reveal" class:expanded bind:this={reveal}>
       <div class="clip">

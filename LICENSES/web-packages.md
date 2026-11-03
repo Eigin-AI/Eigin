@@ -17,11 +17,13 @@ Resolved versions and transitive dependency licenses are recorded in the root lo
 | [eslint](https://github.com/eslint/eslint) | MIT |
 | [eslint-plugin-svelte](https://github.com/sveltejs/eslint-plugin-svelte) | MIT |
 | [globals](https://github.com/sindresorhus/globals) | MIT |
+| [fflate](https://github.com/101arrowz/fflate) | MIT |
 | [highlight.js](https://github.com/highlightjs/highlight.js) | BSD-3-Clause |
 | [katex](https://github.com/KaTeX/KaTeX) | MIT |
 | [marked](https://github.com/markedjs/marked) | MIT |
 | [prettier](https://github.com/prettier/prettier) | MIT |
 | [prettier-plugin-svelte](https://github.com/sveltejs/prettier-plugin-svelte) | MIT |
+| [reveal.js](https://github.com/hakimel/reveal.js) | MIT |
 | [svelte](https://github.com/sveltejs/svelte) | MIT |
 | [svelte-check](https://github.com/sveltejs/language-tools) | MIT |
 | [typescript](https://github.com/microsoft/TypeScript) | Apache-2.0 |

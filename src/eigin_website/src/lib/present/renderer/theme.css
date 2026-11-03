@@ -1,0 +1,1900 @@
+/* Legacy slide styling preserves existing deck layouts and class names. */
+
+/* Navigation snaps immediately, including decks with authored transition attributes. */
+.reveal .slides,
+.reveal .slides section,
+.reveal .slide-background {
+  transition: none !important;
+}
+/* ---- Tokens -------------------------------------------------------- */
+:root {
+  --eigin-dark-bg: #232323;
+  --eigin-dark-elevated: #1b1b1b; /* darker panel (surface elevated) */
+  --eigin-dark-raised: #323331; /* lighter node/card (neutral.300 dark) */
+  --eigin-dark-line: #4c4c4a; /* neutral.400 dark, borders */
+  --eigin-dark-text: #efefef;
+  --eigin-dark-muted: rgba(255, 255, 255, 0.7);
+
+  /* Light surface (site :root tokens) */
+  --eigin-light-bg: #f6f6f2; /* --surface-standard-elevated */
+  --eigin-light-raised: #ffffff; /* node/card on light */
+  --eigin-light-line: #dcdddb; /* neutral.300, borders */
+  --eigin-light-text: #323331; /* --text-standard-base */
+  --eigin-light-muted: rgba(0, 0, 0, 0.5);
+
+  /* Brand — invariant across light/dark */
+  --eigin-primary: #a7b04e;
+  --eigin-primary-deep: #42674a;
+  --eigin-secondary: #fcaf53;
+  --eigin-accent: #b39779;
+
+  /* Accent / chart palette (from the reference deck) */
+  --eigin-blue: #0076ba;
+  --eigin-teal: #05a89d;
+  --eigin-green: #1db100;
+  --eigin-amber: #f9b900;
+  --eigin-red: #ee220d;
+  --eigin-magenta: #cb297b;
+
+  /* reveal core variables — dark is the default */
+  --r-background-color: var(--eigin-dark-bg);
+  --r-main-font: "FiveSerifText", Georgia, serif;
+
+  --r-main-font-size: 24px;
+  --r-main-color: var(--eigin-dark-text);
+  --r-block-margin: 20px;
+  --r-heading-margin: 0 0 20px 0;
+  --r-heading-font: "NorthEastCN", system-ui, sans-serif;
+  --r-heading-color: var(--eigin-dark-text);
+  --r-heading-line-height: 1.1;
+  --r-heading-letter-spacing: normal;
+  --r-heading-text-transform: uppercase;
+  --r-heading-text-shadow: none;
+  --r-heading-font-weight: 700;
+  --r-heading1-size: 2em;
+  --r-heading2-size: 1.45em;
+  --r-heading3-size: 1.1em;
+  --r-heading4-size: 0.95em;
+  --r-code-font: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-link-color: var(--eigin-primary);
+  --r-link-color-dark: #808a2a;
+  --r-link-color-hover: #c3cb78;
+  --r-selection-background-color: var(--eigin-primary);
+  --r-selection-color: #fff;
+}
+
+/* ---- Base ---------------------------------------------------------- */
+
+.reveal-viewport {
+  background-color: var(--r-background-color);
+}
+.reveal {
+  font-family: var(--r-main-font);
+  font-size: var(--r-main-font-size);
+  font-weight: 400;
+  color: var(--r-main-color);
+}
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  font-family: var(--r-heading-font);
+  color: var(--r-heading-color);
+  font-weight: 600;
+  line-height: 1.08;
+  margin: 0 0 0.7em 0;
+}
+/* Only the big titles are all-caps; sub-headings stay sentence case. */
+.reveal h1,
+.reveal h2 {
+  text-transform: uppercase;
+}
+.reveal h1 {
+  font-size: var(--r-heading1-size);
+  font-weight: 700;
+  margin-bottom: 1.05em;
+}
+.reveal h2 {
+  font-size: var(--r-heading2-size);
+  font-weight: 700;
+}
+.reveal h3 {
+  font-size: var(--r-heading3-size);
+  font-weight: 600;
+}
+.reveal h4 {
+  font-size: var(--r-heading4-size);
+  font-weight: 600;
+}
+.reveal strong,
+.reveal b {
+  font-weight: 700;
+}
+
+.reveal .slides section {
+  padding: 0;
+  height: 100%;
+}
+
+.reveal .slide-frame,
+.reveal .slide-frame *,
+.reveal .slide-frame *::before,
+.reveal .slide-frame *::after {
+  box-sizing: border-box;
+}
+.reveal .slide-frame {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 7% 5.5%;
+  text-align: left;
+}
+.reveal .slides section:has(> section) {
+  height: auto;
+}
+.reveal section.layout-center > .slide-frame,
+.reveal section.layout-title > .slide-frame,
+.reveal section.layout-statement > .slide-frame {
+  justify-content: center;
+}
+.reveal .slide-frame > * {
+  flex: 0 0 auto;
+}
+
+.reveal section.spread > .slide-frame {
+  justify-content: space-between;
+}
+
+.reveal .slide-frame > .fill,
+.reveal
+  .slide-frame
+  > :is(
+    .zones,
+    .timeline,
+    .cards,
+    .features,
+    .people,
+    .stat-row,
+    .diagram-svg,
+    .flow,
+    .stack
+  ):nth-last-child(1 of :not(aside)):nth-child(-n + 3) {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: center;
+}
+
+.reveal h1:has(+ .subhead),
+.reveal h2:has(+ .subhead) {
+  margin-bottom: 0.3em;
+}
+.reveal h1 + .subhead,
+.reveal h2 + .subhead {
+  margin-bottom: 1.6em;
+}
+
+.reveal .slide-frame > *:not(h1):not(h2) + .subhead {
+  margin-top: 1.5em;
+}
+.reveal .subhead.bold {
+  font-weight: 700;
+}
+/* Consecutive quotes must not run together. */
+.reveal .slide-frame > .quote + .quote {
+  margin-top: 1.6em;
+}
+.reveal a {
+  color: var(--r-link-color);
+  transition: color 0.15s ease;
+}
+.reveal a:hover {
+  color: var(--r-link-color-hover);
+}
+
+/* Accent underline for emphasis */
+.reveal .accent {
+  color: var(--eigin-primary);
+}
+
+.reveal .slide-frame {
+  text-align: left;
+}
+
+.reveal section.layout-center > .slide-frame,
+.reveal section.layout-title > .slide-frame {
+  text-align: center;
+}
+.reveal h2 {
+  margin-bottom: 0.9em;
+}
+.reveal p {
+  line-height: 1.5;
+  margin: 0 0 0.85em;
+  max-width: 30em;
+}
+.reveal .layout-center p,
+.reveal .layout-title p {
+  margin-left: auto;
+  margin-right: auto;
+}
+.reveal ul,
+.reveal ol {
+  text-align: left;
+  max-width: 34em;
+  margin: 0.2em 0 0.85em;
+}
+.reveal ul {
+  list-style: none;
+  padding: 0;
+}
+.reveal ul > li {
+  position: relative;
+  padding-left: 1.25em;
+  margin: 0 0 0.6em;
+  line-height: 1.45;
+}
+.reveal ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.66em;
+  width: 0.72em;
+  height: 2px;
+  background: var(--eigin-primary);
+  border-radius: 2px;
+}
+.reveal ul > li {
+  margin-bottom: 0.7em;
+}
+.reveal ol {
+  padding-left: 1.4em;
+}
+.reveal ol > li {
+  margin: 0 0 0.7em;
+  line-height: 1.45;
+  padding-left: 0.2em;
+}
+.reveal .layout-center ul,
+.reveal .layout-center ol,
+.reveal .layout-title ul,
+.reveal .layout-title ol {
+  display: inline-block;
+}
+/* Oversized intro paragraph / standfirst. */
+.reveal .lede {
+  font-size: 1.35em;
+  line-height: 1.3;
+  max-width: 22em;
+  margin-bottom: 0.6em;
+}
+
+.reveal section.theme-light,
+.reveal section.theme-light h1,
+.reveal section.theme-light h2,
+.reveal section.theme-light h3,
+.reveal section.theme-light h4,
+.reveal section.theme-light h5,
+.reveal section.theme-light h6 {
+  color: var(--eigin-light-text);
+}
+.reveal section.theme-light a {
+  color: var(--eigin-primary);
+}
+.reveal section.theme-light .muted {
+  color: var(--eigin-light-muted);
+}
+
+/* Explicit dark (same as default, provided for symmetry) */
+.reveal section.theme-dark,
+.reveal section.theme-dark h1,
+.reveal section.theme-dark h2,
+.reveal section.theme-dark h3,
+.reveal section.theme-dark h4,
+.reveal section.theme-dark h5,
+.reveal section.theme-dark h6 {
+  color: var(--eigin-dark-text);
+}
+.reveal .muted {
+  color: var(--eigin-dark-muted);
+}
+
+/* Title: centered hero. */
+.reveal section.layout-title h1 {
+  font-size: 3.1em;
+  margin-bottom: 0.25em;
+}
+.reveal section.layout-title .lede {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Statement: one big centred headline, nothing else competing with it. */
+.reveal section.layout-statement > .slide-frame {
+  text-align: center;
+}
+.reveal section.layout-statement h1 {
+  font-size: 3.4em;
+  line-height: 0.98;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.3em;
+  max-width: 22em;
+  margin-inline: auto;
+}
+
+.reveal section.layout-statement.lg h1 {
+  font-size: 4.5em;
+  max-width: 6.5em;
+}
+
+.reveal section.layout-statement.lg h1:last-child {
+  margin-bottom: 0;
+}
+.reveal section.layout-statement .lede {
+  font-size: 1.5em;
+  max-width: 20em;
+  margin-inline: auto;
+}
+
+.reveal section.layout-statement h1 + .subhead {
+  margin-top: 0.9em;
+}
+
+.reveal section:is(.layout-statement, .layout-title, .layout-center) > .slide-frame > * {
+  margin-inline: auto;
+}
+
+.reveal section.text-left > .slide-frame {
+  text-align: left;
+}
+.reveal section.text-left > .slide-frame > * {
+  margin-inline: 0;
+}
+
+.reveal section.layout-cover > .slide-frame {
+  padding: 0;
+  display: grid;
+  grid-template-columns: 67% 33%;
+  align-items: stretch;
+  justify-content: initial;
+}
+.reveal .cover-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--eigin-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 7% 6%;
+  text-align: center;
+}
+/* The illustration sits behind the headline, inside the panel. */
+.reveal .cover-panel > .bleed {
+  z-index: 0;
+}
+.reveal .cover-panel > :not(.bleed) {
+  position: relative;
+  z-index: 1;
+}
+.reveal .cover-panel h1 {
+  color: var(--eigin-light-bg);
+  font-size: 4.17em;
+  line-height: 0.98;
+  margin: 0 auto;
+  letter-spacing: -0.5px;
+
+  max-width: 7.2em;
+}
+/* A subtitle inside the panel, under the headline. */
+.reveal .cover-panel .subhead {
+  color: var(--eigin-light-bg);
+  opacity: 0.85;
+  margin: 0.9em auto 0;
+  max-width: 22em;
+}
+.reveal .cover-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 7% 6%;
+  gap: 0.4em;
+}
+.reveal .cover-meta > * {
+  margin: 0;
+}
+
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--eigin-primary);
+  padding: 7% 8%;
+  text-align: left;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) > .bleed {
+  z-index: 0;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) > :not(.bleed) {
+  position: relative;
+  z-index: 1;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) h1 {
+  color: var(--eigin-light-bg);
+  font-size: 3.4em;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  max-width: 12em;
+  margin: 0;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) :is(.subhead, .lede) {
+  color: #1a1a17;
+  opacity: 0.75;
+  margin: 0.7em 0 0;
+  max-width: 24em;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) :is(.kicker, .muted) {
+  color: #1a1a17;
+  opacity: 0.6;
+  margin: 0.9em 0 0;
+}
+.reveal section.layout-cover > .slide-frame:not(:has(.cover-panel)) .kicker:first-child {
+  margin: 0 0 0.9em;
+}
+
+/* Section divider: number/label + title. */
+.reveal .section-index {
+  font-family: var(--r-heading-font);
+  font-weight: 800;
+  color: var(--eigin-primary);
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+/* Split: text on one side, media on the other. */
+
+.reveal .split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: start;
+  text-align: left;
+}
+
+.reveal .split.thirds-left {
+  grid-template-columns: 2fr 1fr;
+}
+.reveal .split.thirds-right {
+  grid-template-columns: 1fr 2fr;
+}
+/* Deprecated aliases, kept so older decks keep working. */
+.reveal .split.wide-left {
+  grid-template-columns: 2fr 1fr;
+}
+.reveal .split.wide-right {
+  grid-template-columns: 1fr 2fr;
+}
+.reveal .split > * {
+  min-width: 0;
+}
+.reveal .split .split-media img {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.reveal .split .split-media.oversize {
+  position: relative;
+  align-self: stretch;
+}
+.reveal .split .split-media.oversize img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--oversize, 150%);
+  max-width: none;
+  max-height: none;
+}
+
+.reveal .shot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.reveal .shot img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+
+  max-height: none;
+  border-radius: 0;
+}
+/* .split sets align-items:start, which would collapse the shot to nothing. */
+.reveal .split .shot {
+  align-self: stretch;
+}
+
+.reveal .split.fill {
+  align-content: stretch;
+}
+.reveal .shot.to-right {
+  justify-content: flex-end;
+}
+.reveal .shot.to-left {
+  justify-content: flex-start;
+}
+
+.reveal .shot.to-edge {
+  margin-bottom: -7%;
+}
+
+.reveal section.layout-hero > .slide-frame {
+  padding-top: 3%;
+  padding-bottom: 3%;
+}
+
+.reveal section.layout-hero .split {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.reveal section.layout-hero .split .shot {
+  align-self: stretch;
+  align-items: center;
+}
+.reveal section.layout-hero h1 {
+  font-size: 2.3em;
+  margin-bottom: 0.45em;
+}
+.reveal section.layout-hero .lede {
+  font-size: 1.15em;
+  max-width: 18em;
+}
+
+.reveal .hero-split {
+  grid-template-columns: 34% 1fr;
+}
+.reveal .hero-split .shot {
+  order: -1;
+}
+
+.reveal section.layout-hero .shot {
+  overflow: visible;
+}
+.reveal section.layout-hero .shot img {
+  height: 122%;
+}
+
+html.reveal-print .reveal section.layout-hero .slide-frame {
+  overflow: hidden;
+}
+@media print {
+  .reveal section.layout-hero .slide-frame {
+    overflow: hidden;
+  }
+}
+
+html.reveal-print .reveal .people {
+  display: flex;
+  flex-wrap: wrap;
+}
+html.reveal-print .reveal .people .person {
+  display: block;
+  width: calc((100% - 3 * 1.2em) / 4);
+}
+@media print {
+  .reveal .people {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .reveal .people .person {
+    display: block;
+    width: calc((100% - 3 * 1.2em) / 4);
+  }
+}
+
+/* Two flexible columns (kept for back-compat). */
+.reveal .columns {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+}
+.reveal .columns > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.reveal .cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.9em;
+  align-items: stretch;
+  text-align: left;
+  margin: 0.25em 0 0.4em;
+}
+.reveal .features,
+.reveal .split {
+  margin: 0.25em 0 0.4em;
+}
+/* A figure that opens the slide must not shift the header baseline. */
+.reveal .slide-frame > :is(.split, .features, .cards, .zones):first-child {
+  margin-top: 0;
+}
+.reveal .cards.cols-1 {
+  grid-template-columns: 1fr;
+}
+.reveal .cards.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.reveal .cards.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Cards are flat surfaces: fill only, never a border. */
+.reveal .card {
+  background: #2c2c2b;
+  border: none;
+  color: var(--eigin-dark-text);
+  border-radius: 22px;
+  padding: 1.1em;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.reveal :where(section.theme-light) .card {
+  background: #ffffff;
+  color: var(--eigin-light-text);
+}
+.reveal .card .card-title {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.15em;
+  line-height: 1.05;
+  margin: 0 0 0.5em;
+
+  color: inherit;
+}
+.reveal .card .card-body {
+  font-size: 0.92em;
+  line-height: 1.5;
+  margin: 0;
+  max-width: none;
+  opacity: 0.92;
+}
+
+.reveal .card .card-label {
+  display: block;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 0.72em;
+  letter-spacing: 0.3px;
+  margin: 0 0 0.7em;
+  opacity: 0.55;
+}
+.reveal .card > .shape {
+  margin-bottom: 0.9em;
+}
+.reveal .card > .card-image {
+  margin-bottom: 0.8em;
+}
+.reveal .card .card-image {
+  width: 100%;
+  border-radius: 14px;
+  margin: -0.3em 0 0.8em;
+}
+
+.reveal .cards.visual,
+.reveal .cards.tall {
+  align-content: stretch;
+}
+
+.reveal .cards.tall .card {
+  height: 100%;
+  justify-content: center;
+}
+.reveal .cards.visual .card {
+  height: 100%;
+  justify-content: space-between;
+  padding: 1.25em 1.2em;
+}
+
+.reveal .cards.visual .card > .shape {
+  width: calc(4.6em * var(--shape-scale, 1));
+  height: calc(4.6em * var(--shape-scale, 1));
+  margin: 0 0 1.4em;
+  flex: 0 0 auto;
+}
+.reveal .cards.visual .card > .card-body:last-child,
+.reveal .cards.visual .card > div:last-child {
+  margin-top: auto;
+}
+
+.reveal .cards.visual .card .card-title {
+  margin-bottom: 0.35em;
+  min-height: 2.1em;
+}
+
+/* Card colour variants (from the brand + card-accent palette). */
+.reveal .card.impact {
+  background: #1b1b1b;
+  color: #efefef;
+}
+.reveal .card.olive {
+  background: var(--eigin-primary);
+  color: #1a1a17;
+}
+.reveal .card.warm {
+  background: var(--eigin-secondary);
+  color: #1a1a17;
+}
+.reveal .card.soft {
+  background: var(--eigin-accent);
+  color: #1a1a17;
+}
+.reveal .card.deep {
+  background: var(--eigin-primary-deep);
+  color: #fff;
+}
+.reveal .card.coral {
+  background: #fe6c3b;
+  color: #1a1a17;
+}
+.reveal .card.peach {
+  background: #fcaf53;
+  color: #1a1a17;
+}
+.reveal .card.rose {
+  background: #db7d7f;
+  color: #1a1a17;
+}
+.reveal .card.pink {
+  background: #fac2d5;
+  color: #1a1a17;
+}
+
+.reveal .card:is(.olive, .warm, .soft, .deep, .coral, .peach, .rose, .pink) ul > li::before {
+  background: currentColor;
+  opacity: 0.45;
+}
+.reveal .card.olive .card-body,
+.reveal .card.coral .card-body,
+.reveal .card.peach .card-body,
+.reveal .card.rose .card-body,
+.reveal .card.pink .card-body,
+.reveal .card.warm .card-body,
+.reveal .card.soft .card-body {
+  opacity: 0.78;
+}
+
+.reveal .features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5em 2em;
+  text-align: left;
+  align-content: start;
+}
+.reveal .features.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.reveal .feature .feature-title {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.05em;
+  line-height: 1.1;
+  margin: 0.6em 0 0.3em;
+}
+.reveal .feature > .shape + .feature-title {
+  margin-top: 0.75em;
+}
+.reveal .feature .feature-desc {
+  font-size: 0.9em;
+  line-height: 1.45;
+  color: var(--dg-muted);
+  margin: 0;
+  max-width: none;
+}
+
+.reveal .feature-list {
+  display: grid;
+  gap: 1.05em;
+  text-align: left;
+  align-content: start;
+}
+.reveal .feature-list .feature-title {
+  margin: 0 0 0.15em;
+}
+.reveal .feature-list.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.3em 2.4em;
+}
+.reveal .feature-list.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.3em 2em;
+}
+
+.reveal .feature-list.marked .feature {
+  position: relative;
+  padding-left: 1.55em;
+}
+.reveal .feature-list.marked .feature-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.16em;
+  width: 1em;
+  height: 1em;
+  background-color: var(--eigin-primary);
+  -webkit-mask: url(/assets/icons/mingcute/arrow-right-fill.svg) no-repeat center / contain;
+  mask: url(/assets/icons/mingcute/arrow-right-fill.svg) no-repeat center / contain;
+}
+/* Wide variant: a full-width definition list keeps a comfortable measure. */
+.reveal .feature-list .feature-desc {
+  max-width: 40em;
+}
+.reveal .feature-list.cols-2 .feature-desc,
+.reveal .feature-list.cols-3 .feature-desc {
+  max-width: none;
+}
+
+.reveal .shape {
+  display: inline-block;
+  background-color: currentColor;
+
+  font-size: inherit;
+  width: calc(1.8em * var(--shape-scale, 1));
+  height: calc(1.8em * var(--shape-scale, 1));
+  -webkit-mask: var(--shape) no-repeat center / contain;
+  mask: var(--shape) no-repeat center / contain;
+}
+.reveal .shape.brand {
+  background-color: var(--eigin-primary);
+}
+.reveal .shape.coral {
+  background-color: #fe6c3b;
+}
+.reveal .shape.sm {
+  width: 1.3em;
+  height: 1.3em;
+}
+.reveal .shape.lg {
+  width: 3em;
+  height: 3em;
+}
+
+.reveal .icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  background-color: currentColor;
+  -webkit-mask: var(--shape) no-repeat center / contain;
+  mask: var(--shape) no-repeat center / contain;
+}
+.reveal .icon.accent {
+  background-color: var(--eigin-primary);
+}
+
+.reveal .stat-row {
+  display: flex;
+  gap: 2.4em;
+  align-items: flex-start;
+  text-align: left;
+  flex-wrap: wrap;
+  margin: 0.3em 0 2.6em;
+}
+
+.reveal .stat {
+  flex: 0 1 auto;
+  max-width: 13em;
+  min-width: 0;
+}
+.reveal .stat {
+  line-height: 1;
+}
+/* A short qualifier under a stat, so a number can replace a paragraph. */
+.reveal .stat .stat-note {
+  display: block;
+  margin-top: 0.85em;
+  font-size: 0.85em;
+  line-height: 1.4;
+  color: var(--dg-muted);
+  max-width: 11em;
+}
+.reveal .stat .stat-number {
+  font-family: var(--r-heading-font);
+  font-weight: 800;
+  font-size: 4em;
+  color: var(--eigin-primary);
+  display: block;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.reveal .stat .stat-number.is-word {
+  font-size: 1.9em;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+.reveal .stat .stat-label {
+  display: block;
+  margin-top: 0.6em;
+  font-family: var(--r-heading-font);
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dg-muted);
+}
+
+.reveal .quote {
+  text-align: left;
+}
+.reveal .quote .quote-text {
+  font-size: 1em;
+  font-style: italic;
+  line-height: 1.45;
+  max-width: 38em;
+  margin: 0;
+}
+/* A quote given a slide of its own. */
+.reveal .quote.lg .quote-text {
+  font-size: 1.9em;
+  line-height: 1.25;
+  max-width: 21em;
+}
+.reveal .quote.lg .quote-cite {
+  margin-top: 1.6em;
+}
+.reveal .quote .quote-cite {
+  display: block;
+  margin-top: 26px;
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.7em;
+  color: var(--eigin-primary);
+}
+
+.reveal .kicker {
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.7em;
+  color: var(--eigin-primary);
+  margin-bottom: 14px;
+}
+.reveal .overline {
+  display: block;
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 0.62em;
+  color: var(--dg-muted);
+  margin-bottom: 12px;
+  max-width: none; /* it is a label, not a text column */
+}
+/* As a footnote under a content block it needs its own breathing room. */
+.reveal .slide-frame > .overline:not(:first-child) {
+  margin-top: 1.8em;
+}
+
+.reveal
+  .slide-frame
+  > :is(
+    .cards,
+    .features,
+    .feature-list,
+    .numbered,
+    .stat-row,
+    .people,
+    .timeline,
+    .zones,
+    .stack,
+    .flow,
+    .split,
+    .diagram-svg,
+    table.compare
+  ):has(+ :is(p, .muted, .overline, .lede)) {
+  margin-bottom: 0;
+}
+.reveal
+  .slide-frame
+  > :is(
+    .cards,
+    .features,
+    .feature-list,
+    .numbered,
+    .stat-row,
+    .people,
+    .timeline,
+    .zones,
+    .stack,
+    .flow,
+    .split,
+    .diagram-svg,
+    table.compare
+  )
+  + :is(p, .muted, .overline, .lede) {
+  margin-top: 1.8em;
+}
+
+.reveal .subhead {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.15em;
+  line-height: 1.15;
+  margin: 0 0 0.5em;
+  text-transform: none;
+}
+
+.reveal .slides section::after {
+  content: "";
+  position: absolute;
+  right: 3%;
+  bottom: 5%;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  background-color: var(--eigin-primary);
+  -webkit-mask: url(/assets/images/eigin-logo-tight.svg) no-repeat center / contain;
+  mask: url(/assets/images/eigin-logo-tight.svg) no-repeat center / contain;
+}
+.reveal .slides section.theme-light::after {
+  background-color: var(--eigin-light-text);
+}
+.reveal .slides section:has(> section)::after,
+.reveal .slides section.no-mark::after {
+  content: none;
+}
+
+/* Corner logo mark + footer wordmark (align to the slide frame). */
+.reveal .slide-mark {
+  position: absolute;
+  top: 7%;
+  left: 5.5%;
+  width: 42px;
+  height: 42px;
+  background-color: var(--eigin-primary);
+  -webkit-mask: url(/assets/images/eigin-logo-tight.svg) no-repeat center / contain;
+  mask: url(/assets/images/eigin-logo-tight.svg) no-repeat center / contain;
+}
+.reveal .slide-footer {
+  position: absolute;
+  bottom: 7%;
+  left: 5.5%;
+  margin: 0;
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.62em;
+  color: var(--dg-muted);
+}
+
+/* Images: rounded, no reveal default border/box-shadow */
+.reveal img {
+  border: none;
+  box-shadow: none;
+  border-radius: 14px;
+  max-height: 68vh;
+}
+.reveal img.plain {
+  border-radius: 0;
+  box-shadow: none;
+}
+.reveal img.shadow {
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Code blocks */
+.reveal pre {
+  box-shadow: none;
+  border-radius: 12px;
+  font-size: 0.6em;
+}
+.reveal pre code {
+  border-radius: 12px;
+  padding: 20px;
+  max-height: 60vh;
+}
+
+/* Blockquote — a clean rule + comfortable indent, not a filled box. */
+.reveal blockquote {
+  background: none;
+  border-left: 3px solid var(--eigin-primary);
+  box-shadow: none;
+  font-style: normal;
+  padding: 4px 0 4px 28px;
+  margin: 0 0 0.7em;
+  max-width: 30em;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+.reveal blockquote p {
+  margin: 0;
+  max-width: none;
+}
+
+/* Tables */
+.reveal table {
+  border-collapse: collapse;
+  margin: 10px 0 0;
+  font-size: 0.8em;
+  width: auto;
+}
+.reveal table th,
+.reveal table td {
+  padding: 12px 22px;
+  border: none;
+  border-bottom: 1px solid var(--dg-line);
+  text-align: left;
+  vertical-align: top;
+  color: var(--dg-text);
+}
+.reveal table th {
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.72em;
+  color: var(--dg-muted);
+  font-weight: 700;
+}
+.reveal table td:first-child {
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.82em;
+  color: var(--eigin-primary);
+  white-space: nowrap;
+  padding-right: 40px;
+}
+
+/* Progress bar + controls in brand color */
+.reveal .progress {
+  color: var(--eigin-primary);
+}
+.reveal .controls {
+  color: var(--eigin-primary);
+}
+
+/* Speaker-note blocks (from `Note:`) never render on the deck itself. */
+.reveal aside.notes {
+  display: none !important;
+}
+
+.reveal .slides section {
+  --dg-surface: var(--eigin-dark-raised);
+  --dg-panel: var(--eigin-dark-elevated);
+  --dg-line: var(--eigin-dark-line);
+  --dg-muted: var(--eigin-dark-muted);
+  --dg-text: var(--eigin-dark-text);
+}
+.reveal .slides section.theme-light {
+  --dg-surface: var(--eigin-light-raised);
+  --dg-panel: #ecece7;
+  --dg-line: var(--eigin-light-line);
+  --dg-muted: var(--eigin-light-muted);
+  --dg-text: var(--eigin-light-text);
+}
+
+.reveal .node {
+  background: var(--dg-surface);
+  border: none;
+  border-radius: 18px;
+  padding: 0.9em 1.1em;
+  color: var(--dg-text);
+  text-align: left;
+  min-width: 0;
+}
+.reveal .node .n-title {
+  font-family: var(--r-heading-font);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+  line-height: 1.15;
+  display: block;
+}
+.reveal .node .n-desc {
+  display: block;
+  font-size: 0.8em;
+  line-height: 1.35;
+  color: var(--dg-muted);
+  margin-top: 0.3em;
+}
+
+.reveal .node.accent {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--eigin-primary);
+}
+.reveal .node.primary {
+  background: var(--eigin-primary);
+  color: #1a1a17;
+}
+.reveal .node.primary .n-desc {
+  color: rgba(0, 0, 0, 0.62);
+}
+.reveal .node.deep {
+  background: var(--eigin-primary-deep);
+  color: #fff;
+}
+.reveal .node.deep .n-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* A titled group (like a subgraph): dashed container holding nodes */
+.reveal .group {
+  border: 1px dashed var(--dg-line);
+  border-radius: 18px;
+  padding: 34px 18px 18px;
+  position: relative;
+  background: color-mix(in srgb, var(--dg-panel) 55%, transparent);
+}
+.reveal .group > .group-label {
+  position: absolute;
+  top: 10px;
+  left: 18px;
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.55em;
+  color: var(--dg-muted);
+}
+
+.reveal .flow,
+.reveal .row {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.7em;
+  flex-wrap: nowrap;
+}
+.reveal .flow > .node,
+.reveal .flow > .group {
+  flex: 1 1 0;
+}
+
+.reveal .slide-frame > .flow:nth-last-child(1 of :not(aside)):nth-child(-n + 3) {
+  flex: 0 0 auto;
+  margin-block: auto;
+}
+.reveal .col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.reveal .flow > * {
+  flex: 0 1 auto;
+}
+
+/* Connector arrow between flow items */
+.reveal .arrow {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--eigin-primary);
+  font-size: 1.5em;
+  line-height: 1;
+  opacity: 0.9;
+}
+.reveal .arrow::before {
+  content: "\2192";
+} /* → */
+.reveal .arrow.down::before {
+  content: "\2193";
+}
+.reveal .arrow.dashed {
+  opacity: 0.5;
+}
+
+/* Layered stack (top-to-bottom architecture bars) */
+.reveal .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reveal .stack .layer {
+  background: var(--dg-surface);
+  border: 1px solid var(--dg-line);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: var(--dg-text);
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.7em;
+  font-weight: 700;
+}
+.reveal .stack .layer.muted {
+  background: var(--dg-panel);
+  color: var(--dg-muted);
+}
+
+/* Pills / tags */
+.reveal .pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--dg-line);
+  color: var(--dg-text);
+  font-family: var(--r-heading-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.55em;
+  font-weight: 600;
+}
+.reveal .pill.on {
+  background: var(--eigin-primary);
+  border-color: var(--eigin-primary);
+  color: #1a1a17;
+}
+.reveal .pill-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Inline SVG diagrams: let strokes/fills follow the theme via currentColor */
+.reveal .diagram-svg {
+  color: var(--dg-text);
+  max-height: 62vh;
+}
+.reveal .diagram-svg .edge {
+  stroke: var(--eigin-primary);
+  fill: none;
+}
+.reveal .diagram-svg .edge-muted {
+  stroke: var(--dg-line);
+  fill: none;
+}
+.reveal .diagram-svg text {
+  fill: currentColor;
+  font-family: var(--r-heading-font);
+}
+
+.reveal .diagram-svg .body-copy text {
+  font-family: var(--r-main-font);
+}
+
+.reveal .prose {
+  text-align: left;
+}
+.reveal .prose p {
+  max-width: 44em;
+  margin: 0 0 1.3em;
+  line-height: 1.5;
+}
+.reveal .prose p:last-child {
+  margin-bottom: 0;
+}
+.reveal .prose > .subhead {
+  margin: 1.6em 0 0.5em;
+}
+.reveal .prose > .subhead:first-child {
+  margin-top: 0;
+}
+/* .prose.tight for pages that genuinely need more words on them. */
+.reveal .prose.tight {
+  font-size: 0.9em;
+}
+.reveal .prose.tight p {
+  margin-bottom: 1em;
+}
+
+.reveal .numbered {
+  display: grid;
+  gap: 1.15em;
+  text-align: left;
+  align-content: start;
+}
+.reveal .numbered .step {
+  display: grid;
+  grid-template-columns: 2.4em 1fr;
+  column-gap: 1.1em;
+  align-items: start;
+}
+.reveal .numbered .step-n {
+  font-family: var(--r-heading-font);
+  font-weight: 800;
+  font-size: 1.9em;
+  line-height: 0.9;
+  color: var(--eigin-primary);
+}
+.reveal .numbered .step-title {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.05em;
+  line-height: 1.1;
+  margin: 0 0 0.2em;
+}
+.reveal .numbered .step-desc {
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--dg-muted);
+  margin: 0;
+  max-width: 34em;
+}
+
+.reveal .numbered .step > div > h4 {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.05em;
+  line-height: 1.1;
+  margin: 0 0 0.2em;
+}
+.reveal .numbered .step > div > p {
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--dg-muted);
+  margin: 0;
+  max-width: 34em;
+}
+.reveal .card > h3,
+.reveal .card > div > h3 {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1.15em;
+  line-height: 1.05;
+  margin: 0 0 0.5em;
+  color: inherit;
+}
+.reveal .card > p,
+.reveal .card > div > p {
+  font-size: 0.92em;
+  line-height: 1.5;
+  margin: 0;
+  max-width: none;
+  opacity: 0.92;
+}
+.reveal .feature > h4 {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1em;
+  line-height: 1.15;
+  margin: 0 0 0.15em;
+}
+.reveal .feature > p {
+  font-size: 0.9em;
+  line-height: 1.45;
+  color: var(--dg-muted);
+  margin: 0;
+  max-width: none;
+}
+
+.reveal table.compare {
+  width: 100%;
+  table-layout: fixed;
+  margin: 0.4em 0 0;
+  font-size: 0.9em;
+}
+.reveal table.compare th,
+.reveal table.compare td {
+  padding: 0.55em 0.4em;
+  text-align: center;
+  vertical-align: middle;
+  border: none;
+}
+.reveal table.compare th:first-child,
+.reveal table.compare td:first-child {
+  width: 24%;
+}
+.reveal table.compare thead th {
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 0.92em;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dg-text);
+  border-bottom: 1px solid var(--dg-line);
+}
+/* Row label column: override the generic table's uppercase accent style. */
+.reveal table.compare tbody td:first-child {
+  text-align: left;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 0.95em;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dg-text);
+  padding-right: 1.2em;
+
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+/* Same guard on every other cell, for a long `.partial` value. */
+.reveal table.compare th,
+.reveal table.compare td {
+  overflow-wrap: anywhere;
+}
+.reveal table.compare td.yes::before,
+.reveal table.compare td.no::before {
+  content: "";
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  background-color: currentColor;
+  -webkit-mask: var(--mark) no-repeat center / contain;
+  mask: var(--mark) no-repeat center / contain;
+}
+.reveal table.compare td.yes {
+  color: var(--eigin-primary);
+  --mark: url(/assets/icons/functional/check.svg);
+}
+.reveal table.compare td.no {
+  color: var(--dg-muted);
+  opacity: 0.45;
+  --mark: url(/assets/icons/functional/x.svg);
+}
+.reveal table.compare td.partial {
+  color: var(--dg-muted);
+}
+/* The column that is us. */
+.reveal table.compare .col-us {
+  background: color-mix(in srgb, var(--eigin-primary) 12%, transparent);
+}
+
+.reveal .zones {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.reveal .zones .zone {
+  display: grid;
+  grid-template-columns: 5.5em 1fr;
+  column-gap: 0.9em;
+  padding: 0.45em 0;
+}
+.reveal .zones .zone + .zone {
+  border-top: 2px dotted var(--dg-line);
+}
+.reveal .zones .zone-label {
+  grid-column: 1;
+  align-self: end;
+  font-style: italic;
+  font-size: 0.8em;
+  color: var(--dg-muted);
+  line-height: 1.2;
+}
+.reveal .zones .zone + .zone .zone-label {
+  align-self: start;
+}
+.reveal .zones .zone-body {
+  grid-column: 2;
+  display: grid;
+  gap: 0.5em;
+}
+
+.reveal .panel {
+  background: var(--eigin-light-bg);
+  color: var(--eigin-light-text);
+  border-radius: 18px;
+  padding: 0.9em 1.1em;
+  text-align: center;
+}
+.reveal .panel.muted {
+  background: #e4e4df;
+}
+.reveal .panel.brand {
+  background: var(--eigin-primary);
+}
+.reveal .panel .panel-title {
+  display: block;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 0.95em;
+  line-height: 1.2;
+}
+.reveal .panel .panel-items {
+  list-style: none;
+  padding: 0;
+  margin: 0.35em 0 0;
+  max-width: none;
+  text-align: center; /* overrides the editorial default of left-aligned lists */
+  font-size: 0.85em;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.55);
+}
+.reveal .panel .panel-items > li {
+  margin: 0;
+  padding: 0;
+}
+.reveal .panel .panel-items > li::before {
+  content: none;
+}
+
+.reveal .slide-frame:has(.bleed),
+.reveal .slide-frame:has(.wash) {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.reveal .slide-frame:has(.split-media.oversize) {
+  overflow: hidden;
+}
+
+.reveal .wash {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-color: var(--wash, var(--eigin-primary));
+}
+.reveal .wash.coral {
+  background-color: #fe6c3b;
+}
+.reveal .wash.pink {
+  background-color: #fac2d5;
+}
+.reveal .wash.rose {
+  background-color: #db7d7f;
+}
+.reveal .wash.peach {
+  background-color: #fcaf53;
+}
+.reveal .wash.olive {
+  background-color: var(--eigin-primary);
+}
+.reveal .wash.deep {
+  background-color: var(--eigin-primary-deep);
+}
+.reveal .wash.ink {
+  background-color: var(--eigin-dark-bg);
+}
+.reveal .bleed {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  width: var(--size, 40%);
+  aspect-ratio: 1;
+  background-color: var(--eigin-primary);
+  -webkit-mask: var(--shape) no-repeat center / contain;
+  mask: var(--shape) no-repeat center / contain;
+}
+
+.reveal .slide-frame > p:has(> .bleed),
+.reveal .slide-frame > p:has(> .wash) {
+  margin: 0;
+}
+
+.reveal .bleed.left {
+  left: -12%;
+  top: 50%;
+  margin-top: calc(var(--size, 40%) / -2);
+}
+.reveal .bleed.right {
+  right: -12%;
+  top: 50%;
+  margin-top: calc(var(--size, 40%) / -2);
+}
+.reveal .bleed.top-left {
+  left: -13%;
+  top: -17%;
+}
+.reveal .bleed.top-right {
+  right: -13%;
+  top: -17%;
+}
+.reveal .bleed.bottom-left {
+  left: -13%;
+  bottom: -17%;
+}
+.reveal .bleed.bottom-right {
+  right: -13%;
+  bottom: -17%;
+}
+.reveal .bleed.sm {
+  --size: 28%;
+}
+.reveal .bleed.lg {
+  --size: 58%;
+}
+.reveal .bleed.pink {
+  background-color: #fac2d5;
+}
+.reveal .bleed.coral {
+  background-color: #fe6c3b;
+}
+.reveal .bleed.rose {
+  background-color: #db7d7f;
+}
+.reveal .bleed.ink {
+  background-color: var(--eigin-dark-bg);
+}
+.reveal .bleed.flip {
+  scale: -1 1;
+}
+
+.reveal .people {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: auto;
+  gap: 0 1.2em;
+  text-align: left;
+  align-content: start;
+}
+.reveal .people .person {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  margin-bottom: 1.7em;
+}
+.reveal .people .person img,
+.reveal .people .person .person-photo,
+.reveal .people .person .avatar {
+  display: block;
+  width: min(100%, 4.2em);
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 14px;
+  margin: 0 0 0.4em;
+  max-height: none;
+}
+/* A bare .person-photo div stands in until a real portrait is dropped in. */
+.reveal .people .person .person-photo {
+  background: var(--dg-panel);
+}
+/* Circular avatars read as portraits, so they stay round. */
+.reveal .people .person .avatar {
+  border-radius: 50%;
+}
+
+.reveal .avatar {
+  display: inline-block;
+  width: 3.4em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-color: var(--eigin-primary);
+  background-image: none;
+  position: relative;
+}
+.reveal .avatar::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  background-color: #1a1a17;
+  -webkit-mask: var(--shape) no-repeat center / contain;
+  mask: var(--shape) no-repeat center / contain;
+}
+.reveal .avatar.ink {
+  background-color: var(--eigin-dark-elevated);
+}
+.reveal .avatar.ink::after {
+  background-color: var(--eigin-primary);
+}
+.reveal .people .person-name {
+  display: block;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 0.8em;
+  line-height: 1.2;
+  margin-bottom: 0.1em;
+}
+.reveal .people .person-role {
+  display: block;
+  font-size: 0.8em;
+  line-height: 1.3;
+  color: var(--dg-muted);
+}
+
+.reveal .timeline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  grid-template-rows: auto 2.8em auto auto auto;
+  text-align: center;
+  width: 100%;
+}
+/* No column-gap: the rail segments must butt up to form one line. */
+.reveal .timeline .ms-note,
+.reveal .timeline .ms-title,
+.reveal .timeline .ms-desc,
+.reveal .timeline .ms-date {
+  padding-inline: 0.5em;
+}
+.reveal .timeline .milestone {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / -1;
+}
+.reveal .timeline .ms-note {
+  grid-row: 1;
+  padding-bottom: 1.2em;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 0.62em;
+  color: var(--eigin-primary);
+}
+
+.reveal .timeline .ms-note:has(.shape) {
+  padding-bottom: 0.55em;
+}
+.reveal .timeline .ms-note .shape {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.reveal .timeline .ms-rail {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --rail: var(--dg-line);
+  background: linear-gradient(var(--rail), var(--rail)) left center / 100% 2px no-repeat;
+}
+.reveal .timeline .milestone.done .ms-rail {
+  --rail: var(--eigin-primary);
+}
+
+.reveal .timeline .milestone.now .ms-rail {
+  background: linear-gradient(to right, var(--eigin-primary) 50%, var(--dg-line) 50%) left center /
+    100% 2px no-repeat;
+}
+
+.reveal .timeline .milestone:first-child .ms-rail {
+  background-size: 50% 2px;
+  background-position: right center;
+}
+.reveal .timeline .milestone:last-child .ms-rail {
+  background-size: 50% 2px;
+  background-position: left center;
+}
+.reveal .timeline .ms-dot {
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 50%;
+  background: var(--dg-line);
+}
+.reveal .timeline .milestone.done .ms-dot {
+  background: var(--eigin-primary);
+}
+
+.reveal .timeline .milestone.now .ms-dot {
+  background: var(--eigin-primary);
+  width: 1.15em;
+  height: 1.15em;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--eigin-primary) 22%, transparent);
+}
+/* Date sits directly under the dot, the way a station label does. */
+.reveal .timeline .ms-date {
+  grid-row: 3;
+  padding: 1.15em 0 1.15em;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 0.66em;
+  color: var(--dg-muted);
+}
+.reveal .timeline .milestone.now .ms-date {
+  color: var(--eigin-primary);
+}
+.reveal .timeline .ms-title {
+  grid-row: 4;
+  font-family: var(--r-heading-font);
+  font-weight: 600;
+  font-size: 1em;
+  line-height: 1.2;
+  padding: 0 0 0.7em;
+}
+.reveal .timeline .ms-desc {
+  grid-row: 5;
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: var(--dg-muted);
+}

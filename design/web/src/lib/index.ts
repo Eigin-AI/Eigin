@@ -8,6 +8,8 @@ export { default as FloatingPicker } from "./components/picker/FloatingPicker.sv
 export { default as PickerRow } from "./components/picker/PickerRow.svelte";
 export { default as EiginRoot } from "./theme/EiginRoot.svelte";
 export { default as GridScope } from "./theme/GridScope.svelte";
+/** Generated SVG artwork shared by UI components and presentation rendering. */
+export { icons as iconAssets } from "./generated/icons";
 export { default as Icon } from "./components/icon/Icon.svelte";
 export { default as LinkButton } from "./components/button/LinkButton.svelte";
 export { default as Button } from "./components/button/Button.svelte";
