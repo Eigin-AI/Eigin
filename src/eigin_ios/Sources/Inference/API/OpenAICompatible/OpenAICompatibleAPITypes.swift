@@ -174,5 +174,25 @@ struct ChatCompletionChunk: Decodable {
             case content
             case toolCalls = "tool_calls"
         }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            toolCalls = try container.decodeIfPresent([ToolCallDelta].self, forKey: .toolCalls)
+            if try !container.contains(.content) || container.decodeNil(forKey: .content) {
+                content = nil
+            } else if let text = try? container.decode(String.self, forKey: .content) {
+                content = text
+            } else {
+                // Mistral can mix thinking and answer text in the same delta.
+                let parts = try container.decode([ContentPart].self, forKey: .content)
+                let textParts = parts.filter { $0.type == "text" }.compactMap(\.text)
+                content = textParts.isEmpty ? nil : textParts.joined()
+            }
+        }
+
+        private struct ContentPart: Decodable {
+            let type: String
+            let text: String?
+        }
     }
 }

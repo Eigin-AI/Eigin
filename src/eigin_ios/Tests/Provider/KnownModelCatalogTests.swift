@@ -402,6 +402,18 @@ struct BestModelTests {
         )
     }
 
+    @Test("Provider-prefixed selection follows ranking regardless of input order")
+    func prefixedSelectionFollowsRanking() throws {
+        let available = KnownModelCatalog.preferenceRanking.map { "provider/\($0)" }
+        let preferred = try #require(available.first)
+        #expect(KnownModelCatalog.bestModel(from: available) == preferred)
+        #expect(KnownModelCatalog.bestModel(from: Array(available.reversed())) == preferred)
+
+        let fallback = Array(available.dropFirst())
+        let nextPreferred = try #require(fallback.first)
+        #expect(KnownModelCatalog.bestModel(from: Array(fallback.reversed())) == nextPreferred)
+    }
+
     @Test("Empty input is nil")
     func emptyIsNil() {
         #expect(KnownModelCatalog.bestModel(from: []) == nil)
