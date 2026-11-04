@@ -46,8 +46,8 @@ struct ChatView: View {
     }
 
     private var agent: Agent? {
-        guard viewModel.chat != nil else { return nil }
-        return agents.primary
+        guard let chat = viewModel.chat else { return nil }
+        return agents.first { $0.id == chat.agentID }
     }
 
     private var activeProvider: Provider? {
@@ -95,15 +95,49 @@ struct ChatView: View {
     /// Lets the agent speak first when the history ends on something it should
     /// answer, like the onboarding commit once the user has seen the reveal.
     private func replyFirstIfAwaited() {
-        guard let agent, let provider = activeProvider else { return }
-        viewModel.continueTurnIfAgentOwesReply(
-            agent: agent,
-            provider: provider,
-            space: space,
-            spaces: spaces,
-            mcpServers: mcpServers,
-            integrations: integrations
-        )
+        guard viewModel.window.isPreloaded else { return }
+        if viewModel.canResumeInitiative {
+            viewModel.showInitiativeError(InitiativeError.interrupted)
+            return
+        }
+        guard viewModel.window.isPreloaded,
+              viewModel.awaitsAgentReply || InitiativeConversationService.hasPendingStart(
+                  chatID: chatID,
+                  context: modelContext
+              ) else { return }
+        guard let agent, let provider = activeProvider else {
+            viewModel.showInitiativeError(InitiativeError.providerUnavailable)
+            return
+        }
+        afterConsent {
+            do {
+                if try InitiativeConversationService.claimStart(
+                    chatID: chatID,
+                    context: modelContext
+                ) {
+                    viewModel.continueTurn(
+                        agent: agent,
+                        provider: provider,
+                        space: space,
+                        spaces: spaces,
+                        mcpServers: mcpServers,
+                        integrations: integrations
+                    )
+                    return
+                }
+            } catch {
+                viewModel.showInitiativeError(error)
+                return
+            }
+            viewModel.continueTurnIfAgentOwesReply(
+                agent: agent,
+                provider: provider,
+                space: space,
+                spaces: spaces,
+                mcpServers: mcpServers,
+                integrations: integrations
+            )
+        }
     }
 
     /// Prewarms the loaded history's markdown before the feed is revealed. Only assistant
@@ -246,6 +280,24 @@ struct ChatView: View {
                         : nil,
                     header: { header }
                 )
+                if viewModel.canResumeInitiative {
+                    AppButton(Localized.Intent.resumeInitiative, variant: .secondary) {
+                        afterConsent {
+                            guard let agent, let provider = activeProvider else { return }
+                            viewModel.resumeInitiative(
+                                agent: agent,
+                                provider: provider,
+                                space: space,
+                                spaces: spaces,
+                                mcpServers: mcpServers,
+                                integrations: integrations
+                            )
+                        }
+                    }
+                    .disabled(!canSend)
+                    .padding(.horizontal, Spacing.n16)
+                    .padding(.vertical, Spacing.n8)
+                }
             }
         }
         .background(colors.surface.standard.base.ignoresSafeArea())

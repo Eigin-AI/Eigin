@@ -47,13 +47,13 @@ struct SetProactivityTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Change your background proactivity level.",
+            description: "Set how often you work in the background to prepare for future conversations.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
                     "level": .init(
                         type: "string",
-                        description: "reactive = only respond when user starts a conversation. balanced = middle ground. proactive = more willing to reach out.",
+                        description: "reactive = none; balanced = occasionally; proactive = more often.",
                         enum: ["reactive", "balanced", "proactive"]
                     ),
                 ],

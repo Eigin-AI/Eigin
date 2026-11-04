@@ -8,6 +8,8 @@ final class SkillSession {
     enum ToolAccess {
         case interactive
         case unattended
+        /// Unattended context gathering with classified read tools.
+        case preparation
     }
 
     private(set) var activeSkills: [Skill] = []
@@ -105,7 +107,7 @@ final class SkillSession {
             return failure("No chat context available", toolCallID: toolCallID)
         }
         let targetChat = chat(context: context)
-        guard toolAccess == .unattended || targetChat != nil else {
+        guard toolAccess != .interactive || targetChat != nil else {
             return failure(
                 chatID == nil ? "No chat context available" : "Chat not found",
                 toolCallID: toolCallID
@@ -159,8 +161,9 @@ final class SkillSession {
     }
 
     private func allows(_ name: String) -> Bool {
+        if toolAccess == .preparation, !PreparationToolPolicy.allows(name) { return false }
         let level = permissionPolicy.permissionLevel(for: name)
-        return toolAccess == .unattended ? level == .always : level != .never
+        return toolAccess == .interactive ? level != .never : level == .always
     }
 
     private func availableToolKeys(skill: Skill) -> [String] {
@@ -172,10 +175,11 @@ final class SkillSession {
                 permissionPolicy: permissionPolicy,
                 activeSkill: skill
             )
-        } else if toolAccess == .unattended {
+        } else if toolAccess != .interactive {
             .background(
                 permissionPolicy: permissionPolicy,
                 additionalTools: contributed,
+                preparationOnly: toolAccess == .preparation,
                 onSignal: { _ in }
             )
         } else {
@@ -185,8 +189,11 @@ final class SkillSession {
                 mcpTools: contributed
             )
         }
-        return Set(skill.requiredTools.map(\.key)).union(contributed.map(\.name))
-            .intersection(registry.definitions.map(\.function.name)).sorted()
+        let contributedNames = Set(contributed.map(\.name))
+        return registry.definitions.map(\.function.name).filter { name in
+            contributedNames.contains(name) || !Set(ToolRegistry.capabilities(for: name))
+                .isDisjoint(with: skill.requiredTools)
+        }.sorted()
     }
 
     private func chat(context: ModelContext) -> Chat? {

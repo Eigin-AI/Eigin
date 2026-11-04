@@ -31,7 +31,7 @@ struct FirmSourceMigrationTests {
 
         // Reopen under the current schema, running the full V7 → … → V10 chain.
         let migrated = try ModelContainer(
-            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
+            for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
             migrationPlan: EiginMigrationPlan.self,
             configurations: ModelConfiguration(url: url)
         )

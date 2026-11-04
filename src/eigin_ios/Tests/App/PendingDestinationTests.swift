@@ -13,6 +13,10 @@ final class PendingDestinationTests: XCTestCase {
         let id = UUID()
         let cases: [PendingDestination] = [
             .initiative(id),
+            .scheduledInitiative(
+                "intent-initiative-test",
+                Date(timeIntervalSince1970: 1_793_700_000.125)
+            ),
             .chat(id),
             .newChat(.newChat),
             .newChat(.dictationChat),
@@ -43,6 +47,8 @@ final class PendingDestinationTests: XCTestCase {
         UserDefaults.standard.set("not-a-tagged-value", forKey: PendingDestination.storageKey)
         XCTAssertNil(PendingDestination.get())
         UserDefaults.standard.set("route:not-a-route", forKey: PendingDestination.storageKey)
+        XCTAssertNil(PendingDestination.get())
+        UserDefaults.standard.set("scheduled:test:nan", forKey: PendingDestination.storageKey)
         XCTAssertNil(PendingDestination.get())
     }
 

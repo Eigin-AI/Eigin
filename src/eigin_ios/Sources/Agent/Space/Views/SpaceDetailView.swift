@@ -1,3 +1,4 @@
+import Factory
 import SwiftData
 import SwiftUI
 
@@ -141,6 +142,13 @@ struct SpaceDetailView: View {
             }
         }
         modelContext.delete(space)
+        do {
+            try modelContext.save()
+            Task { await Container.shared.initiativeService().reconcile() }
+        } catch { AppLogger.warning(
+            "Space deletion failed: \(public: error.localizedDescription)",
+            category: .backgroundPrompt
+        ) }
         dismiss()
     }
 }

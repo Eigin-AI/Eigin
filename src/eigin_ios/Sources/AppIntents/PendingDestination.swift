@@ -11,6 +11,7 @@ enum PendingDestination: Equatable {
     /// A background-agent notification was tapped; open the chat for that
     /// initiative request (formerly `PendingInitiative`).
     case initiative(UUID)
+    case scheduledInitiative(String, Date)
     /// A widget or app-shortcut tap; open a fresh chat in the route's mode.
     case newChat(EiginRoute)
     /// The onboarding conversation just became a real chat; open it once on
@@ -38,6 +39,11 @@ private extension PendingDestination {
         let parts = taggedValue.split(separator: ":", maxSplits: 1)
         guard parts.count == 2 else { return nil }
         switch parts[0] {
+        case "scheduled":
+            let values = parts[1].split(separator: ":", maxSplits: 1)
+            guard values.count == 2, let timestamp = Double(values[1]),
+                  timestamp.isFinite else { return nil }
+            self = .scheduledInitiative(String(values[0]), Date(timeIntervalSince1970: timestamp))
         case "initiative":
             guard let id = UUID(uuidString: String(parts[1])) else { return nil }
             self = .initiative(id)
@@ -54,6 +60,7 @@ private extension PendingDestination {
 
     var taggedValue: String {
         switch self {
+        case .scheduledInitiative(let id, let date): "scheduled:\(id):\(date.timeIntervalSince1970)"
         case .initiative(let id): "initiative:\(id.uuidString)"
         case .chat(let id): "chat:\(id.uuidString)"
         case .newChat(let route): "route:\(route.rawValue)"

@@ -38,7 +38,7 @@ extension SkillSession {
                 }
                 continue
             }
-            if toolAccess == .unattended,
+            if toolAccess != .interactive,
                let error = await manager.authorizationError(for: integration)
             {
                 if skill.requiredCapabilities.contains(capability) {
@@ -56,6 +56,11 @@ extension SkillSession {
         skillID: String,
         context: ModelContext
     ) async throws -> (skill: Skill, tools: [any Tool]) {
+        guard toolAccess != .preparation else {
+            throw Unavailable(
+                message: "This connection's tool effects are not classified for preparation. Use it in a foreground conversation instead."
+            )
+        }
         let servers = (try? context.fetch(FetchDescriptor<MCPServer>())) ?? []
         nonisolated(unsafe) let matched = MCPServerSkill.server(
             forSkillID: skillID,

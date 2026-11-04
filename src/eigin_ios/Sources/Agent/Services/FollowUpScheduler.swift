@@ -6,6 +6,7 @@ import UserNotifications
 @MainActor
 protocol LocalNotificationScheduling: Sendable {
     func add(_ request: UNNotificationRequest) async throws
+    func pendingNotificationRequests() async -> [UNNotificationRequest]
 }
 
 extension UNUserNotificationCenter: LocalNotificationScheduling {}
@@ -73,6 +74,13 @@ struct DefaultFollowUpScheduler: FollowUpScheduling {
         agentName: String?,
         agentEmoji: String?
     ) async throws -> UUID {
+        if deliverAt != nil {
+            let pending = await notificationCenter.pendingNotificationRequests()
+            guard pending.count < 64 else {
+                throw NotificationDeliveryTime
+                    .ValidationError(message: Localized.Intent.Errors.capacityExceeded)
+            }
+        }
         let context = ModelContext(container)
 
         let initiativeRequest = AgentInitiativeRequest(

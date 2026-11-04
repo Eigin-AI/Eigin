@@ -63,6 +63,7 @@ final class Gatekeeper {
             ActiveIntentsSource(),
             ChatHintSource(proactivity: proactivity),
             RelevantKnowledgeSource(knowledgeService: knowledgeService),
+            InitiativeContextSource(knowledgeService: knowledgeService),
         ]
         smallSources = [
             GeneralInfoSource(),
@@ -72,6 +73,7 @@ final class Gatekeeper {
             VocabularyHintSource(),
             ActiveIntentsSource(),
             RelevantKnowledgeSource(knowledgeService: knowledgeService),
+            InitiativeContextSource(knowledgeService: knowledgeService),
         ]
     }
 

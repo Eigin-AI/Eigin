@@ -28,7 +28,7 @@ struct FollowUpTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Schedule a one-off notification at a future time. Delivers the prepared message without running the agent again. Tapping opens a new conversation with your briefing. Use Reminders for tracked tasks and Calendar for events. Clarify the time if needed before calling.",
+            description: "Schedule a quick one-off ping at a future time. Delivers your prepared message without running the agent again. Tapping opens a new conversation with your briefing. Use intent initiatives for recurring invitations that start work when opened, the Reminders skill for tracked tasks, and Calendar for events. Clarify the time if needed before calling.",
             parameters: JSONSchema(type: "object", properties: [
                 "notification_title": .init(
                     type: "string",

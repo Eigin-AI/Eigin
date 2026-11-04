@@ -288,6 +288,19 @@ enum SchemaV10: VersionedSchema {
     }
 }
 
+/// Adds explicit initiative agreements, immutable registrations, and occurrence claims.
+enum SchemaV11: VersionedSchema {
+    static let versionIdentifier = Schema.Version(11, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        SchemaV10.models + [
+            IntentInitiative.self,
+            InitiativeRegistration.self,
+            InitiativeOccurrence.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -330,13 +343,14 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
             SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
+            SchemaV11.self,
         ]
     }
 
     static var stages: [MigrationStage] {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
-            migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10,
+            migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10, migrateV10toV11,
         ]
     }
 
@@ -395,5 +409,9 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV9toV10 = MigrationStage.lightweight(
         fromVersion: SchemaV9.self,
         toVersion: SchemaV10.self
+    )
+    static let migrateV10toV11 = MigrationStage.lightweight(
+        fromVersion: SchemaV10.self,
+        toVersion: SchemaV11.self
     )
 }

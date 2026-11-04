@@ -244,3 +244,11 @@ schema note {
         required = false
     }
 }
+
+// Sourced context gathered ahead of foreground initiative work.
+schema preparation {
+    field { name = "content" type = "string" required = true }
+    field { name = "intent_ids" type = "list" required = true }
+    field { name = "sources" type = "list" required = true }
+    field { name = "observed_at" type = "datetime" required = true }
+}

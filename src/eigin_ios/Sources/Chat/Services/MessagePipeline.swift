@@ -98,7 +98,14 @@ enum MessagePipeline {
         onConnectCapability: ConnectCapabilityHandler? = nil,
         skillConnectionGate: SkillConnectionGate? = nil,
         userMessageID: String? = nil
-    ) async -> TurnInputs {
+    ) async throws -> TurnInputs {
+        if let chatID {
+            try InitiativeConversationService.validateTurn(
+                chatID: chatID,
+                messages: messages,
+                context: ModelContext(Container.shared.modelContainer())
+            )
+        }
         let turnModel = model ?? agent.model
         let contextWindow = KnownModelCatalog.lookup(turnModel)?.contextWindow ?? 128_000
         let isSmallContextModel = contextWindow <= SmallContext.windowLimit
@@ -240,7 +247,8 @@ enum MessagePipeline {
             unavailableSkillNotes: skillSession.unavailableNotes,
             provider: provider,
             modelID: turnModel,
-            isSmallContext: isSmallContext
+            isSmallContext: isSmallContext,
+            chatID: chatID
         )
         let preprocessing = await gatekeeper.beforeTurn(hintInput)
         let systemHint = preprocessing.hint

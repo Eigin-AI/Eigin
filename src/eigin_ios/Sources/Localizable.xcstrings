@@ -2735,13 +2735,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Udløs initiativkørsel"
+            "value": "Kør forberedelse"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trigger Initiative Run"
+            "value": "Run Preparation"
           }
         }
       }
@@ -15967,13 +15967,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gennemgår af og til erindringer og nylige samtaler. Giver kun besked, når der er noget værd at dele."
+            "value": "Forbereder lejlighedsvis viden til dine mål og vedligeholder sin hukommelse. Planlagte initiativer fungerer uafhængigt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Occasionally reviews memories and recent chats. Notifies only when it has something genuinely worth sharing."
+            "value": "Occasionally prepares context for your intents and maintains its knowledge. Scheduled initiatives work independently."
           }
         }
       }
@@ -15984,13 +15984,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deler lejlighedsvis tanker, der er værd at høre."
+            "value": "Forbereder lejlighedsvis viden og vedligeholder hukommelsen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Occasionally shares thoughts worth hearing."
+            "value": "Occasionally prepares context and maintains knowledge."
           }
         }
       }
@@ -16001,13 +16001,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gennemgår og reflekterer regelmæssigt over erindringer og samtaler. Mere villig til at dele tanker og observationer."
+            "value": "Forbereder viden og vedligeholder hukommelsen oftere, når iOS giver baggrundstid. Planlagte initiativer fungerer uafhængigt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Regularly reviews and reflects on memories and chats. More willing to share thoughts and observations."
+            "value": "Prepares context and maintains knowledge more frequently when iOS grants background time. Scheduled initiatives work independently."
           }
         }
       }
@@ -16018,13 +16018,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reflekterer regelmæssigt og deler observationer."
+            "value": "Forbereder viden og vedligeholder hukommelsen oftere."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Regularly reflects and shares observations."
+            "value": "Prepares context and maintains knowledge more often."
           }
         }
       }
@@ -16035,13 +16035,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Svarer kun, når du starter en samtale."
+            "value": "Ingen forberedelse eller vedligeholdelse i baggrunden. Planlagte initiativer fungerer stadig."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only responds when you start a conversation."
+            "value": "No background preparation or maintenance. Explicitly scheduled initiatives still work."
           }
         }
       }
@@ -16052,13 +16052,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Svarer kun når man henvender sig."
+            "value": "Intet baggrundsarbejde."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only responds when spoken to."
+            "value": "No background work."
           }
         }
       }
@@ -18669,13 +18669,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ændrer, hvor tilbøjelig agenten er til at henvende sig af sig selv."
+            "value": "Ændrer hvor ofte din agent forbereder viden og vedligeholder hukommelsen i baggrunden."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changes how willing your agent is to reach out on its own."
+            "value": "Changes how often your agent prepares context and maintains knowledge in the background."
           }
         }
       }
@@ -22593,6 +22593,566 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schedule a one-off notification and continue in a new conversation."
+          }
+        }
+      }
+    },
+    "tools.agent.initiatives": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intent initiatives"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiativer"
+          }
+        }
+      }
+    },
+    "tools.description.initiatives": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedules recurring invitations to work on an intent."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planlægger tilbagevendende invitationer til at arbejde på et mål."
+          }
+        }
+      }
+    },
+    "intent.initiatives": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiatives"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiativer"
+          }
+        }
+      }
+    },
+    "intent.cancelInitiative": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel initiative"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuller initiativ"
+          }
+        }
+      }
+    },
+    "intent.initiativeFailed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiative unavailable"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiativ utilgængeligt"
+          }
+        }
+      }
+    },
+    "tools.agent.savePreparation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save preparation"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem forberedelse"
+          }
+        }
+      }
+    },
+    "tools.description.savePreparation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saves dated findings for active intents."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemmer daterede fund til aktive mål."
+          }
+        }
+      }
+    },
+    "intent.errors.permissionRequired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable notifications for Eigin in Settings, then try scheduling again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slå notifikationer til for Eigin i Indstillinger, og prøv at planlægge igen."
+          }
+        }
+      }
+    },
+    "intent.errors.inaccessibleIntent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The intent is inactive or unavailable in this agent and space. Choose an active intent here."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Målet er inaktivt eller utilgængeligt for denne agent og dette rum. Vælg et aktivt mål her."
+          }
+        }
+      }
+    },
+    "intent.errors.missingSchedule": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an existing schedule from list_intents."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg en eksisterende tidsplan fra list_intents."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidContent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provide brief reusable notification wording and clear task instructions."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angiv en kort, genanvendelig notifikation og tydelige opgaveinstruktioner."
+          }
+        }
+      }
+    },
+    "intent.errors.busy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another initiative change is being saved. Try again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En anden ændring er ved at blive gemt. Prøv igen."
+          }
+        }
+      }
+    },
+    "intent.errors.registrationFailed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The agreement was saved, but notification registration failed. Retry scheduling; do not promise delivery yet."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aftalen er gemt, men notifikationerne kunne ikke planlægges. Prøv igen, før du lover levering."
+          }
+        }
+      }
+    },
+    "intent.errors.staleNotification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This initiative has changed or been cancelled. Open its intent to review the current agreement."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiativet er ændret eller annulleret. Åbn målet for at se den aktuelle aftale."
+          }
+        }
+      }
+    },
+    "intent.errors.interrupted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This initiative was interrupted. Retry explicitly to resume; check actions already taken before repeating them."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initiativet blev afbrudt. Prøv igen for at fortsætte, og kontrollér allerede udførte handlinger før gentagelse."
+          }
+        }
+      }
+    },
+    "intent.errors.providerUnavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an available model provider for this agent, then retry in this conversation."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg en tilgængelig modeludbyder til agenten, og prøv igen i denne samtale."
+          }
+        }
+      }
+    },
+    "intent.errors.missingChat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The previous conversation or its agent/space is no longer available."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den tidligere samtale eller dens agent eller rum er ikke længere tilgængelig."
+          }
+        }
+      }
+    },
+    "intent.errors.unsupportedMonthlySchedule": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly initiative notifications are not supported yet. Choose every day, weekdays, weekends, or selected weekdays."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Månedlige notifikationer understøttes ikke endnu. Vælg hver dag, hverdage, weekender eller bestemte ugedage."
+          }
+        }
+      }
+    },
+    "intent.errors.explicitTimeRequired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Specify both hour and minute for the initiative."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angiv både time og minut for initiativet."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidTime": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an hour from 0–23 and a minute from 0–59."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brug en time fra 0–23 og et minut fra 0–59."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidWeekdays": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose at least one weekday, using 1 for Sunday through 7 for Saturday."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg mindst én ugedag, fra 1 for søndag til 7 for lørdag."
+          }
+        }
+      }
+    },
+    "intent.errors.duplicateInitiative": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each initiative may appear only once in a batch."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvert initiativ må kun forekomme én gang i en samlet ændring."
+          }
+        }
+      }
+    },
+    "intent.errors.capacityExceeded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many notification times. Combine agreements at fewer times or cancel an initiative, then try again."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der er for mange notifikationstidspunkter. Saml aftaler på færre tidspunkter, eller annuller et initiativ, og prøv igen."
+          }
+        }
+      }
+    },
+    "intent.state.disabled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disabled"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deaktiveret"
+          }
+        }
+      }
+    },
+    "intent.state.pending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled · notification scheduling pending"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiveret · afventer planlægning af notifikationer"
+          }
+        }
+      }
+    },
+    "intent.state.scheduled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled · notifications scheduled"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiveret · notifikationer planlagt"
+          }
+        }
+      }
+    },
+    "intent.state.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled · notification scheduling needs attention"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiveret · planlægning af notifikationer kræver handling"
+          }
+        }
+      }
+    },
+    "intent.nextExpected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next expected notification"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Næste forventede notifikation"
+          }
+        }
+      }
+    },
+    "intent.notScheduled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not scheduled"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke planlagt"
+          }
+        }
+      }
+    },
+    "intent.schedulingIssue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduling issue"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problem med planlægning"
+          }
+        }
+      }
+    },
+    "intent.resumeInitiative": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume initiative"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsæt initiativ"
+          }
+        }
+      }
+    },
+    "intent.errors.invalidIntentID": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "intent_id must be an existing intent UUID. Use the id returned by add_intent/update_intent, or call list_intents."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "intent_id skal være UUID’et for en eksisterende intention. Brug det id, som add_intent/update_intent returnerer, eller kald list_intents."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidScheduleID": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "schedule_id must be an existing schedule UUID, not a name. Use schedules[].id returned by add_intent/update_intent, or call list_intents."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "schedule_id skal være UUID’et for en eksisterende tidsplan, ikke et navn. Brug schedules[].id fra add_intent/update_intent, eller kald list_intents."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidChanges": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provide 1–20 changes with intent_id, schedule_id, instructions, and notification."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angiv 1–20 ændringer med intent_id, schedule_id, instructions og notification."
+          }
+        }
+      }
+    },
+    "intent.errors.invalidInitiativeID": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "id must be an initiative UUID from list_initiatives."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "id skal være et initiativ-UUID fra list_initiatives."
           }
         }
       }

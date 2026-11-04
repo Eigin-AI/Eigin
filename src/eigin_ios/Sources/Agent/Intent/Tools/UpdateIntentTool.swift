@@ -80,19 +80,22 @@ struct UpdateIntentTool: Tool {
         }
 
         do {
+            let schedules = try IntentArguments.schedules(from: args["schedules"])
             try await intentService.update(
                 id: intentID,
                 content: (args["content"] as? String).flatMap { $0.isEmpty ? nil : $0 },
                 tasks: IntentArguments.tasks(from: args["tasks"]),
                 events: IntentArguments.events(from: args["events"]),
-                schedules: IntentArguments.schedules(from: args["schedules"])
+                schedules: schedules
             )
+            var result: [String: Any] = ["id": intentID.uuidString, "action": "updated"]
+            if let schedules {
+                result["schedules"] = schedules
+                    .map { ["id": $0.id.uuidString, "content": $0.content] }
+            }
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(result: [
-                    "id": intentID.uuidString,
-                    "action": "updated",
-                ]),
+                content: ToolHelpers.output(result: result),
                 isError: false
             )
         } catch {

@@ -13,7 +13,7 @@ struct ChatViewModelTests {
     private func makeContext() throws -> (Chat, Agent, Provider, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
+            for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
             configurations: config
         )
         let ctx = container.mainContext
@@ -222,6 +222,7 @@ struct ChatViewModelTests {
         chatService: FakeChatService
     ) -> ChatViewModel {
         Container.shared.reset()
+        Container.shared.modelContainer.register { container }
         Container.shared.chatService.register { chatService }
         Container.shared.knowledgeService.register { PreviewKnowledgeService() }
         Container.shared.intentService.register { PreviewIntentService() }
@@ -447,6 +448,135 @@ struct ChatViewModelTests {
         #expect(vm.window.messages.count(where: { $0.role == "user" }) == 1)
         #expect(vm.window.messages.last?.content == "Want me to set up that morning rundown now?")
         #expect(service.capturedEventMessages.last?.role == "tool")
+    }
+
+    @Test(
+        "initiatives start and explicitly resume without a visible user message",
+        arguments: [false, true]
+    )
+    @MainActor
+    func initiativeStartsAndResumesWithoutUserMessage(interrupted: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let context = container.mainContext
+        let schedule = IntentSchedule(content: "News", frequency: .daily, hour: 7, minute: 0)
+        let intent = Intent(agentID: agent.id, content: "News", schedules: [schedule])
+        let agreement = IntentInitiative(
+            intentID: intent.id,
+            scheduleID: schedule.id,
+            instructions: "Get news",
+            notificationBody: "Time for news"
+        )
+        let delivery = InitiativeDelivery(
+            agentID: agent.id,
+            spaceID: nil,
+            hour: 7,
+            minute: 0,
+            weekday: nil,
+            members: [
+                .init(
+                    initiativeID: agreement.id,
+                    intentID: intent.id,
+                    schedule: schedule,
+                    instructions: agreement.instructions,
+                    body: agreement.notificationBody,
+                    revision: agreement.updatedAt
+                ),
+            ]
+        )
+        context.insert(intent)
+        context.insert(agreement)
+        try context.insert(InitiativeRegistration(id: "resume-test", payload: delivery.encoded()))
+        context.insert(InitiativeOccurrence(
+            id: "resume-occurrence",
+            registrationID: "resume-test",
+            deliveredAt: .now,
+            chatID: chat.id,
+            intentIDs: [intent.id]
+        ))
+        let toolCall = ToolCall(
+            id: "already-read",
+            type: "function",
+            function: .init(name: "web_fetch", arguments: "{}")
+        )
+        let history: [ChatMessage] = interrupted ? [
+            ChatMessage(role: "assistant", content: nil, toolCalls: [toolCall]),
+            ChatMessage(
+                role: "tool",
+                content: "Fetched source already: research release",
+                toolCallID: toolCall.id
+            ),
+            ChatMessage(role: "assistant", content: "Here is the first finding…"),
+        ] : []
+        let persisted = history.map { message in
+            let row = Message.from(message)
+            row.chat = chat
+            context.insert(row)
+            return row
+        }
+        try context.save()
+        if interrupted {
+            #expect(try InitiativeConversationService.beginExecution(
+                chatID: chat.id, messages: history, context: context
+            ))
+            InitiativeConversationService.recordOutput(
+                persisted[2],
+                chatID: chat.id,
+                context: context
+            )
+            try InitiativeConversationService.finishExecution(
+                chatID: chat.id,
+                completed: false,
+                context: context
+            )
+        }
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta("Continuing from the source already fetched."),
+            .finished(.stop),
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.window.messages = history
+        vm.window.allPersisted = persisted
+        vm.window.isPreloaded = true
+        #expect(vm.streamTask == nil)
+        if interrupted {
+            vm.showInitiativeError(InitiativeError.interrupted)
+            #expect(vm.canResumeInitiative)
+            vm.resumeInitiative(
+                agent: agent,
+                provider: provider,
+                space: nil,
+                spaces: [],
+                mcpServers: []
+            )
+        } else {
+            #expect(InitiativeConversationService.hasPendingStart(
+                chatID: chat.id,
+                context: context
+            ))
+            #expect(try InitiativeConversationService.claimStart(chatID: chat.id, context: context))
+            vm.continueTurn(
+                agent: agent,
+                provider: provider,
+                space: nil,
+                spaces: [],
+                mcpServers: []
+            )
+        }
+        await vm.streamTask?.value
+        #expect(vm.chatError == nil)
+        #expect(!vm.canResumeInitiative)
+        #expect(vm.window.messages.last?.content == "Continuing from the source already fetched.")
+        if interrupted {
+            #expect(service.capturedEventMessages.contains { $0.toolCallID == "already-read" })
+        }
+        #expect(service.capturedEventMessages.contains { $0.content?.contains("Get news") == true })
+        let remaining = try context.fetch(FetchDescriptor<Message>())
+        #expect(Set(persisted.map(\.id)).isSubset(of: Set(remaining.map(\.id))))
+        #expect(!remaining.contains(where: { $0.role == "user" }))
+        #expect(!vm.window.messages.contains(where: { $0.role == "user" }))
+        #expect(try context.fetch(FetchDescriptor<InitiativeOccurrence>()).first?
+            .completedAt != nil)
     }
 
     @Test("retryLastTurn is a no-op when the last message is from the assistant")

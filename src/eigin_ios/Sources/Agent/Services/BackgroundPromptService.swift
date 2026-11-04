@@ -114,32 +114,29 @@ enum BackgroundPromptService {
 
         // Build system prompt with active intents.
         let intentService = DefaultIntentService(modelContainer: container)
-        let promptIntents: [IntentSnapshot]
-        if mode == .initiative {
-            // Rotate through active intents so the same one isn't re-picked
-            // every run; fetch the full pool (unbounded) so rotation can see
-            // everything, not just the top 5.
-            let allActiveIntents = await (try? intentService.activeIntents(
-                agentID: agent.id,
-                limit: Int.max,
-                accessPolicy: accessPolicy
-            )) ?? []
-            let ranked = allActiveIntents.sorted { $0.relevance > $1.relevance }
-            let historyKey = Self.initiativeFocusHistoryKey(agentID: agent.id)
-            let history = UserDefaults.standard.stringArray(forKey: historyKey)?
-                .compactMap(UUID.init(uuidString:)) ?? []
-            let selection = InitiativeIntentRotation.select(rankedIntents: ranked, history: history)
-            UserDefaults.standard.set(
-                selection.history.map(\.uuidString), forKey: historyKey
-            )
-            promptIntents = selection.focus.map { [$0] } ?? []
-        } else {
-            promptIntents = await (try? intentService.activeIntents(
-                agentID: agent.id,
-                limit: 5,
-                accessPolicy: accessPolicy
-            )) ?? []
-        }
+        let promptIntents = await (try? intentService.activeIntents(
+            agentID: agent.id, limit: mode == .preparation ? Int.max : 5, accessPolicy: accessPolicy
+        )) ?? []
+        let upcomingInitiatives: [String]
+        if mode == .preparation {
+            let intents = (try? context.fetch(FetchDescriptor<Intent>())) ?? []
+            let agreements = (try? context.fetch(FetchDescriptor<IntentInitiative>())) ?? []
+            let upcoming = agreements.compactMap { agreement -> (Date, String)? in
+                guard agreement.enabled,
+                      let intent = intents.first(where: { $0.id == agreement.intentID }),
+                      intent.agentID == agent.id, intent.intentStatus == .active,
+                      accessPolicy.canAccess(itemSpaceID: intent.spaceID),
+                      let schedule = intent.schedules
+                      .first(where: { $0.id == agreement.scheduleID }),
+                      let date = schedule.nextOccurrence(onOrAfter: .now),
+                      date < Date.now.addingTimeInterval(7 * 86400) else { return nil }
+                return (
+                    date,
+                    "\(date.ISO8601Format()) intent \(intent.id): \(String(agreement.instructions.prefix(400)))"
+                )
+            }.sorted { $0.0 < $1.0 }
+            upcomingInitiatives = upcoming.map(\.1)
+        } else { upcomingInitiatives = [] }
 
         // Fetch recent notifications so the agent doesn't repeat itself.
         let agentID = agent.id
@@ -174,6 +171,7 @@ enum BackgroundPromptService {
                 activeIntents: promptIntents,
                 recentNotifications: recentNotifications,
                 mode: mode,
+                upcomingInitiatives: upcomingInitiatives,
                 additionalContext: knowledgeSection
             )
         }
@@ -187,15 +185,17 @@ enum BackgroundPromptService {
         // Build tool registry - includes tools the agent has .always permission for.
         let signalBox = BackgroundSignalBox()
         let skillSession = await MainActor.run {
-            mode == .initiative ? SkillSession(
-                toolAccess: .unattended,
-                permissionPolicy: permissionPolicy, accessPolicy: accessPolicy, agentID: agentRef.id
+            mode == .preparation ? SkillSession(
+                toolAccess: .preparation,
+                permissionPolicy: permissionPolicy, accessPolicy: accessPolicy,
+                agentID: agentRef.id
             ) : nil
         }
         let registry = await ToolRegistry.background(
             accessPolicy: accessPolicy,
             permissionPolicy: permissionPolicy,
-            agentID: mode == .initiative ? agentRef.id : nil,
+            agentID: mode == .preparation ? agentRef.id : nil,
+            preparationOnly: mode == .preparation,
             skillSession: skillSession,
             onSignal: { signalBox.set($0) }
         )
@@ -279,7 +279,7 @@ enum BackgroundPromptService {
 
     /// Picks the most overdue background mode based on elapsed time vs preferred interval.
     private static func selectMode() -> BackgroundRunMode {
-        var bestMode = BackgroundRunMode.initiative
+        var bestMode = BackgroundRunMode.preparation
         var bestUrgency = -1.0
 
         for mode in BackgroundRunMode.allCases {
@@ -354,6 +354,7 @@ enum BackgroundPromptService {
                     permissionPolicy: permissionPolicy,
                     agentID: agent.id,
                     additionalTools: tools,
+                    preparationOnly: skillSession.toolAccess == .preparation,
                     skillSession: skillSession,
                     onSignal: { signalBox.set($0) }
                 )

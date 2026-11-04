@@ -2,20 +2,21 @@ import Foundation
 
 /// How often each background mode ideally runs.
 enum BackgroundRunMode: String, CaseIterable {
-    case initiative
+    case preparation
     case maintenance
 
     /// How often this mode ideally runs.
     var preferredInterval: TimeInterval {
         switch self {
-        case .initiative: 6 * 3600 // 6 hours
+        case .preparation: 6 * 3600 // 6 hours
         case .maintenance: 2 * 86400 // 2 days
         }
     }
 
     /// UserDefaults key for last-run timestamp.
     var lastRunKey: String {
-        "backgroundLastRun_\(rawValue)"
+        // The persisted key keeps preparation's existing run cadence.
+        self == .preparation ? "backgroundLastRun_initiative" : "backgroundLastRun_maintenance"
     }
 }
 
@@ -34,19 +35,24 @@ enum BackgroundPrompt {
         activeIntents: [IntentSnapshot] = [],
         activeSkills: [Skill] = [],
         recentNotifications: [NotificationSnapshot] = [],
-        mode: BackgroundRunMode = .initiative,
+        mode: BackgroundRunMode = .preparation,
+        upcomingInitiatives: [String] = [],
         additionalContext: String = ""
     ) -> String {
-        // Background context (moment + proactivity)
+        // Reactive restrictions also apply to manually triggered sessions.
         let context: String = switch proactivity {
         case .reactive: Prompt.Background.contextReactive
-        case .balanced: Prompt.Background.contextBalanced
-        case .proactive: Prompt.Background.contextProactive
+        case .balanced, .proactive: ""
         }
 
         // Intents section
         var intentsLines: [String] = []
-        if !activeIntents.isEmpty {
+        if mode == .preparation {
+            intentsLines.append(PreparationPreview.render(
+                intents: activeIntents,
+                upcoming: upcomingInitiatives
+            ))
+        } else if !activeIntents.isEmpty {
             for intent in activeIntents {
                 let days = Int(Date.now.timeIntervalSince(intent.createdAt) / 86400)
                 var detail = "\(days) \(days == 1 ? "day" : "days")"
@@ -54,7 +60,7 @@ enum BackgroundPrompt {
                     detail += ", \(cue)"
                 }
                 intentsLines.append(Prompt.Background.intentItem(
-                    content: intent.content,
+                    content: "[\(intent.id)] " + String(intent.content.prefix(600)),
                     detail: detail
                 ))
                 for task in intent.tasks.filter({ !$0.completed }) {
@@ -82,7 +88,7 @@ enum BackgroundPrompt {
         }
 
         let modeText: String = switch mode {
-        case .initiative: Prompt.Background.initiative
+        case .preparation: Prompt.Background.preparation
         case .maintenance: Prompt.Background.maintenance
         }
 

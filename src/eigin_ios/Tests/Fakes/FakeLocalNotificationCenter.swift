@@ -21,6 +21,10 @@ final class FakeLocalNotificationCenter: LocalNotificationScheduling {
         self.shouldFail = shouldFail
     }
 
+    func pendingNotificationRequests() async -> [UNNotificationRequest] {
+        requests
+    }
+
     func add(_ request: UNNotificationRequest) async throws {
         if shouldFail { throw NSError(domain: "NotificationTest", code: 1) }
         if suspendAcceptance {

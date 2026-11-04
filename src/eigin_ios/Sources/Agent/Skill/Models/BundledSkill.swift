@@ -62,6 +62,7 @@ enum BundledSkill {
             UpdateIntentTool.capability,
             ListIntentsTool.capability,
             ResolveIntentTool.capability,
+            SetInitiativesTool.capability,
         ],
         alwaysActive: true
     )

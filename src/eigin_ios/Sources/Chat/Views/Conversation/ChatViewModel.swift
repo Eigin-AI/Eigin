@@ -108,6 +108,38 @@ final class ChatViewModel {
         )
     }
 
+    /// An explicit recovery action stays available even when history ends in partial output.
+    var canResumeInitiative: Bool {
+        guard let modelContext, window.isPreloaded, !isTurnInProgress,
+              !window.allPersisted.contains(where: { $0.role == "user" }) else { return false }
+        return InitiativeConversationService.needsResume(chatID: chatID, context: modelContext)
+            || (chatError != nil && InitiativeConversationService.hasPendingStart(
+                chatID: chatID,
+                context: modelContext
+            ))
+    }
+
+    /// Continues the persisted initiative history without rewinding messages or tool results.
+    func resumeInitiative(
+        agent: Agent, provider: Provider, space: Space?, spaces: [Space],
+        mcpServers: [MCPServer], integrations: [Integration] = []
+    ) {
+        guard canResumeInitiative else { return }
+        continueTurn(
+            agent: agent,
+            provider: provider,
+            space: space,
+            spaces: spaces,
+            mcpServers: mcpServers,
+            integrations: integrations
+        )
+    }
+
+    /// Surfaces failed initiative startup through the ordinary retry/error UI.
+    func showInitiativeError(_ error: Error) {
+        chatError = ConnectionError(from: error)
+    }
+
     // MARK: - Staged attachments
 
     /// Stages `attachment` for the next sent message if under
@@ -302,6 +334,27 @@ final class ChatViewModel {
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
                     .compactMap(\.self)
                     : self.window.messages
+            let initiativeExecution: Bool
+            do {
+                initiativeExecution = try InitiativeConversationService.beginExecution(
+                    chatID: chatID,
+                    messages: msgs,
+                    context: modelContext
+                )
+            } catch {
+                chatError = ConnectionError(from: error)
+                return
+            }
+            var initiativeCompleted = false
+            defer {
+                if initiativeExecution {
+                    do { try InitiativeConversationService.finishExecution(
+                        chatID: chatID,
+                        completed: initiativeCompleted,
+                        context: modelContext
+                    ) } catch { chatError = ConnectionError(from: error) }
+                }
+            }
             // Route before the turn is built: the prompt budget and tool registry are
             // sized from the model that ends up running.
             let (provider, routedModel) = await self.applyRoute(
@@ -319,7 +372,8 @@ final class ChatViewModel {
                 return await chatLoop.requestConnection(request)
             }
 
-            let turn = await MessagePipeline.prepareTurn(
+            let turn: MessagePipeline.TurnInputs
+            do { turn = try await MessagePipeline.prepareTurn(
                 messages: msgs,
                 agent: agent, model: routedModel, space: space,
                 permissionPolicy: policy,
@@ -342,7 +396,10 @@ final class ChatViewModel {
                 onConnectCapability: connectHandler,
                 skillConnectionGate: self.skillConnectionGate,
                 userMessageID: initiatingUserMessageID
-            )
+            ) } catch {
+                chatError = ConnectionError(from: error)
+                return
+            }
 
             // Persist the user message before compaction: the summary row lands
             // right after the latest user message, and the retained count equals
@@ -416,6 +473,8 @@ final class ChatViewModel {
                 window.messages.append(contentsOf: completed)
                 window.trimIfNeeded()
                 persistMessages(completed)
+                initiativeCompleted = completed
+                    .contains { $0.role == "assistant" && !($0.content ?? "").isEmpty }
 
                 let assistantCount = window.messages.count(where: { $0.role == "assistant" })
                 if assistantCount >= ChatTitleGenerator.titleGenerationThreshold {
@@ -618,6 +677,7 @@ final class ChatViewModel {
         let message = Message.from(chatMessage)
         message.chat = chat
         modelContext.insert(message)
+        InitiativeConversationService.recordOutput(message, chatID: chat.id, context: modelContext)
         chat.updatedAt = .now
         if window.isPreloaded { window.allPersisted.append(message) }
     }
@@ -628,6 +688,11 @@ final class ChatViewModel {
             let message = Message.from(cm)
             message.chat = chat
             modelContext.insert(message)
+            InitiativeConversationService.recordOutput(
+                message,
+                chatID: chat.id,
+                context: modelContext
+            )
             if window.isPreloaded { window.allPersisted.append(message) }
         }
         chat.updatedAt = .now

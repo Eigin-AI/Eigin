@@ -19,7 +19,12 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
         let userInfo = response.notification.request.content.userInfo
+        if let id = userInfo[InitiativeNotificationScheduler.registrationIDKey] as? String {
+            PendingDestination.set(.scheduledInitiative(id, response.notification.date))
+            return
+        }
 
         // A watch reply routes to the watch chat it came from.
         if let chatIDString = userInfo["chatID"] as? String,

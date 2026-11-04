@@ -32,6 +32,12 @@ No single signal dominates. The most relevant surface first in context, annotate
 - **Resolved**: the goal was met.
 - **Dismissed**: the goal is no longer relevant.
 
-## Relationship to initiative
+## Initiatives and preparation
 
-Intents describe what the agent is working toward. [Initiative](./initiative.md) controls how proactively it acts on them, and an intent's schedules and events are what make a background session surface a timely reminder.
+| Mechanism | Behavior |
+|---|---|
+| Intent events and schedules | Rank relevant goals. They stay silent unless an initiative is explicitly enabled. |
+| Scheduled initiatives | Deliver recurring local invitations. Opening one starts current work with the agreed instructions. |
+| Background preparation | Opportunistically gathers context for ranked goals and upcoming initiatives. Delivery and foreground work run independently of it. |
+
+Use `list_initiatives`, `set_initiatives`, and `cancel_initiative` to manage daily/weekly notifications. Wording should remain true on every occurrence. Monthly notifications are not yet supported. See [Initiative](initiative.md).
