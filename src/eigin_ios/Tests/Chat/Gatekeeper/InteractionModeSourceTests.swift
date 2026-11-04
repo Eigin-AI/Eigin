@@ -59,6 +59,19 @@ struct InteractionModeSourceTests {
         #expect(await source.render(input(mode: .text)) == InteractionMode.text.fullDescription)
     }
 
+    @Test func headlessGuidanceKeepsFastAnswerContractOnFollowUps() async throws {
+        let source = InteractionModeSource()
+        let first = try #require(await source.render(input(mode: .headless)))
+        let reminder = try #require(await source.render(input(mode: .headless)))
+        for guidance in [first, reminder] {
+            #expect(guidance.localizedCaseInsensitiveContains("strict time budget"))
+            #expect(guidance.localizedCaseInsensitiveContains("answer immediately"))
+            #expect(guidance.contains("at most one"))
+            #expect(guidance.contains("tool call"))
+            #expect(guidance.contains("verify"))
+        }
+    }
+
     @Test func title() {
         #expect(InteractionModeSource().title == "Interaction mode")
     }

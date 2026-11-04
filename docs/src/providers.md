@@ -65,6 +65,16 @@ reasoning) or careful (reasoning).
 
 Rejected keys, empty wallets, and malformed requests still appear as errors to the user instead.
 
+### Headless turns
+
+Headless turns, currently used by the watch, have a limited phone background window. Their instructions ask the model to:
+
+- Answer immediately in one or two short, speakable sentences.
+- Use at most one necessary tool call, then reply without further exploration.
+- Say briefly when it cannot verify information or complete an action.
+
+These are prompt instructions. Model selection, reasoning behavior, tool limits, and timeouts remain unchanged.
+
 ### Offline
 
 On Automatic, with no network and an on-device model downloaded, the turn runs locally. A user-selected cloud model fails in this scenario.
