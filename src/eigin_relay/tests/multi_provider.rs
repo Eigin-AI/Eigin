@@ -44,7 +44,9 @@ impl UpstreamClient for TaggedUpstream {
             "choices": [{
                 "message": { "content": format!("{}:model={}", self.tag, forwarded_model) }
             }],
-            "usage": { "prompt_tokens": 1, "completion_tokens": 1 }
+            "usage": { "prompt_tokens": 1, "completion_tokens": 1 },
+            "forwarded_reasoning_effort": json["reasoning_effort"],
+            "forwarded_stream_options": json["stream_options"]
         });
         Ok(UpstreamResponse::Buffer(Bytes::from(
             serde_json::to_vec(&body).unwrap(),
@@ -191,12 +193,24 @@ async fn redeem(app: &axum::Router) -> String {
 }
 
 async fn chat(app: &axum::Router, token: &str, model: &str) -> (StatusCode, String) {
+    chat_body(
+        app,
+        token,
+        serde_json::json!({
+            "model": model,
+            "stream": false,
+            "messages": [{"role": "user", "content": "hi"}]
+        }),
+    )
+    .await
+}
+
+async fn chat_body(
+    app: &axum::Router,
+    token: &str,
+    body: serde_json::Value,
+) -> (StatusCode, String) {
     let connect_info = axum::extract::ConnectInfo(std::net::SocketAddr::from(([127, 0, 0, 1], 0)));
-    let body = serde_json::json!({
-        "model": model,
-        "stream": false,
-        "messages": [{"role": "user", "content": "hi"}]
-    });
     let req = Request::builder()
         .method("POST")
         .uri("/v1/chat/completions")
@@ -345,4 +359,29 @@ async fn unknown_model_returns_bad_request() {
     let (status, body) = chat(&app, &token, "totally-unknown-model").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(body.contains("totally-unknown-model"), "body was: {body}");
+}
+
+#[tokio::test]
+async fn reasoning_effort_survives_model_rewrite_and_usage_injection() {
+    let app = router(make_state_with_providers().await);
+    let token = redeem(&app).await;
+    let (status, body) = chat_body(
+        &app,
+        &token,
+        serde_json::json!({
+            "model": "model-upstream", "stream": true, "reasoning_effort": "low",
+            "messages": [{"role": "user", "content": "hi"}]
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(json["forwarded_reasoning_effort"], "low");
+    assert_eq!(json["forwarded_stream_options"]["include_usage"], true);
+    assert!(
+        json["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap()
+            .contains("provider-internal-id-123")
+    );
 }

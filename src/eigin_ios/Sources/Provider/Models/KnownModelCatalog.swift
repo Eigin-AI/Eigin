@@ -25,6 +25,7 @@ struct KnownModelEntry {
     let supportsReasoning: Bool
     let supportsVision: Bool
     let isRecommended: Bool
+    let reasoningControl: ReasoningControl?
 
     init(
         pattern: String,
@@ -38,7 +39,8 @@ struct KnownModelEntry {
         supportsToolCall: Bool,
         supportsReasoning: Bool,
         supportsVision: Bool,
-        isRecommended: Bool
+        isRecommended: Bool,
+        reasoningControl: ReasoningControl? = nil
     ) {
         self.pattern = pattern
         self.aliases = aliases
@@ -52,6 +54,7 @@ struct KnownModelEntry {
         self.supportsReasoning = supportsReasoning
         self.supportsVision = supportsVision
         self.isRecommended = isRecommended
+        self.reasoningControl = reasoningControl
     }
 }
 
@@ -830,7 +833,8 @@ enum KnownModelCatalog {
             supportsToolCall: true,
             supportsReasoning: true,
             supportsVision: true,
-            isRecommended: true
+            isRecommended: true,
+            reasoningControl: mistralLargeReasoning
         ),
         KnownModelEntry(
             pattern: "mistral-large-latest",
@@ -885,7 +889,8 @@ enum KnownModelCatalog {
             supportsToolCall: true,
             supportsReasoning: true,
             supportsVision: true,
-            isRecommended: true
+            isRecommended: true,
+            reasoningControl: mistralMediumReasoning
         ),
         KnownModelEntry(
             pattern: "mistral-medium-2508",

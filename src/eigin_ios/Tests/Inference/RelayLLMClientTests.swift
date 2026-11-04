@@ -74,6 +74,22 @@ struct RelayLLMClientTests {
         #expect(events.contains(.contentDelta("hi")))
     }
 
+    @Test func forwardsEffortThroughCreditWrapper() async throws {
+        let host = "https://relay-reasoning.test"
+        let url = "\(host)/v1/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: successSSE, statusCode: 200)
+        let client: any LLMClient = makeClient(host: host, manager: makeManager([("token", 100)]))
+        let stream = try await client.chatCompletionEventStream(
+            messages: [ChatMessage(role: "user", content: "hi")],
+            model: "mistral/mistral-medium-2604", tools: nil, cacheKey: nil,
+            reasoningEffort: ReasoningEffort.none
+        )
+        for try await _ in stream {}
+        let data = try #require(FakeURLProtocol.lastRequestBody(for: url))
+        let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(body["reasoning_effort"] as? String == "none")
+    }
+
     @Test func throwsNoCreditsWhenSoleWalletReturns402() async {
         let host = "https://exhausted.test"
         let url = "\(host)/v1/chat/completions"

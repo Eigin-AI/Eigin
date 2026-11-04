@@ -24,10 +24,12 @@ extension DefaultModelRouter {
         guard request.isAuto, let provider = request.currentProvider else { return nil }
         // A hedge races for the same turn, so it keeps the turn's tier: the primary
         // model's tier, or reasoning when the message scored complex.
+        if reasoningDemand(for: request, model: model) {
+            reasoningConversations.insert(request.conversationID ?? request.currentProviderID)
+        }
         let candidates = rankedCandidates(
             for: request, provider: provider, at: now(),
-            needsReasoning: QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
-                || KnownModelCatalog.lookup(model)?.supportsReasoning == true
+            needsReasoning: reasoningDemand(for: request, model: model)
         )
         guard let runnerUp = candidates.first(where: { $0 != model }) else { return nil }
         AppLogger.debug(

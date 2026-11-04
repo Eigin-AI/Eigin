@@ -21,6 +21,9 @@ protocol ModelRouter: Sendable {
     /// decides before a turn exists, like whether to offer the attachment button.
     func canSatisfy(_ request: RouteRequest) async -> Bool
 
+    /// Effort for an individual dispatched candidate in the current Auto session.
+    func reasoningEffort(for model: String, request: RouteRequest) async -> ReasoningEffort?
+
     // MARK: Hedging
 
     /// How long a model may stay silent before the turn opens a runner-up alongside it.
@@ -38,6 +41,10 @@ protocol ModelRouter: Sendable {
 }
 
 extension ModelRouter {
+    func reasoningEffort(for _: String, request _: RouteRequest) async -> ReasoningEffort? {
+        nil
+    }
+
     /// Default: long enough that healthy models rarely see a hedge; mirrors
     /// ``DefaultModelRouter.hedgeDelay`` so fakes drift with the knob.
     func hedgeDelay(for _: String) async -> Duration {
