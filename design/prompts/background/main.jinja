@@ -4,7 +4,8 @@ The user prefers you speak in {{ language }}.{% endif %}
 
 ---
 
-{{ context }}
+The user is not chatting with you. You have a moment to yourself.{% if context %}
+{{ context }}{% endif %}
 {% if intentsSection %}
 
 Your active intents — goals you've set for yourself based on what matters to the user:

@@ -29,6 +29,7 @@ struct ChatListView: View {
     @State private var showRenameAlert = false
     @State private var renameText = ""
     @State private var selectedSpaceID: UUID?
+    @State private var initiativeError: String?
 
     private var filteredChats: [Chat] {
         ChatListFilter.visibleChats(chats, spaces: spaces, selectedSpaceID: selectedSpaceID)
@@ -83,6 +84,16 @@ struct ChatListView: View {
                     }
                 }
             }
+            .task { await Container.shared.initiativeService().reconcile() }
+            .alert(
+                Localized.Intent.initiativeFailed,
+                isPresented: Binding(
+                    get: { initiativeError != nil },
+                    set: { if !$0 { initiativeError = nil } }
+                )
+            ) {
+                Button(Localized.Common.Actions.ok, role: .cancel) {}
+            } message: { Text(initiativeError ?? "") }
             .onAppear {
                 // Must run before handling a pending destination — the incoming
                 // chat only exists after consumption, so nothing to protect.
@@ -96,6 +107,7 @@ struct ChatListView: View {
             // taps land in that window. Re-run once the scene is active.
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
+                Task { await Container.shared.initiativeService().reconcile() }
                 handlePendingDestination()
             }
             .alert(Localized.Common.Alert.deleteChatTitle, isPresented: $showDeleteConfirmation) {
@@ -288,8 +300,26 @@ struct ChatListView: View {
     private func handlePendingDestination() {
         guard scenePhase == .active else { return }
         guard let destination = PendingDestination.get() else { return }
+        if case .scheduledInitiative(let id, let date) = destination {
+            do {
+                let chatID = try InitiativeConversationService.open(
+                    registrationID: id,
+                    deliveredAt: date,
+                    context: modelContext
+                )
+                if PendingDestination.get() == destination { PendingDestination.clear() }
+                replacePath(ChatLaunch(chatID: chatID))
+            } catch {
+                initiativeError = error.localizedDescription
+                // Invalidated agreements cannot become executable by retrying the old notification.
+                if error is InitiativeError,
+                   PendingDestination.get() == destination { PendingDestination.clear() }
+            }
+            return
+        }
         PendingDestination.clear()
         switch destination {
+        case .scheduledInitiative: break
         case .initiative(let requestID):
             openInitiativeChat(requestID: requestID)
         case .chat(let chatID):

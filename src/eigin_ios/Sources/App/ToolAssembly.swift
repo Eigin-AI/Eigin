@@ -96,7 +96,9 @@ extension ToolRegistry {
             let allSkillToolKeys = Set(BundledSkill.all.flatMap { $0.requiredTools.map(\.key) })
                 .union(mcpSkills.flatMap { $0.requiredTools.map(\.key) })
             tools = tools.filter { tool in
-                skillRequiredKeys.contains(tool.name) || !allSkillToolKeys.contains(tool.name)
+                let keys = Set(tool.capabilities.map(\.key))
+                return !keys.isDisjoint(with: skillRequiredKeys) || keys
+                    .isDisjoint(with: allSkillToolKeys)
             }
         }
 
@@ -227,6 +229,7 @@ extension ToolRegistry {
         permissionPolicy: (any ToolPermissionPolicy)? = nil,
         agentID: UUID? = nil,
         additionalTools: [any Tool] = [],
+        preparationOnly: Bool = false,
         skillSession: SkillSession? = nil,
         onSignal: @escaping @Sendable (BackgroundToolSignal) -> Void
     ) -> ToolRegistry {
@@ -244,8 +247,17 @@ extension ToolRegistry {
             AddIntentTool.capability.key,
             UpdateIntentTool.capability.key,
             ResolveIntentTool.capability.key,
+            SetInitiativesTool.toolName, CancelInitiativeTool.toolName,
         ]
         tools += additionalTools
+        if preparationOnly {
+            tools.append(SavePreparationTool(
+                modelContainer: Container.shared.modelContainer(),
+                knowledgeService: Container.shared.knowledgeService(),
+                accessPolicy: accessPolicy
+            ))
+            tools.removeAll { !PreparationToolPolicy.allows($0.name) }
+        }
         tools.removeAll { excludedFromBackground.contains($0.name) }
 
         // Filter to only .always permission tools
@@ -258,7 +270,7 @@ extension ToolRegistry {
         }
 
         var result = alwaysTools
-        result.append(BackgroundNotifyTool(onSignal: onSignal))
+        if !preparationOnly { result.append(BackgroundNotifyTool(onSignal: onSignal)) }
         return ToolRegistry(tools: result)
     }
 }

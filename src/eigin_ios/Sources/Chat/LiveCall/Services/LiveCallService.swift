@@ -692,7 +692,8 @@ final class LiveCallService: @unchecked Sendable {
 
             let activeSkills = loadActiveSkills(agent: agent)
 
-            let turn = await MessagePipeline.prepareTurn(
+            let turn: MessagePipeline.TurnInputs
+            do { turn = try await MessagePipeline.prepareTurn(
                 messages: messages, agent: agent, space: space,
                 permissionPolicy: policy,
                 spaceID: spaceID, chatID: chatID,
@@ -706,7 +707,10 @@ final class LiveCallService: @unchecked Sendable {
                 onConnectCapability: connectHandler,
                 skillConnectionGate: skillConnectionGate,
                 userMessageID: userMessage.localID
-            )
+            ) } catch {
+                endCallWithError(error)
+                return
+            }
 
             // Auto-compact if approaching context limits (silent, no progress UI)
             let compactionResult = await MessagePipeline.compactIfNeeded(

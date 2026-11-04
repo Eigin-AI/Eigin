@@ -28,7 +28,7 @@ struct DevelopmentMenu: View {
         List {
             Section(Localized.Settings.backgroundPrompt) {
                 Button {
-                    runBackgroundPrompt(mode: .initiative)
+                    runBackgroundPrompt(mode: .preparation)
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "play.fill", color: .green)

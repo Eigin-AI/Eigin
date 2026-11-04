@@ -37,7 +37,7 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
         }
 
         let container = try! ModelContainer(
-            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
+            for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         // Any service resolving the container through Factory gets the same

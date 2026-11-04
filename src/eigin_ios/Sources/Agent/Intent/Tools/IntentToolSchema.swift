@@ -84,7 +84,7 @@ enum IntentToolSchema {
                 "minute": .init(type: "integer", description: "Optional minute (0–59)."),
                 "id": .init(
                     type: "string",
-                    description: "Existing schedule id — include to preserve identity when updating."
+                    description: "Existing schedule UUID; preserve it when updating. Omit for new schedules. Assigned IDs are returned in result.schedules."
                 ),
             ],
             required: ["content", "frequency"]

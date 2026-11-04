@@ -97,6 +97,7 @@ struct AddIntentTool: Tool {
         }
 
         do {
+            let schedules = try IntentArguments.schedules(from: args["schedules"]) ?? []
             let newID = try await intentService.create(
                 content: content,
                 agentID: agent.id,
@@ -104,11 +105,15 @@ struct AddIntentTool: Tool {
                 chatID: chatID,
                 tasks: IntentArguments.tasks(from: args["tasks"]) ?? [],
                 events: IntentArguments.events(from: args["events"]) ?? [],
-                schedules: IntentArguments.schedules(from: args["schedules"]) ?? []
+                schedules: schedules
             )
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(result: ["id": newID.uuidString, "action": "created"]),
+                content: ToolHelpers.output(result: [
+                    "id": newID.uuidString,
+                    "action": "created",
+                    "schedules": schedules.map { ["id": $0.id.uuidString, "content": $0.content] },
+                ]),
                 isError: false
             )
         } catch {

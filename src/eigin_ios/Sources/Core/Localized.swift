@@ -2325,6 +2325,10 @@ enum Localized {
     }
 
     enum Intent {
+        static var cancelInitiative: String {
+            Localized.get("intent.cancelInitiative")
+        }
+
         /// intent.content
         static var content: String {
             Localized.get("intent.content")
@@ -2350,9 +2354,33 @@ enum Localized {
             Localized.get("intent.events")
         }
 
+        static var initiativeFailed: String {
+            Localized.get("intent.initiativeFailed")
+        }
+
+        static var initiatives: String {
+            Localized.get("intent.initiatives")
+        }
+
+        static var nextExpected: String {
+            Localized.get("intent.nextExpected")
+        }
+
+        static var notScheduled: String {
+            Localized.get("intent.notScheduled")
+        }
+
+        static var resumeInitiative: String {
+            Localized.get("intent.resumeInitiative")
+        }
+
         /// Section header listing an intent's recurring schedules.
         static var schedules: String {
             Localized.get("intent.schedules")
+        }
+
+        static var schedulingIssue: String {
+            Localized.get("intent.schedulingIssue")
         }
 
         /// Section header listing an intent's tasks.
@@ -2374,6 +2402,106 @@ enum Localized {
             /// Empty state title when there are no active intents
             static var title: String {
                 Localized.get("intent.emptyState.title")
+            }
+        }
+
+        enum Errors {
+            static var busy: String {
+                Localized.get("intent.errors.busy")
+            }
+
+            static var capacityExceeded: String {
+                Localized.get("intent.errors.capacityExceeded")
+            }
+
+            static var duplicateInitiative: String {
+                Localized.get("intent.errors.duplicateInitiative")
+            }
+
+            static var explicitTimeRequired: String {
+                Localized.get("intent.errors.explicitTimeRequired")
+            }
+
+            static var inaccessibleIntent: String {
+                Localized.get("intent.errors.inaccessibleIntent")
+            }
+
+            static var interrupted: String {
+                Localized.get("intent.errors.interrupted")
+            }
+
+            static var invalidChanges: String {
+                Localized.get("intent.errors.invalidChanges")
+            }
+
+            static var invalidContent: String {
+                Localized.get("intent.errors.invalidContent")
+            }
+
+            static var invalidInitiativeID: String {
+                Localized.get("intent.errors.invalidInitiativeID")
+            }
+
+            static var invalidIntentID: String {
+                Localized.get("intent.errors.invalidIntentID")
+            }
+
+            static var invalidScheduleID: String {
+                Localized.get("intent.errors.invalidScheduleID")
+            }
+
+            static var invalidTime: String {
+                Localized.get("intent.errors.invalidTime")
+            }
+
+            static var invalidWeekdays: String {
+                Localized.get("intent.errors.invalidWeekdays")
+            }
+
+            static var missingChat: String {
+                Localized.get("intent.errors.missingChat")
+            }
+
+            static var missingSchedule: String {
+                Localized.get("intent.errors.missingSchedule")
+            }
+
+            static var permissionRequired: String {
+                Localized.get("intent.errors.permissionRequired")
+            }
+
+            static var providerUnavailable: String {
+                Localized.get("intent.errors.providerUnavailable")
+            }
+
+            static var registrationFailed: String {
+                Localized.get("intent.errors.registrationFailed")
+            }
+
+            static var staleNotification: String {
+                Localized.get("intent.errors.staleNotification")
+            }
+
+            static var unsupportedMonthlySchedule: String {
+                Localized.get("intent.errors.unsupportedMonthlySchedule")
+            }
+        }
+
+        enum State {
+            static var disabled: String {
+                Localized.get("intent.state.disabled")
+            }
+
+            static var failed: String {
+                Localized.get("intent.state.failed")
+            }
+
+            static var pending: String {
+                Localized.get("intent.state.pending")
+            }
+
+            static var scheduled: String {
+                Localized.get("intent.state.scheduled")
             }
         }
     }
@@ -5778,6 +5906,10 @@ enum Localized {
                 Localized.get("tools.agent.advanceFlow")
             }
 
+            static var initiatives: String {
+                Localized.get("tools.agent.initiatives")
+            }
+
             /// Display name for the list-intents tool
             static var listIntents: String {
                 Localized.get("tools.agent.listIntents")
@@ -5786,6 +5918,10 @@ enum Localized {
             /// Display name for the resolve-intent tool
             static var resolveIntent: String {
                 Localized.get("tools.agent.resolveIntent")
+            }
+
+            static var savePreparation: String {
+                Localized.get("tools.agent.savePreparation")
             }
 
             /// Display name for the search-skills tool
@@ -6063,6 +6199,10 @@ enum Localized {
                 Localized.get("tools.description.getWeather")
             }
 
+            static var initiatives: String {
+                Localized.get("tools.description.initiatives")
+            }
+
             /// One-sentence description of the list_chats tool, shown in the tool detail sheet
             static var listChats: String {
                 Localized.get("tools.description.listChats")
@@ -6135,6 +6275,10 @@ enum Localized {
             /// One-sentence description of the resolve_intent tool, shown in the tool detail sheet
             static var resolveIntent: String {
                 Localized.get("tools.description.resolveIntent")
+            }
+
+            static var savePreparation: String {
+                Localized.get("tools.description.savePreparation")
             }
 
             /// One-sentence description of the search_food tool, shown in the tool detail sheet

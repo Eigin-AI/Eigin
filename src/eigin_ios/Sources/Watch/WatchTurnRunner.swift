@@ -41,7 +41,7 @@ enum WatchTurnRunner {
             connectedCapabilities: connected
         )
 
-        let turn = await MessagePipeline.prepareTurn(
+        let turn = try await MessagePipeline.prepareTurn(
             messages: context.messages,
             agent: context.agent,
             space: nil,

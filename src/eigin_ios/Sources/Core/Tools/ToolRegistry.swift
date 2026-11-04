@@ -135,6 +135,14 @@ struct ToolRegistry: ToolExecutor {
                 capabilities: [cap]
             )
         }
+        for kit in allKits {
+            for (name, cap) in kit.capabilityAliases {
+                map[name] = ToolMetadata(
+                    displayName: cap.displayName, description: cap.description,
+                    capabilities: [cap]
+                )
+            }
+        }
         return map
     }()
 

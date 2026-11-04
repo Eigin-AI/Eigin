@@ -67,9 +67,23 @@ protocol IntentService: Sendable {
 /// Default implementation backed by SwiftData.
 final class DefaultIntentService: IntentService, @unchecked Sendable {
     private let modelContainer: ModelContainer
+    private let onChange: @Sendable () async -> Void
+    private let initiatives: (@MainActor @Sendable () -> InitiativeService)?
 
-    init(modelContainer: ModelContainer) {
+    init(
+        modelContainer: ModelContainer,
+        onChange: @escaping @Sendable () async -> Void = {},
+        initiatives: (@MainActor @Sendable () -> InitiativeService)? = nil
+    ) {
         self.modelContainer = modelContainer
+        self.onChange = onChange
+        self.initiatives = initiatives
+    }
+
+    @MainActor private func initiativeUpdates() -> InitiativeService? {
+        guard modelContainer.schema.entities.contains(where: { $0.name == "IntentInitiative" })
+        else { return nil }
+        return initiatives?() ?? InitiativeService(modelContainer: modelContainer)
     }
 
     func activeIntents(
@@ -137,6 +151,16 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         events: [IntentEvent]?,
         schedules: [IntentSchedule]?
     ) async throws {
+        if let schedules, let service = await initiativeUpdates() {
+            try await service.updateIntent(
+                id: id,
+                content: content,
+                tasks: tasks,
+                events: events,
+                schedules: schedules
+            )
+            return
+        }
         let context = ModelContext(modelContainer)
         guard let intent = try fetch(id: id, in: context) else {
             throw IntentServiceError.notFound(id: id)
@@ -147,6 +171,7 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         if let schedules { intent.schedules = schedules }
         intent.updatedAt = .now
         try context.save()
+        await onChange()
     }
 
     func resolve(id: UUID) async throws {
@@ -164,6 +189,7 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         }
         intent.intentStatus = status
         try context.save()
+        await onChange()
     }
 
     private func fetch(id: UUID, in context: ModelContext) throws -> Intent? {

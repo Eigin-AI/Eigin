@@ -4,6 +4,7 @@ import Foundation
 enum KnowledgeToolKit: ToolKit {
     static let capabilities: [ToolCapability] = [
         SearchKnowledgeTool.capability,
+        SavePreparationTool.capability,
         GetKnowledgeTool.capability,
         AddKnowledgeTool.capability,
         UpdateKnowledgeTool.capability,

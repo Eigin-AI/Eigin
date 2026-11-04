@@ -19,7 +19,7 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
+                for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
                 migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
@@ -207,7 +207,15 @@ extension Container {
     }
 
     var intentService: Factory<any IntentService> {
-        self { DefaultIntentService(modelContainer: self.modelContainer()) }.singleton
+        self { DefaultIntentService(modelContainer: self.modelContainer(), onChange: {
+            await Container.shared.initiativeService().reconcile()
+        }, initiatives: { Container.shared.initiativeService() }) }.singleton
+    }
+
+    @MainActor
+    var initiativeService: Factory<InitiativeService> {
+        self { @MainActor in InitiativeService(modelContainer: self.modelContainer()) }
+            .singleton
     }
 
     @MainActor

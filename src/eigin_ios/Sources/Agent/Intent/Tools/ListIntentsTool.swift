@@ -12,6 +12,7 @@ struct ListIntentsTool: Tool {
     var isSmallContext: Bool = false
     let intentService: any IntentService
     let accessPolicy: SpaceAccessPolicy
+    let initiativeService: InitiativeService?
     var displayName: String {
         Self.capability.displayName
     }
@@ -30,10 +31,15 @@ struct ListIntentsTool: Tool {
 
     init(
         intentService: any IntentService = PreviewIntentService(),
-        accessPolicy: SpaceAccessPolicy = SpaceAccessPolicy(currentSpaceID: nil, publicSpaceIDs: [])
+        accessPolicy: SpaceAccessPolicy = SpaceAccessPolicy(
+            currentSpaceID: nil,
+            publicSpaceIDs: []
+        ),
+        initiativeService: InitiativeService? = nil
     ) {
         self.intentService = intentService
         self.accessPolicy = accessPolicy
+        self.initiativeService = initiativeService
     }
 
     func definition() -> ToolDefinition {
@@ -77,12 +83,18 @@ struct ListIntentsTool: Tool {
                 )
             }
             let now = Date.now
+            let initiatives = (try? initiativeService?.list(
+                agentID: agent.id,
+                spaceID: accessPolicy.currentSpaceID
+            )) ?? []
             let items: [[String: Any]] = intents.map { intent in
                 var entry: [String: Any] = [
                     "id": intent.id.uuidString,
                     "content": intent.content,
                     "days_active": Int(now.timeIntervalSince(intent.createdAt) / 86400),
                 ]
+                entry["initiatives"] = initiatives
+                    .filter { $0["intent_id"] == intent.id.uuidString }
                 if !intent.tasks.isEmpty {
                     entry["tasks"] = intent.tasks.map { Self.taskEntry($0) }
                     entry["open_task_count"] = intent.tasks.count { !$0.completed }

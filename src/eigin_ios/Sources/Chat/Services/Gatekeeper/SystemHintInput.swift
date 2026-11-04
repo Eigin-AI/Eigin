@@ -62,4 +62,5 @@ struct SystemHintInput {
     /// needs minimal hydration. Sources check this flag to truncate output.
     /// Small-context models also don't receive tools.
     let isSmallContext: Bool
+    var chatID: UUID?
 }

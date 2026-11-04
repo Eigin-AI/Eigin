@@ -9,6 +9,15 @@ protocol ToolKit {
     /// Capabilities this kit exposes (for permissions UI and catalog).
     static var capabilities: [ToolCapability] { get }
 
+    /// Execution names that use a different permission capability key.
+    static var capabilityAliases: [String: ToolCapability] { get }
+
     /// Create all tools this kit provides for the given invocation context.
     @MainActor static func tools(context: ToolContext) -> [any Tool]
+}
+
+extension ToolKit {
+    static var capabilityAliases: [String: ToolCapability] {
+        [:]
+    }
 }
