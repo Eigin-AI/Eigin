@@ -2,6 +2,16 @@
 
 Provides the `email` capability via Gmail's REST API: list, search, read, send, and reply.
 
+## Folders and labels
+
+- `email_list_folders` discovers available folders and returns their IDs and names.
+- Pass a returned ID as optional `folder_id` to `email_list` or `email_search`.
+- IDs are opaque and scoped to the connected account. Discover them again when switching accounts.
+- When paging, pass `next_page_token` back as `page_token` and keep the same folder and search query.
+- Gmail folders are labels: one message can belong to several labels.
+- Selecting Spam or Trash includes messages in that label. Unscoped requests keep Gmail's default exclusions.
+- Discovery and filtering use the existing `gmail.readonly` permission.
+
 ## Requirements
 
 | Requirement | Notes |
@@ -14,3 +24,9 @@ Provides the `email` capability via Gmail's REST API: list, search, read, send, 
 ## Partial consent
 
 Google's consent screen lets scopes be approved individually. Denying one still connects the account, but Eigin only exposes tools for what was actually granted — the connection detail screen shows which.
+
+## API references
+
+- [List labels](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.labels/list).
+- [List messages](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list): `labelIds`, `q`, `includeSpamTrash`, and pagination.
+- [Gmail discovery document](https://gmail.googleapis.com/$discovery/rest?version=v1): `labelIds` is a repeated query parameter; the wire name has no brackets.

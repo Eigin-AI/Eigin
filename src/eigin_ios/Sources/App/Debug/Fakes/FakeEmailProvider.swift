@@ -4,6 +4,15 @@ import Foundation
 /// Configurable fake ``EmailProvider`` for exercising the email tools in
 /// isolation from any real backend.
 final class FakeEmailProvider: EmailProvider, @unchecked Sendable {
+    var searchQueryDescription = "Search with plain text."
+    var folders: [EmailFolder] = []
+    private(set) var lastFolderID: String?
+
+    func listFolders() async throws -> [EmailFolder] {
+        if let errorToThrow { throw errorToThrow }
+        return folders
+    }
+
     var summaries: [EmailSummary] = []
     var nextPageToken: String?
     var message: EmailMessage = .init(
@@ -28,19 +37,26 @@ final class FakeEmailProvider: EmailProvider, @unchecked Sendable {
     private(set) var lastReplyMessageID: String?
     private(set) var lastReplyBody: String?
 
-    func listEmails(maxResults: Int, pageToken: String?) async throws -> EmailPage {
+    func listEmails(
+        folderID: String? = nil,
+        maxResults: Int,
+        pageToken: String?
+    ) async throws -> EmailPage {
         if let errorToThrow { throw errorToThrow }
+        lastFolderID = folderID
         lastPageToken = pageToken
         return EmailPage(messages: summaries, nextPageToken: nextPageToken)
     }
 
     func searchEmails(
         query: String,
+        folderID: String? = nil,
         maxResults: Int,
         pageToken: String?
     ) async throws -> EmailPage {
         if let errorToThrow { throw errorToThrow }
         lastSearchQuery = query
+        lastFolderID = folderID
         lastPageToken = pageToken
         return EmailPage(messages: summaries, nextPageToken: nextPageToken)
     }

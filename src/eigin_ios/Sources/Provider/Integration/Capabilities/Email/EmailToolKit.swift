@@ -4,6 +4,7 @@ import Foundation
 /// permissions UI even when no email integration is connected.
 enum EmailToolCapabilities {
     static let all: [ToolCapability] = [
+        ListEmailFoldersTool.capability,
         ListEmailsTool.capability,
         SearchEmailsTool.capability,
         ReadEmailTool.capability,
@@ -12,7 +13,7 @@ enum EmailToolCapabilities {
     ]
 }
 
-/// Builds the five email tools for a connected ``EmailProvider`` backend.
+/// Builds the supported email tools for a connected ``EmailProvider`` backend.
 enum EmailToolKit {
     static func tools(provider: any EmailProvider) -> [any Tool] {
         [
@@ -21,6 +22,7 @@ enum EmailToolKit {
             ReadEmailTool(provider: provider),
             SendEmailTool(provider: provider),
             ReplyEmailTool(provider: provider),
+            ListEmailFoldersTool(provider: provider),
         ]
     }
 }

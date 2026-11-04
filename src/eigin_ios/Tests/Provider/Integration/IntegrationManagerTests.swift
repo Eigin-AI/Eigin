@@ -137,15 +137,15 @@ struct IntegrationManagerTests {
         )
         microsoft.createdAt = laterDate
 
-        // Both connected: only the earlier-created integration's five tools
-        // contribute — not both providers' tools stacked (which would be 10
+        // Both connected: only the earlier-created integration's six tools
+        // contribute — not both providers' tools stacked (which would be 12
         // same-named tools colliding in `ToolRegistry`).
         let bothConnected = manager.toolsByCapability(
             integrations: [google, microsoft],
             selections: [],
             context: ToolContext()
         )
-        #expect((bothConnected[.email] ?? []).count == 5)
+        #expect((bothConnected[.email] ?? []).count == 6)
 
         // Disconnecting the winner (drop it from the integrations list) lets
         // the remaining provider take over.
@@ -155,7 +155,14 @@ struct IntegrationManagerTests {
             context: ToolContext()
         )
         let names = Set((microsoftOnly[.email] ?? []).map(\.name))
-        #expect(names == ["email_list", "email_search", "email_read", "email_send", "email_reply"])
+        #expect(names == [
+            "email_list",
+            "email_search",
+            "email_read",
+            "email_send",
+            "email_reply",
+            "email_list_folders",
+        ])
     }
 
     // MARK: - activeIntegration / provider selection

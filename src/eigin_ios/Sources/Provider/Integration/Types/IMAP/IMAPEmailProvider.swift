@@ -35,16 +35,31 @@ struct IMAPEmailProvider: EmailProvider {
 
     // MARK: - EmailProvider
 
-    func listEmails(maxResults: Int, pageToken: String?) async throws -> EmailPage {
-        try await search(query: nil, maxResults: maxResults, pageToken: pageToken)
+    var searchQueryDescription: String {
+        "Search this IMAP account's INBOX using plain text. Field operators are unsupported."
+    }
+
+    func listEmails(
+        folderID: String? = nil,
+        maxResults: Int,
+        pageToken: String?
+    ) async throws -> EmailPage {
+        guard folderID == nil else {
+            throw EmailProviderError.requestFailed("Folder access is unsupported by this provider.")
+        }
+        return try await search(query: nil, maxResults: maxResults, pageToken: pageToken)
     }
 
     func searchEmails(
         query: String,
+        folderID: String? = nil,
         maxResults: Int,
         pageToken: String?
     ) async throws -> EmailPage {
-        try await search(query: query, maxResults: maxResults, pageToken: pageToken)
+        guard folderID == nil else {
+            throw EmailProviderError.requestFailed("Folder access is unsupported by this provider.")
+        }
+        return try await search(query: query, maxResults: maxResults, pageToken: pageToken)
     }
 
     func readEmail(id: String) async throws -> EmailMessage {

@@ -14,6 +14,29 @@ struct IMAPEmailProviderTests {
         password: "secret"
     )
 
+    @Test func folderScopeIsUnsupportedAndDoesNotOpenSession() async throws {
+        let session = FakeIMAPSession()
+        let provider: any EmailProvider = IMAPEmailProvider(
+            integrationID: UUID(), credentialStore: FakeIMAPCredentialStore(),
+            makeIMAPSession: { session }, makeSMTPSession: { FakeSMTPSession() }
+        )
+        await #expect(throws: EmailProviderError.self) {
+            try await provider.listFolders()
+        }
+        await #expect(throws: EmailProviderError.self) {
+            try await provider.listEmails(folderID: "Sent", maxResults: 10, pageToken: nil)
+        }
+        await #expect(throws: EmailProviderError.self) {
+            try await provider.searchEmails(
+                query: "invoice",
+                folderID: "Sent",
+                maxResults: 10,
+                pageToken: nil
+            )
+        }
+        #expect(session.openedSettings == nil)
+    }
+
     @Test func listEmailsSortsNewestFirstAndPaginates() async throws {
         let integrationID = UUID()
         let credentialStore = FakeIMAPCredentialStore()

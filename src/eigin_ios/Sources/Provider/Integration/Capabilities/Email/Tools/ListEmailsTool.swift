@@ -36,18 +36,22 @@ struct ListEmailsTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "List recent emails from the connected inbox, newest first.",
+            description: "List recent emails from the connected account.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
-                    "max_results": .init(
+                    "max_results": JSONSchema.Property(
                         type: "string",
                         description: "Maximum number of messages to return "
                             + "(default \(Self.defaultResults), max \(Self.maxResults))."
                     ),
-                    "page_token": .init(
+                    "page_token": JSONSchema.Property(
                         type: "string",
                         description: "Pass the `next_page_token` from a previous call to fetch the next page."
+                    ),
+                    "folder_id": JSONSchema.Property(
+                        type: "string",
+                        description: "Folder or label ID from email_list_folders. Omit for provider default; retain when paging."
                     ),
                 ],
                 required: []
@@ -63,6 +67,7 @@ struct ListEmailsTool: Tool {
 
         do {
             let page = try await provider.listEmails(
+                folderID: args["folder_id"] as? String,
                 maxResults: min(max(maxResults, Self.minResults), Self.maxResults),
                 pageToken: pageToken
             )

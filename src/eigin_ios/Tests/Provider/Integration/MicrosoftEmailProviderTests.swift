@@ -35,6 +35,98 @@ struct MicrosoftEmailProviderTests {
         )
     }
 
+    @Test func discoversNestedFoldersAndPages() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let next = "\(Self.base)/mailFolders?$skip=1"
+        let childNext = "\(Self.base)/mailFolders/parent/childFolders?$skip=1"
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/mailFolders",
+            data: Data(
+                "{\"value\":[{\"id\":\"parent\",\"displayName\":\"Work\",\"childFolderCount\":1}],\"@odata.nextLink\":\"\(next)\"}"
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: next,
+            data: Data(#"{"value":[{"id":"sent","displayName":"Sent","childFolderCount":0}]}"#
+                .utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/mailFolders/parent/childFolders",
+            data: Data(
+                "{\"value\":[{\"id\":\"child\",\"displayName\":\"Receipts\",\"parentFolderId\":\"parent\",\"childFolderCount\":0}],\"@odata.nextLink\":\"\(childNext)\"}"
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: childNext,
+            data: Data(
+                #"{"value":[{"id":"child-2","displayName":"Invoices","parentFolderId":"parent","childFolderCount":0}]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        let folders = try await makeProvider(session: session).listFolders()
+        #expect(folders.map(\.id) == ["parent", "sent", "child", "child-2"])
+        #expect(folders.last?.parentID == "parent")
+    }
+
+    @Test(arguments: ["folder-1", "folder/with?reserved#chars%+="])
+    func scopesMessagesAndSearchToFolder(folderID: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let encodedID = folderID == "folder-1" ? "folder-1" : "folder%2Fwith%3Freserved%23chars%25%2B%3D"
+        let endpoint = "\(Self.base)/mailFolders/\(encodedID)/messages"
+        let searchNext = "\(endpoint)?$search=%22invoice%22&$skiptoken=opaque"
+        let next = "\(endpoint)?$skip=5"
+        FakeURLProtocol.stubResponse(
+            for: "\(endpoint)?$top=5&$select=\(Self.summarySelect)",
+            data: Data("{\"value\":[],\"@odata.nextLink\":\"\(next)\"}".utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(for: next, data: Data(#"{"value":[]}"#.utf8), statusCode: 200)
+        FakeURLProtocol.stubResponse(
+            for: "\(endpoint)?$top=5&$select=\(Self.summarySelect)&$search=%22invoice%22",
+            data: Data("{\"value\":[],\"@odata.nextLink\":\"\(searchNext)\"}".utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: searchNext,
+            data: Data(#"{"value":[{"id":"match"}]}"#.utf8),
+            statusCode: 200
+        )
+        let provider = makeProvider(session: session)
+        let first = try await provider.listEmails(
+            folderID: folderID,
+            maxResults: 5,
+            pageToken: nil
+        )
+        #expect(first.nextPageToken == next)
+        let second = try await provider.listEmails(
+            folderID: folderID,
+            maxResults: 5,
+            pageToken: first.nextPageToken
+        )
+        #expect(second.nextPageToken == nil)
+        let search = try await provider.searchEmails(
+            query: "invoice",
+            folderID: folderID,
+            maxResults: 5,
+            pageToken: nil
+        )
+        #expect(search.nextPageToken == searchNext)
+        let nextSearch = try await provider.searchEmails(
+            query: "invoice",
+            folderID: folderID,
+            maxResults: 5,
+            pageToken: search.nextPageToken
+        )
+        #expect(nextSearch.messages.map(\.id) == ["match"])
+        #expect(nextSearch.nextPageToken == nil)
+    }
+
     @Test func listEmailsFetchesAllSummariesInOneCall() async throws {
         let session = FakeURLProtocol.fakeSession()
         FakeURLProtocol.stubResponse(

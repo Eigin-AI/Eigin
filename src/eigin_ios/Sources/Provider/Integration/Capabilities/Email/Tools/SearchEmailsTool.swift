@@ -36,22 +36,26 @@ struct SearchEmailsTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Search emails in the connected inbox by sender, subject, or content.",
+            description: "Search emails in the connected account by sender, subject, or content.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
-                    "query": .init(
+                    "query": JSONSchema.Property(
                         type: "string",
-                        description: "Search query (e.g. 'from:alice subject:invoice')."
+                        description: provider.searchQueryDescription
                     ),
-                    "max_results": .init(
+                    "max_results": JSONSchema.Property(
                         type: "string",
                         description: "Maximum number of messages to return "
                             + "(default \(Self.defaultResults), max \(Self.maxResults))."
                     ),
-                    "page_token": .init(
+                    "page_token": JSONSchema.Property(
                         type: "string",
                         description: "Pass the `next_page_token` from a previous call to fetch the next page."
+                    ),
+                    "folder_id": JSONSchema.Property(
+                        type: "string",
+                        description: "Folder or label ID from email_list_folders. Omit for provider default; retain when paging."
                     ),
                 ],
                 required: ["query"]
@@ -84,6 +88,7 @@ struct SearchEmailsTool: Tool {
         do {
             let page = try await provider.searchEmails(
                 query: query,
+                folderID: args["folder_id"] as? String,
                 maxResults: min(max(maxResults, Self.minResults), Self.maxResults),
                 pageToken: pageToken
             )

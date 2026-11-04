@@ -50,16 +50,73 @@ struct MicrosoftEmailProvider: EmailProvider {
 
     // MARK: - EmailProvider
 
-    func listEmails(maxResults: Int, pageToken: String?) async throws -> EmailPage {
-        try await fetchPage(searchQuery: nil, maxResults: maxResults, pageToken: pageToken)
+    func listFolders() async throws -> [EmailFolder] {
+        let token = try await accessToken()
+        var pending = [Self.baseURL.appendingPathComponent("mailFolders")]
+        var folders: [EmailFolder] = []
+        var seen = Set<String>()
+        while let firstURL = pending.popLast() {
+            var nextURL: URL? = firstURL
+            while let url = nextURL {
+                let page = try await get(url, token: token).decoded(GraphFolderList.self)
+                for folder in page.value where seen.insert(folder.id).inserted {
+                    folders.append(EmailFolder(
+                        id: folder.id,
+                        name: folder.displayName,
+                        parentID: folder.parentFolderId
+                    ))
+                    if folder.childFolderCount > 0 {
+                        pending
+                            .append(Self.folderURL(folder.id)
+                                .appendingPathComponent("childFolders"))
+                    }
+                }
+                nextURL = page.nextLink.flatMap { URL(string: $0) }
+            }
+        }
+        return folders
+    }
+
+    private static func folderURL(_ id: String) -> URL {
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent("mailFolders"),
+            resolvingAgainstBaseURL: false
+        )!
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+        components.percentEncodedPath += "/" + id
+            .addingPercentEncoding(withAllowedCharacters: allowed)!
+        return components.url!
+    }
+
+    var searchQueryDescription: String {
+        "Search this Microsoft account using Graph message KQL, e.g. from:alice@example.com subject:invoice. Supply the query without surrounding quotes."
+    }
+
+    func listEmails(
+        folderID: String? = nil,
+        maxResults: Int,
+        pageToken: String?
+    ) async throws -> EmailPage {
+        try await fetchPage(
+            searchQuery: nil,
+            maxResults: maxResults,
+            pageToken: pageToken,
+            folderID: folderID
+        )
     }
 
     func searchEmails(
         query: String,
+        folderID: String? = nil,
         maxResults: Int,
         pageToken: String?
     ) async throws -> EmailPage {
-        try await fetchPage(searchQuery: query, maxResults: maxResults, pageToken: pageToken)
+        try await fetchPage(
+            searchQuery: query,
+            maxResults: maxResults,
+            pageToken: pageToken,
+            folderID: folderID
+        )
     }
 
     func readEmail(id: String) async throws -> EmailMessage {
@@ -128,7 +185,8 @@ struct MicrosoftEmailProvider: EmailProvider {
     private func fetchPage(
         searchQuery: String?,
         maxResults: Int,
-        pageToken: String?
+        pageToken: String?,
+        folderID: String? = nil
     ) async throws -> EmailPage {
         let token = try await accessToken()
 
@@ -140,7 +198,8 @@ struct MicrosoftEmailProvider: EmailProvider {
             url = nextURL
         } else {
             var components = URLComponents(
-                url: Self.baseURL.appendingPathComponent("messages"),
+                url: folderID.map { Self.folderURL($0).appendingPathComponent("messages") }
+                    ?? Self.baseURL.appendingPathComponent("messages"),
                 resolvingAgainstBaseURL: false
             )!
             var items = [
@@ -307,5 +366,21 @@ private struct GraphMessage: Decodable {
             body: body?.content ?? bodyPreview ?? "",
             date: receivedDateTime ?? ""
         )
+    }
+}
+
+private struct GraphFolderList: Decodable {
+    let value: [Folder]
+    let nextLink: String?
+    enum CodingKeys: String, CodingKey {
+        case value
+        case nextLink = "@odata.nextLink"
+    }
+
+    struct Folder: Decodable {
+        let id: String
+        let displayName: String
+        let parentFolderId: String?
+        let childFolderCount: Int
     }
 }
