@@ -64,14 +64,16 @@ extension AgenticChatLoop {
         let dispatch: @Sendable (String) async throws -> AsyncThrowingStream<
             ChatStreamEvent, Error
         > = { model in
-            try await chatService.chatCompletionEventStream(
+            let effort = await router.reasoningEffort(for: model, request: request)
+            return try await chatService.chatCompletionEventStream(
                 baseURL: host,
                 providerID: hostID,
                 messages: messages,
                 model: model,
                 tools: tools,
                 cacheKey: cacheKey,
-                inlineToolRunner: inlineToolRunner
+                inlineToolRunner: inlineToolRunner,
+                reasoningEffort: effort
             )
         }
 

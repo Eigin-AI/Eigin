@@ -47,8 +47,8 @@ extension DefaultModelRouter {
         let ranked = KnownModelCatalog.knownModels(in: offer(for: provider))
             .sorted { a, b in
                 let (aTier, bTier) = (
-                    tierOrder(of: a, wantsReasoning: needsReasoning),
-                    tierOrder(of: b, wantsReasoning: needsReasoning)
+                    tierOrder(of: a, wantsReasoning: needsReasoning, provider: provider),
+                    tierOrder(of: b, wantsReasoning: needsReasoning, provider: provider)
                 )
                 if aTier != bTier { return aTier < bTier }
                 return rank(of: a) < rank(of: b)
@@ -131,7 +131,13 @@ extension DefaultModelRouter {
     /// Where a model sits in the turn's tier ordering: 0 is the tier the turn wants,
     /// 1 the one it will settle for. Unknown-to-catalog models are treated as
     /// non-reasoning, matching their bottom-of-the-ranking treatment.
-    private func tierOrder(of model: String, wantsReasoning: Bool) -> Int {
+    private func tierOrder(
+        of model: String,
+        wantsReasoning: Bool,
+        provider: RoutingProvider
+    ) -> Int {
+        if KnownModelCatalog
+            .reasoningControl(for: model, baseURL: provider.baseURL) != nil { return 0 }
         let isReasoning = KnownModelCatalog.lookup(model)?.supportsReasoning ?? false
         return isReasoning == wantsReasoning ? 0 : 1
     }

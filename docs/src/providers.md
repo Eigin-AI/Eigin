@@ -57,6 +57,11 @@ Routing has a second axis: how much reasoning the message needs. The score picks
 **tier**, with `preferenceRanking` ordering models within each tier — fast (non-
 reasoning) or careful (reasoning).
 
+For models with verified reasoning controls, Auto raises effort from the lowest
+supported setting to `high`, keeping the model when eligible. Pinned models use
+provider defaults. [#366](https://code.eigin.ai/dev/eigin/-/issues/366) tracks
+reasoning-history replay and the quality evaluation required before rollout.
+
 ### Step-up rules
 
 - Two or more reasoning markers ("step by step", "tænk igennem") always step up, regardless of score. A stepped-up conversation stays there: a reasoning model answers simple follow-ups without collapsing back, which keeps the prompt cache warm.

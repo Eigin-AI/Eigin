@@ -24,6 +24,7 @@ actor DefaultModelRouter: ModelRouter {
     /// conversation on the fast tier costs nothing. In-memory only — after a
     /// relaunch, conversations anchor on `agent.model` until their next turn.
     var lastModelByConversation: [UUID: String] = [:]
+    var reasoningConversations: Set<UUID> = []
     var sawOfflineFailure = false
     var wasReachable = true
 
@@ -74,14 +75,17 @@ actor DefaultModelRouter: ModelRouter {
             // Clear the memory first: the reset turn is judged by the message alone,
             // so every conversation — locked or not — restarts on the fast tier.
             lastModelByConversation.removeAll()
+            reasoningConversations.removeAll()
         }
         let conversationIsNew = neverRouted(request.conversationID)
         let anchor = conversationAnchor(for: request)
         // A conversation already locked into reasoning keeps that tier on forced
         // switches (an image arriving, say); fresh conversations go by the message.
         let wantsReasoning = messageNeedsReasoning
-            || (request.conversationID != nil && !conversationIsNew
-                && KnownModelCatalog.lookup(anchor)?.supportsReasoning == true)
+            || reasoningConversations.contains(request.conversationID ?? request.currentProviderID)
+        if wantsReasoning {
+            reasoningConversations.insert(request.conversationID ?? request.currentProviderID)
+        }
         let candidates = rankedCandidates(
             for: request, provider: provider, at: timestamp, needsReasoning: wantsReasoning
         )
@@ -154,6 +158,11 @@ actor DefaultModelRouter: ModelRouter {
            route.providerID == request.currentProviderID
         {
             lastModelByConversation[id] = route.model
+            if KnownModelCatalog.reasoningControl(for: route.model, baseURL: route.baseURL) == nil,
+               KnownModelCatalog.lookup(route.model)?.supportsReasoning == true
+            {
+                reasoningConversations.insert(id)
+            }
         }
         return route
     }
@@ -216,8 +225,7 @@ actor DefaultModelRouter: ModelRouter {
     func retry(after error: Error, request: RouteRequest) async -> ResolvedRoute? {
         let failure = RoutingFailure(from: error)
         let timestamp = now()
-        let needsReasoning = QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
-            || KnownModelCatalog.lookup(request.currentModel)?.supportsReasoning == true
+        let needsReasoning = reasoningDemand(for: request, model: request.currentModel)
 
         guard request.isAuto, let provider = request.currentProvider else { return nil }
         guard failure.blamesModel else {
@@ -228,6 +236,9 @@ actor DefaultModelRouter: ModelRouter {
             return nil
         }
 
+        if needsReasoning {
+            reasoningConversations.insert(request.conversationID ?? request.currentProviderID)
+        }
         apply(failure: failure, to: request.currentModel, at: timestamp)
 
         let candidates = rankedCandidates(
@@ -254,6 +265,27 @@ actor DefaultModelRouter: ModelRouter {
         return storingAnchor(
             route(to: next, on: provider, change: change), for: request
         )
+    }
+
+    /// Session demand is independent of whether an adjustable model can reason.
+    func reasoningDemand(for request: RouteRequest, model: String) -> Bool {
+        QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
+            || reasoningConversations.contains(request.conversationID ?? request.currentProviderID)
+            || (KnownModelCatalog.reasoningControl(
+                for: model, baseURL: request.currentProvider?.baseURL ?? ""
+            ) == nil && KnownModelCatalog.lookup(model)?.supportsReasoning == true)
+    }
+
+    func reasoningEffort(for model: String, request: RouteRequest) async -> ReasoningEffort? {
+        guard request.isAuto, let provider = request.currentProvider,
+              let control = KnownModelCatalog.reasoningControl(
+                  for: model,
+                  baseURL: provider.baseURL
+              )
+        else { return nil }
+        let escalated = QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
+            || reasoningConversations.contains(request.conversationID ?? request.currentProviderID)
+        return escalated ? control.escalatedEffort : control.fastEffort
     }
 
     // MARK: - Capability

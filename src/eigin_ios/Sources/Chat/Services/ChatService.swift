@@ -31,9 +31,25 @@ protocol ChatService: Sendable {
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
+    func chatCompletionEventStream(
+        baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
+        tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort: ReasoningEffort?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
 }
 
 extension ChatService {
+    func chatCompletionEventStream(
+        baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
+        tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort _: ReasoningEffort?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            baseURL: baseURL, providerID: providerID, messages: messages, model: model,
+            tools: tools, cacheKey: cacheKey, inlineToolRunner: inlineToolRunner
+        )
+    }
+
     /// Default implementation: ignores the runner and forwards to the
     /// standard method. Cloud providers adopt this automatically.
     func chatCompletionEventStream(
@@ -120,6 +136,23 @@ struct DefaultChatService: ChatService {
         cacheKey: String?,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            baseURL: baseURL, providerID: providerID, messages: messages, model: model,
+            tools: tools, cacheKey: cacheKey, inlineToolRunner: inlineToolRunner,
+            reasoningEffort: nil
+        )
+    }
+
+    func chatCompletionEventStream(
+        baseURL: String,
+        providerID: UUID,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        cacheKey: String?,
+        inlineToolRunner: InlineToolRunner?,
+        reasoningEffort: ReasoningEffort?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         guard !consentStore.needsConsent(baseURL: baseURL) else {
             throw AIConsentError.notAllowed
         }
@@ -154,7 +187,8 @@ struct DefaultChatService: ChatService {
                 messages: messages,
                 model: model,
                 tools: tools,
-                cacheKey: cacheKey
+                cacheKey: cacheKey,
+                reasoningEffort: reasoningEffort
             )
         }
     }

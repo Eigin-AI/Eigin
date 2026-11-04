@@ -17,6 +17,10 @@ protocol LLMClient: Sendable {
         cacheKey: String?
     ) async throws
         -> AsyncThrowingStream<ChatStreamEvent, Error>
+    func chatCompletionEventStream(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, reasoningEffort: ReasoningEffort?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error>
 }
 
 /// Creates the appropriate ``LLMClient`` based on the provider's base URL.
@@ -50,5 +54,19 @@ enum LLMClientFactory {
             )
         }
         return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken)
+    }
+}
+
+extension LLMClient {
+    func chatCompletionEventStream(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, reasoningEffort _: ReasoningEffort?
+    ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await chatCompletionEventStream(
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey
+        )
     }
 }

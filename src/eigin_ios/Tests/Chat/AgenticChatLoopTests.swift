@@ -1,6 +1,7 @@
 @testable import Eigin
 import Factory
 import Foundation
+import os
 import SwiftData
 import Testing
 
@@ -31,6 +32,72 @@ struct AgenticChatLoopTests {
         return ToolRegistry.chat(
             permissionPolicy: AlwaysAllowPolicy()
         ).definitions
+    }
+
+    @Test(arguments: ["same-model", "retry", "hedge"])
+    @MainActor func dispatchesSessionEffortAcrossTurnsAndFallbacks(mode: String) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        provider.baseURL = "https://api.mistral.ai/v1"
+        provider.availableModels = mode == "same-model"
+            ? ["mistral-large-4-0"] : ["mistral-medium-3-5", "mistral-large-4-0"]
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(), localModelReadiness: { false }
+        )
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+        let conversation = UUID()
+        let routingProvider = RoutingProvider(
+            id: provider.id, name: provider.name, baseURL: provider.baseURL,
+            availableModels: provider.availableModels
+        )
+        let service = ObservedChatService { _, _, _ in }
+        let calls = OSAllocatedUnfairLock(initialState: [(String, ReasoningEffort?)]())
+        service.observeEffort = { model, effort in calls.withLock { $0.append((model, effort)) } }
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let texts = ["Hello", "Analyze and compare trade-offs step by step. Explain why.", "Thanks"]
+        var firstModel = ""
+        for (index, text) in texts.enumerated() {
+            let request = RouteRequest(
+                currentProviderID: provider.id, currentModel: agent.model, isAuto: true,
+                requirements: RouteRequirements(), providers: [routingProvider],
+                conversationID: conversation, lastUserMessage: text
+            )
+            let route = await router.resolve(request)
+            agent.model = route.model
+            loop.activeModel = route.model
+            if index == 0 { firstModel = route.model }
+            if index == 2, mode == "retry" {
+                service.scripted.throwOnEventStream(OpenAICompatibleClientError.httpError(
+                    503,
+                    body: nil
+                ))
+            }
+            if index == 2, mode == "hedge" {
+                service.scripted.delayBeforeStream(.seconds(7))
+            }
+            service.scripted.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
+            if index == 2, mode == "hedge" {
+                service.scripted.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
+            }
+            let stream = try await loop.openStream(
+                chatService: service, provider: provider, agent: agent,
+                messages: [ChatMessage(role: "user", content: text)], tools: nil,
+                cacheKey: nil, routing: request, conversationID: conversation
+            )
+            for try await _ in stream.stream {}
+        }
+        let dispatched = calls.withLock { $0 }
+        #expect(dispatched[0].1 == .low)
+        #expect(dispatched[1].0 == firstModel)
+        #expect(dispatched.dropFirst().allSatisfy { $0.1 == .high })
+        if mode == "same-model" {
+            #expect(dispatched.count == 3)
+            #expect(dispatched.allSatisfy { $0.0 == firstModel })
+        } else {
+            #expect(dispatched.count == 4)
+            #expect(dispatched.last?.0 != firstModel)
+        }
     }
 
     @Test @MainActor func contentOnlyResponseReturnsSingleMessage() async throws {
