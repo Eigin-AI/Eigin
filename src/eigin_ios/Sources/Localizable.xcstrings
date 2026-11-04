@@ -18833,6 +18833,40 @@
         }
       }
     },
+    "tools.email.listFolders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List email folders"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis mailmapper"
+          }
+        }
+      }
+    },
+    "tools.description.emailListFolders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List folders and labels in your email account"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vis mapper og etiketter i din mailkonto"
+          }
+        }
+      }
+    },
     "tools.email.list": {
       "comment": "Display name for the list-emails tool",
       "localizations": {

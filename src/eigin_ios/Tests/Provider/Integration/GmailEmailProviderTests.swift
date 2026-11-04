@@ -27,6 +27,72 @@ struct GmailEmailProviderTests {
 
     private let integrationID = UUID()
 
+    @Test func discoversLabels() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/labels",
+            data: Data(
+                #"{"labels":[{"id":"INBOX","name":"INBOX"},{"id":"Label_1","name":"Work/Receipts"}]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        let folders = try await makeProvider(session: session).listFolders()
+        #expect(folders == [
+            EmailFolder(id: "INBOX", name: "INBOX", parentID: nil),
+            EmailFolder(id: "Label_1", name: "Work/Receipts", parentID: nil),
+        ])
+    }
+
+    @Test(arguments: ["Label_1", "SPAM", "TRASH"])
+    func scopesListingAndSearchToLabels(label: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let flags = label == "Label_1" ? "" : "&includeSpamTrash=true"
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages?maxResults=5&labelIds=\(label)\(flags)",
+            data: Data(#"{"messages":[],"nextPageToken":"next"}"#.utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages?maxResults=5&labelIds=\(label)\(flags)&pageToken=next",
+            data: Data(#"{"messages":[]}"#.utf8),
+            statusCode: 200
+        )
+        let provider = makeProvider(session: session)
+        let first = try await provider.listEmails(folderID: label, maxResults: 5, pageToken: nil)
+        #expect(first.nextPageToken == "next")
+        let page = try await provider.listEmails(
+            folderID: label,
+            maxResults: 5,
+            pageToken: first.nextPageToken
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages?maxResults=5&labelIds=\(label)\(flags)&q=invoice",
+            data: Data(#"{"messages":[],"nextPageToken":"search-next"}"#.utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages?maxResults=5&labelIds=\(label)\(flags)&q=invoice&pageToken=search-next",
+            data: Data(#"{"messages":[]}"#.utf8),
+            statusCode: 200
+        )
+        let search = try await provider.searchEmails(
+            query: "invoice",
+            folderID: label,
+            maxResults: 5,
+            pageToken: nil
+        )
+        #expect(search.nextPageToken == "search-next")
+        let searchNext = try await provider.searchEmails(
+            query: "invoice",
+            folderID: label,
+            maxResults: 5,
+            pageToken: search.nextPageToken
+        )
+        #expect(searchNext.nextPageToken == nil)
+        #expect(page.messages.isEmpty)
+    }
+
     @Test func listEmailsFetchesMessagesThenMetadataForEach() async throws {
         let session = FakeURLProtocol.fakeSession()
         FakeURLProtocol.stubResponse(

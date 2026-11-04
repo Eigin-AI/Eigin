@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 import Testing
 
-/// Drives the five email tools against a fake ``EmailProvider``, verifying
+/// Drives the email tools against a fake ``EmailProvider``, verifying
 /// argument parsing, result envelopes, and error paths — the tools are the
 /// firm agent-facing contract, so their behavior matters more than any one
 /// backend.
@@ -27,6 +27,58 @@ struct EmailToolsTests {
             type: "function",
             function: .init(name: name, arguments: arguments)
         )
+    }
+
+    @Test @MainActor func foldersAreDiscoveredAndForwarded() async throws {
+        let provider = FakeEmailProvider()
+        provider.folders = [EmailFolder(id: "folder-1", name: "Receipts", parentID: nil)]
+        let agent = try makeAgent()
+        let folders = await ListEmailFoldersTool(provider: provider).execute(
+            call("email_list_folders", "{}"),
+            agent: agent
+        )
+        #expect(!folders.isError)
+        #expect(folders.content.contains("Receipts"))
+        let list = await ListEmailsTool(provider: provider).execute(
+            call("email_list", #"{"folder_id":"folder-1","page_token":"next"}"#),
+            agent: agent
+        )
+        #expect(!list.isError)
+        #expect(provider.lastFolderID == "folder-1")
+        #expect(provider.lastPageToken == "next")
+        let search = await SearchEmailsTool(provider: provider).execute(
+            call("email_search", #"{"folder_id":"folder-1","query":"invoice"}"#),
+            agent: agent
+        )
+        #expect(!search.isError)
+        #expect(provider.lastFolderID == "folder-1")
+        #expect(provider.lastSearchQuery == "invoice")
+    }
+
+    @Test @MainActor func unsupportedFolderAccessReturnsAnError() async throws {
+        let provider = IMAPEmailProvider(
+            integrationID: UUID(),
+            credentialStore: FakeIMAPCredentialStore()
+        )
+        #expect(EmailToolKit.tools(provider: provider).contains { $0.name == "email_list_folders" })
+        let agent = try makeAgent()
+        let folders = await ListEmailFoldersTool(provider: provider).execute(
+            call("email_list_folders", "{}"),
+            agent: agent
+        )
+        #expect(folders.isError)
+        let result = await ListEmailsTool(provider: provider).execute(
+            call("email_list", #"{"folder_id":"sent"}"#),
+            agent: agent
+        )
+        #expect(result.isError)
+    }
+
+    @Test func searchSchemaUsesConnectedProviderGuidance() {
+        let provider = FakeEmailProvider()
+        provider.searchQueryDescription = "Use this account's query syntax."
+        let schema = SearchEmailsTool(provider: provider).definition().function.parameters
+        #expect(schema.properties?["query"]?.description == provider.searchQueryDescription)
     }
 
     // MARK: - list_emails

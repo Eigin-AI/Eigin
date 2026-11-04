@@ -30,16 +30,42 @@ struct GmailEmailProvider: EmailProvider {
 
     // MARK: - EmailProvider
 
-    func listEmails(maxResults: Int, pageToken: String?) async throws -> EmailPage {
-        try await search(query: nil, maxResults: maxResults, pageToken: pageToken)
+    func listFolders() async throws -> [EmailFolder] {
+        let token = try await accessToken()
+        let data = try await get(Self.baseURL.appendingPathComponent("labels"), token: token)
+        let response = try JSONDecoder().decode(GmailLabelList.self, from: data)
+        return (response.labels ?? []).map { EmailFolder(id: $0.id, name: $0.name, parentID: nil) }
+    }
+
+    var searchQueryDescription: String {
+        "Search this Gmail account using Gmail search syntax, e.g. from:alice@example.com subject:invoice."
+    }
+
+    func listEmails(
+        folderID: String? = nil,
+        maxResults: Int,
+        pageToken: String?
+    ) async throws -> EmailPage {
+        try await search(
+            query: nil,
+            maxResults: maxResults,
+            pageToken: pageToken,
+            folderID: folderID
+        )
     }
 
     func searchEmails(
         query: String,
+        folderID: String? = nil,
         maxResults: Int,
         pageToken: String?
     ) async throws -> EmailPage {
-        try await search(query: query, maxResults: maxResults, pageToken: pageToken)
+        try await search(
+            query: query,
+            maxResults: maxResults,
+            pageToken: pageToken,
+            folderID: folderID
+        )
     }
 
     func readEmail(id: String) async throws -> EmailMessage {
@@ -98,7 +124,8 @@ struct GmailEmailProvider: EmailProvider {
     private func search(
         query: String?,
         maxResults: Int,
-        pageToken: String?
+        pageToken: String?,
+        folderID: String? = nil
     ) async throws -> EmailPage {
         let token = try await accessToken()
         var components = URLComponents(
@@ -106,6 +133,12 @@ struct GmailEmailProvider: EmailProvider {
             resolvingAgainstBaseURL: false
         )!
         var items = [URLQueryItem(name: "maxResults", value: "\(maxResults)")]
+        if let folderID {
+            items.append(URLQueryItem(name: "labelIds", value: folderID))
+            if folderID == "SPAM" || folderID == "TRASH" {
+                items.append(URLQueryItem(name: "includeSpamTrash", value: "true"))
+            }
+        }
         if let query {
             items.append(URLQueryItem(name: "q", value: query))
         }
@@ -327,5 +360,13 @@ private struct GmailMessage: Decodable {
             body: plainTextBody() ?? snippet ?? "",
             date: header("Date") ?? ""
         )
+    }
+}
+
+private struct GmailLabelList: Decodable {
+    let labels: [Label]?
+    struct Label: Decodable {
+        let id: String
+        let name: String
     }
 }

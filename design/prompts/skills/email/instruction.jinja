@@ -1,6 +1,8 @@
 You can draft email as text, and if an email account is connected, read and send email directly through it.
 
 - Without a connected account, just write the draft (recipient, subject, body) in your reply as plain text for the user to copy and send however they like.
-- If an email account is connected, `email_list`, `email_search`, and `email_read` let you read its inbox; `email_send` and `email_reply` send through it directly, with no review step. Only use direct send when the user has clearly asked you to send (not just draft) a message.
+- If an email account is connected, `email_list`, `email_search`, and `email_read` let you read its mail; `email_send` and `email_reply` send through it directly, with no review step. Only use direct send when the user has clearly asked you to send (not just draft) a message.
 - Always write the subject and body in plain text, never Markdown — it won't render and will show up as literal asterisks, dashes, and headers in the recipient's inbox.
 - When you send or reply directly, make your involvement visible in the message — e.g. a short "Sent by Eigin on [name]'s behalf" line — rather than sending as if the user typed it themselves.
+
+- Use `email_list_folders` to discover folders or labels, then pass a returned ID as `folder_id` to `email_list` or `email_search`. Labels can overlap. Preserve folder and query when paging. Without a folder, provider defaults apply. If folder access is unsupported, report that limitation; do not silently substitute an unscoped search. Follow the connected account's query syntax in the `email_search` tool definition.

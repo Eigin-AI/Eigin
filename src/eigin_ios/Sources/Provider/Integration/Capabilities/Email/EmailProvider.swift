@@ -35,15 +35,13 @@ struct EmailMessage: Sendable, Equatable {
     let date: String
 }
 
-/// The agent-facing contract for the `email` capability. Backends (Gmail
-/// today; IMAP or another provider could implement this later) conform to
-/// this protocol — the five email tools, the email skill, and the resolution
-/// rule never see the backend, only this contract. Expected to evolve as
-/// more backends land, not a frozen interface.
+/// Shared email operations for connected accounts.
 protocol EmailProvider: Sendable {
-    func listEmails(maxResults: Int, pageToken: String?) async throws -> EmailPage
+    func listEmails(folderID: String?, maxResults: Int, pageToken: String?) async throws
+        -> EmailPage
     func searchEmails(
         query: String,
+        folderID: String?,
         maxResults: Int,
         pageToken: String?
     ) async throws -> EmailPage
@@ -55,6 +53,9 @@ protocol EmailProvider: Sendable {
         -> EmailMessage
     /// Replies within the thread of `messageID`. Returns the sent message.
     func replyEmail(messageID: String, body: String) async throws -> EmailMessage
+    func listFolders() async throws -> [EmailFolder]
+    /// Query syntax guidance for the connected provider, exposed in the search tool schema.
+    var searchQueryDescription: String { get }
 }
 
 extension EmailMessage {
