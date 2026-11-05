@@ -107,13 +107,17 @@ struct AddIntentTool: Tool {
                 events: IntentArguments.events(from: args["events"]) ?? [],
                 schedules: schedules
             )
+            var result: [String: Any] = [
+                "id": newID.uuidString,
+                "action": "created",
+                "schedules": schedules.map { ["id": $0.id.uuidString, "content": $0.content] },
+            ]
+            if !schedules.isEmpty {
+                result["guidance"] = Prompt.Hints.initiative
+            }
             return ToolResult(
                 toolCallID: id,
-                content: ToolHelpers.output(result: [
-                    "id": newID.uuidString,
-                    "action": "created",
-                    "schedules": schedules.map { ["id": $0.id.uuidString, "content": $0.content] },
-                ]),
+                content: ToolHelpers.output(result: result),
                 isError: false
             )
         } catch {

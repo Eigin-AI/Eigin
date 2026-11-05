@@ -92,6 +92,9 @@ struct UpdateIntentTool: Tool {
             if let schedules {
                 result["schedules"] = schedules
                     .map { ["id": $0.id.uuidString, "content": $0.content] }
+                if !schedules.isEmpty {
+                    result["guidance"] = Prompt.Hints.initiative
+                }
             }
             return ToolResult(
                 toolCallID: id,
