@@ -258,6 +258,9 @@ enum MessagePipeline {
         // `maxLiveImageTurns` image-bearing user turns; strip all images
         // unconditionally when the model does not support vision.
         let supportsVision = KnownModelCatalog.lookup(turnModel)?.supportsVision ?? false
+        let reasoningOrigin = ReasoningOrigin.destination(
+            providerID: agent.providerID, baseURL: provider.baseURL, model: turnModel
+        )
         let strippedConversation = applyImageStripping(
             conversationMessages,
             supportsVision: supportsVision
@@ -281,7 +284,7 @@ enum MessagePipeline {
 
         // 10. Token estimation
         let estimatedTokens = TokenEstimator.estimateRequest(
-            messages: apiMessages,
+            messages: apiMessages.map { $0.reasoningScoped(to: reasoningOrigin) },
             toolDefinitions: registry.definitions
         )
 
@@ -541,6 +544,10 @@ enum MessagePipeline {
         cacheKey: String? = nil,
         onProgress: (@Sendable (CompactionPhase) -> Void)? = nil
     ) async -> CompactionResult {
+        let reasoningOrigin = ReasoningOrigin.destination(
+            providerID: providerID, baseURL: baseURL, model: model
+        )
+        let budgetMessages = apiMessages.map { $0.reasoningScoped(to: reasoningOrigin) }
         // Small-context models: use sliding window (drop oldest messages) instead
         // of expensive LLM-based summarisation.
         if contextWindow <= SmallContext.windowLimit {
@@ -560,7 +567,7 @@ enum MessagePipeline {
             let systemTokens = TokenEstimator.estimate(systemPrompt.content ?? "") + 4
             let highMark = max(inputBudget - systemTokens, 0)
             let lowMark = Int(Double(highMark) * SmallContext.slidingWindowLowWaterFraction)
-            let conversationMessages = Array(apiMessages.dropFirst())
+            let conversationMessages = Array(budgetMessages.dropFirst())
             let truncated = CompactionService.windowedForBudget(
                 messages: conversationMessages,
                 highMark: highMark,
@@ -571,7 +578,7 @@ enum MessagePipeline {
                 category: .chat
             )
             return CompactionResult(
-                apiMessages: [systemPrompt] + truncated,
+                apiMessages: [systemPrompt] + apiMessages.suffix(truncated.count),
                 summary: nil,
                 needsCompaction: false
             )
@@ -603,11 +610,12 @@ enum MessagePipeline {
         }
 
         let retainedBudget = Int(Double(contextWindow) * Compaction.retainedFraction)
-        var retained = CompactionService.retainedTail(
-            messages: conversationMessages,
+        let retainedCount = CompactionService.retainedTail(
+            messages: Array(budgetMessages.dropFirst()),
             tokenBudget: retainedBudget,
             minimumTurns: Compaction.minimumRetainedTurns
-        )
+        ).count
+        var retained = Array(conversationMessages.suffix(retainedCount))
         // Degenerate conversation with no user turn anywhere — still keep the
         // newest message out of the summary so the payload ends on a model
         // reply the conversation can continue from.
@@ -645,7 +653,8 @@ enum MessagePipeline {
             // Minimum-turn retention can itself blow the window-fit budget —
             // warn when the fallback payload still exceeds what fits.
             let fallbackTokens = TokenEstimator.estimateRequest(
-                messages: [apiMessages[0]] + retained,
+                messages: ([apiMessages[0]] + retained)
+                    .map { $0.reasoningScoped(to: reasoningOrigin) },
                 toolDefinitions: tools ?? []
             )
             if fallbackTokens > contextWindow {

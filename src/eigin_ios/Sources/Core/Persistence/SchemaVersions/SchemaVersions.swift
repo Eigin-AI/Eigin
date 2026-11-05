@@ -301,6 +301,32 @@ enum SchemaV11: VersionedSchema {
     }
 }
 
+/// Adds private reasoning history to messages.
+enum SchemaV12: VersionedSchema {
+    static let versionIdentifier = Schema.Version(12, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        [
+            SchemaV1.Provider.self,
+            SchemaV7.Agent.self,
+            SchemaV12.Chat.self,
+            SchemaV12.Message.self,
+            SchemaV1.Space.self,
+            SchemaV1.AgentToolGrant.self,
+            SchemaV1.ChatToolGrant.self,
+            SchemaV6.MCPServer.self,
+            SchemaV9.FirmSource.self,
+            SchemaV2.Intent.self,
+            SchemaV1.AgentInitiativeRequest.self,
+            SchemaV5.Integration.self,
+            SchemaV5.CapabilityProviderSelection.self,
+            SchemaV11.IntentInitiative.self,
+            SchemaV11.InitiativeRegistration.self,
+            SchemaV11.InitiativeOccurrence.self,
+        ]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -343,7 +369,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
             SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
-            SchemaV11.self,
+            SchemaV11.self, SchemaV12.self,
         ]
     }
 
@@ -351,6 +377,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
             migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10, migrateV10toV11,
+            migrateV11toV12,
         ]
     }
 
@@ -413,5 +440,9 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV10toV11 = MigrationStage.lightweight(
         fromVersion: SchemaV10.self,
         toVersion: SchemaV11.self
+    )
+    static let migrateV11toV12 = MigrationStage.lightweight(
+        fromVersion: SchemaV11.self,
+        toVersion: SchemaV12.self
     )
 }

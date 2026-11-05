@@ -18,6 +18,11 @@ enum TokenEstimator {
         for message in messages {
             total += 4 // role, framing, separators
             total += estimate(message.content ?? "")
+            if let history = message.reasoningHistory,
+               history.matches(message, origin: history.origin)
+            {
+                total += history.additionalInputTokens
+            }
             if let toolCalls = message.toolCalls {
                 for call in toolCalls {
                     total += 10 // function call framing

@@ -14,19 +14,22 @@ struct RelayLLMClient: LLMClient {
     private let baseURL: URL?
     private let eiginKey: String?
     private let session: URLSession
+    private let providerID: UUID?
 
     init(
         walletManager: any CreditWalletManager,
         relayClient: any RelayClient,
         baseURL: URL? = RelayConfiguration.baseURL,
         eiginKey: String? = RelayConfiguration.apiKey,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        providerID: UUID? = nil
     ) {
         self.walletManager = walletManager
         self.relayClient = relayClient
         self.baseURL = baseURL
         self.eiginKey = eiginKey
         self.session = session
+        self.providerID = providerID
     }
 
     func fetchModels() async throws -> [String] {
@@ -96,7 +99,9 @@ struct RelayLLMClient: LLMClient {
             baseURL: baseURL.appendingPathComponent("v1").absoluteString,
             apiToken: token,
             extraHeaders: ["X-Eigin-Key": eiginKey],
-            session: session
+            session: session,
+            providerID: providerID,
+            isEiginRelay: true
         )
     }
 }

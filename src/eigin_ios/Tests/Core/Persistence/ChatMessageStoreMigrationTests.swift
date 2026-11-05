@@ -56,7 +56,7 @@ struct ChatMessageStoreMigrationTests {
     @MainActor
     private func migrate(_ url: URL) throws -> ModelContainer {
         try ModelContainer(
-            for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
             migrationPlan: EiginMigrationPlan.self,
             configurations: ModelConfiguration(url: url)
         )
@@ -113,5 +113,30 @@ struct ChatMessageStoreMigrationTests {
 
         let chats = try migrated.mainContext.fetch(FetchDescriptor<Chat>())
         #expect(chats.count == 1)
+    }
+
+    @Test @MainActor func migratesV11MessagesWithoutReasoning() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("store")
+        do {
+            let old = try ModelContainer(
+                for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
+                configurations: ModelConfiguration(url: url)
+            )
+            let chat = SchemaV10.Chat(agentID: UUID())
+            let message = SchemaV10.Message(role: "assistant", content: "Existing answer")
+            message.chat = chat
+            old.mainContext.insert(chat)
+            old.mainContext.insert(message)
+            try old.mainContext.save()
+        }
+        let current = try migrate(url)
+        let message = try #require(current.mainContext.fetch(FetchDescriptor<Message>()).first)
+        #expect(message.content == "Existing answer")
+        #expect(message.reasoningHistoryData == nil)
+        #expect(message.chat != nil)
     }
 }

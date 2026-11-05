@@ -102,7 +102,11 @@ struct DefaultChatService: ChatService {
             )
             throw ChatServiceError.apiKeyNotFound
         }
-        let client = LLMClientFactory.client(baseURL: baseURL, apiToken: apiKey)
+        let client = LLMClientFactory.client(
+            baseURL: baseURL,
+            apiToken: apiKey,
+            providerID: providerID
+        )
         return try await withRetry {
             try await client.chatCompletionStream(messages: messages, model: model)
         }
@@ -168,7 +172,11 @@ struct DefaultChatService: ChatService {
             )
             throw ChatServiceError.apiKeyNotFound
         }
-        let client = LLMClientFactory.client(baseURL: baseURL, apiToken: apiKey)
+        let client = LLMClientFactory.client(
+            baseURL: baseURL,
+            apiToken: apiKey,
+            providerID: providerID
+        )
         // Local client: forward the runner so the runtime can execute tools inline.
         if let localClient = client as? LocalClient {
             return try await withRetry {

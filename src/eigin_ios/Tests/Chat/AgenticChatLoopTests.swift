@@ -100,6 +100,86 @@ struct AgenticChatLoopTests {
         }
     }
 
+    @Test(arguments: [false, true], [false, true])
+    @MainActor func retainsPrivateHistoryAcrossToolRounds(
+        prose: Bool,
+        checkpoint: Bool
+    ) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        provider.baseURL = "https://api.mistral.ai/v1"
+        agent.model = "mistral-large-4-0"
+        let service = FakeChatService()
+        let history = try MistralReasoningHistory(
+            origin: ReasoningOrigin(
+                providerID: provider.id,
+                endpoint: provider.baseURL,
+                model: agent.model
+            ),
+            parts: [MistralContentPart(type: "thinking", thinking: [.text("hidden")])]
+                + (prose ? [.text("Checking")] : [])
+        ).stored()
+        let call = ToolCall(
+            id: "call00001",
+            type: "function",
+            function: .init(name: "lookup", arguments: "{}")
+        )
+        service.enqueueEventStream((prose ? [.contentDelta("Checking")] : []) + [
+            .reasoningHistory(history), .toolCall(call), .finished(.toolCalls),
+        ])
+        service.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        var savedCheckpoint: [ChatMessage] = []
+        if checkpoint {
+            loop.onToolsChanged = {
+                savedCheckpoint = loop.stop()
+                return ([], FakeToolExecutor())
+            }
+        }
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hello")], tools: nil,
+            agent: agent, provider: provider, chatService: service, toolExecutor: FakeToolExecutor()
+        )
+        var continuation = service.capturedEventMessages
+        if checkpoint {
+            let store = try ModelContainer(
+                for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+                configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            )
+            for message in savedCheckpoint {
+                store.mainContext.insert(Message.from(message))
+            }
+            try store.mainContext.save()
+            continuation = try ModelContext(store)
+                .fetch(FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)]))
+                .map { $0.toChatMessage() }
+        }
+        #expect(continuation.contains { $0.role == "tool" && $0.toolCallID == call.id })
+        #expect(!continuation.contains { $0.content?.contains("hidden") == true })
+        let url = provider.baseURL + "/chat/completions"
+        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+        let client = OpenAICompatibleClient(
+            baseURL: provider.baseURL,
+            apiToken: "test",
+            session: FakeURLProtocol.fakeSession(),
+            providerID: provider.id
+        )
+        let stream = try await client.chatCompletionEventStream(
+            messages: continuation,
+            model: agent.model,
+            tools: nil
+        )
+        for try await _ in stream {}
+        let body = try #require(FakeURLProtocol.lastRequestBody(for: url))
+        let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let messages = try #require(json["messages"] as? [[String: Any]])
+        let assistant = try #require(messages.first { $0["role"] as? String == "assistant" })
+        let parts = try #require(assistant["content"] as? [[String: Any]])
+        #expect((parts.first?["thinking"] as? [[String: String]])?.first?["text"] == "hidden")
+        #expect((assistant["tool_calls"] as? [[String: Any]])?.first?["id"] as? String == call.id)
+        #expect(parts.count == (prose ? 2 : 1))
+    }
+
     @Test @MainActor func contentOnlyResponseReturnsSingleMessage() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container

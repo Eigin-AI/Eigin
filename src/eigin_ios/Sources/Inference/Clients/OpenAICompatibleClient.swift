@@ -10,17 +10,23 @@ struct OpenAICompatibleClient: LLMClient {
     /// Extra headers applied to every request (e.g. the relay's `X-Eigin-Key`).
     let extraHeaders: [String: String]
     let session: URLSession
+    let providerID: UUID?
+    let isEiginRelay: Bool
 
     init(
         baseURL: String,
         apiToken: String,
         extraHeaders: [String: String] = [:],
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        providerID: UUID? = nil,
+        isEiginRelay: Bool = false
     ) {
         self.baseURL = baseURL
         self.apiToken = apiToken
         self.extraHeaders = extraHeaders
         self.session = session
+        self.providerID = providerID
+        self.isEiginRelay = isEiginRelay
     }
 
     /// Applies the configured extra headers to a request.
@@ -33,7 +39,7 @@ struct OpenAICompatibleClient: LLMClient {
     /// Resolves the provider adapter for a specific model, using both the base URL
     /// and model name so routed models (e.g. Mistral on OpenRouter) get the right adapter.
     private func adapter(for model: String) -> ProviderAdapter {
-        ProviderAdapterFactory.adapter(for: baseURL, model: model)
+        ProviderAdapterFactory.adapter(for: baseURL, model: model, isEiginRelay: isEiginRelay)
     }
 
     /// Fetches the list of available model IDs from the provider, deduplicated and returned sorted
@@ -102,13 +108,17 @@ struct OpenAICompatibleClient: LLMClient {
         let store = Container.shared.chatAttachmentStore()
         let body = ChatCompletionRequest(
             model: model,
-            messages: messages.map { ChatCompletionMessage($0, store: store) },
+            messages: messages.map { ChatCompletionMessage(
+                $0,
+                store: store
+            ) },
             stream: true
         )
         let encoded = try JSONEncoder().encode(body)
         request.httpBody = try adapter(for: model).processRequestBody(
             encoded,
-            messages: messages
+            messages: messages,
+            reasoningOrigin: reasoningOrigin(for: model)
         )
 
         let (bytes, response) = try await session.bytes(for: request)
@@ -189,14 +199,21 @@ struct OpenAICompatibleClient: LLMClient {
         let store = Container.shared.chatAttachmentStore()
         var body = ChatCompletionRequest(
             model: model,
-            messages: messages.map { ChatCompletionMessage($0, store: store) },
+            messages: messages.map { ChatCompletionMessage(
+                $0,
+                store: store
+            ) },
             stream: true
         )
         body.reasoningEffort = reasoningEffort
         body.tools = tools
         body.promptCacheKey = resolvedAdapter.usesPromptCacheKey ? cacheKey : nil
         let encoded = try JSONEncoder().encode(body)
-        request.httpBody = try resolvedAdapter.processRequestBody(encoded, messages: messages)
+        request.httpBody = try resolvedAdapter.processRequestBody(
+            encoded,
+            messages: messages,
+            reasoningOrigin: reasoningOrigin(for: model)
+        )
 
         AppLogger.debug(
             "Request: \(public: model) with \(public: messages.count) messages, tools: \(public: tools?.count ?? 0)",
@@ -225,6 +242,8 @@ struct OpenAICompatibleClient: LLMClient {
             let task = Task {
                 do {
                     var accumulator = ToolCallAccumulator()
+                    var reasoning = resolvedAdapter
+                        .makeReasoningCapture(origin: reasoningOrigin(for: model))
                     var didFinish = false
                     var lineCount = 0
 
@@ -264,14 +283,14 @@ struct OpenAICompatibleClient: LLMClient {
                                     body: streamError.error.message
                                 )
                             }
-                            AppLogger.debug(
-                                "Skipping unparseable chunk: \(private: error.localizedDescription) — raw: \(private: payload.prefix(200))",
-                                category: .network
-                            )
+                            reasoning?.invalidate()
+                            AppLogger.debug("Skipping unparseable stream chunk", category: .network)
                             continue
                         }
 
                         guard let choice = chunk.choices.first else { continue }
+
+                        reasoning?.append(chunk: chunkData)
 
                         // Accumulate content deltas
                         if let content = choice.delta.content {
@@ -288,6 +307,11 @@ struct OpenAICompatibleClient: LLMClient {
                         // Check finish reason — break out immediately to avoid
                         // writing to the continuation after it's consumed.
                         if let reason = choice.finishReason {
+                            if reason == "stop" || reason == "tool_calls",
+                               let history = reasoning?.completed()
+                            {
+                                continuation.yield(.reasoningHistory(history))
+                            }
                             if reason == "tool_calls" ||
                                 (resolvedAdapter.treatsStopAsToolCalls && accumulator.hasToolCalls)
                             {
@@ -347,6 +371,14 @@ struct OpenAICompatibleClient: LLMClient {
                 task.cancel()
             }
         }
+    }
+
+    private func reasoningOrigin(for model: String) -> ReasoningOrigin? {
+        ReasoningOrigin.destination(
+            providerID: providerID,
+            baseURL: baseURL,
+            model: model
+        )
     }
 
     private func buildURL(path: String) throws -> URL {

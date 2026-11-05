@@ -50,7 +50,7 @@ enum CompactionService {
     /// window — an over-window summarise request is what fails on providers that
     /// reject or time out oversized prompts.
     static func compact(
-        apiMessages: [ChatMessage],
+        apiMessages inputMessages: [ChatMessage],
         coveredCount: Int,
         retainedCount: Int,
         contextWindow: Int,
@@ -62,6 +62,8 @@ enum CompactionService {
         chatService: any ChatService,
         onProgress: (@Sendable (CompactionPhase) -> Void)? = nil
     ) async -> Outcome {
+        // Summaries use visible history only; hidden continuation state is never summarized.
+        let apiMessages = inputMessages.map { $0.reasoningScoped(to: nil) }
         let instruction = ChatMessage(
             role: "user",
             content: Prompt.Compaction.main(retainedCount: String(retainedCount))
@@ -254,7 +256,7 @@ enum CompactionService {
             if accumulated + msgTokens > tokenBudget {
                 // Partial fit: truncate the oldest message to fill remaining budget.
                 let remaining = tokenBudget - accumulated - 4
-                if i == startIndex - 1, remaining > 20 {
+                if i == startIndex - 1, remaining > 20, messages[i].reasoningHistory == nil {
                     let truncated = truncateContent(
                         messages[i].content ?? "", maxTokens: remaining
                     )

@@ -9,7 +9,7 @@ struct WatchChatTests {
     private func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
-            for: Schema(SchemaV10.models, version: SchemaV10.versionIdentifier),
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
             configurations: config
         )
     }

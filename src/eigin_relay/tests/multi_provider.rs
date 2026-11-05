@@ -46,6 +46,7 @@ impl UpstreamClient for TaggedUpstream {
             }],
             "usage": { "prompt_tokens": 1, "completion_tokens": 1 },
             "forwarded_reasoning_effort": json["reasoning_effort"],
+            "forwarded_messages": json["messages"],
             "forwarded_stream_options": json["stream_options"]
         });
         Ok(UpstreamResponse::Buffer(Bytes::from(
@@ -384,4 +385,70 @@ async fn reasoning_effort_survives_model_rewrite_and_usage_injection() {
             .unwrap()
             .contains("provider-internal-id-123")
     );
+}
+
+#[tokio::test]
+async fn reasoning_history_survives_model_rewrite() {
+    let app = router(make_state_with_providers().await);
+    let token = redeem(&app).await;
+    let messages = serde_json::json!([
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": [
+            {"type": "thinking", "thinking": [{"type": "text", "text": "private trace"}]},
+            {"type": "text", "text": "answer"}
+        ], "tool_calls": [{"id": "call1", "type": "function", "function": {"name": "lookup", "arguments": "{}"}}]},
+        {"role": "tool", "tool_call_id": "call1", "content": "result"}
+    ]);
+    let (status, body) = chat_body(
+        &app,
+        &token,
+        serde_json::json!({
+            "model": "model-upstream", "stream": true, "messages": messages
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(json["forwarded_messages"], messages);
+}
+
+struct ReasoningStreamUpstream;
+
+#[async_trait::async_trait]
+impl UpstreamClient for ReasoningStreamUpstream {
+    async fn chat_completions(
+        &self,
+        body: Bytes,
+        _api_key: &str,
+    ) -> Result<UpstreamResponse, AppError> {
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["model"], "provider-internal-id-123");
+        let stream = futures::stream::iter(vec![Ok(Bytes::from_static(
+            b"data: {\"choices\":[{\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"private trace\"}]}]}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1}}\n\ndata: [DONE]\n\n"
+        ))]);
+        Ok(UpstreamResponse::Stream(Box::new(stream)))
+    }
+}
+
+#[tokio::test]
+async fn native_thinking_sse_passes_through_unchanged() {
+    let mut state = make_state_with_providers().await;
+    Arc::get_mut(&mut state)
+        .unwrap()
+        .provider_clients
+        .insert("provider_a".into(), Arc::new(ReasoningStreamUpstream));
+    let app = router(state);
+    let token = redeem(&app).await;
+    let (status, body) = chat_body(
+        &app,
+        &token,
+        serde_json::json!({
+            "model": "model-upstream", "stream": true,
+            "messages": [{"role": "user", "content": "Hello"}]
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.starts_with("data: {\"choices\":[{\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"private trace\"}]}]}}]}\n\n"));
+    assert!(body.ends_with("data: [DONE]\n\n"));
 }

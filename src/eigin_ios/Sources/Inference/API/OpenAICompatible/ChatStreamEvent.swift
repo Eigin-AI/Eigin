@@ -9,6 +9,8 @@ enum ChatStreamEvent: Equatable {
     /// Provider-specific metadata (e.g. Gemini thought_signature) to attach to the assistant
     /// message.
     case providerMetadata([String: String])
+    /// Completed private continuation state, emitted only after a successful finish reason.
+    case reasoningHistory(ReasoningHistory)
     /// The stream has finished.
     case finished(FinishReason)
 

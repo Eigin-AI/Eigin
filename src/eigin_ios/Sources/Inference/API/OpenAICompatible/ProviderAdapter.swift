@@ -4,7 +4,14 @@ import Foundation
 protocol ProviderAdapter: Sendable {
     /// Post-process the JSON-encoded request body before sending.
     /// `messages` provides access to providerMetadata (not in the encoded JSON).
-    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data
+    func processRequestBody(
+        _ body: Data,
+        messages: [ChatMessage],
+        reasoningOrigin: ReasoningOrigin?
+    ) throws -> Data
+
+    /// Creates provider-specific capture state for a compatible destination.
+    func makeReasoningCapture(origin: ReasoningOrigin?) -> (any ReasoningCapturing)?
 
     /// Whether this provider sends "stop" as finish reason even when tool calls are present.
     var treatsStopAsToolCalls: Bool { get }
@@ -15,9 +22,30 @@ protocol ProviderAdapter: Sendable {
     var usesPromptCacheKey: Bool { get }
 }
 
+/// Accumulates provider wire events into private continuation state.
+protocol ReasoningCapturing: Sendable {
+    mutating func append(chunk: Data)
+    mutating func invalidate()
+    func completed() -> ReasoningHistory?
+}
+
+extension ProviderAdapter {
+    func makeReasoningCapture(origin: ReasoningOrigin?) -> (any ReasoningCapturing)? {
+        nil
+    }
+
+    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
+        try processRequestBody(body, messages: messages, reasoningOrigin: nil)
+    }
+}
+
 /// No-op adapter for standard OpenAI-compatible providers.
 struct DefaultAdapter: ProviderAdapter {
-    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
+    func processRequestBody(
+        _ body: Data,
+        messages: [ChatMessage],
+        reasoningOrigin: ReasoningOrigin? = nil
+    ) throws -> Data {
         body
     }
 
@@ -45,7 +73,11 @@ struct GeminiAdapter: ProviderAdapter {
         false
     }
 
-    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
+    func processRequestBody(
+        _ body: Data,
+        messages: [ChatMessage],
+        reasoningOrigin: ReasoningOrigin? = nil
+    ) throws -> Data {
         // Check if any message has a thought_signature to inject
         let hasSignature = messages.contains { msg in
             msg.providerMetadata?["thought_signature"] != nil && msg.toolCalls != nil
@@ -80,66 +112,6 @@ struct GeminiAdapter: ProviderAdapter {
     }
 }
 
-/// Adapter for Mistral AI's OpenAI-compatible endpoint.
-///
-/// Sanitizes tool call IDs to contain only alphanumeric characters (`[a-zA-Z0-9]`),
-/// which is Mistral's requirement. Both `tool_calls[*].id` (assistant messages) and
-/// `tool_call_id` (tool result messages) are sanitized with the same function so IDs stay in sync.
-struct MistralAdapter: ProviderAdapter {
-    var treatsStopAsToolCalls: Bool {
-        false
-    }
-
-    var usesPromptCacheKey: Bool {
-        true
-    }
-
-    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
-        guard var root = try JSONSerialization.jsonObject(with: body) as? [String: Any],
-              var jsonMessages = root["messages"] as? [[String: Any]]
-        else {
-            return body
-        }
-
-        var changed = false
-
-        for i in 0 ..< jsonMessages.count {
-            // Sanitize tool_call_id on tool result messages
-            if let toolCallID = jsonMessages[i]["tool_call_id"] as? String {
-                let sanitized = Self.sanitizeID(toolCallID)
-                if sanitized != toolCallID {
-                    jsonMessages[i]["tool_call_id"] = sanitized
-                    changed = true
-                }
-            }
-
-            // Sanitize tool_calls[*].id on assistant messages
-            if var toolCalls = jsonMessages[i]["tool_calls"] as? [[String: Any]] {
-                for j in 0 ..< toolCalls.count {
-                    if let id = toolCalls[j]["id"] as? String {
-                        let sanitized = Self.sanitizeID(id)
-                        if sanitized != id {
-                            toolCalls[j]["id"] = sanitized
-                            changed = true
-                        }
-                    }
-                }
-                if changed { jsonMessages[i]["tool_calls"] = toolCalls }
-            }
-        }
-
-        guard changed else { return body }
-
-        root["messages"] = jsonMessages
-        return try JSONSerialization.data(withJSONObject: root)
-    }
-
-    /// Strips all characters outside `[a-zA-Z0-9]`.
-    static func sanitizeID(_ id: String) -> String {
-        String(id.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.suffix(9))
-    }
-}
-
 /// Adapter for Anthropic models on OpenRouter.
 ///
 /// Injects top-level `cache_control` into the OpenAI-compatible request body so
@@ -154,7 +126,11 @@ struct AnthropicAdapter: ProviderAdapter {
         false
     }
 
-    func processRequestBody(_ body: Data, messages: [ChatMessage]) throws -> Data {
+    func processRequestBody(
+        _ body: Data,
+        messages: [ChatMessage],
+        reasoningOrigin: ReasoningOrigin? = nil
+    ) throws -> Data {
         guard var root = try JSONSerialization.jsonObject(with: body) as? [String: Any] else {
             return body
         }
@@ -169,20 +145,25 @@ struct AnthropicAdapter: ProviderAdapter {
 /// catalog kicks in as a fallback for routers like OpenRouter that proxy to the
 /// original model API without normalizing request/response formats.
 enum ProviderAdapterFactory {
-    static func adapter(for baseURL: String, model: String) -> ProviderAdapter {
+    static func adapter(
+        for baseURL: String,
+        model: String,
+        isEiginRelay: Bool = false
+    ) -> ProviderAdapter {
         // Primary: URL-based detection (direct API access)
         if baseURL.contains("generativelanguage.googleapis.com") {
             return GeminiAdapter()
         }
-        if baseURL.contains("api.mistral.ai") {
-            return MistralAdapter()
+        if URL(string: baseURL)?.host?.lowercased() == "api.mistral.ai" {
+            return MistralAdapter(supportsReasoningHistory: true)
         }
 
         // Fallback: model-based detection via catalog (for routers)
         if let entry = KnownModelCatalog.lookup(model) {
             switch entry.family {
             case .google: return GeminiAdapter()
-            case .mistral: return MistralAdapter()
+            case .mistral: return MistralAdapter(supportsReasoningHistory: isEiginRelay ||
+                    ProviderPreset.isRelay(baseURL))
             default: break
             }
         }
@@ -198,5 +179,12 @@ enum ProviderAdapterFactory {
         }
 
         return DefaultAdapter()
+    }
+
+    /// Reads current envelopes and native history saved by earlier development builds.
+    static func decodeReasoningHistory(_ data: Data) -> ReasoningHistory? {
+        if let history = try? JSONDecoder()
+            .decode(ReasoningHistory.self, from: data) { return history }
+        return try? JSONDecoder().decode(MistralReasoningHistory.self, from: data).stored()
     }
 }
