@@ -189,13 +189,107 @@ struct ChatViewModelTests {
             ChatMessage(role: "assistant", content: "Where to?"),
         ]
 
-        vm.generateTitle(agent: agent, provider: provider)
-
-        // Wait for the async title generation task
-        try await Task.sleep(for: .milliseconds(100))
+        await vm.generateTitle(agent: agent, provider: provider)?.value
 
         #expect(chat.title == "Trip Planning")
         #expect(chat.titleOrigin == .generated)
+    }
+
+    @Test("Deleted chats skip title eligibility and delayed persistence", arguments: [false, true])
+    @MainActor
+    func deletedChatSkipsPendingWork(saveDeletion: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+        vm.chat = chat
+        let service = SuspendedTitleService()
+        Container.shared.chatService.register { service }
+        let context = container.mainContext
+        try context.save()
+        context.delete(chat)
+        if saveDeletion { try context.save() }
+
+        #expect(vm.generateTitle(agent: agent, provider: provider) == nil)
+        vm.persistMessage(ChatMessage(role: "user", content: "Late user message"))
+        vm.persistMessages([ChatMessage(role: "assistant", content: "Late reply")])
+        vm.seedTitle(from: "Late seed")
+        vm.handleStop()
+        try context.save()
+
+        #expect(try context.fetch(FetchDescriptor<Chat>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Message>()).isEmpty)
+        #expect(await service.requestCount == 0)
+    }
+
+    @Test(
+        "Deleting during title generation skips writes and retries",
+        arguments: [false, true],
+        ["Generated title", ""]
+    )
+    @MainActor
+    func deletedDuringTitleGeneration(saveDeletion: Bool, response: String) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+        vm.chat = chat
+        let service = SuspendedTitleService()
+        Container.shared.chatService.register { service }
+        let context = container.mainContext
+        try context.save()
+
+        let task = try #require(vm.generateTitle(agent: agent, provider: provider))
+        await service.waitForRequest()
+        context.delete(chat)
+        if saveDeletion { try context.save() }
+        await service.finish(response)
+        await task.value
+        try context.save()
+
+        #expect(try context.fetch(FetchDescriptor<Chat>()).isEmpty)
+        #expect(await service.requestCount == 1)
+    }
+
+    @Test(
+        "Title generation preserves edits made during the request",
+        arguments: ["Generated title", ""]
+    )
+    @MainActor
+    func titleEditedDuringGeneration(response: String) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+        vm.chat = chat
+        let service = SuspendedTitleService()
+        Container.shared.chatService.register { service }
+
+        let task = try #require(vm.generateTitle(agent: agent, provider: provider))
+        await service.waitForRequest()
+        chat.title = "My title"
+        chat.titleOrigin = .edited
+        await service.finish(response)
+        await task.value
+
+        #expect(chat.title == "My title")
+        #expect(chat.titleOrigin == .edited)
+        #expect(await service.requestCount == 1)
+    }
+
+    @Test("An empty generated title retries once for an existing chat")
+    @MainActor
+    func emptyTitleRetries() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let vm = makeViewModel(chat: chat, container: container)
+        vm.chat = chat
+        let service = SuspendedTitleService()
+        Container.shared.chatService.register { service }
+
+        let task = try #require(vm.generateTitle(agent: agent, provider: provider))
+        await service.waitForRequest()
+        await service.finish("")
+        await service.waitForRequest(2)
+        await service.finish("Retry title")
+        await task.value
+
+        #expect(chat.title == "Retry title")
+        #expect(chat.titleOrigin == .generated)
+        #expect(await service.requestCount == 2)
     }
 
     @Test("generateTitle skips if already generated")
@@ -219,7 +313,7 @@ struct ChatViewModelTests {
         chat: Chat,
         agent: Agent,
         container: ModelContainer,
-        chatService: FakeChatService
+        chatService: any ChatService
     ) -> ChatViewModel {
         Container.shared.reset()
         Container.shared.modelContainer.register { container }
@@ -236,6 +330,39 @@ struct ChatViewModelTests {
         )
         vm.messageText = "Hello"
         return vm
+    }
+
+    @Test("A reply completing after deletion cannot recreate the chat", arguments: [false, true])
+    @MainActor
+    func replyCompletesAfterDeletion(saveDeletion: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let context = container.mainContext
+        try context.save()
+        var deleted = false
+        let service = ObservedChatService { _, _, _ in
+            context.delete(chat)
+            if saveDeletion {
+                do { try context.save() } catch { Issue.record(error) }
+            }
+            deleted = true
+        }
+        service.scripted.enqueueEventStream([.contentDelta("Late reply"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.window.messages = (0 ..< 4).map { _ in ChatMessage(
+            role: "assistant",
+            content: "Earlier reply"
+        ) }
+
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        try context.save()
+
+        #expect(deleted)
+        #expect(vm.chatError == nil)
+        #expect(!vm.isTurnInProgress)
+        #expect(try context.fetch(FetchDescriptor<Chat>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Message>()).isEmpty)
+        #expect(service.scripted.capturedMessages.isEmpty)
     }
 
     @Test("a thrown non-cancellation error surfaces as a chatError")

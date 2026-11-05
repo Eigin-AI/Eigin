@@ -303,14 +303,17 @@ final class ChatViewModel {
         mcpServers: [MCPServer],
         integrations: [Integration]
     ) {
+        guard let chat = existingChat() else { return }
+        let chatID = chatID
+        let spaceID = chat.spaceID
+        let activeFlow = chat.activeFlow
         let initiatingUserMessageID = skillConnectionGate.messageID(chatID: chatID)
         chatError = nil
 
         let hasSpaces = spaces.contains(where: { $0.agentID == agent.id })
-        let needsCompaction = chat?.needsCompaction ?? false
+        let needsCompaction = chat.needsCompaction
 
         let policy = loadPermissionPolicy(for: agent)
-        let chatID = chat?.id ?? UUID()
 
         wirePermissionCallbacks(policy: policy, chatID: chatID)
 
@@ -329,6 +332,7 @@ final class ChatViewModel {
                 self.endBackgroundGrace()
                 self.isTurnInProgress = false
             }
+            guard existingChat() != nil else { return }
             let msgs =
                 self.window.isPreloaded
                     ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
@@ -361,6 +365,7 @@ final class ChatViewModel {
                 agent: agent, provider: provider, messages: msgs, conversationID: chatID
             )
 
+            guard existingChat() != nil else { return }
             let activeSkills = self.resolvedActiveSkills(
                 integrations: integrations,
                 mcpServers: servers
@@ -377,10 +382,10 @@ final class ChatViewModel {
                 messages: msgs,
                 agent: agent, model: routedModel, space: space,
                 permissionPolicy: policy,
-                spaceID: chat?.spaceID, chatID: chat?.id,
+                spaceID: spaceID, chatID: chatID,
                 integrations: integrations,
                 activeSkills: activeSkills,
-                activeFlow: chat?.activeFlow,
+                activeFlow: activeFlow,
                 gatekeeper: gatekeeper,
                 mode: context,
                 hasSpaces: hasSpaces,
@@ -404,12 +409,14 @@ final class ChatViewModel {
             // Persist the user message before compaction: the summary row lands
             // right after the latest user message, and the retained count equals
             // the rows kept before it — payload and store stay aligned.
+            guard existingChat() != nil else { return }
             if let userMessage { persistMessage(userMessage) }
 
             let apiMessages = await applyCompactionIfNeeded(
                 turn: turn, provider: provider, model: routedModel, agent: agent
             )
 
+            guard existingChat() != nil else { return }
             let registry = turn.registry
 
             // Rebuild tool registry mid-turn when skills are activated.
@@ -432,14 +439,14 @@ final class ChatViewModel {
                 let activeOnDemand = updatedSkills.last
                 let updatedRegistry = if isSmallContext {
                     ToolRegistry.smallChat(
-                        chatID: chat?.id,
+                        chatID: chatID,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkill: activeOnDemand
                     )
                 } else {
                     ToolRegistry.chat(
-                        spaceID: chat?.spaceID, chatID: chat?.id,
+                        spaceID: spaceID, chatID: chatID,
                         agentID: agent.id,
                         permissionPolicy: policy,
                         activeSkills: BundledSkill.alwaysActive
@@ -469,6 +476,10 @@ final class ChatViewModel {
                     sentAt: sentAt,
                     conversationID: chatID
                 )
+                guard existingChat() != nil else {
+                    chatLoop.abort()
+                    return
+                }
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)
                 window.trimIfNeeded()
@@ -550,7 +561,7 @@ final class ChatViewModel {
         integrations: [Integration] = []
     ) {
         guard !isTurnInProgress,
-              let chat,
+              let chat = existingChat(),
               let last = window.messages.last,
               last.role == "user",
               let content = last.content?.trimmingCharacters(in: .whitespaces),
@@ -616,7 +627,7 @@ final class ChatViewModel {
                     if !self.isCompacting {
                         self.isCompacting = true
                         self.compactionProgress.reset()
-                        self.chat?.needsCompaction = true
+                        self.existingChat()?.needsCompaction = true
                     }
                     switch phase {
                     case .waiting:
@@ -634,7 +645,7 @@ final class ChatViewModel {
             apiMessages: turn.apiMessages,
             estimatedTokens: turn.estimatedTokens,
             contextWindow: turn.contextWindow,
-            needsCompaction: chat?.needsCompaction ?? false,
+            needsCompaction: existingChat()?.needsCompaction ?? false,
             baseURL: provider.baseURL,
             providerID: provider.id,
             model: model,
@@ -644,7 +655,12 @@ final class ChatViewModel {
             onProgress: onProgress
         )
 
-        chat?.needsCompaction = result.needsCompaction
+        guard let chat = existingChat() else {
+            compactionProgress.reset()
+            isCompacting = false
+            return result.apiMessages
+        }
+        chat.needsCompaction = result.needsCompaction
 
         guard let summaryMessage = result.summary else {
             if isCompacting {
@@ -670,10 +686,15 @@ final class ChatViewModel {
         return result.apiMessages
     }
 
+    private func existingChat() -> Chat? {
+        guard let modelContext else { return nil }
+        return ChatLookup.find(chatID, in: modelContext)
+    }
+
     // MARK: - Persistence
 
     func persistMessage(_ chatMessage: ChatMessage) {
-        guard let chat else { return }
+        guard let chat = existingChat() else { return }
         let message = Message.from(chatMessage)
         message.chat = chat
         modelContext.insert(message)
@@ -683,7 +704,7 @@ final class ChatViewModel {
     }
 
     func persistMessages(_ chatMessages: [ChatMessage]) {
-        guard let chat, !chatMessages.isEmpty else { return }
+        guard let chat = existingChat(), !chatMessages.isEmpty else { return }
         for cm in chatMessages {
             let message = Message.from(cm)
             message.chat = chat
@@ -711,15 +732,16 @@ final class ChatViewModel {
 
     // MARK: - Title Generation
 
+    @discardableResult
     func generateTitle(
         agent: Agent,
         provider: Provider,
         model: String? = nil,
         using overrideMessages: [ChatMessage]? = nil
-    ) {
-        guard let chat else { return }
-        ChatTitleGenerator.generate(
-            chat: chat, messages: window.messages,
+    ) -> Task<Void, Never>? {
+        guard let modelContext else { return nil }
+        return ChatTitleGenerator.generate(
+            chatID: chatID, context: modelContext, messages: window.messages,
             agent: agent, provider: provider, model: model,
             chatService: Container.shared.chatService(),
             using: overrideMessages
@@ -727,7 +749,7 @@ final class ChatViewModel {
     }
 
     func seedTitle(from content: String) {
-        guard let chat else { return }
+        guard let chat = existingChat() else { return }
         ChatTitleGenerator.seed(chat: chat, from: content)
     }
 
@@ -740,7 +762,7 @@ final class ChatViewModel {
         integrations: [Integration],
         mcpServers: [MCPServer]
     ) -> [Skill] {
-        guard let chat else { return [] }
+        guard let chat = existingChat() else { return [] }
         let connected = Container.shared.integrationManager()
             .connectedCapabilities(integrations: integrations)
         let resolved = SkillCatalog.activeSkills(
@@ -766,7 +788,7 @@ final class ChatViewModel {
     func loadPermissionPolicy(for agent: Agent) -> AgentPermissionPolicy {
         PermissionPolicyLoader.load(
             for: agent,
-            chatID: chat?.id,
+            chatID: chatID,
             modelContext: modelContext
         )
     }

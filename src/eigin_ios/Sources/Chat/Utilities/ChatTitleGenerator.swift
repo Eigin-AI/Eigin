@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// Handles automatic title generation and seeding for chats.
 @MainActor
@@ -6,69 +7,71 @@ enum ChatTitleGenerator {
     /// Minimum number of assistant messages before auto-generating a title.
     static let titleGenerationThreshold = 4
 
-    /// Generates a title by sending the conversation summary to the LLM.
+    /// Generates a title only while the chat exists and still permits automatic titles.
+    @discardableResult
     static func generate(
-        chat: Chat,
+        chatID: UUID,
+        context: ModelContext,
         messages: [ChatMessage],
         agent: Agent,
         provider: Provider,
-        // The model the chat is running on. Defaults to the agent's own; pass the routed
-        // model when the turn ran somewhere else, so the request matches `provider`.
         model: String? = nil,
         chatService: any ChatService,
-        retryCount: Int = 0,
         using overrideMessages: [ChatMessage]? = nil
-    ) {
-        guard chat.titleOrigin != .generated, chat.titleOrigin != .edited else { return }
+    ) -> Task<Void, Never>? {
+        guard eligibleChat(chatID, in: context) != nil else { return nil }
 
-        let source = overrideMessages ?? messages
-        let conversationSummary = source
+        let conversationSummary = (overrideMessages ?? messages)
             .filter { $0.role == "user" || $0.role == "assistant" }
             .compactMap(\.content)
             .map { ChatTags.stripAll(from: $0) }
             .prefix(6)
             .joined(separator: "\n")
+        let baseURL = provider.baseURL
+        let providerID = provider.id
+        let requestModel = model ?? agent.model
 
-        let prompt = (retryCount == 0 ? Prompt.Title.first : Prompt.Title.retry)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let titleMessages: [ChatMessage] = [
-            ChatMessage(role: "system", content: prompt),
-            ChatMessage(role: "user", content: conversationSummary),
-        ]
-
-        Task {
-            var title = ""
-            do {
-                // Best-effort background work: a foreground chat send preempts it.
-                try await LocalGeneration.$priority.withValue(.background) {
-                    let stream = try await chatService.chatCompletionStream(
-                        baseURL: provider.baseURL,
-                        providerID: provider.id,
-                        messages: titleMessages,
-                        model: model ?? agent.model
-                    )
-                    for try await token in stream {
-                        title += token
+        return Task {
+            for attempt in 0 ... 1 {
+                guard !Task.isCancelled, eligibleChat(chatID, in: context) != nil else { return }
+                let prompt = (attempt == 0 ? Prompt.Title.first : Prompt.Title.retry)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let titleMessages = [
+                    ChatMessage(role: "system", content: prompt),
+                    ChatMessage(role: "user", content: conversationSummary),
+                ]
+                var title = ""
+                do {
+                    // Best-effort background work: a foreground chat send preempts it.
+                    try await LocalGeneration.$priority.withValue(.background) {
+                        let stream = try await chatService.chatCompletionStream(
+                            baseURL: baseURL, providerID: providerID,
+                            messages: titleMessages, model: requestModel
+                        )
+                        for try await token in stream {
+                            title += token
+                        }
                     }
+                    guard !Task.isCancelled,
+                          let chat = eligibleChat(chatID, in: context) else { return }
+                    if let cleaned = cleanTitle(title) {
+                        chat.title = cleaned
+                        chat.titleOrigin = .generated
+                        chat.updatedAt = .now
+                        return
+                    }
+                } catch {
+                    // Title generation is non-critical — fail silently.
+                    return
                 }
-                let cleaned = cleanTitle(title)
-                if let cleaned {
-                    chat.title = cleaned
-                    chat.titleOrigin = .generated
-                    chat.updatedAt = .now
-                } else if retryCount == 0 {
-                    generate(
-                        chat: chat, messages: messages,
-                        agent: agent, provider: provider, model: model,
-                        chatService: chatService,
-                        retryCount: 1, using: overrideMessages
-                    )
-                }
-            } catch {
-                // Title generation is non-critical — fail silently
             }
         }
+    }
+
+    private static func eligibleChat(_ id: UUID, in context: ModelContext) -> Chat? {
+        guard let chat = ChatLookup.find(id, in: context),
+              chat.titleOrigin != .generated, chat.titleOrigin != .edited else { return nil }
+        return chat
     }
 
     /// Seeds the chat title from the first sentence of the user's message.
