@@ -122,10 +122,10 @@ fn secure_file_download_checks_selection_and_bytes() {
     for case in ["complete", "missing", "corrupt"] {
         let dir = fixture();
         let root = dir.path();
-        fs::create_dir_all(root.join(".gitlab/scripts")).unwrap();
+        fs::create_dir_all(root.join(".buildkite/scripts")).unwrap();
         fs::write(
-            root.join(".gitlab/scripts/download-docs-fonts.sh"),
-            include_str!("../../.gitlab/scripts/download-docs-fonts.sh"),
+            root.join(".buildkite/scripts/download-docs-fonts.py"),
+            include_str!("../../.buildkite/scripts/download-docs-fonts.py"),
         )
         .unwrap();
         fs::write(
@@ -146,8 +146,9 @@ esac
         )
         .unwrap();
         fs::set_permissions(root.join("bin/curl"), fs::Permissions::from_mode(0o755)).unwrap();
-        let output = Command::new("bash")
-            .arg(root.join(".gitlab/scripts/download-docs-fonts.sh"))
+        let output = Command::new("python3")
+            .arg(root.join(".buildkite/scripts/download-docs-fonts.py"))
+            .current_dir(root)
             .env(
                 "PATH",
                 format!(

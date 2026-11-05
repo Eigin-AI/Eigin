@@ -1,7 +1,7 @@
 # Docs releases
 
-Docs CI builds and publishes on `main`. Fonts are bundled with the book and
-served from the docs origin.
+Buildkite builds and publishes docs on main webhook builds after Versions and
+CI regression tests pass. Fonts are bundled and served from the docs origin.
 
 ## Font setup
 
@@ -13,7 +13,7 @@ Requires permission to distribute the licensed fonts on the docs domain.
 3. Keep source binaries outside Git. Local builds read `design/assets/fonts/`
    recursively; North East filenames ending in ` copy.otf` are also accepted.
 
-CI downloads only these files using `CI_JOB_TOKEN`, verifies their checksums,
+Buildkite downloads these files using `DOCS_GITLAB_TOKEN`, verifies their checksums,
 and stages them under `design/assets/fonts/docs/`. Secure Files are accessible
 to project members with Developer access or higher; keep project access restricted.
 
@@ -40,3 +40,22 @@ just docs serve
 4. Build locally and verify the deployed docs after CI completes.
 
 Website releases and hosting CORS configuration are independent of docs fonts.
+
+## Publishing
+
+- The `eigin/docs-publish` concurrency group permits one upload at a time.
+- Before uploading, the job checks the current main SHA and skips stale builds.
+- Uploads use `aws s3 sync --delete` to `s3://eigin-docs/` through Scaleway's
+  `https://s3.fr-par.scw.cloud` endpoint.
+- Font and AWS secrets are restricted to main webhook builds. MR jobs cannot
+  access them. See `.buildkite/README.md` for setup and secret policies.
+- The build container receives the font token; the upload container receives AWS
+  credentials. Neither uses the versions cache. No font-bearing CI artifacts are uploaded.
+
+If publishing fails, fix the cause and trigger a main webhook build. For retries,
+confirm the build source still satisfies the webhook-only secret policy.
+
+To stop publishing, pause the pipeline, cancel queued uploads, and drain any
+active upload. Keep one publisher active: the concurrency group only coordinates
+Buildkite jobs. Verify the live site, fonts, navigation, and Mermaid diagrams
+after each deployment.

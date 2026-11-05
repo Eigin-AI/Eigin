@@ -1,0 +1,81 @@
+steps:
+  - label: ":rust: Versions"
+    key: versions
+    agents:
+      queue: linux-small
+    if: build.branch == "main" || (build.pull_request.id != null && build.pull_request.repository == pipeline.repository)
+    timeout_in_minutes: 30
+    cache:
+      name: versions-v1
+      size: 20g
+      paths:
+        - /cache/eigin-versions
+    command: >-
+      docker run --rm
+      --volume "$$PWD:/work"
+      --volume /cache/eigin-versions:/ci-cache
+      --env CARGO_HOME=/ci-cache/cargo
+      --env CARGO_TARGET_DIR=/ci-cache/target
+      --workdir /work
+      rust:1-bookworm
+      python3 .buildkite/scripts/check-versions.py
+
+  - label: ":python: CI regression tests"
+    key: ci-tests
+    agents:
+      queue: linux-small
+    timeout_in_minutes: 5
+    command: >-
+      docker run --rm
+      --volume "$$PWD:/work:ro"
+      --workdir /work
+      --env PYTHONDONTWRITEBYTECODE=1
+      rust:1-bookworm
+      python3 -m unittest discover -s .buildkite/tests
+
+  # Same-repository branch writers are trusted with these CLA credentials.
+  - label: ":memo: Contributor agreement"
+    key: cla
+    agents:
+      queue: linux-small
+    if: build.pull_request.id != null && build.pull_request.repository == pipeline.repository
+    timeout_in_minutes: 5
+    concurrency: 1
+    concurrency_group: eigin/cla-comments
+    secrets:
+      - CLA_READ_TOKEN
+      - CLA_BOT_TOKEN
+    command: |
+      docker run --rm --interactive --read-only --cap-drop ALL \
+        --security-opt no-new-privileges --user 65534:65534 \
+        --env CLA_READ_TOKEN --env CLA_BOT_TOKEN \
+        --env BUILDKITE_PULL_REQUEST --env BUILDKITE_COMMIT \
+        python:3.13-slim python - < .buildkite/scripts/check-cla.py
+
+  - label: ":books: Publish docs"
+    key: docs-publish
+    depends_on:
+      - versions
+      - ci-tests
+    agents:
+      queue: linux-small
+    if: build.branch == "main" && build.pull_request.id == null && build.source == "webhook"
+    concurrency: 1
+    concurrency_group: eigin/docs-publish
+    timeout_in_minutes: 30
+    secrets:
+      - DOCS_GITLAB_TOKEN
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_DEFAULT_REGION
+    command: |
+      docker run --rm \
+        --volume "$$PWD:/work" --workdir /work \
+        --env DOCS_GITLAB_TOKEN \
+        rust:1-bookworm python3 .buildkite/scripts/build-docs.py
+      docker run --rm \
+        --volume "$$PWD:/work" --workdir /work \
+        --env AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY --env AWS_DEFAULT_REGION \
+        --env BUILDKITE_COMMIT --env BUILDKITE_BRANCH \
+        --env BUILDKITE_PULL_REQUEST --env BUILDKITE_SOURCE \
+        rust:1-bookworm python3 .buildkite/scripts/publish-docs.py
