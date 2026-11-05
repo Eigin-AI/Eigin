@@ -14,6 +14,9 @@ struct ChatMessage: Codable {
     var name: String?
     var toolCalls: [ToolCall]?
 
+    /// Private continuation state; excluded from generic wire encoding.
+    var reasoningHistory: ReasoningHistory? = nil
+
     /// Provider-specific metadata (e.g. Gemini thought_signature).
     /// Not part of CodingKeys — injected into the request body by the ProviderAdapter.
     var providerMetadata: [String: String]?
@@ -54,6 +57,7 @@ struct ChatMessage: Codable {
         name: String? = nil,
         toolCalls: [ToolCall]? = nil,
         providerMetadata: [String: String]? = nil,
+        reasoningHistory: ReasoningHistory? = nil,
         attachments: [MessageAttachment]? = nil,
         localID: String = UUID().uuidString
     ) {
@@ -64,6 +68,7 @@ struct ChatMessage: Codable {
         self.name = name
         self.toolCalls = toolCalls
         self.providerMetadata = providerMetadata
+        self.reasoningHistory = reasoningHistory
         self.attachments = attachments
     }
 

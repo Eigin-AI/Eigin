@@ -114,7 +114,10 @@ struct ChatCompletionMessage: Encodable {
     /// Builds the wire message for `message`. Image attachments are loaded from
     /// `store` and inlined as base64 data URLs; when there are none (or none of
     /// their bytes could be loaded), `content` falls back to plain text.
-    init(_ message: ChatMessage, store: any ChatAttachmentStoring) {
+    init(
+        _ message: ChatMessage,
+        store: any ChatAttachmentStoring
+    ) {
         role = message.role
         toolCallID = message.toolCallID
         name = message.name
@@ -186,14 +189,14 @@ struct ChatCompletionChunk: Decodable {
             } else if let text = try? container.decode(String.self, forKey: .content) {
                 content = text
             } else {
-                // Mistral can mix thinking and answer text in the same delta.
-                let parts = try container.decode([ContentPart].self, forKey: .content)
+                // Structured responses can mix visible text and provider-specific parts.
+                let parts = try container.decode([TextProjection].self, forKey: .content)
                 let textParts = parts.filter { $0.type == "text" }.compactMap(\.text)
                 content = textParts.isEmpty ? nil : textParts.joined()
             }
         }
 
-        private struct ContentPart: Decodable {
+        private struct TextProjection: Decodable {
             let type: String
             let text: String?
         }

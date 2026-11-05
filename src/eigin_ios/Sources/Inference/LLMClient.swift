@@ -25,7 +25,7 @@ protocol LLMClient: Sendable {
 
 /// Creates the appropriate ``LLMClient`` based on the provider's base URL.
 enum LLMClientFactory {
-    static func client(baseURL: String, apiToken: String) -> LLMClient {
+    static func client(baseURL: String, apiToken: String, providerID: UUID? = nil) -> LLMClient {
         if ProviderPreset.isLocal(baseURL) {
             return LocalClient()
         }
@@ -34,7 +34,8 @@ enum LLMClientFactory {
             // manager. `apiToken` is unused here.
             return RelayLLMClient(
                 walletManager: Container.shared.creditWalletManager(),
-                relayClient: Container.shared.relayClient()
+                relayClient: Container.shared.relayClient(),
+                providerID: providerID
             )
         }
         if ProviderPreset.isAnthropic(baseURL) {
@@ -53,7 +54,7 @@ enum LLMClientFactory {
                 apiToken: apiToken
             )
         }
-        return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken)
+        return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken, providerID: providerID)
     }
 }
 

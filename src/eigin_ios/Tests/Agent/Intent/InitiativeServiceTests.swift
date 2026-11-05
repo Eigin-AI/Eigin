@@ -8,7 +8,7 @@ import UserNotifications
 struct InitiativeServiceTests {
     @MainActor private func fixture(status: UNAuthorizationStatus = .authorized) throws -> Fixture {
         let container = try ModelContainer(
-            for: Schema(SchemaV11.models),
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let center = FakeInitiativeNotifications()

@@ -13,7 +13,7 @@ struct ChatViewModelTests {
     private func makeContext() throws -> (Chat, Agent, Provider, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV11.models, version: SchemaV11.versionIdentifier),
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
             configurations: config
         )
         let ctx = container.mainContext

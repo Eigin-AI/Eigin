@@ -13,7 +13,7 @@ struct KnowledgeServiceEntityIDTests {
 
     private func makeService() throws -> DefaultKnowledgeService {
         let container = try ModelContainer(
-            for: Schema(SchemaV10.models),
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         return DefaultKnowledgeService(modelContainer: container)

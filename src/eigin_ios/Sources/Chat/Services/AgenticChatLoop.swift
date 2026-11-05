@@ -265,6 +265,7 @@ final class AgenticChatLoop {
             pendingToolCalls = []
             var finishReason: ChatStreamEvent.FinishReason = .stop
             var capturedProviderMetadata: [String: String]?
+            var reasoningHistory: ReasoningHistory?
 
             let stream = turn.stream
             let streamStart = turn.dispatchedAt
@@ -306,6 +307,9 @@ final class AgenticChatLoop {
                         )
                         chatPhase = .streamingTools
                         pendingToolCalls.append(call)
+
+                    case .reasoningHistory(let history):
+                        reasoningHistory = history
 
                     case .providerMetadata(let meta):
                         AppLogger.debug(
@@ -399,6 +403,7 @@ final class AgenticChatLoop {
                     content: contentBuffer.isEmpty ? nil : contentBuffer,
                     toolCalls: pendingToolCalls,
                     providerMetadata: capturedProviderMetadata,
+                    reasoningHistory: reasoningHistory,
                     localID: contentBuffer.isEmpty ? UUID().uuidString : currentMessageID
                 )
                 allMessages.append(assistantMessage)
@@ -480,10 +485,11 @@ final class AgenticChatLoop {
 
             AppLogger.debug("Final content length: \(public: finalContent.count)", category: .chat)
 
-            if !finalContent.isEmpty {
+            if !finalContent.isEmpty || reasoningHistory != nil {
                 let finalMessage = ChatMessage(
                     role: "assistant",
                     content: finalContent,
+                    reasoningHistory: reasoningHistory,
                     localID: currentMessageID
                 )
                 produced.append(finalMessage)

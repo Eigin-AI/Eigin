@@ -59,8 +59,12 @@ reasoning) or careful (reasoning).
 
 For models with verified reasoning controls, Auto raises effort from the lowest
 supported setting to `high`, keeping the model when eligible. Pinned models use
-provider defaults. [#366](https://code.eigin.ai/dev/eigin/-/issues/366) tracks
-reasoning-history replay and the quality evaluation required before rollout.
+provider defaults.
+
+Thinking replay is supported for selected models, starting with Mistral directly
+and through Eigin relay. Mistral strongly recommends preserving reasoning history
+for Large 4. Eigin keeps these traces hidden and replays them only to the same
+provider configuration, endpoint, and model.
 
 ### Step-up rules
 
