@@ -29,6 +29,78 @@ struct IntentToolTests {
 
     private let policy = SpaceAccessPolicy(currentSpaceID: nil, publicSpaceIDs: [])
 
+    @Test(arguments: ["add_intent", "update_intent"], [
+        "",
+        #", "schedules": []"#,
+        #", "schedules": [{"content": "Inbox overview", "frequency": "daily", "hour": 8}]"#,
+    ])
+    @MainActor func scheduleGuidance(name: String, scheduleArguments: String) async throws {
+        let (agent, service) = try makeFixture()
+        let id = try await service.create(
+            content: "Inbox overview", agentID: agent.id, spaceID: nil, chatID: nil,
+            tasks: [], events: [], schedules: []
+        )
+        let call = makeCall(name: name, arguments: """
+        {"id": "\(id.uuidString)", "content": "Inbox overview"\(scheduleArguments)}
+        """)
+        let result = if name == "add_intent" {
+            await AddIntentTool(intentService: service).execute(call, agent: agent)
+        } else {
+            await UpdateIntentTool(intentService: service).execute(call, agent: agent)
+        }
+        #expect(!result.isError)
+        let hasSchedules = scheduleArguments.contains("daily")
+        #expect(result.content.contains("guidance") == hasSchedules)
+        #expect(result.content.contains("set_initiatives") == hasSchedules)
+        if hasSchedules {
+            #expect(result.content.contains("do not create notifications"))
+            let intents = try await service.activeIntents(
+                agentID: agent.id, limit: 10, accessPolicy: policy
+            )
+            let scheduledIntent = try #require(intents.first { !$0.schedules.isEmpty })
+            let schedule = try #require(scheduledIntent.schedules.first)
+            #expect(result.content.contains(scheduledIntent.id.uuidString))
+            #expect(result.content.contains(schedule.id.uuidString))
+        }
+    }
+
+    @Test @MainActor func clearingSchedulesOmitsGuidance() async throws {
+        let (agent, service) = try makeFixture()
+        let id = try await service.create(
+            content: "Inbox overview", agentID: agent.id, spaceID: nil, chatID: nil,
+            tasks: [], events: [],
+            schedules: [IntentSchedule(content: "Inbox overview", frequency: .daily, hour: 8)]
+        )
+        let result = await UpdateIntentTool(intentService: service).execute(
+            makeCall(name: "update_intent", arguments: """
+            {"id": "\(id.uuidString)", "schedules": []}
+            """), agent: agent
+        )
+        #expect(!result.isError)
+        #expect(!result.content.contains("guidance"))
+        let intents = try await service.activeIntents(
+            agentID: agent.id, limit: 10, accessPolicy: policy
+        )
+        let intent = try #require(intents.first)
+        #expect(intent.schedules.isEmpty)
+    }
+
+    @Test(arguments: ["add_intent", "update_intent"])
+    @MainActor func rejectedSchedulesOmitGuidance(name: String) async throws {
+        let (agent, service) = try makeFixture()
+        let call = makeCall(name: name, arguments: """
+        {"id": "\(UUID().uuidString)", "content": "Inbox overview",
+         "schedules": [{"content": "Inbox overview", "frequency": "invalid"}]}
+        """)
+        let result = if name == "add_intent" {
+            await AddIntentTool(intentService: service).execute(call, agent: agent)
+        } else {
+            await UpdateIntentTool(intentService: service).execute(call, agent: agent)
+        }
+        #expect(result.isError)
+        #expect(!result.content.contains("guidance"))
+    }
+
     // MARK: - add_intent
 
     @Test @MainActor func addIntentCreatesWithSubObjects() async throws {
