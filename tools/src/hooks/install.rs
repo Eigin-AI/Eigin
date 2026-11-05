@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
@@ -30,6 +31,8 @@ fn write_hook(path: &str, content: &str) -> Result<()> {
     // Remove any existing file or dangling symlink before writing.
     let _ = fs::remove_file(path);
     fs::write(path, content).with_context(|| format!("writing hook {path}"))?;
+    // Executability is not permission-based on Windows: hooks run via git's sh.
+    #[cfg(unix)]
     fs::set_permissions(path, fs::Permissions::from_mode(0o755))
         .with_context(|| format!("setting permissions on {path}"))?;
     Ok(())

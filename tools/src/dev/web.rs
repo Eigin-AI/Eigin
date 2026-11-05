@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::Write as _;
 use std::net::{SocketAddr, TcpStream};
+#[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -120,8 +121,9 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
         .current_dir(root)
         .stdout(log.try_clone()?)
         .stderr(log)
-        .stdin(std::process::Stdio::null())
-        .process_group(0);
+        .stdin(std::process::Stdio::null());
+    #[cfg(unix)]
+    command.process_group(0);
     let child = command.spawn().context("starting the web dev server")?;
 
     fs::write(pid_file(root, target), format!("{}\n", child.id()))
