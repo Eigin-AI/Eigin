@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::net::{SocketAddr, TcpStream};
+#[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -57,15 +58,16 @@ pub fn start(env: Env, root: &str) -> Result<()> {
 
     // Its own process group, so the relay outlives whatever started it, and
     // its own directory, because it resolves config/ relative to the cwd.
-    let child = Command::new("./target/debug/eigin-relay")
+    let mut command = Command::new("./target/debug/eigin-relay");
+    command
         .current_dir(&relay_dir)
         .envs(vars.iter().map(|(k, v)| (k.as_str(), v.as_str())))
         .stdout(log.try_clone()?)
         .stderr(log)
-        .stdin(std::process::Stdio::null())
-        .process_group(0)
-        .spawn()
-        .context("starting the relay")?;
+        .stdin(std::process::Stdio::null());
+    #[cfg(unix)]
+    command.process_group(0);
+    let child = command.spawn().context("starting the relay")?;
 
     fs::write(pid_file(root), format!("{}\n", child.id())).context("writing the pid file")?;
 
