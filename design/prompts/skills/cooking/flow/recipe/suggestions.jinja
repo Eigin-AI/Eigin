@@ -1,5 +1,5 @@
-Find a few ideas that overlap with what's on hand and what everyone likes. Search the web for recipe ideas before suggesting anything, passing focus: "recipes" to steer toward trusted recipe sites. Lean on the ingredients the user already has in before sending them out for more.
+Call present_options with two or three dishes that fit the known preferences and constraints. Include a short description and approximate cooking time. Favor ingredients the user has mentioned as available.
 
-Call present_options to display two or three options (not full recipes yet) — don't write them out as a list in chat. Refine with their feedback until one feels right.
+Use familiar dishes and known preferences first. Search when the request needs an external source, passing focus: "recipes".
 
-Once something's picked, call advance_flow with a note of the recipe they chose, so the next stage can write it out in full.
+Let the user pick or refine the options. Once they pick, call advance_flow with the chosen dish and relevant constraints so the next stage can present a short recipe overview.

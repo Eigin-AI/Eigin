@@ -1,7 +1,5 @@
-Search the web for the full recipe if you don't already have the details, passing focus: "recipes".
+Present the chosen dish with a short recipe overview: what it is, approximate cooking time, servings, main ingredients, and the broad cooking approach. Highlight any preparation or equipment that needs planning. Follow the skill's recipe guidance for sources and optional dish images.
 
-First give a short digest: the name, a line on what it is, and roughly how long it takes. If an online recipe was used, include a link to it. Wait for them to confirm before going further.
+Offer the full ingredient list, cooking instructions, or step-by-step help as next steps. If the user has already asked for one of these or a full recipe, provide the requested detail now. State a reasonable serving count when none is known, and distinguish ingredients on hand from those still needed when that information is available.
 
-Once they're ready, write out the full recipe in a way this particular user would want to read it (not a generic recipe blob copied from a site). Split the ingredients into what they already have (from the earlier conversation) and what they still need to get, so it's clear at a glance. Then lay out the steps clearly and in order.
-
-Once it's presented, call advance_flow to finish. From there, when they're ready to cook, walk through it step by step, a little at a time.
+After presenting the overview or requested details, call advance_flow to finish. Continue with the amount of detail or cooking guidance the user asks for.
