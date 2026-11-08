@@ -167,6 +167,19 @@ test("the chat builder draws the conversation you write", async ({ page }) => {
   await expect(page.locator(".options-group")).toHaveCount(1);
 });
 
+test("compact options survive the chat builder URL and render mode", async ({ page }) => {
+  await page.goto("/#/showcase/chat-builder");
+  const group = page.locator(".shot-canvas .options-group");
+  await expect(group.locator(".carousel.compact")).toHaveCount(0);
+  await page.getByRole("radio", { name: "Compact", exact: true }).click();
+  await expect(group.locator(".carousel.compact")).toHaveCount(1);
+  await expect.poll(() => new URL(page.url()).hash).toContain("compact");
+  const hash = new URL(page.url()).hash;
+  await page.goto(`/${hash}&render`);
+  await page.waitForSelector("body[data-showcase-ready]");
+  await expect(page.locator(".options-group .carousel.compact")).toHaveCount(1);
+});
+
 test("an option's category picks its illustration, as in the app", async ({ page }) => {
   const draw = async (line: string) => {
     const chat = JSON.stringify([{ kind: "options", text: line }]);

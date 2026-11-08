@@ -13,6 +13,8 @@ export type TurnKind = "user" | "agent" | "tools" | "options";
 export interface Turn {
   kind: TurnKind;
   text: string;
+  /** Card style for options; existing shots default to visual. */
+  presentation?: "compact" | "visual";
 }
 
 export const turnKinds: { id: TurnKind; label: string; hint: string }[] = [

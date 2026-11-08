@@ -82,7 +82,7 @@
         {:else if turn.kind === "tools"}
           <ToolGroup tools={tools(turn.text)} />
         {:else}
-          <OptionsGroup options={options(turn.text)} />
+          <OptionsGroup options={options(turn.text)} presentation={turn.presentation ?? "visual"} />
         {/if}
       {/each}
     </ChatFeed>

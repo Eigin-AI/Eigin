@@ -28,6 +28,13 @@
         selection={turn.kind}
         onSelect={(next) => (turn.kind = next as TurnKind)}
       />
+      {#if turn.kind === "options"}
+        <SegmentedControl
+          segments={[{ value: "compact", label: "Compact" }, { value: "visual", label: "Visual" }]}
+          selection={turn.presentation ?? "visual"}
+          onSelect={(next) => (turn.presentation = next as "compact" | "visual")}
+        />
+      {/if}
       <textarea
         class="showcase-textarea t-description"
         rows={turn.kind === "agent" ? 5 : 2}

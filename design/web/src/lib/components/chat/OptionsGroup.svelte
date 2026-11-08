@@ -1,10 +1,11 @@
 <script lang="ts">
   import OptionsCarousel from "../card/OptionsCarousel.svelte";
-  import type { OptionChoice } from "../card/types";
+  import type { OptionChoice, OptionsPresentation } from "../card/types";
 
   let {
     question,
     options,
+    presentation = "visual",
     somethingElse = { label: "Something else", description: "Write your own answer" },
     onSelect,
     onFocusInput,
@@ -12,6 +13,7 @@
     /** Asked above the cards; omit when the question was already spoken. */
     question?: string;
     options: OptionChoice[];
+    presentation?: OptionsPresentation;
     somethingElse?: { label: string; description: string };
     onSelect?: (label: string) => void;
     /** Taking the way out hands the turn back to the composer. */
@@ -29,7 +31,7 @@
   {/if}
 
   <OptionsCarousel
-    presentation="visual"
+    {presentation}
     {options}
     {somethingElse}
     {onSelect}
