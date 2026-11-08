@@ -1,0 +1,10 @@
+fact eigin_agent_does_background_work {
+    name = "Background Preparation and Knowledge Maintenance"
+    claim = "When proactivity is enabled, the agent can work in the background to prepare for future conversations and upcoming agreed initiatives, and maintain its knowledge. It can gather context, save findings, and revisit its knowledge to tidy up duplicates, outdated entries, and contradictions. The more proactive the agent is, the more often it does this. Reactive mode disables scheduled background work while keeping agreed initiative invitations."
+    source = enum"stated"
+    describes = [thing.eigin]
+    relates_to = [fact.eigin_agent_has_initiative, fact.eigin_agent_has_intents, fact.eigin_agent_has_knowledge, fact.eigin_background_permissions]
+    tags = ["background", "preparation", "maintenance", "knowledge", "proactivity", "proactive", "balanced", "reactive", "settings", "level", "initiative"]
+    created_at = 2026-11-06
+    last_verified = 2026-11-06
+}
