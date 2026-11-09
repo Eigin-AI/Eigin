@@ -219,6 +219,13 @@ struct OnboardingFlow: View {
             return
         }
 
+        if priority == nil {
+            priorityRaw = ""
+            if step == .inference || step == .conversation {
+                stepRaw = OnboardingStep.priority.rawValue
+            }
+        }
+
         switch step {
         case .welcome, .name, .priority, .inference:
             break

@@ -157,13 +157,10 @@ struct OnboardingChat: View {
         let language = languageManager.currentLanguage.displayName
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let person = trimmedName.isEmpty ? "this person" : trimmedName
-        let priorityLine = priority.map {
-            "When you asked what they're hoping to get from a personal AI, they leaned "
-                + "toward \($0.conversationSeed)."
-        } ?? "They have not said yet what they're hoping to get from a personal AI."
         let systemPrompt = Prompt.Onboarding.chat(
             person: person,
-            priorityLine: priorityLine,
+            prioritySeed: priority?.conversationSeed
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
             language: language
         )
 

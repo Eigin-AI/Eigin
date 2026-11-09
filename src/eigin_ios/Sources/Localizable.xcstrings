@@ -10286,36 +10286,36 @@
         }
       }
     },
-    "onboarding.priority.people.explainer": {
-      "comment": "Explainer on the ‘keep in touch’ priority card.",
+    "onboarding.priority.getStuffDone.explainer": {
+      "comment": "Explainer on the ‘get stuff done’ priority card.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "De mennesker der betyder noget for dig og hvad der sker i deres liv."
+            "value": "Praktiske gøremål eller noget du har udskudt. Tag det næste skridt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The people who matter to you and what’s going on in their lives."
+            "value": "Everyday admin or something you’ve been putting off. Take the next step."
           }
         }
       }
     },
-    "onboarding.priority.people.title": {
-      "comment": "Title on the ‘keep in touch’ priority card.",
+    "onboarding.priority.getStuffDone.title": {
+      "comment": "Title on the ‘get stuff done’ priority card.",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hold kontakten"
+            "value": "Få ting gjort"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keep in touch"
+            "value": "Get stuff done"
           }
         }
       }

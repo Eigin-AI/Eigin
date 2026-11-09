@@ -3590,15 +3590,15 @@ enum Localized {
                 }
             }
 
-            enum People {
-                /// Explainer on the ‘keep in touch’ priority card.
+            enum GetStuffDone {
+                /// Explainer on the ‘get stuff done’ priority card.
                 static var explainer: String {
-                    Localized.get("onboarding.priority.people.explainer")
+                    Localized.get("onboarding.priority.getStuffDone.explainer")
                 }
 
-                /// Title on the ‘keep in touch’ priority card.
+                /// Title on the ‘get stuff done’ priority card.
                 static var title: String {
-                    Localized.get("onboarding.priority.people.title")
+                    Localized.get("onboarding.priority.getStuffDone.title")
                 }
             }
 
