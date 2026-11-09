@@ -11,9 +11,15 @@ The agentic loop orchestrates the tool-calling cycle, exchanging with the model 
 | **Repeat** | Send the results back and stream again, until the model replies with no tool calls, or a safety limit is reached. |
 | **Reply** | The final response goes to the user. |
 
+## Silent and interrupted turns
+
+An empty final reply or recoverable cloud-stream interruption gets one automatic continuation per turn. A request-only system hint asks the model to finish using existing results. Cancellation, limits, refusals, and explicit background completion do not trigger recovery.
+
+Repeated silence shows a tappable continuation card. The credits-ready card offers the same action: resume saved work without resending the user's message.
+
 ## Safe checkpoints
 
-The loop tracks safe checkpoints so an interruption doesn't leave the chat in a broken state. Inference providers have strict message-format rules, and normalising across providers means being conservative enough to satisfy the strictest.
+Failures and stops preserve completed tool results and partial prose. Interrupted tool batches get paired results marking outstanding actions as uncertain, so continuation can check their state before repeating them.
 
 ## Permission gating
 

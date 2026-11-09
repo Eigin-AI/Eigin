@@ -45,6 +45,37 @@ struct HedgedFirstTokenTests {
 
     // MARK: - Race behaviour
 
+    @Test(arguments: [false, true], [false, true])
+    func winnerPreservesItsCompletion(fallbackWins: Bool, fails: Bool) async throws {
+        let (primary, primaryTx) = makeStream()
+        let (fallback, fallbackTx) = makeStream()
+        let winnerTx = fallbackWins ? fallbackTx : primaryTx
+        winnerTx.yield(1)
+        winnerTx.finish(throwing: fails ? URLError(.networkConnectionLost) : nil)
+        let raced = withHedgedFirstToken(
+            primaryModel: "primary",
+            plan: fallbackWins ? HedgePlan(delay: .zero, fallbackModel: "fallback") : nil,
+            ceiling: .seconds(2), raceWinner: RaceWinner(),
+            openPrimary: { _ in primary }, openFallback: { fallback },
+            primaryFailed: { _, _ in
+                Issue.record("A winning stream must not retry through the opening hook")
+                return nil
+            },
+            onLoser: { _, _ in }
+        )
+        var received: [Int] = []
+        do {
+            for try await value in raced {
+                received.append(value)
+            }
+            #expect(!fails)
+        } catch let error as URLError {
+            #expect(fails)
+            #expect(error.code == .networkConnectionLost)
+        }
+        #expect(received == [1])
+    }
+
     @Test("Primary speaks first: runner-up never opens, nobody loses")
     func primaryWinsBeforeDelay() async throws {
         let (primary, primaryTx) = makeStream()

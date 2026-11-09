@@ -79,6 +79,28 @@ struct WatchTurnRunnerTests {
         #expect(try watchChat(in: container).messages.count == 4)
     }
 
+    @Test("silent failure keeps completed tool work")
+    @MainActor func silentFailureKeepsToolWork() async throws {
+        let (_, _, container) = try makeContainer()
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "work",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.enqueueEventStreams([
+            [.toolCall(call), .finished(.toolCalls)], [.finished(.stop)], [.finished(.stop)],
+        ])
+        registerServices(container: container, chatService: service)
+        UserDefaults.standard.removeObject(forKey: StorageKey.watchChat)
+        defer { UserDefaults.standard.removeObject(forKey: StorageKey.watchChat) }
+        await #expect(throws: TurnCompletionError.self) {
+            try await WatchTurnRunner.run(question: "check")
+        }
+        let context = try WatchAgentContext.resolve()
+        #expect(context.messages.contains { $0.toolCallID == "work" })
+    }
+
     @Test("a failed turn throws, keeps the question, and persists no reply")
     @MainActor func failedTurnThrows() async throws {
         let (agent, provider, container) = try makeContainer()

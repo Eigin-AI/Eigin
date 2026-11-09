@@ -14,6 +14,7 @@ struct ChatFeedRow: View {
     var onUserMessageFooterAction: (() -> Void)?
     var onOptionSelected: ((String) -> Void)?
     var onFocusInput: (() -> Void)?
+    var onContinue: (() -> Void)?
     var onSelectError: ((ConnectionError) -> Void)?
 
     @Environment(\.colors) private var colors
@@ -43,13 +44,16 @@ struct ChatFeedRow: View {
             .padding(.horizontal, breakpoint.inner)
         case .error(_, let error):
             if error.recovery == .purchaseEiginRelayCredits {
-                CreditsRecoveryCard(error: error)
+                CreditsRecoveryCard(error: error, onContinue: onContinue)
                     .padding(.horizontal, breakpoint.inner)
             } else {
                 AppCard(
                     error.title,
                     explainer: error.suggestion,
-                    action: { onSelectError?(error) }
+                    action: {
+                        if error.recovery == .continueTurn { onContinue?() }
+                        else { onSelectError?(error) }
+                    }
                 )
                 .padding(.horizontal, breakpoint.inner)
             }

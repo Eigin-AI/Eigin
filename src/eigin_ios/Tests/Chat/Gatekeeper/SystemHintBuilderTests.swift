@@ -30,6 +30,18 @@ struct SystemHintBuilderTests {
 
     // MARK: - Tests
 
+    @Test func preparedSectionsUseTheSameHintFormat() async {
+        let fromSources = await SystemHintBuilder.build(
+            sources: [StubSource(title: "Continuation", body: "Finish the reply.")], input: input()
+        )
+        let prepared = SystemHintBuilder.build(sections: [
+            "",
+            "## Continuation\n\nFinish the reply.",
+        ])
+        #expect(prepared == fromSources)
+        #expect(SystemHintBuilder.build(sections: [""]) == nil)
+    }
+
     @Test func buildWrapsSectionsInSystemHintTag() async {
         let sources: [any SystemHintSource] = [
             StubSource(title: "One", body: "first body"),

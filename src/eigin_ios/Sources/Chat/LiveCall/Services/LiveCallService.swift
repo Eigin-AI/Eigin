@@ -779,6 +779,10 @@ final class LiveCallService: @unchecked Sendable {
                     "Live call chat error: \(private: error.localizedDescription)",
                     category: .livecall
                 )
+                let checkpoint = chatLoop.buildCheckpoint()
+                messages.append(contentsOf: checkpoint)
+                onPersist?(checkpoint)
+                chatLoop.settle()
                 endCallWithError(error)
             }
         }

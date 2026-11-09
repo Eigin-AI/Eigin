@@ -4,6 +4,11 @@ import os
 import SwiftData
 import SwiftUI
 
+/// A completed request that left the user without a final reply.
+enum TurnCompletionError: Error {
+    case missingReply
+}
+
 /// Status of a tool event shown in the chat feed.
 enum ToolEventStatus: Equatable {
     case executing
@@ -194,7 +199,8 @@ final class AgenticChatLoop {
         model: String? = nil,
         sentAt: ContinuousClock.Instant? = nil,
         routing: RouteRequest? = nil,
-        conversationID: UUID? = nil
+        conversationID: UUID? = nil,
+        continuationInstruction: String? = nil
     ) async throws -> [ChatMessage] {
         reset()
         turnSentAt = sentAt
@@ -204,6 +210,8 @@ final class AgenticChatLoop {
         throttler.start()
 
         var allMessages = messages
+        var recoveryUsed = false
+        var nextInstruction = continuationInstruction
         var currentTools = tools
         var currentExecutor: ToolExecutor = toolExecutor
 
@@ -238,6 +246,7 @@ final class AgenticChatLoop {
             produced.append(assistantMsg)
             produced.append(toolMsg)
             safeProducedCount = produced.count
+            allMessages.append(contentsOf: [assistantMsg, toolMsg])
             return result
         }
 
@@ -249,11 +258,17 @@ final class AgenticChatLoop {
                 category: .chat
             )
 
+            var requestMessages = allMessages
+            if let instruction = nextInstruction,
+               let hint = SystemHintBuilder.build(sections: [instruction])
+            {
+                requestMessages = MessagePipeline.appendSystemHint(hint, to: requestMessages)
+            }
             let turn = try await openStream(
                 chatService: chatService,
                 provider: provider,
                 agent: agent,
-                messages: allMessages,
+                messages: requestMessages,
                 tools: currentTools,
                 cacheKey: cacheKey,
                 inlineToolRunner: inlineRunner,
@@ -261,9 +276,10 @@ final class AgenticChatLoop {
                 conversationID: conversationID
             )
 
+            nextInstruction = nil
             contentBuffer = ""
             pendingToolCalls = []
-            var finishReason: ChatStreamEvent.FinishReason = .stop
+            var finishReason: ChatStreamEvent.FinishReason?
             var capturedProviderMetadata: [String: String]?
             var reasoningHistory: ReasoningHistory?
 
@@ -327,10 +343,11 @@ final class AgenticChatLoop {
                         if reason == .toolCalls, !pendingToolCalls.isEmpty {
                             chatPhase = .readyToExecute
                         } else {
-                            chatPhase = .done
+                            chatPhase = .streamingProse
                         }
                     }
                 }
+                if finishReason == nil { throw StreamCompletionError.interrupted }
             } catch is CancellationError {
                 // Either handleStop already committed partial prose via its
                 // checkpoint, or the whole turn is being torn down — nothing
@@ -365,6 +382,33 @@ final class AgenticChatLoop {
                         result: .failed(RoutingFailure(from: error))
                     )
                 }
+                if !Task.isCancelled, !shouldStop, shouldTerminate?() != true,
+                   !recoveryUsed, round + 1 < maxRounds,
+                   !ProviderPreset.isLocal(provider.baseURL), isStreamInterruption(error)
+                {
+                    recoveryUsed = true
+                    pendingToolCalls = []
+                    if !contentBuffer.isEmpty {
+                        throttler.finish()
+                        await waitForThrottlerDrain()
+                        if shouldStop { return [] }
+                        try Task.checkCancellation()
+                        let partial = ChatMessage(
+                            role: "assistant",
+                            content: contentBuffer,
+                            localID: currentMessageID
+                        )
+                        produced.append(partial)
+                        allMessages.append(partial)
+                        safeProducedCount = produced.count
+                    }
+                    contentBuffer = ""
+                    throttler.resetKeepingPhase(.waiting)
+                    currentMessageID = "msg-\(UUID().uuidString)"
+                    nextInstruction = Prompt.Hints.Continuation.interrupted
+                    chatPhase = .streamingProse
+                    continue
+                }
                 throw error
             }
 
@@ -381,6 +425,10 @@ final class AgenticChatLoop {
             if finishReason == .toolCalls, !pendingToolCalls.isEmpty {
                 if shouldStop { return [] }
 
+                guard pendingToolCalls.allSatisfy({ call in
+                    !call.id.isEmpty && !call.function.name.isEmpty
+                        && ToolHelpers.parseArguments(call.function.arguments) != nil
+                }) else { throw StreamCompletionError.invalidToolCall }
                 chatPhase = .executingTools
 
                 if contentBuffer.isEmpty {
@@ -430,6 +478,8 @@ final class AgenticChatLoop {
                     )
 
                     await beforeToolCall?(call.function.name)
+                    if shouldStop { return [] }
+                    try Task.checkCancellation()
 
                     let result = await executeToolCall(
                         call, agent: agent, executor: currentExecutor
@@ -475,11 +525,29 @@ final class AgenticChatLoop {
                 continue
             }
 
-            chatPhase = .done
+            if contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               shouldTerminate?() != true
+            {
+                try Task.checkCancellation()
+                guard !recoveryUsed, round + 1 < maxRounds else {
+                    throw TurnCompletionError.missingReply
+                }
+                recoveryUsed = true
+                throttler.resetKeepingPhase(.waiting)
+                contentBuffer = ""
+                pendingToolCalls = []
+                currentMessageID = "msg-\(UUID().uuidString)"
+                nextInstruction = Prompt.Hints.Continuation.missingReply
+                chatPhase = .streamingProse
+                continue
+            }
 
-            // finish_reason == stop: we're done
+            // Drain before marking the turn done so stopping can still save its text.
             throttler.finish()
             await waitForThrottlerDrain()
+            if shouldStop { return [] }
+            try Task.checkCancellation()
+            chatPhase = .done
 
             let finalContent = throttler.fullText
 
@@ -523,6 +591,8 @@ final class AgenticChatLoop {
     /// batches both changes (committed messages appear + streaming item disappears).
     func settle() {
         throttler.reset()
+        contentBuffer = ""
+        pendingToolCalls = []
         toolEvents = []
         produced = []
         safeProducedCount = 0
@@ -658,6 +728,15 @@ final class AgenticChatLoop {
                 ToolEvent(id: id, toolName: toolName, status: .executing, arguments: arguments)
             )
         }
+    }
+
+    private func isStreamInterruption(_ error: Error) -> Bool {
+        if let error = error as? StreamCompletionError, case .interrupted = error { return true }
+        if let error = error as? ResponsesAPIError, case .interruptedStream = error { return true }
+        if let error = error as? URLError {
+            return error.code == .timedOut || error.code == .networkConnectionLost
+        }
+        return false
     }
 
     private func waitForThrottlerDrain() async {
@@ -825,18 +904,34 @@ final class AgenticChatLoop {
         }
     }
 
-    private func buildCheckpoint() -> [ChatMessage] {
-        // Only return messages up to the last complete round to avoid
-        // orphaned tool calls (assistant with tool_calls but missing results).
+    /// Captures completed work and partial prose for persistence after a failure.
+    func buildCheckpoint() -> [ChatMessage] {
+        // Preserve recorded work, including results from a partially executed batch.
         var result = Array(produced.prefix(safeProducedCount))
 
-        // Recover prose buffered by an uncommitted round, whether stopped
-        // mid-stream (.streamingProse) or after the stream ended with tool
-        // calls pending (.readyToExecute). Committing prose alone is safe:
-        // the round's tool calls are still pending, so leaving them out can't
-        // orphan anything, and the round would otherwise commit nothing.
-        if !contentBuffer.isEmpty, chatPhase == .streamingProse || chatPhase == .readyToExecute {
-            result.append(ChatMessage(role: "assistant", content: contentBuffer))
+        // Close a stopped tool batch without losing actions that already completed.
+        if let assistant = result.last(where: { !($0.toolCalls ?? []).isEmpty }),
+           let calls = assistant.toolCalls
+        {
+            let completedIDs = Set(result.compactMap(\.toolCallID))
+            for call in calls where !completedIDs.contains(call.id) {
+                result.append(ChatMessage(
+                    role: "tool",
+                    content: "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.",
+                    toolCallID: call.id, name: call.function.name
+                ))
+            }
+        }
+
+        // Keep uncommitted prose without retaining unexecuted tool calls.
+        if !contentBuffer.isEmpty, chatPhase != .executingTools,
+           !result.contains(where: { $0.localID == currentMessageID })
+        {
+            result.append(ChatMessage(
+                role: "assistant",
+                content: contentBuffer,
+                localID: currentMessageID
+            ))
         }
 
         return result

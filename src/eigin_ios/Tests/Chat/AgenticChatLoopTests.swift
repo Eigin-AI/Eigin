@@ -157,7 +157,14 @@ struct AgenticChatLoopTests {
         #expect(continuation.contains { $0.role == "tool" && $0.toolCallID == call.id })
         #expect(!continuation.contains { $0.content?.contains("hidden") == true })
         let url = provider.baseURL + "/chat/completions"
-        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data(
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                    .utf8
+            ),
+            statusCode: 200
+        )
         let client = OpenAICompatibleClient(
             baseURL: provider.baseURL,
             apiToken: "test",
@@ -178,6 +185,380 @@ struct AgenticChatLoopTests {
         #expect((parts.first?["thinking"] as? [[String: String]])?.first?["text"] == "hidden")
         #expect((assistant["tool_calls"] as? [[String: Any]])?.first?["id"] as? String == call.id)
         #expect(parts.count == (prose ? 2 : 1))
+    }
+
+    @Test(arguments: ["", " \n\t"])
+    @MainActor func recoversEmptyFinalReply(empty: String) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta(empty), .finished(.stop)])
+        service.enqueueEventStream([.contentDelta("Done."), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let messages = [
+            ChatMessage(role: "system", content: "Stable system prompt"),
+            ChatMessage(role: "user", content: "Help"),
+        ]
+        let produced = try await loop.run(
+            messages: messages, tools: nil,
+            agent: agent, provider: provider, chatService: service, toolExecutor: FakeToolExecutor()
+        )
+        #expect(produced.last?.content == "Done.")
+        #expect(loop.roundsExecuted == 2)
+        #expect(service.capturedEventMessages.first?.content == messages.first?.content)
+        #expect(service.capturedEventMessages.last?.role == "user")
+        #expect(service.capturedEventMessages.last?.content?.contains("<system_hint>") == true)
+        #expect(service.capturedEventMessages.last?.content?
+            .contains(Prompt.Hints.Continuation.missingReply) == true)
+        #expect(service.capturedEventMessages.count == messages.count)
+        #expect(messages.last?.content == "Help")
+        #expect(!produced.contains { $0.role == "system" || $0.role == "user" })
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func recoveryHintAppliesOnlyToTheRecoveryRequest(hasUserMessage: Bool) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let requests = OSAllocatedUnfairLock(initialState: [[ChatMessage]]())
+        let service = ObservedChatService { _, messages, _ in
+            requests.withLock { $0.append(messages) }
+        }
+        let call = ToolCall(
+            id: "work",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.scripted.enqueueEventStreams([
+            [.finished(.stop)], [.toolCall(call), .finished(.toolCalls)],
+            [.contentDelta("Done."), .finished(.stop)],
+        ])
+        var messages = [ChatMessage(role: "system", content: "Stable system prompt")]
+        if hasUserMessage {
+            messages.append(ChatMessage(
+                role: "user",
+                content: "Help\n\n<system_hint>Existing context</system_hint>"
+            ))
+        }
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let produced = try await loop.run(
+            messages: messages,
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: FakeToolExecutor()
+        )
+        let captured = requests.withLock { $0 }
+        #expect(captured.count == 3)
+        for (index, request) in captured.enumerated() {
+            #expect(request.first?.content == messages.first?.content)
+            #expect(request
+                .contains { ($0.content ?? "").contains(Prompt.Hints.Continuation.missingReply) } ==
+                (index == 1))
+        }
+        let recoveryUser = try #require(captured[1].last(where: { $0.role == "user" }))
+        #expect(recoveryUser.content?.contains("<system_hint>") == true)
+        if hasUserMessage {
+            #expect(recoveryUser.localID == messages.last?.localID)
+            #expect(recoveryUser.content?.contains("Existing context") == true)
+        }
+        #expect(!produced
+            .contains { ($0.content ?? "").contains(Prompt.Hints.Continuation.missingReply) })
+        #expect(!messages
+            .contains { ($0.content ?? "").contains(Prompt.Hints.Continuation.missingReply) })
+    }
+
+    @Test(arguments: ["empty", "eof", "network"])
+    @MainActor func recoversAfterToolsWithoutRepeatingWork(ending: String) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "work",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.enqueueEventStream([
+            .contentDelta("Checking."),
+            .toolCall(call),
+            .finished(.toolCalls),
+        ])
+        service.enqueueEventStream(
+            ending == "empty" ? [.finished(.stop)] : [.contentDelta("The result is")],
+            endingWith: ending == "network" ? URLError(.networkConnectionLost) : nil
+        )
+        service.enqueueEventStream([.contentDelta("Done."), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Help")], tools: toolDefinitions,
+            agent: agent, provider: provider, chatService: service, toolExecutor: executor
+        )
+        #expect(executor.calls.count == 1)
+        #expect(loop.roundsExecuted == 3)
+        #expect(produced.last?.content == "Done.")
+        #expect(service.capturedEventMessages.contains { $0.toolCallID == "work" })
+        if ending != "empty" {
+            #expect(service.capturedEventMessages.contains { $0.content == "The result is" })
+        }
+    }
+
+    @Test @MainActor func repeatedSilenceOffersContinuationAndPreservesTools() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "work",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventStreams([[.finished(.stop)], [.finished(.stop)]])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        do {
+            _ = try await loop.run(
+                messages: [],
+                tools: toolDefinitions,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+            Issue.record("Expected missing reply")
+        } catch let error as TurnCompletionError {
+            #expect(ConnectionError(from: error).recovery == .continueTurn)
+        }
+        #expect(loop.roundsExecuted == 3)
+        #expect(executor.calls.count == 1)
+        #expect(loop.buildCheckpoint().contains { $0.toolCallID == "work" })
+    }
+
+    @Test @MainActor func interruptedToolFragmentsAreNeverExecuted() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "fragment",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{ truncated")
+        )
+        service.enqueueEventStream([.toolCall(call)])
+        service.enqueueEventStream([.contentDelta("Please try again."), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        _ = try await loop.run(
+            messages: [],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: executor
+        )
+        #expect(executor.calls.isEmpty)
+        #expect(!service.capturedEventMessages.contains { !($0.toolCalls ?? []).isEmpty })
+    }
+
+    @Test @MainActor func sharedBudgetPreservesTextBeforeUnexecutedTools() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "pending",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.enqueueEventStream([.finished(.stop)])
+        service.enqueueEventStream([.contentDelta("Partial answer"), .toolCall(call)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        do {
+            _ = try await loop.run(
+                messages: [],
+                tools: toolDefinitions,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+            Issue.record("Expected exhausted recovery")
+        } catch let error as StreamCompletionError {
+            guard case .interrupted = error else { Issue.record("Wrong failure"); return }
+        }
+        #expect(loop.roundsExecuted == 2)
+        #expect(executor.calls.isEmpty)
+        #expect(loop.buildCheckpoint().last?.content == "Partial answer")
+        #expect(loop.buildCheckpoint().allSatisfy { ($0.toolCalls ?? []).isEmpty })
+        loop.settle()
+        #expect(loop.buildCheckpoint().isEmpty)
+    }
+
+    @Test @MainActor func explicitToolTerminationDoesNotNeedReply() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "done",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.shouldTerminate = { true }
+        let produced = try await loop.run(
+            messages: [],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: FakeToolExecutor()
+        )
+        #expect(loop.roundsExecuted == 1)
+        #expect(produced.last?.toolCallID == "done")
+    }
+
+    @Test @MainActor func stoppingDuringRecoveryKeepsCompletedTools() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let saved = OSAllocatedUnfairLock(initialState: [ChatMessage]())
+        let service = ObservedChatService { index, _, _ in
+            if index == 2 {
+                let checkpoint = loop.stop()
+                saved.withLock { $0 = checkpoint }
+            }
+        }
+        let call = ToolCall(
+            id: "done",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        service.scripted.enqueueEventStreams([
+            [.toolCall(call), .finished(.toolCalls)], [.finished(.stop)], [.finished(.stop)],
+        ])
+        _ = try await loop.run(
+            messages: [],
+            tools: toolDefinitions,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: FakeToolExecutor()
+        )
+        #expect(saved.withLock { $0.contains { $0.toolCallID == "done" } })
+    }
+
+    @Test @MainActor func stoppedBatchPersistsPairedResultsAndContinuesWithoutReplay() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let executor = FakeToolExecutor()
+        let service = FakeChatService()
+        let calls = ["first", "second", "third"].map {
+            ToolCall(id: $0, type: "function", function: .init(name: $0, arguments: "{}"))
+        }
+        executor.setResult(for: "first", content: "Completed action")
+        service.enqueueEventStream(calls.map { .toolCall($0) } + [.finished(.toolCalls)])
+        var checkpoint: [ChatMessage] = []
+        loop.beforeToolCall = { name in
+            if name == "second" { checkpoint = loop.stop() }
+        }
+        _ = try await loop.run(
+            messages: [],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: executor
+        )
+        #expect(executor.calls.map(\.id) == ["first"])
+        let store = try ModelContainer(
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        for message in checkpoint {
+            store.mainContext.insert(Message.from(message))
+        }
+        try store.mainContext.save()
+        let persisted = try ModelContext(store)
+            .fetch(FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)]))
+            .map { $0.toChatMessage() }
+        #expect(persisted.filter { $0.toolCallID == "first" }
+            .map(\.content) == ["Completed action"])
+        for call in calls {
+            #expect(persisted.count { $0.toolCallID == call.id } == 1)
+        }
+        #expect(persisted.first?.toolCalls?.map(\.id) == calls.map(\.id))
+        loop.settle()
+        loop.beforeToolCall = nil
+        service.enqueueEventStream([
+            .contentDelta("The first action completed. The remaining actions were interrupted."),
+            .finished(.stop),
+        ])
+        let reply = try await loop.run(
+            messages: persisted,
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: executor,
+            continuationInstruction: Prompt.Hints.Continuation.interrupted
+        )
+        #expect(reply.last?.content?.contains("first action completed") == true)
+        #expect(executor.calls.map(\.id) == ["first"])
+        for call in calls {
+            #expect(service.capturedEventMessages.count { $0.toolCallID == call.id } == 1)
+        }
+    }
+
+    @Test(arguments: [StreamCompletionError.outputLimit, .policyStop, .invalidToolCall])
+    @MainActor func terminalFailuresDoNotContinue(failure: StreamCompletionError) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Partial response")], endingWith: failure)
+        service.enqueueEventStream([.contentDelta("Unexpected continuation"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        await #expect(throws: StreamCompletionError.self) {
+            try await loop.run(
+                messages: [],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: FakeToolExecutor()
+            )
+        }
+        #expect(loop.roundsExecuted == 1)
+    }
+
+    @Test(arguments: ["arguments", "id", "name"])
+    @MainActor func invalidToolBatchNeverExecutes(invalidField: String) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let call = ToolCall(
+            id: invalidField == "id" ? "" : "call",
+            type: "function",
+            function: .init(
+                name: invalidField == "name" ? "" : "read_core",
+                arguments: invalidField == "arguments" ? "[]" : "{}"
+            )
+        )
+        let service = FakeChatService()
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        let executor = FakeToolExecutor()
+        let loop = AgenticChatLoop(isBootstrap: false)
+        await #expect(throws: StreamCompletionError.self) {
+            try await loop.run(
+                messages: [],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+        }
+        #expect(executor.calls.isEmpty)
+        #expect(loop.roundsExecuted == 1)
     }
 
     @Test @MainActor func contentOnlyResponseReturnsSingleMessage() async throws {

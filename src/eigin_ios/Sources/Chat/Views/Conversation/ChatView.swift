@@ -278,6 +278,20 @@ struct ChatView: View {
                             }
                         }
                         : nil,
+                    onContinue: {
+                        afterConsent {
+                            guard let agent, let provider = activeProvider,
+                                  viewModel.chatError?.recovery != nil else { return }
+                            viewModel.continueTurn(
+                                agent: agent, provider: provider, space: space, spaces: spaces,
+                                mcpServers: mcpServers, integrations: integrations,
+                                continuationInstruction: viewModel.chatError?
+                                    .recovery == .continueTurn
+                                    ? Prompt.Hints.Continuation.missingReply : Prompt.Hints
+                                    .Continuation.interrupted
+                            )
+                        }
+                    },
                     header: { header }
                 )
                 if viewModel.canResumeInitiative {

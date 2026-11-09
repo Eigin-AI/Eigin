@@ -491,12 +491,13 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             return false
         }
 
-        // The second death picks whichever surfaced error exists - the streams
-        // are gone either way.
+        // The winner owns completion; an undecided race surfaces a recorded failure.
         if finish {
             cancelTasks()
-            let surfaced = lock
-                .withLock { $0.primaryDeath.surfacedError ?? $0.fallbackDeath.surfacedError }
+            let surfaced = lock.withLock { state in
+                if state.winner == side { return error }
+                return state.primaryDeath.surfacedError ?? state.fallbackDeath.surfacedError
+            }
             if let surfaced {
                 continuation.finish(throwing: surfaced)
             } else {

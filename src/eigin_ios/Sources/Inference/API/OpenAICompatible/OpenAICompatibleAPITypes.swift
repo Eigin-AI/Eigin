@@ -174,15 +174,17 @@ struct ChatCompletionChunk: Decodable {
 
     struct Delta: Decodable {
         let content: String?
+        let refusal: String?
         let toolCalls: [ToolCallDelta]?
 
         enum CodingKeys: String, CodingKey {
-            case content
+            case content, refusal
             case toolCalls = "tool_calls"
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            refusal = try container.decodeIfPresent(String.self, forKey: .refusal)
             toolCalls = try container.decodeIfPresent([ToolCallDelta].self, forKey: .toolCalls)
             if try !container.contains(.content) || container.decodeNil(forKey: .content) {
                 content = nil

@@ -6,6 +6,60 @@ import Testing
 struct ResponsesAPIClientTests {
     private let baseURL = "https://api.openai.com/v1"
 
+    @Test(arguments: ["response.incomplete", "response.refusal.done"])
+    func incompleteAndRefusedResponsesAreNotRecoverable(type: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/responses",
+            data: Data("data: {\"type\":\"\(type)\"}\n\n".utf8),
+            statusCode: 200
+        )
+        let client = ResponsesAPIClient(apiToken: "token", session: session)
+        do {
+            let stream = try await client.chatCompletionEventStream(messages: [], model: "test")
+            for try await _ in stream {}
+            Issue.record("Expected nonrecoverable completion failure")
+        } catch let error as StreamCompletionError {
+            if type == "response.incomplete" {
+                guard case .outputLimit = error
+                else { Issue.record("Expected output limit"); return }
+            } else {
+                guard case .policyStop = error else { Issue.record("Expected policy stop"); return }
+            }
+        }
+    }
+
+    @Test(arguments: ["max_output_tokens", "content_filter"])
+    func incompleteReasonSelectsAppropriateCard(reason: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let payload = """
+        data: {"type":"response.incomplete","response":{"incomplete_details":{"reason":"\(
+            reason
+        )"}}}
+
+
+        """
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/responses", data: Data(payload.utf8), statusCode: 200
+        )
+        let client = ResponsesAPIClient(apiToken: "token", session: session)
+        do {
+            let stream = try await client.chatCompletionEventStream(messages: [], model: "test")
+            for try await _ in stream {}
+            Issue.record("Expected a nonrecoverable incomplete response")
+        } catch let error as StreamCompletionError {
+            let card = ConnectionError(from: error)
+            if reason == "content_filter" {
+                guard case .policyStop = error else { Issue.record("Expected policy stop"); return }
+                #expect(card.title == Localized.Errors.Chat.policyStopTitle)
+            } else {
+                guard case .outputLimit = error
+                else { Issue.record("Expected output limit"); return }
+                #expect(card.title == Localized.Errors.Chat.outputLimitTitle)
+            }
+        }
+    }
+
     // MARK: - fetchModels
 
     @Test func fetchModelsParsesSIWCShapeAndFiltersVisibility() async throws {

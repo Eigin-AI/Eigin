@@ -4,6 +4,63 @@ import Testing
 
 @Suite("OpenAICompatibleClient", .serialized)
 struct OpenAICompatibleClientTests {
+    @Test(arguments: ["", "data: [DONE]\n\n"])
+    func missingFinishReasonIsInterrupted(ending: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let chunk = #"{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call","type":"function","function":{"name":"write","arguments":"{"}}]}}]}"#
+        FakeURLProtocol.stubResponse(
+            for: "https://api.example.com/v1/chat/completions",
+            data: Data(("data: \(chunk)\n\n" + ending).utf8),
+            statusCode: 200
+        )
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+        var calls = 0
+        do {
+            let stream = try await client.chatCompletionEventStream(messages: [], model: "test")
+            for try await event in stream {
+                if case .toolCall = event { calls += 1 }
+            }
+            Issue.record("Expected interruption")
+        } catch let error as StreamCompletionError {
+            guard case .interrupted = error else { Issue.record("Wrong failure"); return }
+        }
+        #expect(calls == 0)
+    }
+
+    @Test(arguments: ["length", "content_filter", "refusal"])
+    func limitsAndRefusalsDoNotLookLikeSilence(reason: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        let chunk = reason == "refusal"
+            ? #"{"choices":[{"delta":{"refusal":"I cannot help."},"finish_reason":"stop"}]}"#
+            : "{\"choices\":[{\"delta\":{},\"finish_reason\":\"\(reason)\"}]}"
+        FakeURLProtocol.stubResponse(
+            for: "https://api.example.com/v1/chat/completions",
+            data: Data("data: \(chunk)\n\n".utf8),
+            statusCode: 200
+        )
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: session
+        )
+        do {
+            let stream = try await client.chatCompletionEventStream(messages: [], model: "test")
+            for try await _ in stream {}
+            Issue.record("Expected nonrecoverable completion failure")
+        } catch let error as StreamCompletionError {
+            if reason == "length" {
+                guard case .outputLimit = error
+                else { Issue.record("Expected output limit"); return }
+            } else {
+                guard case .policyStop = error else { Issue.record("Expected policy stop"); return }
+            }
+        }
+    }
+
     private func makeModelsJSON(ids: [String]) -> Data {
         let entries = ids.map { "{\"id\":\"\($0)\"}" }.joined(separator: ",")
         return Data("{\"data\":[\(entries)]}".utf8)

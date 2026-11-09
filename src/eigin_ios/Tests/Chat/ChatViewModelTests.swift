@@ -474,9 +474,11 @@ struct ChatViewModelTests {
         #expect(rows.first(where: { $0.role == "user" })?.attachments?.first?.id == attachment.id)
     }
 
-    @Test("retry after confirmation guidance and a failed response cannot open a connection sheet")
+    @Test(
+        "continuation after confirmation guidance and a failed response cannot open a connection sheet"
+    )
     @MainActor
-    func retryDoesNotCountAsConnectionConsent() async throws {
+    func continuationDoesNotCountAsConnectionConsent() async throws {
         let (chat, agent, provider, container) = try makeContext()
         let service = FakeChatService()
         let call = ToolCall(
@@ -501,13 +503,14 @@ struct ChatViewModelTests {
             .contains {
                 $0.role == "tool" && ($0.content?.contains("confirmation_required") ?? false)
             })
-        let originalID = try #require(vm.window.messages.last?.localID)
+        let originalID = try #require(vm.window.messages.first(where: { $0.role == "user" })?
+            .localID)
         service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
         service.enqueueEventStream([
             .contentDelta("May I open the connection screen?"),
             .finished(.stop),
         ])
-        vm.retryLastTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        vm.continueTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
         // A broken gate waits on a sheet here; stop it so the regression fails without hanging.
         for _ in 0 ..< 1000 {
             if !vm.isTurnInProgress || vm.chatLoop.pendingConnection != nil { break }
@@ -538,6 +541,59 @@ struct ChatViewModelTests {
     }
 
     // MARK: - continueTurn
+
+    @Test(
+        "recovery continues saved work without resending or duplicate taps",
+        arguments: [false, true]
+    )
+    @MainActor
+    func recoveryContinuesSavedWork(credits: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "completed",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        if credits {
+            service.enqueueEventFailure(CreditsError.noCreditsRemaining)
+        } else {
+            service.enqueueEventStreams([[.finished(.stop)], [.finished(.stop)]])
+        }
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.continueTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+        #expect(vm.chatError?.recovery == (credits ? .purchaseEiginRelayCredits : .continueTurn))
+        #expect(vm.window.messages.count(where: { $0.toolCallID == "completed" }) == 1)
+        #expect(vm.chatLoop.committedMessages.isEmpty)
+        let userCount = vm.window.messages.count(where: { $0.role == "user" })
+        service.enqueueEventStream([.contentDelta("Done."), .finished(.stop)])
+        vm.continueTurn(
+            agent: agent,
+            provider: provider,
+            space: nil,
+            spaces: [],
+            mcpServers: [],
+            continuationInstruction: Prompt.Hints.Continuation.interrupted
+        )
+        vm.continueTurn(
+            agent: agent,
+            provider: provider,
+            space: nil,
+            spaces: [],
+            mcpServers: [],
+            continuationInstruction: Prompt.Hints.Continuation.interrupted
+        )
+        await vm.streamTask?.value
+        #expect(vm.chatError == nil)
+        #expect(vm.window.messages.last?.content == "Done.")
+        #expect(vm.window.messages.count(where: { $0.role == "user" }) == userCount)
+        #expect(vm.window.messages.count(where: { $0.toolCallID == "completed" }) == 1)
+        #expect(service.capturedEventMessages.contains { $0.toolCallID == "completed" })
+        #expect(!vm.window.messages
+            .contains { ($0.content ?? "").contains(Prompt.Hints.Continuation.interrupted) })
+    }
 
     @Test("continueTurn lets the agent answer a seal without a user message")
     @MainActor

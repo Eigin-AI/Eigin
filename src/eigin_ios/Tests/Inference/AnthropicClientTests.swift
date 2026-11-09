@@ -6,6 +6,35 @@ import Testing
 struct AnthropicClientTests {
     private let baseURL = "https://api.anthropic.com/v1"
 
+    @Test(arguments: [false, true])
+    func requiresMessageStop(complete: Bool) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        var sse = "event: message_delta\ndata: {\"delta\":{\"stop_reason\":\"end_turn\"}}\n\n"
+        if complete { sse += "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n" }
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/messages",
+            data: Data(sse.utf8),
+            statusCode: 200
+        )
+        let client = AnthropicClient(baseURL: baseURL, apiToken: "token", session: session)
+        var finished = false
+        do {
+            let stream = try await client.chatCompletionEventStream(
+                messages: [],
+                model: "test",
+                tools: nil
+            )
+            for try await event in stream {
+                if case .finished = event { finished = true }
+            }
+            #expect(complete)
+        } catch let error as StreamCompletionError {
+            guard case .interrupted = error else { Issue.record("Wrong failure"); return }
+            #expect(!complete)
+        }
+        #expect(finished == complete)
+    }
+
     // MARK: - validateAPIKey
 
     @Test(arguments: [401, 403])

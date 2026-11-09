@@ -25,6 +25,12 @@ enum SystemHintBuilder {
             guard let body = await source.render(input), !body.isEmpty else { continue }
             sections.append("## \(source.title)\n\n\(body)")
         }
+        return build(sections: sections)
+    }
+
+    /// Builds a hint from ready-to-use sections without evaluating context sources.
+    static func build(sections: [String]) -> String? {
+        let sections = sections.filter { !$0.isEmpty }
         guard !sections.isEmpty else { return nil }
         return "<system_hint>\n" + sections.joined(separator: "\n\n") + "\n</system_hint>"
     }

@@ -176,6 +176,11 @@ struct ResponsesStreamEvent: Decodable {
         let incompleteDetails: IncompleteDetails?
         let usage: Usage?
 
+        enum CodingKeys: String, CodingKey {
+            case error, usage
+            case incompleteDetails = "incomplete_details"
+        }
+
         struct APIError: Decodable {
             let code: String?
             let message: String?

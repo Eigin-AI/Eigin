@@ -385,8 +385,10 @@ enum BackgroundPromptService {
                 "Chat loop error: \(private: error.localizedDescription)",
                 category: .backgroundPrompt
             )
+            let checkpoint = chatLoop.buildCheckpoint()
+            let rounds = chatLoop.roundsExecuted
             chatLoop.settle()
-            return ([], 0)
+            return (checkpoint, rounds)
         }
     }
 }

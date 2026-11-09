@@ -76,15 +76,22 @@ enum WatchTurnRunner {
         // PassthroughThrottler: CADisplayLink stops in the background, so the
         // turn must not depend on display ticks to drain its stream.
         let loop = AgenticChatLoop(isBootstrap: false, throttler: PassthroughThrottler())
-        let produced = try await loop.run(
-            messages: compacted.apiMessages,
-            tools: turn.registry.definitions,
-            agent: context.agent,
-            provider: context.provider,
-            chatService: Container.shared.chatService(),
-            toolExecutor: turn.registry,
-            cacheKey: context.chat.id.uuidString
-        )
+        let produced: [ChatMessage]
+        do {
+            produced = try await loop.run(
+                messages: compacted.apiMessages,
+                tools: turn.registry.definitions,
+                agent: context.agent,
+                provider: context.provider,
+                chatService: Container.shared.chatService(),
+                toolExecutor: turn.registry,
+                cacheKey: context.chat.id.uuidString
+            )
+        } catch {
+            context.persist(loop.buildCheckpoint())
+            loop.settle()
+            throw error
+        }
         loop.settle()
 
         context.persist(produced)
