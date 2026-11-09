@@ -7,6 +7,10 @@ GitLab requires its external status to pass before merging.
 | --- | --- | --- |
 | Versions | Main and same-repository MRs | Version checks and version/release integration tests |
 | CI regression tests | Accepted builds | Python script tests; required before publishing |
+| Select Linux tests | Main and same-repository MRs | Upload affected relay, Postgres, and SDK jobs |
+| Relay tests | Selected builds | Locked Rust test suite |
+| Relay Postgres integration | Selected builds | Ignored tests against disposable Postgres 16 |
+| Rust SDK checks | Selected builds | Native/WASM builds, binding fixtures, clippy, rustfmt |
 | CLA | Same-repository MRs | Verify signatures and post signing instructions |
 | Publish docs | Main webhook builds without an MR | Build and publish after Versions and CI tests pass |
 
@@ -87,5 +91,80 @@ installation, compilation, and tests. Rust tracks `rust:1-bookworm`.
 python3 -m unittest discover -s .buildkite/tests
 cargo test --locked --manifest-path tools/Cargo.toml --test docs_generate
 ```
+
+## Linux component checks
+
+MR selection compares the merge base of the freshly fetched target branch with
+`BUILDKITE_COMMIT`. This covers the whole MR, including changes from earlier
+pushes. Deleted files and both sides of renames participate in selection.
+
+| Changed paths | Checks |
+| --- | --- |
+| `src/eigin_relay/**` | Relay and Postgres |
+| `src/eigin_sdk/**` | SDK |
+| `.buildkite/**`, `tools/**`, `justfile`, root Cargo/toolchain configuration | All three |
+| Unrelated docs, design, npm, website, iOS changes | None |
+
+Missing history, target-fetch failure, or invalid comparison metadata runs all
+three checks. Main currently always runs all three: Buildkite does not provide a
+verified pre-push SHA in this setup. Comparing only the last commit could miss
+earlier changes in a multi-commit push. No baseline API token or state store is
+introduced. A no-op step records builds with no affected components.
+
+The selector has a 5-minute timeout. Selected jobs run independently, each with
+a 30-minute timeout and a concurrency limit of 2 per component across builds.
+They use `linux-small` and request no secrets. Failures, including selector or
+upload failures, fail the Buildkite build and its existing GitLab commit status.
+Docs publication retains its existing dependencies; it does not wait for these
+component checks.
+
+`linux-images.sh` pins Rust 1.99.1 Bookworm and Postgres 16 Bookworm by immutable
+image-index digest. SDK setup explicitly installs clippy, rustfmt, and the WASM
+target. Playwright, Node, Apple bindings, web, and website tests are outside this
+delivery; web/website coverage in #372 remains open. Binding expansion is #356.
+
+Each job has a separate 20 GB hosted cache, `linux-<component>-rust-1-99-1-v1`,
+mounted at `/cache/eigin-linux-<component>` for Cargo downloads and build output.
+Required tools come from the image or explicit setup, even on warm caches.
+Do not mount these writable branch caches in credential-bearing jobs.
+
+Postgres uses a unique container and shares its network namespace with the test
+container. No host port is published. Both `DATABASE_URL` and
+`POOL_TEST_DATABASE_URL` point to localhost, satisfying the pool-recovery guard.
+Readiness probes TCP with a 60-second deadline and a bounded Docker invocation.
+Exit/signal traps remove containers and database volumes and retain test failures.
+Forced runner termination relies on hosted job teardown. Test containers receive
+no Docker socket; host Docker, Bash, Python in the image, and GNU `timeout` are
+required. Cold runs need network access to Docker Hub and Rust registries.
+
+Reproduce on a Linux Docker host from the repository root:
+
+```sh
+bash .buildkite/scripts/run-linux-tests.sh relay
+bash .buildkite/scripts/run-linux-tests.sh postgres
+bash .buildkite/scripts/run-linux-tests.sh sdk
+python3 -m unittest discover -s .buildkite/tests
+```
+
+The wrapper defaults to the documented `/cache` paths. Set `LINUX_CACHE_DIR` to
+an absolute host directory or a Docker volume name for local execution. On macOS,
+install GNU `timeout` (`brew install coreutils`); UUID generation uses `uuidgen`.
+To match Buildkite's architecture on Apple Silicon, set
+`DOCKER_DEFAULT_PLATFORM=linux/amd64` (compilation through emulation is slower).
+
+```sh
+DOCKER_DEFAULT_PLATFORM=linux/amd64 LINUX_CACHE_DIR=eigin-relay-check \
+  bash .buildkite/scripts/run-linux-tests.sh relay
+```
+
+For a cold run, use an empty cache directory or a new volume name. For a warm run,
+reuse it. Remove disposable verification volumes after testing. The local
+`just test relay postgres` recipe currently
+sets only `DATABASE_URL`; this CI wrapper also covers the pool-recovery suite.
+
+Hosted acceptance checks: run all three suites with empty then warm caches,
+exercise concurrent Postgres jobs, and confirm a failing component produces a
+failed GitLab status that blocks merging. These operational checks require a
+working Linux runner and the existing GitLab required-status configuration.
 
 For publishing operations, see [Docs releases](../docs/src/runbooks/docs-deployment.md).
