@@ -11,7 +11,7 @@ struct FlowToolTests {
     private func makeFixture() throws -> (Agent, Chat, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: config
         )
         let agent = Agent(name: "TestAgent", providerID: UUID(), model: "test-model")

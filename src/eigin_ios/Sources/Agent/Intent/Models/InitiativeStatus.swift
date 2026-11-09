@@ -40,6 +40,6 @@ struct InitiativeStatus {
         } else {
             state = .pending
         }
-        nextOccurrence = state == .scheduled ? schedule?.nextOccurrence(onOrAfter: now) : nil
+        nextOccurrence = state != .disabled ? schedule?.nextOccurrence(onOrAfter: now) : nil
     }
 }

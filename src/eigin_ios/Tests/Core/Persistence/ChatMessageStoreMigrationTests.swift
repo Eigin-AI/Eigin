@@ -56,7 +56,7 @@ struct ChatMessageStoreMigrationTests {
     @MainActor
     private func migrate(_ url: URL) throws -> ModelContainer {
         try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             migrationPlan: EiginMigrationPlan.self,
             configurations: ModelConfiguration(url: url)
         )

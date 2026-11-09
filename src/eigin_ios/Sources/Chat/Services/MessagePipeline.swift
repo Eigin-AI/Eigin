@@ -184,6 +184,7 @@ enum MessagePipeline {
         // 6. Build tool registry
         let builtRegistry = if isSmallContext {
             ToolRegistry.smallChat(
+                spaceID: spaceID,
                 chatID: chatID,
                 agentID: agent.id,
                 permissionPolicy: permissionPolicy,

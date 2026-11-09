@@ -28,14 +28,11 @@ struct FollowUpToolTests {
         Agent(name: "Test", providerID: UUID(), model: "test")
     }
 
-    @Test("Schedules only after authorization and returns the accepted request")
+    @Test("Reports saved follow-up and optional delivery outcome")
     @MainActor func schedules() async throws {
         let scheduler = FakeFollowUpScheduler()
         let instant = now
-        let tool = FollowUpTool(scheduler: scheduler, now: { instant }, authorize: { canPrompt in
-            #expect(canPrompt)
-            return true
-        })
+        let tool = FollowUpTool(scheduler: scheduler, now: { instant })
         let result = try await tool.execute(call(), agent: agent())
         #expect(!result.isError)
         #expect(scheduler.scheduledDates.count == 1)
@@ -50,46 +47,40 @@ struct FollowUpToolTests {
     @MainActor func invalidTime(time: String?) async throws {
         let scheduler = FakeFollowUpScheduler()
         let instant = now
-        let tool = FollowUpTool(scheduler: scheduler, now: { instant }, authorize: { _ in
-            Issue.record("Invalid arguments must not request authorization")
-            return true
-        })
+        let tool = FollowUpTool(scheduler: scheduler, now: { instant })
         let result = try await tool.execute(call(time: time), agent: agent())
         #expect(result.isError)
         #expect(scheduler.scheduledDates.isEmpty)
     }
 
-    @Test("Denied authorization does not schedule")
+    @Test("Denied system authorization still reports a saved follow-up")
     @MainActor func denied() async throws {
         let scheduler = FakeFollowUpScheduler()
-        let tool = FollowUpTool(scheduler: scheduler, authorize: { _ in false })
+        scheduler.deliveryStatus = .permissionDenied
+        let tool = FollowUpTool(scheduler: scheduler)
         let result = try await tool.execute(call(), agent: agent())
-        #expect(result.isError)
-        #expect(result.content.contains("Settings"))
-        #expect(scheduler.scheduledDates.isEmpty)
+        #expect(!result.isError)
+        #expect(result.content.contains("permission_denied"))
+        #expect(result.content.contains("saved"))
+        #expect(scheduler.scheduledDates.count == 1)
     }
 
     @Test("Non-prompting contexts cannot request OS authorization")
     @MainActor func cannotPrompt() async throws {
         let scheduler = FakeFollowUpScheduler()
-        let tool = FollowUpTool(
-            scheduler: scheduler,
-            canPromptUser: false,
-            authorize: { canPrompt in
-                #expect(!canPrompt)
-                return false
-            }
-        )
+        let spaceID = UUID()
+        let tool = FollowUpTool(scheduler: scheduler, spaceID: spaceID, canPromptUser: false)
         let result = try await tool.execute(call(), agent: agent())
-        #expect(result.isError)
-        #expect(scheduler.scheduledDates.isEmpty)
+        #expect(!result.isError)
+        #expect(scheduler.prompted == false)
+        #expect(scheduler.spaceID == spaceID)
     }
 
     @Test("Scheduling failures are returned to the agent")
     @MainActor func schedulingFailure() async throws {
         let scheduler = FakeFollowUpScheduler()
         scheduler.error = NSError(domain: "Test", code: 1)
-        let tool = FollowUpTool(scheduler: scheduler, authorize: { _ in true })
+        let tool = FollowUpTool(scheduler: scheduler)
         let result = try await tool.execute(call(), agent: agent())
         #expect(result.isError)
         #expect(!result.content.contains("notification_scheduled"))

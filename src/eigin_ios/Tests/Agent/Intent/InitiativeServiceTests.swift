@@ -8,7 +8,7 @@ import UserNotifications
 struct InitiativeServiceTests {
     @MainActor private func fixture(status: UNAuthorizationStatus = .authorized) throws -> Fixture {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let center = FakeInitiativeNotifications()
@@ -35,7 +35,7 @@ struct InitiativeServiceTests {
         )
     }
 
-    @Test @MainActor func permissionDenialDoesNotPersistAgreementOrTimeChange() async throws {
+    @Test @MainActor func permissionDenialPersistsInAppAgreementAndTimeChange() async throws {
         let f = try fixture(status: .denied)
         var schedule = try #require(f.intent.schedules.first)
         schedule.hour = 9
@@ -49,9 +49,15 @@ struct InitiativeServiceTests {
             Issue.record("Expected denied permission")
         } catch {}
         let context = ModelContext(f.container)
-        #expect(try context.fetchCount(FetchDescriptor<IntentInitiative>()) == 0)
-        #expect(try context.fetch(FetchDescriptor<Intent>()).first?.schedules.first?.hour == 7)
+        try seedTrackingBeforeLatestDue(context)
+        #expect(try context.fetchCount(FetchDescriptor<IntentInitiative>()) == 1)
+        #expect(try context.fetch(FetchDescriptor<Intent>()).first?.schedules.first?.hour == 9)
         #expect(f.center.requests.isEmpty)
+        try WaitingInitiativeStore.reconcile(
+            context: context,
+            now: Date.now.addingTimeInterval(86400)
+        )
+        #expect(try context.fetchCount(FetchDescriptor<WaitingInitiative>()) == 1)
     }
 
     @Test @MainActor func agreementSurvivesRelaunchAndReschedulesWithoutBackground() async throws {
@@ -102,6 +108,7 @@ struct InitiativeServiceTests {
         let f = try fixture()
         _ = try await f.apply()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
@@ -133,6 +140,7 @@ struct InitiativeServiceTests {
     @Test @MainActor func deletingAnOwningSpaceCancelsItsNotifications() async throws {
         let f = try fixture()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let space = Space(agentID: f.agent.id)
         context.insert(space)
         let intent = try #require(context.fetch(FetchDescriptor<Intent>()).first)
@@ -156,6 +164,7 @@ struct InitiativeServiceTests {
         _ = try await f.apply()
         let original = try #require(f.center.requests.first?.identifier)
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
@@ -185,8 +194,9 @@ struct InitiativeServiceTests {
         let f = try fixture()
         _ = try await f.apply()
         let id = try #require(f.center.requests.first?.identifier)
-        let date = Date.now.addingTimeInterval(-4 * 3600)
+        let date = Date.now
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let first = try InitiativeConversationService.open(
             registrationID: id,
             deliveredAt: date,
@@ -208,7 +218,8 @@ struct InitiativeServiceTests {
         let next = try InitiativeConversationService.open(
             registrationID: id,
             deliveredAt: date.addingTimeInterval(86400),
-            context: context
+            context: context,
+            now: date.addingTimeInterval(86400)
         )
         #expect(next != first)
     }
@@ -218,6 +229,7 @@ struct InitiativeServiceTests {
         let agreements = try await f.apply()
         let registration = try #require(f.center.requests.first?.identifier)
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let chatID = try InitiativeConversationService.open(
             registrationID: registration,
             deliveredAt: .now,
@@ -261,6 +273,7 @@ struct InitiativeServiceTests {
         _ = try await f.apply()
         let registration = try #require(f.center.requests.first?.identifier)
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let chatID = try InitiativeConversationService.open(
             registrationID: registration,
             deliveredAt: .now,
@@ -295,6 +308,7 @@ struct InitiativeServiceTests {
         _ = try await f.apply()
         let registration = try #require(f.center.requests.first?.identifier)
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let chatID = try InitiativeConversationService.open(
             registrationID: registration,
             deliveredAt: .now,
@@ -318,12 +332,13 @@ struct InitiativeServiceTests {
     }
 
     @Test(arguments: ["intent", "agreement"])
-    @MainActor func deletedGroupMemberBlocksOldDeliveryAndPreservesRemainingWork(
+    @MainActor func deletedInitiativeBlocksItsDeliveryAndPreservesOtherWork(
         deleted: String
     ) async throws {
         let f = try fixture()
         _ = try await f.apply()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
@@ -342,11 +357,12 @@ struct InitiativeServiceTests {
             spaceID: nil,
             canPromptUser: true
         )
-        let registrationID = try #require(f.center.requests.first?.identifier)
+        let registrationID = try #require(f.center.requests
+            .first { $0.content.body == "Time for news" }?.identifier)
         #expect(try InitiativeConversationService.validatedDelivery(
             registrationID: registrationID,
             context: context
-        ).members.count == 2)
+        ).members.count == 1)
         let chatID = try InitiativeConversationService.open(
             registrationID: registrationID,
             deliveredAt: .now,
@@ -386,6 +402,7 @@ struct InitiativeServiceTests {
         let f = try fixture()
         let agreements = try await f.apply()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let registration = try #require(f.center.requests.first?.identifier)
         let chatID = try InitiativeConversationService.open(
             registrationID: registration,
@@ -414,6 +431,7 @@ struct InitiativeServiceTests {
         let f = try fixture()
         _ = try await f.apply()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let invalid = try #require(context.fetch(FetchDescriptor<Intent>()).first)
         invalid.schedules[0].frequency = .monthly
         invalid.schedules[0].monthDays = [31]
@@ -443,6 +461,7 @@ struct InitiativeServiceTests {
         let f = try fixture()
         _ = try await f.apply()
         let context = ModelContext(f.container)
+        try seedTrackingBeforeLatestDue(context)
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
@@ -491,6 +510,48 @@ struct InitiativeServiceTests {
         )
         #expect(invalid.isError)
         #expect(f.center.requests.count == 2)
+    }
+
+    @Test @MainActor func capacityAllocatesWholeInitiativesAndKeepsInAppDiscovery() async throws {
+        let f = try fixture()
+        f.center.requests = (0 ..< 59).map {
+            UNNotificationRequest(
+                identifier: "other-\($0)",
+                content: UNMutableNotificationContent(),
+                trigger: nil
+            )
+        }
+        var schedule = f.intent.schedules[0]
+        schedule.frequency = .weekly
+        schedule.weekdays = [2, 3, 4, 5, 6]
+        do {
+            _ = try await f.service.apply(
+                [f.change(schedule: schedule)],
+                agentID: f.agent.id,
+                spaceID: nil,
+                canPromptUser: true
+            )
+            Issue.record("Expected a saved agreement with unavailable system delivery")
+        } catch let failure as InitiativeOperationFailure {
+            #expect(failure.changesState == .saved)
+        }
+        #expect(f.center.requests.count == 59)
+        let report = try await f.service.report(agentID: f.agent.id, spaceID: nil)
+        #expect(report.first?["in_app"] as? String == "enabled")
+        #expect(report.first?["registered_request_count"] as? Int == 0)
+        let context = ModelContext(f.container)
+        try WaitingInitiativeStore.reconcile(
+            context: context,
+            now: Date.now.addingTimeInterval(7 * 86400)
+        )
+        #expect(try context.fetchCount(FetchDescriptor<WaitingInitiative>()) == 1)
+    }
+
+    @MainActor private func seedTrackingBeforeLatestDue(_ context: ModelContext) throws {
+        for cursor in try context.fetch(FetchDescriptor<InitiativeCursor>()) {
+            cursor.evaluatedThrough = Date.now.addingTimeInterval(-86400)
+        }
+        try context.save()
     }
 
     @MainActor private struct Fixture {

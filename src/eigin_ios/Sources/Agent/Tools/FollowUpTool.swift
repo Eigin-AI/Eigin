@@ -1,6 +1,6 @@
 import Foundation
 
-/// Schedules a prepared, one-off notification from an interactive conversation.
+/// Saves a prepared one-off follow-up with optional system notification delivery.
 struct FollowUpTool: Tool {
     static let capability = ToolCapability(
         kind: .builtIn, key: "follow_up",
@@ -19,16 +19,15 @@ struct FollowUpTool: Tool {
     }
 
     let scheduler: any FollowUpScheduling
+    var spaceID: UUID?
     var canPromptUser: Bool = true
     var now: @Sendable () -> Date = { Date() }
     var calendar: Calendar = .current
-    var authorize: @Sendable (Bool) async
-        -> Bool = { await NotificationPermission.requestIfNeeded(canPromptUser: $0) }
 
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Schedule a quick one-off ping at a future time. Delivers your prepared message without running the agent again. Tapping opens a new conversation with your briefing. Use intent initiatives for recurring invitations that start work when opened, the Reminders skill for tracked tasks, and Calendar for events. Clarify the time if needed before calling.",
+            description: "Save a prepared one-off follow-up for a future time, with optional notification delivery. Delivers your prepared message without running the agent again. Tapping opens a new conversation with your briefing. Use intent initiatives for recurring invitations that start work when opened, the Reminders skill for tracked tasks, and Calendar for events. Clarify the time if needed before calling.",
             parameters: JSONSchema(type: "object", properties: [
                 "notification_title": .init(
                     type: "string",
@@ -73,19 +72,7 @@ struct FollowUpTool: Tool {
                 calendar: calendar,
                 required: true
             )
-            guard await authorize(canPromptUser) else {
-                throw NotificationDeliveryTime
-                    .ValidationError(
-                        message: "Notifications are unavailable. Enable notifications for Eigin in Settings. If authorization has not been requested, try again in a foreground chat."
-                    )
-            }
-            guard delivery > now() else {
-                throw NotificationDeliveryTime
-                    .ValidationError(
-                        message: "The delivery time elapsed while requesting permission. Choose a new future time."
-                    )
-            }
-            let id = try await scheduler.schedule(
+            let result = try await scheduler.schedule(
                 title: title,
                 body: message,
                 message: message,
@@ -93,11 +80,14 @@ struct FollowUpTool: Tool {
                 deliverAt: delivery,
                 agentID: agent.id,
                 agentName: agent.name,
-                agentEmoji: agent.emoji
+                agentEmoji: agent.emoji,
+                spaceID: spaceID,
+                canPromptUser: canPromptUser
             )
             return ToolResult(toolCallID: toolCall.id, content: ToolHelpers.output(result: [
-                "status": "notification_scheduled",
-                "request_id": id.uuidString,
+                "status": "saved",
+                "delivery_status": result.deliveryStatus.rawValue,
+                "request_id": result.requestID.uuidString,
                 "scheduled_for": ISO8601DateFormatter().string(from: delivery),
             ]), isError: false)
         } catch {

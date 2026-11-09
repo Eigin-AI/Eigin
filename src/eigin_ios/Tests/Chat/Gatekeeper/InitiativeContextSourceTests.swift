@@ -9,7 +9,7 @@ struct InitiativeContextSourceTests {
     @Test func afternoonReceivesMorningOutputWithoutBackgroundPreparation() async throws {
         let f = try fixture()
         let context = f.container.mainContext
-        let morning = try InitiativeConversationService.open(
+        let morning = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now.addingTimeInterval(-3600),
             context: context
@@ -42,7 +42,7 @@ struct InitiativeContextSourceTests {
         context.insert(unrelated)
         InitiativeConversationService.recordOutput(unrelated, chatID: morning, context: context)
         try context.save()
-        let afternoon = try InitiativeConversationService.open(
+        let afternoon = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now,
             context: context
@@ -73,7 +73,7 @@ struct InitiativeContextSourceTests {
     func deletedPriorHistoryIsSkipped(deleted: String) async throws {
         let f = try fixture()
         let context = f.container.mainContext
-        let previousID = try InitiativeConversationService.open(
+        let previousID = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now.addingTimeInterval(-3600),
             context: context
@@ -94,7 +94,7 @@ struct InitiativeContextSourceTests {
             completed: true,
             context: context
         )
-        let currentID = try InitiativeConversationService.open(
+        let currentID = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now,
             context: context
@@ -114,7 +114,7 @@ struct InitiativeContextSourceTests {
         let f = try fixture()
         let context = f.container.mainContext
         let deliveredAt = Date.now
-        let chatID = try InitiativeConversationService.open(
+        let chatID = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: deliveredAt,
             context: context
@@ -123,7 +123,7 @@ struct InitiativeContextSourceTests {
         context.delete(chat)
         try context.save()
         #expect(throws: (any Error).self) {
-            try InitiativeConversationService.open(
+            try openLegacyChat(
                 registrationID: f.registrationID,
                 deliveredAt: deliveredAt,
                 context: context
@@ -134,7 +134,7 @@ struct InitiativeContextSourceTests {
 
     @Test func wrongAgentAndMovedChatCannotReadInitiativeContext() async throws {
         let f = try fixture()
-        let chat = try InitiativeConversationService.open(
+        let chat = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now,
             context: f.container.mainContext
@@ -151,7 +151,7 @@ struct InitiativeContextSourceTests {
     @Test func cancelledInitialTurnNeverReceivesExecutionInstructions() async throws {
         let f = try fixture()
         let context = f.container.mainContext
-        let chat = try InitiativeConversationService.open(
+        let chat = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now,
             context: context
@@ -172,7 +172,7 @@ struct InitiativeContextSourceTests {
         let f = try fixture()
         let context = f.container.mainContext
         let intent = try #require(context.fetch(FetchDescriptor<Intent>()).first)
-        let chatID = try InitiativeConversationService.open(
+        let chatID = try openLegacyChat(
             registrationID: f.registrationID,
             deliveredAt: .now,
             context: context
@@ -261,7 +261,7 @@ struct InitiativeContextSourceTests {
             _ offset: Double,
             completed: Bool = true
         ) throws {
-            let id = try InitiativeConversationService.open(
+            let id = try openLegacyChat(
                 registrationID: registration,
                 deliveredAt: Date.now.addingTimeInterval(offset),
                 context: context
@@ -290,7 +290,7 @@ struct InitiativeContextSourceTests {
                 Double(-300 + index)
             )
         }
-        let group = try InitiativeConversationService.open(
+        let group = try openLegacyChat(
             registrationID: "group",
             deliveredAt: .now,
             context: context
@@ -306,6 +306,38 @@ struct InitiativeContextSourceTests {
         for index in 1 ... 3 {
             #expect(hint.contains("News result \(index)"))
         }
+    }
+
+    /// Historical execution fixtures remain supported after grouped deliveries are retired.
+    private func openLegacyChat(
+        registrationID: String,
+        deliveredAt: Date,
+        context: ModelContext
+    ) throws -> UUID {
+        let key = registrationID + ":" + String(deliveredAt.timeIntervalSince1970)
+        if try !((context.fetch(FetchDescriptor<InitiativeOccurrence>()))
+            .contains { $0.id == key })
+        {
+            let delivery = try InitiativeConversationService.validatedDelivery(
+                registrationID: registrationID,
+                context: context
+            )
+            let chat = Chat(agentID: delivery.agentID, spaceID: delivery.spaceID)
+            context.insert(chat)
+            context.insert(InitiativeOccurrence(
+                id: key,
+                registrationID: registrationID,
+                deliveredAt: deliveredAt,
+                chatID: chat.id,
+                intentIDs: delivery.members.map(\.intentID)
+            ))
+            try context.save()
+        }
+        return try InitiativeConversationService.open(
+            registrationID: registrationID,
+            deliveredAt: deliveredAt,
+            context: context
+        )
     }
 
     private func input(
@@ -331,7 +363,7 @@ struct InitiativeContextSourceTests {
         -> (container: ModelContainer, agent: Agent, registrationID: String)
     {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Test", providerID: UUID(), model: "test")

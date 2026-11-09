@@ -82,6 +82,7 @@
   }
 
   .edges {
+    pointer-events: none;
     position: relative;
     display: flex;
     align-items: center;
@@ -90,6 +91,7 @@
   }
 
   .slot {
+    pointer-events: auto;
     display: flex;
     align-items: center;
   }

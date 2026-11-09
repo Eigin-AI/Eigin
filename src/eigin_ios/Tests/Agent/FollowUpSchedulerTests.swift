@@ -6,156 +6,206 @@ import UserNotifications
 
 @Suite("FollowUpScheduler")
 struct FollowUpSchedulerTests {
-    @MainActor private func container() throws -> ModelContainer {
-        try ModelContainer(
-            for: AgentInitiativeRequest.self,
+    @MainActor private func fixture() throws -> (ModelContainer, Agent, Space) {
+        let container = try ModelContainer(
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        let agent = Agent(name: "Test", providerID: UUID(), model: "test")
+        let space = Space(agentID: agent.id)
+        container.mainContext.insert(agent)
+        container.mainContext.insert(space)
+        try container.mainContext.save()
+        return (container, agent, space)
     }
 
-    @Test("Accepted notifications retain a briefing and its routing identifier")
+    @Test("Accepted notifications retain due time, source space, briefing and stable routing")
     @MainActor func persistsAndSchedules() async throws {
-        let container = try container()
+        let (container, agent, space) = try fixture()
         let center = FakeLocalNotificationCenter()
-        let scheduler = DefaultFollowUpScheduler(container: container, notificationCenter: center)
-        let agentID = UUID()
+        var refreshed = false
+        let scheduler = DefaultFollowUpScheduler(
+            container: container,
+            notificationCenter: center,
+            authorize: { _ in true },
+            onChange: { refreshed = true }
+        )
         let date = Date().addingTimeInterval(3600)
-        let id = try await scheduler.schedule(
+        let result = try await scheduler.schedule(
             title: "Hello",
             body: "Prepared message",
             message: "Prepared message",
             summary: "Briefing",
             deliverAt: date,
-            agentID: agentID,
+            agentID: agent.id,
+            agentName: nil,
+            agentEmoji: nil,
+            spaceID: space.id
+        )
+        let record = try #require(container.mainContext
+            .fetch(FetchDescriptor<AgentInitiativeRequest>()).first)
+        #expect(record.id == result.requestID)
+        #expect(record.summary == "Briefing")
+        #expect(record.message == "Prepared message")
+        #expect(record.dueAt == date)
+        #expect(record.spaceID == space.id)
+        #expect(refreshed)
+        #expect(result.deliveryStatus == .scheduled)
+        let request = try #require(center.requests.first)
+        #expect(request.identifier == "follow-up-\(record.id.uuidString)")
+        #expect(request.content.userInfo["initiativeRequestID"] as? String == record.id.uuidString)
+        let trigger = try #require(request.trigger as? UNCalendarNotificationTrigger)
+        #expect(!trigger.repeats)
+        let deliveredAt = try #require(trigger.nextTriggerDate())
+        #expect(deliveredAt >= date)
+        #expect(deliveredAt.timeIntervalSince(date) < 1)
+        #expect(trigger.dateComponents.timeZone?.secondsFromGMT() == 0)
+    }
+
+    @Test(
+        "Optional delivery failures preserve the saved message",
+        arguments: ["denied", "capacity", "failed"]
+    )
+    @MainActor func deliveryFailure(kind: String) async throws {
+        let (container, agent, _) = try fixture()
+        let center = FakeLocalNotificationCenter(shouldFail: kind == "failed")
+        if kind == "capacity" {
+            for index in 0 ..< 64 {
+                try await center.add(UNNotificationRequest(
+                    identifier: "other-\(index)",
+                    content: UNMutableNotificationContent(),
+                    trigger: nil
+                ))
+            }
+        }
+        let scheduler = DefaultFollowUpScheduler(
+            container: container,
+            notificationCenter: center,
+            authorize: { _ in
+                #expect(try! ModelContext(container)
+                    .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 1)
+                return kind != "denied"
+            }
+        )
+        let result = try await scheduler.schedule(
+            title: "Hello",
+            body: "Message",
+            message: "Message",
+            summary: nil,
+            deliverAt: Date().addingTimeInterval(3600),
+            agentID: agent.id,
             agentName: nil,
             agentEmoji: nil
         )
-        let records = try container.mainContext.fetch(FetchDescriptor<AgentInitiativeRequest>())
-        let record = try #require(records.first)
-        #expect(records.count == 1)
-        #expect(record.id == id)
-        #expect(record.summary == "Briefing")
-        #expect(record.message == "Prepared message")
-        let requests = await center.requests
-        let request = try #require(requests.first)
-        #expect(request.content.userInfo["initiativeRequestID"] as? String == id.uuidString)
-        #expect(request.content.body == "Prepared message")
-        let trigger = try #require(request.trigger as? UNCalendarNotificationTrigger)
-        #expect(!trigger.repeats)
-        #expect(try abs(#require(trigger.nextTriggerDate()).timeIntervalSince(date)) < 1)
-    }
-
-    @Test("Rejected notifications remove their persisted briefing")
-    @MainActor func schedulingFailureCleansUp() async throws {
-        let container = try container()
-        let scheduler = DefaultFollowUpScheduler(
-            container: container,
-            notificationCenter: FakeLocalNotificationCenter(shouldFail: true)
-        )
-        do {
-            _ = try await scheduler.schedule(
-                title: "Hello",
-                body: "Message",
-                message: "Message",
-                summary: nil,
-                deliverAt: Date().addingTimeInterval(3600),
-                agentID: UUID(),
-                agentName: nil,
-                agentEmoji: nil
-            )
-            Issue.record("Expected scheduling to fail")
-        } catch {}
+        #expect(result
+            .deliveryStatus ==
+            (kind == "denied" ? .permissionDenied : kind == "capacity" ? .capacityExceeded :
+                .failed))
         #expect(try container.mainContext
-            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 0)
+            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 1)
+        #expect(center.requests.count == (kind == "capacity" ? 64 : 0))
     }
 
-    @Test("Persistence failure never schedules a notification")
-    @MainActor func persistenceFailure() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let url = directory.appendingPathComponent("notifications.store")
-        do {
-            let writable = try ModelContainer(
-                for: AgentInitiativeRequest.self,
-                configurations: ModelConfiguration(url: url)
-            )
-            try writable.mainContext.save()
-        }
-        let container = try ModelContainer(
-            for: AgentInitiativeRequest.self,
-            configurations: ModelConfiguration(url: url, allowsSave: false)
-        )
-        let center = FakeLocalNotificationCenter()
-        let scheduler = DefaultFollowUpScheduler(container: container, notificationCenter: center)
-        do {
-            _ = try await scheduler.schedule(
-                title: "Title",
-                body: "Message",
-                message: "Message",
-                summary: nil,
-                deliverAt: Date().addingTimeInterval(3600),
-                agentID: UUID(),
-                agentName: nil,
-                agentEmoji: nil
-            )
-            Issue.record("Expected persistence to fail")
-        } catch {}
-        #expect(await center.requests.isEmpty)
-    }
-
-    @Test("A deadline elapsed during preparation fails and removes the briefing")
+    @Test("A deadline elapsed during preparation keeps the message due in app")
     @MainActor func elapsedDuringPreparation() async throws {
-        let container = try container()
+        let (container, agent, _) = try fixture()
         let center = FakeLocalNotificationCenter()
         let deadline = Date().addingTimeInterval(60)
         var instant = deadline.addingTimeInterval(-60)
-        let preparer = FakeCommunicationNotificationPreparer(onPrepare: {
-            instant = deadline.addingTimeInterval(1)
-        })
         let scheduler = DefaultFollowUpScheduler(
             now: { instant },
             container: container,
-            contentPreparer: preparer,
-            notificationCenter: center
+            contentPreparer: FakeCommunicationNotificationPreparer(onPrepare: {
+                instant = deadline.addingTimeInterval(1)
+            }),
+            notificationCenter: center,
+            authorize: { _ in true }
         )
-        do {
-            _ = try await scheduler.schedule(
-                title: "Title",
-                body: "Message",
-                message: "Message",
-                summary: "Briefing",
-                deliverAt: deadline,
-                agentID: UUID(),
-                agentName: "Agent",
-                agentEmoji: nil
-            )
-            Issue.record("Expected the elapsed deadline to fail")
-        } catch {
-            #expect(error.localizedDescription.contains("Choose a new future time"))
-        }
+        let result = try await scheduler.schedule(
+            title: "Title",
+            body: "Message",
+            message: "Message",
+            summary: "Briefing",
+            deliverAt: deadline,
+            agentID: agent.id,
+            agentName: "Agent",
+            agentEmoji: nil
+        )
+        #expect(result.deliveryStatus == .failed)
         #expect(center.requests.isEmpty)
-        #expect(try container.mainContext
-            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 0)
+        try WaitingInitiativeStore.reconcile(context: container.mainContext, now: instant)
+        #expect(try WaitingMessageStore.messages(context: container.mainContext, now: instant)
+            .count == 1)
     }
 
-    @Test("An omitted delivery time explicitly schedules immediate delivery")
+    @Test("Immediate delivery persists its actual due time")
     @MainActor func immediateDelivery() async throws {
-        let container = try container()
+        let (container, agent, _) = try fixture()
         let center = FakeLocalNotificationCenter()
-        let scheduler = DefaultFollowUpScheduler(container: container, notificationCenter: center)
-        _ = try await scheduler.schedule(
+        let instant = Date.now
+        let scheduler = DefaultFollowUpScheduler(
+            now: { instant },
+            container: container,
+            notificationCenter: center,
+            authorize: { _ in true }
+        )
+        let result = try await scheduler.schedule(
             title: "Title",
             body: "Message",
             message: "Message",
             summary: nil,
             deliverAt: nil,
-            agentID: UUID(),
+            agentID: agent.id,
             agentName: nil,
             agentEmoji: nil
         )
-        let request = try #require(center.requests.first)
-        #expect(request.trigger == nil)
+        #expect(result.dueAt == instant)
+        #expect(try #require(center.requests.first).trigger == nil)
+    }
+
+    @Test("Persistence failure never requests authorization or schedules delivery")
+    @MainActor func persistenceFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("follow-ups.store")
+        let schema = Schema(SchemaV14.models, version: SchemaV14.versionIdentifier)
+        let agentID: UUID
+        do {
+            let writable = try ModelContainer(
+                for: schema,
+                configurations: ModelConfiguration(url: url)
+            )
+            let agent = Agent(name: "Test", providerID: UUID(), model: "test")
+            agentID = agent.id
+            writable.mainContext.insert(agent)
+            try writable.mainContext.save()
+        }
+        let container = try ModelContainer(
+            for: schema,
+            configurations: ModelConfiguration(url: url, allowsSave: false)
+        )
+        let center = FakeLocalNotificationCenter()
+        let scheduler = DefaultFollowUpScheduler(
+            container: container,
+            notificationCenter: center,
+            authorize: { _ in
+                Issue.record("Unsaved follow-up must not request authorization"); return true
+            }
+        )
+        await #expect(throws: (any Error).self) {
+            _ = try await scheduler.schedule(
+                title: "Title",
+                body: "Message",
+                message: "Message",
+                summary: nil,
+                deliverAt: Date().addingTimeInterval(3600),
+                agentID: agentID,
+                agentName: nil,
+                agentEmoji: nil
+            )
+        }
+        #expect(center.requests.isEmpty)
     }
 }

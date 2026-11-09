@@ -7,7 +7,16 @@ import UserNotifications
 @MainActor protocol InitiativeNotificationAccess {
     func pending() async -> [UNNotificationRequest]
     func add(_ request: UNNotificationRequest) async throws
-    func remove(_ identifiers: [String])
+    func removePending(_ identifiers: [String])
+    func delivered() async -> [DeliveredInitiativeNotification]
+    func removeDelivered(_ identifiers: [String])
+}
+
+/// Delivered notification identity and receipt time exposed by the system boundary.
+struct DeliveredInitiativeNotification {
+    let identifier: String
+    let date: Date
+    var followUpID: UUID?
 }
 
 @MainActor struct SystemInitiativeNotifications: InitiativeNotificationAccess {
@@ -15,15 +24,30 @@ import UserNotifications
         await UNUserNotificationCenter.current().pendingNotificationRequests()
     }
 
+    func delivered() async -> [DeliveredInitiativeNotification] {
+        await UNUserNotificationCenter.current().deliveredNotifications().map {
+            DeliveredInitiativeNotification(
+                identifier: $0.request.identifier,
+                date: $0.date,
+                followUpID: ($0.request.content
+                    .userInfo["initiativeRequestID"] as? String)
+                    .flatMap(UUID.init(uuidString:))
+            )
+        }
+    }
+
+    func removeDelivered(_ identifiers: [String]) {
+        UNUserNotificationCenter.current()
+            .removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+
     func add(_ request: UNNotificationRequest) async throws {
         try await UNUserNotificationCenter.current().add(request)
     }
 
-    func remove(_ identifiers: [String]) {
+    func removePending(_ identifiers: [String]) {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: identifiers)
-        UNUserNotificationCenter.current()
-            .removeDeliveredNotifications(withIdentifiers: identifiers)
     }
 }
 
@@ -38,6 +62,8 @@ struct InitiativeDelivery: Codable, Equatable {
         let revision: Date
     }
 
+    var identityVersion: Int? = nil
+    var timeZoneIdentifier: String? = nil
     let agentID: UUID
     let spaceID: UUID?
     let hour: Int
@@ -78,7 +104,9 @@ struct InitiativeDelivery: Codable, Equatable {
     func compile(
         context: ModelContext,
         otherRequestCount: Int,
-        strict: Bool = true
+        strict: Bool = true,
+        enforceCapacity: Bool = true,
+        calendar: Calendar = .current
     ) throws -> [InitiativeDelivery] {
         let intents = try Dictionary(uniqueKeysWithValues: context.fetch(FetchDescriptor<Intent>())
             .map { (
@@ -125,10 +153,11 @@ struct InitiativeDelivery: Codable, Equatable {
         // Leave four slots for one-off follow-ups and other app notifications.
         let patterns = try InitiativeRecurrenceCompiler.compile(
             schedules,
-            availableRequestCount: max(0, 60 - otherRequestCount)
+            availableRequestCount: enforceCapacity ? max(0, 60 - otherRequestCount) : Int.max
         )
         return patterns.map { pattern in
             InitiativeDelivery(
+                identityVersion: 2, timeZoneIdentifier: calendar.timeZone.identifier,
                 agentID: pattern.agentID, spaceID: pattern.spaceID,
                 hour: pattern.hour, minute: pattern.minute, weekday: pattern.weekday,
                 members: pattern.initiativeIDs.compactMap { members[$0] }
@@ -136,28 +165,38 @@ struct InitiativeDelivery: Codable, Equatable {
         }
     }
 
-    func reconcile(context: ModelContext) async throws {
+    func reconcile(context: ModelContext, calendar: Calendar = .current) async throws {
         let pending = await notifications.pending()
         let owned = pending.filter { $0.identifier.hasPrefix(Self.prefix) }
         let agreements = try context.fetch(FetchDescriptor<IntentInitiative>())
         // Remove only obsolete agreements; a failed replacement must not cancel unrelated work.
-        let invalid = owned.filter { (try? InitiativeConversationService.validatedDelivery(
-            registrationID: $0.identifier,
-            context: context
-        )) == nil }
-        notifications.remove(invalid.map(\.identifier))
+        let invalid = owned.filter { request in
+            guard let delivery = try? InitiativeConversationService.validatedDelivery(
+                registrationID: request.identifier, context: context
+            ) else { return true }
+            return delivery.identityVersion != 2
+        }
+        notifications.removePending(invalid.map(\.identifier))
         do {
-            let deliveries = try compile(
+            let compiled = try compile(
                 context: context,
                 otherRequestCount: pending.count - owned.count,
-                strict: false
+                strict: false, enforceCapacity: false, calendar: calendar
             )
+            var remaining = max(0, 60 - (pending.count - owned.count))
+            var deliveries: [InitiativeDelivery] = []
+            let groups = Dictionary(grouping: compiled, by: { $0.members[0].initiativeID })
+            for id in groups.keys.sorted(by: { $0.uuidString < $1.uuidString }) {
+                guard let group = groups[id], group.count <= remaining else { continue }
+                deliveries += group
+                remaining -= group.count
+            }
             let authorized = await NotificationPermission.requestIfNeeded(
                 canPromptUser: false,
                 authorization: authorization
             )
             if !deliveries.isEmpty, !authorized {
-                notifications.remove(owned.map(\.identifier))
+                notifications.removePending(owned.map(\.identifier))
                 throw InitiativeError.permissionRequired
             }
             var desired: [String: InitiativeDelivery] = [:]
@@ -177,7 +216,7 @@ struct InitiativeDelivery: Codable, Equatable {
                 registration.retiredAt = registration.retiredAt ?? .now
             }
             try context.save()
-            notifications.remove(owned.map(\.identifier).filter { desired[$0] == nil })
+            notifications.removePending(owned.map(\.identifier).filter { desired[$0] == nil })
             // Replace plain requests in place without changing their routing snapshots.
             let installed = Set(owned.filter {
                 $0.content.categoryIdentifier == CommunicationNotificationContent.categoryIdentifier
@@ -187,7 +226,7 @@ struct InitiativeDelivery: Codable, Equatable {
                     $0.id,
                     $0
                 ) })
-            var failed = false
+            var failed = deliveries.count != compiled.count
             for (id, delivery) in desired where !installed.contains(id) {
                 guard let agent = agents[delivery.agentID] else { failed = true; continue }
                 let content = UNMutableNotificationContent()
@@ -201,6 +240,7 @@ struct InitiativeDelivery: Codable, Equatable {
                     agentID: agent.id, conversationID: id
                 )
                 let components = DateComponents(
+                    timeZone: delivery.timeZoneIdentifier.flatMap(TimeZone.init(identifier:)),
                     hour: delivery.hour,
                     minute: delivery.minute, second: 0, weekday: delivery.weekday
                 )
@@ -211,17 +251,15 @@ struct InitiativeDelivery: Codable, Equatable {
             }
             let actual = await Set(notifications.pending().map(\.identifier))
             failed = failed || Set(desired.keys) != Set(actual.filter { $0.hasPrefix(Self.prefix) })
-            for registration in registrations {
-                if let retired = registration.retiredAt,
-                   retired < Date.now.addingTimeInterval(-90 * 86400)
-                {
-                    context.delete(registration)
-                }
-            }
             for agreement in agreements {
                 let required = desired
                     .filter { $0.value.members.contains { $0.initiativeID == agreement.id } }
                     .map(\.key)
+                if required.isEmpty, agreement.enabled {
+                    agreement.registrationStatus = "pending"
+                    agreement.schedulingError = InitiativeError.registrationFailed
+                        .localizedDescription
+                }
                 if !required.isEmpty {
                     let installed = Set(required).isSubset(of: actual)
                     agreement.registrationStatus = installed ? "scheduled" : "pending"

@@ -26,6 +26,7 @@ enum InitiativeRecurrenceCompiler {
                 throw InitiativeScheduleError.invalidTime
             }
             let group = Group(
+                initiativeID: initiative.initiativeID,
                 agentID: initiative.agentID,
                 spaceID: initiative.spaceID,
                 hour: hour,
@@ -77,13 +78,14 @@ enum InitiativeRecurrenceCompiler {
     }
 
     private struct Group: Hashable {
+        let initiativeID: UUID
         let agentID: UUID
         let spaceID: UUID?
         let hour: Int
         let minute: Int
 
         var sortKey: String {
-            "\(agentID.uuidString)/\(spaceID?.uuidString ?? "global")/\(hour)/\(minute)"
+            "\(initiativeID.uuidString)/\(agentID.uuidString)/\(spaceID?.uuidString ?? "global")/\(hour)/\(minute)"
         }
 
         func pattern(weekday: Int?, members: Set<UUID>) -> InitiativeNotificationPattern {

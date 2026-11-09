@@ -37,7 +37,7 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
         }
 
         let container = try! ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         // Any service resolving the container through Factory gets the same
@@ -46,6 +46,10 @@ final class ScreenshotModeInstaller: NSObject, ScreenshotModeInstalling {
 
         let context = container.mainContext
         let fixtures = ScreenshotFixtures.seed(into: context)
+        if scene == .waitingInitiatives { ScreenshotWaitingInitiatives.seed(
+            context,
+            agent: fixtures.agent
+        ) }
         if scene.isSecondary { ScreenshotSecondaryScene.seed(context, fixtures: fixtures) }
         if let chatTitle = scene.chatTitle {
             // A header chat for the canvas scenes; the conversation itself is

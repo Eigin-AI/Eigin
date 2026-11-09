@@ -202,7 +202,7 @@ struct ChatListView: View {
                 )
             },
             center: {
-                AppBrandAvatar(emoji: agent?.emoji)
+                WaitingInitiativeAvatar(agentID: agent?.id, emoji: agent?.emoji)
             },
             trailing: {
                 AppActionButton(
@@ -280,7 +280,9 @@ struct ChatListView: View {
     /// no view lifecycle to clean them up — the list's appearance is the one
     /// place that always sees them.
     private func sweepOrphanedEmptyChats() {
-        let orphans = chats.filter { $0.messages.isEmpty }
+        let claims = (try? modelContext.fetch(FetchDescriptor<InitiativeOccurrence>())) ?? []
+        let claimedChats = Set(claims.map(\.chatID))
+        let orphans = chats.filter { $0.messages.isEmpty && !claimedChats.contains($0.id) }
         guard !orphans.isEmpty else { return }
         for chat in orphans {
             modelContext.delete(chat)
@@ -309,6 +311,7 @@ struct ChatListView: View {
                 )
                 if PendingDestination.get() == destination { PendingDestination.clear() }
                 replacePath(ChatLaunch(chatID: chatID))
+                Task { await Container.shared.initiativeService().reconcile() }
             } catch {
                 initiativeError = error.localizedDescription
                 // Invalidated agreements cannot become executable by retrying the old notification.
@@ -346,39 +349,18 @@ struct ChatListView: View {
     }
 
     private func openInitiativeChat(requestID: UUID) {
-        let descriptor = FetchDescriptor<AgentInitiativeRequest>(
-            predicate: #Predicate { $0.id == requestID }
-        )
-
-        guard let request = try? modelContext.fetch(descriptor).first else {
-            return
-        }
-
-        let chat = Chat(agentID: request.agentID, spaceID: selectedSpaceID)
-        if let title = request.title, !title.isEmpty {
-            chat.title = title
-            chat.titleOrigin = .edited
-        }
-        modelContext.insert(chat)
-
-        if let summary = request.summary, !summary.isEmpty {
-            let summaryMessage = Message(
-                role: "system",
-                content: "Summary of earlier conversation:\n\n\(summary)"
+        do {
+            let chatID = try Container.shared.initiativeService().openFollowUp(
+                requestID: requestID, legacySpaceID: selectedSpaceID
             )
-            summaryMessage.isCompactionSummary = true
-            summaryMessage.chat = chat
-            modelContext.insert(summaryMessage)
+            replacePath(ChatLaunch(chatID: chatID))
+        } catch {
+            initiativeError = error.localizedDescription
+            AppLogger.error(
+                "Could not open follow-up: \(private: error.localizedDescription)",
+                category: .backgroundPrompt
+            )
         }
-
-        let message = Message(role: "assistant", content: request.message)
-        message.chat = chat
-        modelContext.insert(message)
-
-        request.handledAt = Date()
-        try? modelContext.save()
-
-        replacePath(ChatLaunch(chatID: chat.id))
     }
 }
 

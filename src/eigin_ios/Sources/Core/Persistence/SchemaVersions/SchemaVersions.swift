@@ -327,6 +327,26 @@ enum SchemaV12: VersionedSchema {
     }
 }
 
+/// Adds notification-independent waiting invitations and discovery cursors.
+enum SchemaV13: VersionedSchema {
+    static let versionIdentifier = Schema.Version(13, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        SchemaV12.models + [InitiativeCursor.self, WaitingInitiative.self]
+    }
+}
+
+/// Prepared follow-ups retain their due time, scope, and terminal chat association.
+enum SchemaV14: VersionedSchema {
+    static var versionIdentifier: Schema.Version {
+        Schema.Version(14, 0, 0)
+    }
+
+    static var models: [any PersistentModel.Type] {
+        SchemaV13.models
+            .filter { $0 != SchemaV1.AgentInitiativeRequest.self } + [AgentInitiativeRequest.self]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -369,7 +389,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
             SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
-            SchemaV11.self, SchemaV12.self,
+            SchemaV11.self, SchemaV12.self, SchemaV13.self, SchemaV14.self,
         ]
     }
 
@@ -377,7 +397,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
             migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10, migrateV10toV11,
-            migrateV11toV12,
+            migrateV11toV12, migrateV12toV13, migrateV13toV14,
         ]
     }
 
@@ -441,8 +461,14 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         fromVersion: SchemaV10.self,
         toVersion: SchemaV11.self
     )
+    static let migrateV12toV13 = MigrationStage.lightweight(
+        fromVersion: SchemaV12.self, toVersion: SchemaV13.self
+    )
     static let migrateV11toV12 = MigrationStage.lightweight(
         fromVersion: SchemaV11.self,
         toVersion: SchemaV12.self
+    )
+    static let migrateV13toV14 = MigrationStage.lightweight(
+        fromVersion: SchemaV13.self, toVersion: SchemaV14.self
     )
 }

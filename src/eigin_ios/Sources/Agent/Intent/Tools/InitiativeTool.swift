@@ -44,7 +44,6 @@ extension InitiativeTool {
             "status": "ok",
             "initiatives": agreements,
             "nearby_suggestions": service.nearbySuggestions(agentID: agent.id, spaceID: spaceID),
-            "guidance": "Times follow the device timezone. Delivery depends on notification settings. Only combine nearby times with the user's agreement.",
         ]), isError: false)
     }
 
