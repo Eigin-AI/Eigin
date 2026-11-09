@@ -37,15 +37,27 @@ import json, os, sys
 args = sys.argv[1:]
 assert args[args.index('--header') + 1] == os.environ['EXPECTED_AUTH']
 mode = os.environ.get('MODE', 'ok')
-if mode == 'http':
-    sys.exit(22)
-if args[-1].endswith('per_page=100'):
+listing = args[-1].endswith('per_page=100')
+if mode == 'transport':
+    sys.stderr.write(os.environ['EXPECTED_AUTH'])
+    sys.exit(6)
+status = '200'
+if mode == 'http' or (mode.startswith('download-') and not listing):
+    status = '403'
+    body = json.dumps({'message': '403 Forbidden'})
+    if mode == 'download-html': body = '<html>private response</html>'
+    if mode == 'download-secret':
+        body = json.dumps({'error': os.environ['EXPECTED_AUTH']})
+elif listing:
     files = [{'name': 'test.otf', 'id': 1}]
     if mode == 'missing': files = []
     if mode == 'duplicate': files *= 2
-    print(json.dumps(files))
+    body = json.dumps(files)
 else:
-    sys.stdout.write('bad' if mode == 'checksum' else 'font')
+    body = 'bad' if mode == 'checksum' else 'font'
+with open(args[args.index('--output') + 1], 'w') as response:
+    response.write(body)
+sys.stdout.write(status)
 ''')
         curl.chmod(0o755)
         self.env = {
@@ -77,7 +89,42 @@ else:
 
     def test_missing_credentials(self):
         self.env.pop("DOCS_GITLAB_TOKEN")
-        self.assertNotEqual(self.run_download().returncode, 0)
+        result = self.run_download()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("require DOCS_GITLAB_TOKEN or CI_JOB_TOKEN", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_http_errors_identify_operation_status_and_credential(self):
+        for mode, operation in (("http", "list files"), ("download-http", "download test.otf")):
+            with self.subTest(mode=mode):
+                result = self.run_download(mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"{operation} using DOCS_GITLAB_TOKEN failed (HTTP 403)", result.stderr)
+                self.assertIn("403 Forbidden", result.stderr)
+                self.assertNotIn("test-token", result.stderr)
+                self.assertFalse((self.root / "design/assets/fonts/docs/test.otf").exists())
+
+    def test_job_token_error_identifies_credential(self):
+        self.env.pop("DOCS_GITLAB_TOKEN")
+        self.env.update(CI_JOB_TOKEN="job-token", EXPECTED_AUTH="JOB-TOKEN: job-token")
+        result = self.run_download("http")
+        self.assertIn("using CI_JOB_TOKEN failed (HTTP 403)", result.stderr)
+        self.assertNotIn("job-token", result.stderr)
+
+    def test_error_details_redact_credentials(self):
+        result = self.run_download("download-secret")
+        self.assertIn("[redacted]", result.stderr)
+        self.assertNotIn("test-token", result.stderr)
+
+    def test_non_json_error_body_is_not_logged(self):
+        result = self.run_download("download-html")
+        self.assertIn("HTTP 403", result.stderr)
+        self.assertNotIn("private response", result.stderr)
+
+    def test_transport_error_does_not_log_curl_stderr(self):
+        result = self.run_download("transport")
+        self.assertIn("list files using DOCS_GITLAB_TOKEN failed (curl exit 6)", result.stderr)
+        self.assertNotIn("test-token", result.stderr)
 
     def test_download_errors(self):
         for mode in ("missing", "duplicate", "http", "checksum"):
