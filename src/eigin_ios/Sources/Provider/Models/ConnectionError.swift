@@ -7,6 +7,8 @@ struct ConnectionError: Equatable {
     enum Recovery: Equatable {
         /// The Eigin relay has no spendable credits; offer to buy more.
         case purchaseEiginRelayCredits
+        /// Continue from completed work without resending the user message.
+        case continueTurn
     }
 
     let title: String
@@ -33,6 +35,8 @@ struct ConnectionError: Equatable {
     /// mapper, not another branch here.
     init(from error: Error) {
         let mappers: [@Sendable (Error) -> ConnectionError?] = [
+            Self.missingReplyCard,
+            Self.streamCompletionCard,
             Self.firstEventTimeoutCard,
             Self.creditsCard,
             Self.consentCard,
@@ -46,6 +50,41 @@ struct ConnectionError: Equatable {
     }
 
     // MARK: - Mappers
+
+    private static func streamCompletionCard(for error: Error) -> ConnectionError? {
+        guard let error = error as? StreamCompletionError else { return nil }
+        switch error {
+        case .interrupted:
+            return ConnectionError(
+                title: Localized.Errors.Chat.interruptedTitle,
+                suggestion: Localized.Errors.Chat.interruptedBody
+            )
+        case .outputLimit:
+            return ConnectionError(
+                title: Localized.Errors.Chat.outputLimitTitle,
+                suggestion: Localized.Errors.Chat.outputLimitBody
+            )
+        case .policyStop:
+            return ConnectionError(
+                title: Localized.Errors.Chat.policyStopTitle,
+                suggestion: Localized.Errors.Chat.policyStopBody
+            )
+        case .invalidToolCall:
+            return ConnectionError(
+                title: Localized.Errors.Chat.invalidToolCallTitle,
+                suggestion: Localized.Errors.Chat.invalidToolCallBody
+            )
+        }
+    }
+
+    private static func missingReplyCard(for error: Error) -> ConnectionError? {
+        guard error is TurnCompletionError else { return nil }
+        return ConnectionError(
+            title: Localized.Errors.Chat.missingReplyTitle,
+            suggestion: Localized.Errors.Chat.continueBody,
+            recovery: .continueTurn
+        )
+    }
 
     /// The hedged race's first-token ceiling expired: silence from every
     /// side, no error body to quote. Reuse the network-timeout card.

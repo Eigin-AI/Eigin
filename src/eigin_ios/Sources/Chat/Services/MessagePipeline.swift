@@ -403,7 +403,7 @@ enum MessagePipeline {
     /// to the synthetic one. Mutates only the `content` of a copy of the
     /// array (value semantics keep the caller's input untouched), preserving
     /// every other field on the matched message, including attachments.
-    private static func appendSystemHint(
+    static func appendSystemHint(
         _ hint: String,
         to messages: [ChatMessage]
     ) -> [ChatMessage] {

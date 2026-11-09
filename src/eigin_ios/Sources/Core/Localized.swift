@@ -989,6 +989,56 @@ enum Localized {
             }
         }
 
+        enum Chat {
+            static var continueBody: String {
+                Localized.get("errors.chat.continueBody")
+            }
+
+            /// Chat card for a stream completion failure
+            static var interruptedBody: String {
+                Localized.get("errors.chat.interruptedBody")
+            }
+
+            /// Chat card for a stream completion failure
+            static var interruptedTitle: String {
+                Localized.get("errors.chat.interruptedTitle")
+            }
+
+            /// Chat card for a stream completion failure
+            static var invalidToolCallBody: String {
+                Localized.get("errors.chat.invalidToolCallBody")
+            }
+
+            /// Chat card for a stream completion failure
+            static var invalidToolCallTitle: String {
+                Localized.get("errors.chat.invalidToolCallTitle")
+            }
+
+            static var missingReplyTitle: String {
+                Localized.get("errors.chat.missingReplyTitle")
+            }
+
+            /// Chat card for a stream completion failure
+            static var outputLimitBody: String {
+                Localized.get("errors.chat.outputLimitBody")
+            }
+
+            /// Chat card for a stream completion failure
+            static var outputLimitTitle: String {
+                Localized.get("errors.chat.outputLimitTitle")
+            }
+
+            /// Chat card for a stream completion failure
+            static var policyStopBody: String {
+                Localized.get("errors.chat.policyStopBody")
+            }
+
+            /// Chat card for a stream completion failure
+            static var policyStopTitle: String {
+                Localized.get("errors.chat.policyStopTitle")
+            }
+        }
+
         enum Chatgpt {
             /// Suggestion when the ChatGPT sign-in is no longer valid
             static var invalidUserSuggestion: String {
@@ -4406,7 +4456,8 @@ enum Localized {
                 Localized.get("provider.eigin.creditsCaption")
             }
 
-            /// Chat recovery card body shown after credits are added, prompting the user to resend
+            /// Chat recovery card body when credits are available; the whole card continues the
+            /// turn
             static var creditsReadyBody: String {
                 Localized.get("provider.eigin.creditsReadyBody")
             }

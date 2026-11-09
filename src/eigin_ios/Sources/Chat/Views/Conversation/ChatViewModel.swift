@@ -275,7 +275,8 @@ final class ChatViewModel {
         space: Space?,
         spaces: [Space],
         mcpServers: [MCPServer],
-        integrations: [Integration] = []
+        integrations: [Integration] = [],
+        continuationInstruction: String? = nil
     ) {
         guard !isTurnInProgress else { return }
         runTurn(
@@ -287,7 +288,8 @@ final class ChatViewModel {
             space: space,
             spaces: spaces,
             mcpServers: mcpServers,
-            integrations: integrations
+            integrations: integrations,
+            continuationInstruction: continuationInstruction
         )
     }
 
@@ -301,7 +303,8 @@ final class ChatViewModel {
         space: Space?,
         spaces: [Space],
         mcpServers: [MCPServer],
-        integrations: [Integration]
+        integrations: [Integration],
+        continuationInstruction: String? = nil
     ) {
         guard let chat = existingChat() else { return }
         let chatID = chatID
@@ -474,7 +477,8 @@ final class ChatViewModel {
                     cacheKey: chatID.uuidString,
                     model: routedModel,
                     sentAt: sentAt,
-                    conversationID: chatID
+                    conversationID: chatID,
+                    continuationInstruction: continuationInstruction
                 )
                 guard existingChat() != nil else {
                     chatLoop.abort()
@@ -497,7 +501,14 @@ final class ChatViewModel {
                 // That's not a failure — handleStop already snapshotted the partial
                 // response, so settle quietly without painting an error banner.
                 if !(Task.isCancelled || error is CancellationError) {
+                    let checkpoint = chatLoop.buildCheckpoint()
+                    if existingChat() != nil {
+                        window.messages.append(contentsOf: checkpoint)
+                        window.trimIfNeeded()
+                        persistMessages(checkpoint)
+                    }
                     chatError = ConnectionError(from: error)
+                    chatLoop.settle()
                 }
                 chatLoop.abort()
             }

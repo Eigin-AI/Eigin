@@ -77,7 +77,14 @@ struct MistralReasoningReplayTests {
         #expect(loaded.reasoningHistory == history)
         #expect(try !String(decoding: JSONEncoder().encode(loaded), as: UTF8.self)
             .contains("opaque-signature"))
-        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data(
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                    .utf8
+            ),
+            statusCode: 200
+        )
         let next = try await client.chatCompletionEventStream(
             messages: [loaded],
             model: model,
@@ -112,7 +119,10 @@ struct MistralReasoningReplayTests {
             let target = endpoint + "/chat/completions"
             FakeURLProtocol.stubResponse(
                 for: target,
-                data: Data("data: [DONE]\n\n".utf8),
+                data: Data(
+                    "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                        .utf8
+                ),
                 statusCode: 200
             )
             let switched = try await destination.chatCompletionEventStream(
@@ -146,9 +156,18 @@ struct MistralReasoningReplayTests {
             model: model,
             tools: nil
         )
-        for try await event in stream {
-            if case .reasoningHistory = event {
-                Issue.record("Incomplete reasoning was retained")
+        do {
+            for try await event in stream {
+                if case .reasoningHistory = event {
+                    Issue.record("Incomplete reasoning was retained")
+                }
+            }
+            Issue.record("Expected incomplete stream failure")
+        } catch let error as StreamCompletionError {
+            switch error {
+            case .interrupted: #expect(ending.isEmpty)
+            case .outputLimit: #expect(!ending.isEmpty)
+            default: Issue.record("Unexpected completion failure: \(error)")
             }
         }
     }
@@ -226,7 +245,14 @@ struct MistralReasoningReplayTests {
             message.reasoningHistoryData = try JSONEncoder().encode(history)
         }
         let url = origin.endpoint + "/chat/completions"
-        FakeURLProtocol.stubResponse(for: url, data: Data("data: [DONE]\n\n".utf8), statusCode: 200)
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data(
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                    .utf8
+            ),
+            statusCode: 200
+        )
         let client = OpenAICompatibleClient(
             baseURL: origin.endpoint,
             apiToken: "test",

@@ -137,6 +137,7 @@ struct ResponsesAPIClient: LLMClient {
 
         return AsyncThrowingStream { continuation in
             let task = Task {
+                var didRefuse = false
                 do {
                     var sawCompletion = false
                     var hasToolCalls = false
@@ -155,7 +156,8 @@ struct ResponsesAPIClient: LLMClient {
                         if try ResponsesStreamParser.apply(
                             event,
                             to: continuation,
-                            hasToolCalls: &hasToolCalls
+                            hasToolCalls: &hasToolCalls,
+                            didRefuse: &didRefuse
                         ) {
                             sawCompletion = true
                             break
@@ -169,7 +171,8 @@ struct ResponsesAPIClient: LLMClient {
                     }
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: error)
+                    continuation
+                        .finish(throwing: didRefuse ? StreamCompletionError.policyStop : error)
                 }
             }
             continuation.onTermination = { _ in

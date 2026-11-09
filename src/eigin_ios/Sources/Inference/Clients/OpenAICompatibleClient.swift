@@ -240,6 +240,7 @@ struct OpenAICompatibleClient: LLMClient {
 
         return AsyncThrowingStream { continuation in
             let task = Task {
+                var didRefuse = false
                 do {
                     var accumulator = ToolCallAccumulator()
                     var reasoning = resolvedAdapter
@@ -290,6 +291,10 @@ struct OpenAICompatibleClient: LLMClient {
 
                         guard let choice = chunk.choices.first else { continue }
 
+                        if let refusal = choice.delta.refusal, !refusal.isEmpty {
+                            continuation.yield(.contentDelta(refusal))
+                            didRefuse = true
+                        }
                         reasoning?.append(chunk: chunkData)
 
                         // Accumulate content deltas
@@ -307,6 +312,12 @@ struct OpenAICompatibleClient: LLMClient {
                         // Check finish reason — break out immediately to avoid
                         // writing to the continuation after it's consumed.
                         if let reason = choice.finishReason {
+                            if didRefuse { throw StreamCompletionError.policyStop }
+                            if reason == "length" { throw StreamCompletionError.outputLimit }
+                            if reason == "content_filter" { throw StreamCompletionError.policyStop }
+                            guard reason == "stop" || reason == "tool_calls" else {
+                                throw StreamCompletionError.policyStop
+                            }
                             if reason == "stop" || reason == "tool_calls",
                                let history = reasoning?.completed()
                             {
@@ -342,28 +353,12 @@ struct OpenAICompatibleClient: LLMClient {
                         category: .network
                     )
 
-                    // Fallback: if the stream ended without an explicit finish_reason
-                    // (e.g. the chunk was skipped), emit .finished(.stop) so the
-                    // consumer doesn't hang.
-                    if !didFinish {
-                        // Check if we accumulated tool calls without a finish_reason
-                        if let meta = accumulator.capturedProviderMetadata {
-                            continuation.yield(.providerMetadata(meta))
-                        }
-                        let leftover = accumulator.finalize()
-                        if !leftover.isEmpty {
-                            for call in leftover {
-                                continuation.yield(.toolCall(call))
-                            }
-                            continuation.yield(.finished(.toolCalls))
-                        } else {
-                            continuation.yield(.finished(.stop))
-                        }
-                    }
+                    if !didFinish { throw StreamCompletionError.interrupted }
 
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: error)
+                    continuation
+                        .finish(throwing: didRefuse ? StreamCompletionError.policyStop : error)
                 }
             }
 

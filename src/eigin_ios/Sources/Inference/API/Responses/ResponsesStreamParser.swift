@@ -12,9 +12,16 @@ enum ResponsesStreamParser {
     static func apply(
         _ event: ResponsesStreamEvent,
         to continuation: AsyncThrowingStream<ChatStreamEvent, Error>.Continuation,
-        hasToolCalls: inout Bool
+        hasToolCalls: inout Bool,
+        didRefuse: inout Bool
     ) throws -> Bool {
         switch event.type {
+        case "response.refusal.delta":
+            didRefuse = true
+            if let delta = event.delta { continuation.yield(.contentDelta(delta)) }
+        case "response.refusal.done":
+            didRefuse = true
+            throw StreamCompletionError.policyStop
         case "response.output_text.delta":
             if let delta = event.delta, !delta.isEmpty {
                 continuation.yield(.contentDelta(delta))
@@ -32,8 +39,14 @@ enum ResponsesStreamParser {
                 )))
             }
         case "response.completed":
+            if didRefuse { throw StreamCompletionError.policyStop }
             continuation.yield(.finished(hasToolCalls ? .toolCalls : .stop))
             return true
+        case "response.incomplete":
+            if event.response?.incompleteDetails?.reason == "content_filter" {
+                throw StreamCompletionError.policyStop
+            }
+            throw StreamCompletionError.outputLimit
         case "response.failed":
             throw error(from: event)
         case "error":

@@ -7,6 +7,7 @@ final class FakeChatService: ChatService, @unchecked Sendable {
     private var _eventSequences: [[[ChatStreamEvent]]] = []
     private var _callIndex = 0
     private var _eventFailures: [Int: Error] = [:]
+    private var _streamFailures: [Int: Error] = [:]
 
     // Token stream support for chatCompletionStream
     private var _tokenSequences: [Result<[String], Error>] = []
@@ -42,8 +43,9 @@ final class FakeChatService: ChatService, @unchecked Sendable {
 
     /// Enqueue an event stream response. Each call to chatCompletionEventStream
     /// will consume the next sequence in order.
-    func enqueueEventStream(_ events: [ChatStreamEvent]) {
+    func enqueueEventStream(_ events: [ChatStreamEvent], endingWith error: Error? = nil) {
         lock.withLock {
+            _streamFailures[_eventSequences.count] = error
             _eventSequences.append([events])
         }
     }
@@ -197,6 +199,7 @@ final class FakeChatService: ChatService, @unchecked Sendable {
             throw error
         }
 
+        let terminalError = lock.withLock { _streamFailures[_callIndex] }
         let events: [ChatStreamEvent] = lock.withLock {
             if _callIndex < _eventSequences.count {
                 let e = _eventSequences[_callIndex].first ?? []
@@ -228,7 +231,7 @@ final class FakeChatService: ChatService, @unchecked Sendable {
                 for event in events {
                     continuation.yield(event)
                 }
-                continuation.finish()
+                continuation.finish(throwing: terminalError)
             }
         }
     }

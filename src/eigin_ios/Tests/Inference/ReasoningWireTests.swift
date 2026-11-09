@@ -13,7 +13,10 @@ struct ReasoningWireTests {
         for effort: ReasoningEffort? in [nil, .low, .high, ReasoningEffort.none] {
             FakeURLProtocol.stubResponse(
                 for: url,
-                data: Data("data: [DONE]\n\n".utf8),
+                data: Data(
+                    "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                        .utf8
+                ),
                 statusCode: 200
             )
             let stream = try await client.chatCompletionEventStream(

@@ -87,6 +87,7 @@ struct ChatFeed: View {
     /// Action for the trailing user-message footer (e.g. retry last turn).
     /// `nil` hides the footer — set while streaming or when retry is unavailable.
     var onUserMessageFooterAction: (() -> Void)?
+    var onContinue: (() -> Void)?
 
     @Environment(\.colors) private var colors
     @Environment(\.gridBreakpoint) private var breakpoint
@@ -149,8 +150,10 @@ struct ChatFeed: View {
         isLoaded: Bool = true,
         isContentReady: Bool = true,
         onUserMessageFooterAction: (() -> Void)? = nil,
+        onContinue: (() -> Void)? = nil,
         @ViewBuilder header: () -> some View = { EmptyView() }
     ) {
+        self.onContinue = onContinue
         self.items = items
         self.throttler = throttler
         self.streamingItemID = streamingItemID
@@ -588,6 +591,7 @@ struct ChatFeed: View {
             },
             onOptionSelected: interactions.onOptionSelected,
             onFocusInput: { isInputFocused = true },
+            onContinue: onContinue,
             onSelectError: { sheets.selectedError = $0 }
         )
         .growIn(isNew: scroll.isLiveRow(item.id, phase: throttler.phase))

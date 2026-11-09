@@ -292,6 +292,8 @@ struct AnthropicClient: LLMClient {
                     var currentEventType: AnthropicStreamEventType?
                     // Track active tool_use blocks: index → (id, name, accumulated JSON)
                     var activeToolUses: [Int: (id: String, name: String, json: String)] = [:]
+                    var didFinish = false
+                    var finishReason: ChatStreamEvent.FinishReason?
 
                     for try await line in bytes.lines {
                         if line.hasPrefix("event: ") {
@@ -358,9 +360,13 @@ struct AnthropicClient: LLMClient {
                             if let reason = parsed.delta.stopReason {
                                 switch reason {
                                 case "tool_use":
-                                    continuation.yield(.finished(.toolCalls))
-                                default: // "end_turn", "max_tokens", etc.
-                                    continuation.yield(.finished(.stop))
+                                    finishReason = .toolCalls
+                                case "end_turn", "stop_sequence":
+                                    finishReason = .stop
+                                case "max_tokens":
+                                    throw StreamCompletionError.outputLimit
+                                default:
+                                    throw StreamCompletionError.policyStop
                                 }
                             }
 
@@ -379,13 +385,22 @@ struct AnthropicClient: LLMClient {
                                 )
                             }
 
-                        case .messageStart, .messageStop, .ping:
+                        case .messageStop:
+                            guard let finishReason, activeToolUses.isEmpty else {
+                                throw StreamCompletionError.interrupted
+                            }
+                            continuation.yield(.finished(finishReason))
+                            didFinish = true
+
+                        case .messageStart, .ping:
                             break // no action needed
                         }
 
+                        if didFinish { break }
                         currentEventType = nil
                     }
 
+                    guard didFinish else { throw StreamCompletionError.interrupted }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

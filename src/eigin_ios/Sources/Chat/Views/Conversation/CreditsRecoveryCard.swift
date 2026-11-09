@@ -8,6 +8,7 @@ import SwiftUI
 struct CreditsRecoveryCard: View {
     /// The originating error, used for the out-of-credits copy.
     let error: ConnectionError
+    var onContinue: (() -> Void)?
 
     @State private var model = EiginCreditsModel()
     @State private var showPurchase = false
@@ -21,7 +22,8 @@ struct CreditsRecoveryCard: View {
             if hasCredits {
                 AppCard(
                     Localized.Provider.Eigin.creditsReadyTitle,
-                    explainer: Localized.Provider.Eigin.creditsReadyBody
+                    explainer: Localized.Provider.Eigin.creditsReadyBody,
+                    action: onContinue
                 )
             } else {
                 AppCard(error.title, explainer: error.suggestion)

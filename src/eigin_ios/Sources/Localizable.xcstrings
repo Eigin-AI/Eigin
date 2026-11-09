@@ -12786,18 +12786,18 @@
       }
     },
     "provider.eigin.creditsReadyBody": {
-      "comment": "Chat recovery card body shown after credits are added, prompting the user to resend",
+      "comment": "Chat recovery card body when credits are available; the whole card continues the turn",
       "localizations": {
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Credits tilføjet. Send din besked for at fortsætte."
+            "value": "Du har credits. Tryk for at fortsætte."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Credits added. Send your message to continue."
+            "value": "Credits are available. Tap to continue."
           }
         }
       }
@@ -23187,6 +23187,174 @@
           "stringUnit": {
             "state": "translated",
             "value": "id skal være et initiativ-UUID fra list_initiatives."
+          }
+        }
+      }
+    },
+    "errors.chat.continueBody": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to continue from the work already done."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk for at fortsætte fra det arbejde, der allerede er udført."
+          }
+        }
+      }
+    },
+    "errors.chat.missingReplyTitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The agent ended without a final reply"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agenten sluttede uden et endeligt svar"
+          }
+        }
+      }
+    },
+    "errors.chat.interruptedTitle": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svaret blev afbrudt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response was interrupted"
+          }
+        }
+      }
+    },
+    "errors.chat.interruptedBody": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udført arbejde er gemt. Tjek din forbindelse, og bed derefter agenten om at fortsætte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed work is saved. Check your connection, then ask the agent to continue."
+          }
+        }
+      }
+    },
+    "errors.chat.outputLimitTitle": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svaret nåede sin grænse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The response reached its limit"
+          }
+        }
+      }
+    },
+    "errors.chat.outputLimitBody": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udført arbejde er gemt. Bed om et kortere svar, eller del anmodningen op i mindre trin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed work is saved. Ask for a shorter answer or split the request into smaller steps."
+          }
+        }
+      }
+    },
+    "errors.chat.policyStopTitle": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbyderen stoppede svaret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The provider stopped the response"
+          }
+        }
+      }
+    },
+    "errors.chat.policyStopBody": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbyderen afviste eller begrænsede dette svar. Gennemgå din anmodning, før du prøver igen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The provider declined or restricted this response. Review your request before trying again."
+          }
+        }
+      }
+    },
+    "errors.chat.invalidToolCallTitle": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En værktøjsanmodning kunne ikke læses"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tool request could not be read"
+          }
+        }
+      }
+    },
+    "errors.chat.invalidToolCallBody": {
+      "comment": "Chat card for a stream completion failure",
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne gruppe værktøjer blev ikke kørt. Tidligere udført arbejde er gemt. Bed agenten om at tjekke, hvad der mangler."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This batch of tools was not run. Earlier completed work is saved. Ask the agent to check what remains."
           }
         }
       }

@@ -5,6 +5,21 @@ import Testing
 /// Verifies ``ConnectionError`` mapping of thrown errors into user-facing cards.
 @Suite("ConnectionError")
 struct ConnectionErrorTests {
+    @Test(arguments: [
+        StreamCompletionError.interrupted,
+        .outputLimit,
+        .policyStop,
+        .invalidToolCall,
+    ])
+    func streamFailuresHaveActionableCards(failure: StreamCompletionError) {
+        let card = ConnectionError(from: failure)
+        #expect(!card.title.isEmpty)
+        #expect(!card.suggestion.isEmpty)
+        #expect(card.rawDescription == nil)
+        #expect(card.title != Localized.Errors.Connection.title)
+        #expect(card.recovery == nil)
+    }
+
     @Test func deviceUnsupportedMapsToDeviceCardWithJSONDetail() {
         let payload = """
         {"error":{"type":"insufficient_memory","device_memory_gb":"4.0"}}
