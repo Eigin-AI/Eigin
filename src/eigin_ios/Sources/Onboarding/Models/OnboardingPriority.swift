@@ -7,7 +7,7 @@ import SwiftUI
 /// fourth is an open "something else" the agent picks up on later in the chat.
 /// Each case carries the copy shown on its choice card.
 enum OnboardingPriority: String, CaseIterable, Identifiable {
-    case stayOnTop, people, clarity, somethingElse
+    case stayOnTop, getStuffDone, clarity, somethingElse
 
     var id: String {
         rawValue
@@ -16,7 +16,7 @@ enum OnboardingPriority: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .stayOnTop: Localized.Onboarding.Priority.StayOnTop.title
-        case .people: Localized.Onboarding.Priority.People.title
+        case .getStuffDone: Localized.Onboarding.Priority.GetStuffDone.title
         case .clarity: Localized.Onboarding.Priority.Clarity.title
         case .somethingElse: Localized.Onboarding.Priority.SomethingElse.title
         }
@@ -25,7 +25,7 @@ enum OnboardingPriority: String, CaseIterable, Identifiable {
     var explainer: String {
         switch self {
         case .stayOnTop: Localized.Onboarding.Priority.StayOnTop.explainer
-        case .people: Localized.Onboarding.Priority.People.explainer
+        case .getStuffDone: Localized.Onboarding.Priority.GetStuffDone.explainer
         case .clarity: Localized.Onboarding.Priority.Clarity.explainer
         case .somethingElse: Localized.Onboarding.Priority.SomethingElse.explainer
         }
@@ -35,23 +35,22 @@ enum OnboardingPriority: String, CaseIterable, Identifiable {
     var conversationSeed: String {
         switch self {
         case .stayOnTop:
-            "staying on top of their daily life: their schedule, errands, and the things that pile up"
-        case .people:
-            "the people they love: keeping up with family and friends and showing up for them"
+            Prompt.Onboarding.Priority.stayOnTop
+        case .getStuffDone:
+            Prompt.Onboarding.Priority.getStuffDone
         case .clarity:
-            "thinking things through: talking things out and working through decisions"
+            Prompt.Onboarding.Priority.clarity
         case .somethingElse:
-            "something they haven't pinned down yet, so stay open and ask what they're hoping for"
+            Prompt.Onboarding.Priority.somethingElse
         }
     }
 
-    /// Illustration icon mapped from an abstract feel. The images are
-    /// cave-painting style abstractions: a tree for structure, figures for
-    /// connection, a ghost for reflection, a bird for open horizons.
+    /// Cave-painting illustrations: a tree for structure, a many-armed person
+    /// for action, a ghost for reflection, and a bird for open horizons.
     var illustration: Image {
         switch self {
         case .stayOnTop: Iconography.Illustration.tree
-        case .people: Iconography.Illustration.person2
+        case .getStuffDone: Iconography.Illustration.person1
         case .clarity: Iconography.Illustration.ghost
         case .somethingElse: Iconography.Illustration.bird
         }

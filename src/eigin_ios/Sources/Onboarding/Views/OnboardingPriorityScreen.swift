@@ -79,7 +79,7 @@ private struct PriorityCarousel: View {
     private func variant(for priority: OnboardingPriority) -> AppVisualCardVariant {
         switch priority {
         case .stayOnTop: .brand
-        case .people: .warm
+        case .getStuffDone: .warm
         case .clarity: .soft
         case .somethingElse: .neutral
         }
