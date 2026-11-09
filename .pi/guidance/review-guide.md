@@ -17,8 +17,8 @@ line. Keep each item one line and checkable.
 
 ## Comments and prose
 
-### Comments should describe the code as it is now.
-Avoid "used to", "no longer", "previously", "instead of the old" — the comment outlives the change it narrates.
+### Comments, docs, and prompts should describe the current state.
+Flag migration history, issue references, and comparisons with previous behaviour that aren't needed to understand or operate the current system.
 
 ### Comments should be one line, unless they're a doc summary.
 `///` summaries stay short too.
@@ -29,8 +29,8 @@ If the name carries it, the comment can be deleted.
 ### Comments shouldn't say the same thing many times.
 Across a comment and its code, or across two files.
 
-### Comments and docs should leave out background that isn't needed to understand or act on the code.
-Explain what and why, not the tour.
+### Comments, docs, and prompts should briefly explain purpose and action.
+Flag implementation walkthroughs, repeated detail, and background the reader doesn't need to understand or use the thing.
 
 ### Comments and docs should say what a thing is, not what it isn't.
 Flag "not X, but Y" framing and negative definitions.
@@ -70,13 +70,22 @@ The key is to make each doc feel immediately scannable by mixing media and using
 ### Docs should reflect the change.
 Affected `docs/src/` pages update on the same branch; a new concept may need its own page.
 
+### Required recurring steps should fit existing workflows.
+Flag avoidable manual steps and stale pi guidance when commands or release procedures change.
+
 ## Code
 
 ### Two values that always vary together should be one concept.
 Flag parallel flags, enums, and params.
 
 ### Code should be the simplest thing that works.
-Flag uncessesary indirection that could be achieved more simply.
+Flag unnecessary indirection that could be achieved more simply.
+
+### Reuse existing mechanisms when they meet the requirement.
+Check platform, library, and project mechanisms before adding custom machinery or a parallel implementation of the same behaviour.
+
+### Shared paths should stay provider-neutral.
+Keep provider-specific behaviour in adapters or configuration; flag provider-specific branches and types leaking into shared paths.
 
 ### Code should keep options open.
 Flag abstractions or interfaces built for a use case that doesn't exist yet. Sticky decisions (persisted schemas, protocol contracts) are the exception.
@@ -98,6 +107,9 @@ Not inline in the code. This applies to app prompts — the jinja templates
 compiled into Swift. Kickoff and guidance text for the pi extension is its own
 kind of prompt: compositions live in `workflow/*-handoff.ts`, guidance in
 `.pi/guidance/`.
+
+### Agent guidance should live at its point of use.
+Facts explain concepts, skills explain workflows, tools explain usage, and hints or results supply situational instructions; flag duplication across layers.
 
 ## Security and privacy
 
