@@ -20,6 +20,14 @@ steps:
       rust:1-bookworm
       python3 .buildkite/scripts/check-versions.py
 
+  - label: ":pipeline: Select Linux tests"
+    key: linux-select
+    agents:
+      queue: linux-small
+    if: build.branch == "main" || (build.pull_request.id != null && build.pull_request.repository == pipeline.repository)
+    timeout_in_minutes: 5
+    command: bash .buildkite/scripts/upload-linux-tests.sh
+
   - label: ":python: CI regression tests"
     key: ci-tests
     agents:
