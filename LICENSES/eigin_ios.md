@@ -17,6 +17,15 @@
 | LiteRT-LM (vendored, `src/eigin_ios/Packages/LiteRTLM`) | https://github.com/google-ai-edge/LiteRT-LM | 0.16.0 | Apache 2.0 |
 
 
+## Test tooling
+
+| Package | Repository | Version | License |
+|---------|-----------|---------|---------|
+| Minitest (Ruby signing tests; test-only) | https://github.com/minitest/minitest | 5.27.0 | MIT |
+
+Minitest runs through Bundler and is not shipped in the app. Its installed
+5.27.0 gem metadata and `README.rdoc` license section identify the MIT license.
+
 ## SDK consumer
 
 The app consumes [Eigin SDK](eigin_sdk.md). Its Rust and browser dependency inventory belongs to the SDK.

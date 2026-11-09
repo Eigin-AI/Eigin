@@ -82,6 +82,9 @@ pub fn render(r: &Resolved) -> Rendered {
         "ASC_KEY_ID",
         "ASC_ISSUER_ID",
         "ASC_KEY_PATH",
+        "MATCH_GIT_URL",
+        "MATCH_PASSWORD",
+        "MATCH_GIT_PRIVATE_KEY",
         "APP_REVIEW_FIRST_NAME",
         "APP_REVIEW_LAST_NAME",
         "APP_REVIEW_PHONE_NUMBER",
@@ -180,6 +183,25 @@ mod tests {
     #[test]
     fn omits_release_only_values_when_unset() {
         assert!(!render(&resolved(&base())).exports.contains("ASC_KEY_ID"));
+    }
+
+    #[test]
+    fn exports_match_configuration_without_shell_expansion() {
+        let out = render(&resolved(&[
+            ("MATCH_GIT_URL", "git@code.eigin.ai:dev/signing.git"),
+            ("MATCH_PASSWORD", "pass'$HOME"),
+            ("MATCH_GIT_PRIVATE_KEY", "/private/key"),
+        ]))
+        .exports;
+        assert!(out.contains("export MATCH_GIT_URL='git@code.eigin.ai:dev/signing.git'"));
+        assert!(out.contains("export MATCH_GIT_PRIVATE_KEY='/private/key'"));
+        assert!(out.contains(r"export MATCH_PASSWORD='pass'\''$HOME'"));
+    }
+
+    #[test]
+    fn absent_match_values_leave_injected_environment_untouched() {
+        let out = render(&resolved(&base())).exports;
+        assert!(!out.contains("MATCH_"));
     }
 
     #[test]

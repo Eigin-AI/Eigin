@@ -41,6 +41,11 @@ packages:
     url: https://github.com/scinfu/SwiftSoup.git
     from: "2.13.0"
 
+settings:
+  base:
+    EIGIN_SIGNING_STYLE: Automatic
+    EIGIN_CODE_SIGN_IDENTITY: Apple Development
+
 schemes:
   Eigin:
     build:
@@ -206,7 +211,9 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         TARGETED_DEVICE_FAMILY: 1
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_Eigin)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Eigin uses the microphone to transcribe your voice into text messages."
@@ -299,7 +306,9 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.widgets
         TARGETED_DEVICE_FAMILY: 1
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWidgetsExtension)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Widgets
         SKIP_INSTALL: true
@@ -339,7 +348,9 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev.widgets
         TARGETED_DEVICE_FAMILY: 1
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWidgetsDevExtension)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Widgets
         SKIP_INSTALL: true
@@ -436,7 +447,9 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginDev)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev
         KEYCHAIN_SERVICE_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
@@ -520,7 +533,9 @@ targets:
         # with its host under any other bundle id.
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.watchkitapp
         TARGETED_DEVICE_FAMILY: 4
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWatch)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Eigin
         INFOPLIST_KEY_WKApplication: true
@@ -572,7 +587,9 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev.watchkitapp
         TARGETED_DEVICE_FAMILY: 4
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWatchDev)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Eigin Dev
         INFOPLIST_KEY_WKApplication: true
@@ -608,7 +625,9 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.watchkitapp.widgets
         TARGETED_DEVICE_FAMILY: 4
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWatchWidgets)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Ask Eigin
         SKIP_INSTALL: true
@@ -640,7 +659,9 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: ${BUNDLE_ID}.dev.watchkitapp.widgets
         TARGETED_DEVICE_FAMILY: 4
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: "$(EIGIN_SIGNING_STYLE)"
+        CODE_SIGN_IDENTITY: "$(EIGIN_CODE_SIGN_IDENTITY)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(EIGIN_PROFILE_EiginWatchWidgetsDev)"
         DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
         INFOPLIST_KEY_CFBundleDisplayName: Ask Eigin
         SKIP_INSTALL: true
