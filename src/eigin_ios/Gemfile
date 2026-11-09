@@ -1,3 +1,7 @@
 source "https://rubygems.org"
 
 gem "fastlane"
+
+group :test do
+  gem "minitest", "~> 5.0"
+end

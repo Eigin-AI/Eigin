@@ -33,7 +33,9 @@ All lanes take `env:staging` or `env:production` (default `staging`), matching
 
 | Lane | What it does |
 |---|---|
-| `beta` | Archive + upload to TestFlight |
+| `archive` | Build and export an IPA with an isolated keychain; no upload |
+| `beta` | Run `archive`, then upload its IPA to TestFlight |
+| `check_signing` | Install and check signing assets without building or uploading |
 | `screenshots` | Capture App Store screenshots by running the UI tests against `EiginDev` |
 | `sync_screenshots` | Push `screenshots/` to App Store Connect, no binary |
 | `sync_metadata` | Push `metadata/` listing copy only, no binary |
@@ -68,7 +70,26 @@ error on any version that's never had one — a known, unfixed upstream bug
 
 ## Signing
 
-Cloud-managed signing via the App Store Connect API key
-(`-allowProvisioningUpdates` on `gym`). No `match` yet — see
-`docs/src/ios/releasing.md` for why that's fine on a persistent build
-machine.
+Release signing uses encrypted assets from a separate private GitLab repository
+through `match(type: "appstore", readonly: true)`. Configure `MATCH_GIT_URL` and
+`MATCH_PASSWORD`; optionally set `MATCH_GIT_PRIVATE_KEY` to an absolute file path
+outside the checkout. Local SSH access can use your normal key. CI uses a
+read-only deploy key. Archive builds use an isolated temporary keychain locally
+and in CI after retrieving assets with the user's repository credentials;
+cleanup restores the original default keychain and search list. The ASC API key stays App Manager.
+
+The check lane needs signing configuration, `BUNDLE_ID`, and `DEVELOPMENT_TEAM`;
+it does not need an ASC key. Direct Bundler commands require exporting configuration
+first. See [the release guide](../../../docs/src/ios/releasing.md#signing-with-match)
+for import, SSH host verification, renewal, clean-runner validation, and CI setup.
+
+`project.yml` defines per-target profile settings; `beta` supplies their values
+through `gym` build arguments. `signing.rb` handles expiry checks and CI keychain
+cleanup. Development signing stays automatic. Warnings begin
+30 days before expiry; expired assets fail. No scheduled notification job is added.
+
+Run signing behavior tests from `src/eigin_ios/`:
+
+```sh
+bundle exec ruby fastlane/tests/signing_test.rb
+```

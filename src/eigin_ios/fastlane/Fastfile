@@ -1,9 +1,12 @@
+require_relative "signing"
+
 default_platform(:ios)
 skip_docs # fastlane overwrites fastlane/README.md with a lane listing otherwise
 
 # Resolves everything a release needs from the staging/production selector,
 # mirroring `just build ios <env>`. A future app is just a new BUNDLE_ID/team.
 def profile(env)
+  UI.user_error!("Unknown release environment: #{env}") unless %w[staging production].include?(env)
   base = ENV.fetch("BUNDLE_ID")
   production = env == "production"
   {
@@ -39,22 +42,42 @@ def app_review_information
 end
 
 platform :ios do
-  desc "Build and upload to TestFlight (env: staging | production)"
-  lane :beta do |options|
+  desc "Build and export an IPA without uploading (env: staging | production)"
+  lane :archive do |options|
     p = profile(options.fetch(:env, "staging"))
     api_key = asc_api_key
 
-    gym(
-      scheme: p[:scheme],
-      export_method: "app-store",
-      xcargs: "CURRENT_PROJECT_VERSION=#{next_build_number(api_key, p[:bundle_id])} -allowProvisioningUpdates",
-    )
+    ReleaseSigning.with_keychain(self, isolated: true) do |keychain|
+      profiles = ReleaseSigning.sync(self, p, keychain)
+      ReleaseSigning.isolate_keychain(keychain)
+      gym(
+        scheme: p[:scheme],
+        export_method: "app-store",
+        export_options: { signingStyle: "manual", provisioningProfiles: profiles },
+        skip_profile_detection: true,
+        xcargs: "#{ReleaseSigning.build_settings(p, profiles, keychain: keychain)} CURRENT_PROJECT_VERSION=#{next_build_number(api_key, p[:bundle_id])} -allowProvisioningUpdates",
+      )
+    end
+  end
 
+  desc "Build and upload to TestFlight (env: staging | production)"
+  lane :beta do |options|
+    p = profile(options.fetch(:env, "staging"))
+    ipa = archive(options)
     pilot(
-      api_key: api_key,
+      api_key: asc_api_key,
       app_identifier: p[:bundle_id],
+      ipa: ipa,
       skip_waiting_for_build_processing: true,
     )
+  end
+
+  desc "Check distribution signing assets without building or uploading"
+  lane :check_signing do |options|
+    p = profile(options.fetch(:env, "staging"))
+    ReleaseSigning.with_keychain(self, isolated: is_ci) do |keychain|
+      ReleaseSigning.sync(self, p, keychain)
+    end
   end
 
   desc "Push App Store listing metadata (env: staging | production)"
