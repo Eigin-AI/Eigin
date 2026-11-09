@@ -34,7 +34,7 @@ struct ChatHeaderView: View {
                 )
             },
             center: {
-                AppBrandAvatar(emoji: emoji)
+                WaitingInitiativeAvatar(agentID: chat?.agentID, emoji: emoji)
             },
             trailing: {
                 AppActionButton(

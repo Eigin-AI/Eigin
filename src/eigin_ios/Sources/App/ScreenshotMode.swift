@@ -8,6 +8,7 @@ import SwiftUI
 /// Listing order lives in `EiginUITests/ScreenshotsUITests.swift`, which
 /// numbers each capture.
 enum ScreenshotScene: String {
+    case waitingInitiatives = "for-you"
     case care
     case onDevice = "on-device"
     case asksFirst = "asks-first"

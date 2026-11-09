@@ -53,23 +53,35 @@ struct ContentView: View {
                 selectedTab = .chats
             }
         }
-        .task {
-            ensureBackgroundSchedule()
-            ensureEiginProvider()
-            ensureLocalProvider()
-            gemmaManager.prepareIfNeeded()
-        }
+        .task { prepareApp() }
         .onChange(of: gemmaManager.state) { _, newState in
             if newState == .ready || newState == .downloaded {
                 ensureLocalProvider()
             }
         }
+        .onReceive(NotificationCenter.default
+            .publisher(for: UIApplication.significantTimeChangeNotification))
+        { _ in
+            Task { await Container.shared.initiativeService().reconcile() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            Task { await Container.shared.initiativeService().reconcile() }
+        }
         .onChange(of: scenePhase) { _, phase in
+            Container.shared.initiativeService().setActive(phase == .active)
             if phase == .active {
                 ensureBackgroundSchedule()
                 ensureLocalProvider()
             }
         }
+    }
+
+    private func prepareApp() {
+        Container.shared.initiativeService().setActive(scenePhase == .active)
+        ensureBackgroundSchedule()
+        ensureEiginProvider()
+        ensureLocalProvider()
+        gemmaManager.prepareIfNeeded()
     }
 
     private func ensureBackgroundSchedule() {

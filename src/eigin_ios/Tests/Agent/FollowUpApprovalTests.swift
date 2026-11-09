@@ -20,7 +20,7 @@ struct FollowUpApprovalTests {
     )
     @MainActor func approval(approve: Bool) async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let provider = Provider(name: "Test", baseURL: "https://fake.local")
@@ -34,14 +34,13 @@ struct FollowUpApprovalTests {
         let scheduler = DefaultFollowUpScheduler(
             container: container,
             contentPreparer: FakeCommunicationNotificationPreparer(),
-            notificationCenter: center
-        )
-        let tool = FollowUpTool(scheduler: scheduler, authorize: {
-            await NotificationPermission.requestIfNeeded(
+            notificationCenter: center,
+            authorize: { await NotificationPermission.requestIfNeeded(
                 canPromptUser: $0,
                 authorization: authorization
-            )
-        })
+            ) }
+        )
+        let tool = FollowUpTool(scheduler: scheduler)
         let registry = ToolRegistry(tools: [tool])
         let deadline = ISO8601DateFormatter().string(from: Date().addingTimeInterval(3600))
         let args = [

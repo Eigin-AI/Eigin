@@ -4,7 +4,7 @@
 /// When a new schema version is introduced, update these aliases to point
 /// to the new version and add a `MigrationStage` in the migration plan.
 typealias Agent = SchemaV7.Agent
-typealias AgentInitiativeRequest = SchemaV1.AgentInitiativeRequest
+typealias AgentInitiativeRequest = SchemaV14.AgentInitiativeRequest
 typealias AgentToolGrant = SchemaV1.AgentToolGrant
 typealias CapabilityProviderSelection = SchemaV5.CapabilityProviderSelection
 typealias Chat = SchemaV12.Chat
@@ -19,3 +19,6 @@ typealias MCPServer = SchemaV6.MCPServer
 typealias Message = SchemaV12.Message
 typealias Provider = SchemaV1.Provider
 typealias Space = SchemaV1.Space
+
+typealias InitiativeCursor = SchemaV13.InitiativeCursor
+typealias WaitingInitiative = SchemaV13.WaitingInitiative

@@ -25,6 +25,7 @@ struct ScreenshotSceneRoot: View {
     var body: some View {
         Group {
             switch scene {
+            case .waitingInitiatives: ChatListView()
             case .memory:
                 ScreenshotCanvas(chat: chat, items: ScreenshotMemoryScene.items, emoji: agentEmoji)
             case .followUp:
@@ -79,7 +80,8 @@ extension ScreenshotScene {
         case .followUp: ScreenshotFollowUpScene.chatTitle
         case .onDevice: ScreenshotOnDeviceScene.chatTitle
         case .care: ScreenshotCareScene.chatTitle
-        case .connections, .modelPicker, .intents, .intentDetail, .skills, .skillDetail, .spaces,
+        case .waitingInitiatives, .connections, .modelPicker, .intents, .intentDetail, .skills,
+             .skillDetail, .spaces,
              .spaceDetail, .permissions, .knowledge: nil
         }
     }

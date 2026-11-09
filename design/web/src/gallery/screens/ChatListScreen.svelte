@@ -10,6 +10,9 @@
   import ChatListRow from "@gallery/screens/ChatListRow.svelte";
   import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
 
+  import type { Snippet } from "svelte";
+
+  let { avatar }: { avatar?: Snippet } = $props();
   let tab = $state("chats");
 
   /* `#/screens/chat-list?long` repeats the sections so the list overflows. */
@@ -71,9 +74,13 @@
           />
         {/snippet}
         {#snippet center()}
-          <BrandAvatar emoji="🪶" label="Agent">
-            <Icon name="brand/avatar" size="fill" />
-          </BrandAvatar>
+          {#if avatar}
+            {@render avatar()}
+          {:else}
+            <BrandAvatar emoji="🪶" label="Agent">
+              <Icon name="brand/avatar" size="fill" />
+            </BrandAvatar>
+          {/if}
         {/snippet}
         {#snippet trailing()}
           <ActionButton icon="functional/plus" variant="open" size="medium" label="New chat" />

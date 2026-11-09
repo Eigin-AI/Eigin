@@ -7,14 +7,15 @@ import UserNotifications
 struct InitiativeRecurrenceCompilerTests {
     private let agentID = UUID()
 
-    @Test func dailyTasksShareOneIndefinitePattern() throws {
+    @Test func dailyTasksHaveIndependentIndefinitePatterns() throws {
         let news = initiative()
         let email = initiative()
         let patterns = try compile([news, email])
         let pattern = try #require(patterns.first)
-        #expect(patterns.count == 1)
+        #expect(patterns.count == 2)
         #expect(pattern.weekday == nil)
-        #expect(Set(pattern.initiativeIDs) == [news.initiativeID, email.initiativeID])
+        #expect(Set(patterns.flatMap(\.initiativeIDs)) == [news.initiativeID, email.initiativeID])
+        #expect(patterns.allSatisfy { $0.initiativeIDs.count == 1 })
         let trigger = UNCalendarNotificationTrigger(
             dateMatching: pattern.dateComponents,
             repeats: true
@@ -26,17 +27,17 @@ struct InitiativeRecurrenceCompilerTests {
         #expect(trigger.nextTriggerDate() != nil)
     }
 
-    @Test func dailyAndMondayTasksNeverCreateOverlappingAlerts() throws {
+    @Test func dailyAndMondayTasksHaveIndependentAlerts() throws {
         let daily = initiative()
         let monday = initiative(weekdays: [2])
         let patterns = try compile([daily, monday])
-        #expect(patterns.count == 7)
+        #expect(patterns.count == 2)
         for day in 1 ... 7 {
             let matches = patterns.filter { $0.weekday == nil || $0.weekday == day }
-            #expect(matches.count == 1)
+            #expect(matches.allSatisfy { $0.initiativeIDs.count == 1 })
             let expected: Set<UUID> = day == 2
                 ? [daily.initiativeID, monday.initiativeID] : [daily.initiativeID]
-            #expect(try Set(#require(matches.first).initiativeIDs) == expected)
+            #expect(Set(matches.flatMap(\.initiativeIDs)) == expected)
         }
     }
 
@@ -62,10 +63,10 @@ struct InitiativeRecurrenceCompilerTests {
             let patterns = try compile([weekly, daily])
             for day in 1 ... 7 {
                 let matches = patterns.filter { $0.weekday == nil || $0.weekday == day }
-                #expect(matches.count == 1)
+                #expect(matches.allSatisfy { $0.initiativeIDs.count == 1 })
                 let expected: Set<UUID> = weekdays.contains(day)
                     ? [daily.initiativeID, weekly.initiativeID] : [daily.initiativeID]
-                #expect(try Set(#require(matches.first).initiativeIDs) == expected)
+                #expect(Set(matches.flatMap(\.initiativeIDs)) == expected)
             }
         }
     }
@@ -83,11 +84,11 @@ struct InitiativeRecurrenceCompilerTests {
 
     @Test func capacityFailureDoesNotReturnAPartialSchedule() throws {
         let inputs = [initiative(), initiative(weekdays: [2])]
-        #expect(throws: InitiativeScheduleError.capacityExceeded(required: 7, available: 6)) {
-            try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 6)
+        #expect(throws: InitiativeScheduleError.capacityExceeded(required: 2, available: 1)) {
+            try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 1)
         }
-        #expect(try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 7)
-            .count == 7)
+        #expect(try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 2)
+            .count == 2)
         #expect(try InitiativeRecurrenceCompiler.compile([], availableRequestCount: 0).isEmpty)
     }
 
@@ -140,7 +141,8 @@ struct InitiativeRecurrenceCompilerTests {
                 repeats: true
             )
             let next = try #require(trigger.nextTriggerDate())
-            #expect(calendar.component(.weekday, from: next) == pattern.weekday)
+            if let weekday = pattern
+                .weekday { #expect(calendar.component(.weekday, from: next) == weekday) }
             #expect(calendar.component(.hour, from: next) == pattern.hour)
             #expect(calendar.component(.minute, from: next) == pattern.minute)
             #expect(calendar.component(.second, from: next) == 0)
@@ -148,7 +150,7 @@ struct InitiativeRecurrenceCompilerTests {
     }
 
     private func compile(_ inputs: [InitiativeSchedule]) throws -> [InitiativeNotificationPattern] {
-        try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 60)
+        try InitiativeRecurrenceCompiler.compile(inputs, availableRequestCount: 10)
     }
 
     private func initiative(

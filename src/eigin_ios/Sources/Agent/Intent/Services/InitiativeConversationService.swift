@@ -53,7 +53,9 @@ import SwiftData
     static func open(
         registrationID: String,
         deliveredAt: Date,
-        context: ModelContext
+        context: ModelContext,
+        now: Date = .now,
+        calendar: Calendar = .current
     ) throws -> UUID {
         guard deliveredAt.timeIntervalSince1970.isFinite
         else { throw InitiativeError.staleNotification }
@@ -68,16 +70,22 @@ import SwiftData
             }
             return occurrence.chatID
         }
-        let delivery = try validatedDelivery(registrationID: registrationID, context: context)
-        let chat = Chat(agentID: delivery.agentID, spaceID: delivery.spaceID)
-        context.insert(chat)
-        context.insert(InitiativeOccurrence(
-            id: key, registrationID: registrationID, deliveredAt: deliveredAt,
-            chatID: chat.id, intentIDs: delivery.members.map(\.intentID)
-        ))
-        do { try context.save() }
-        catch { context.rollback(); throw error }
-        return chat.id
+        guard let registration = try context.fetch(FetchDescriptor<InitiativeRegistration>())
+            .first(where: { $0.id == registrationID })
+        else { throw InitiativeError.staleNotification }
+        let delivery = try JSONDecoder().decode(InitiativeDelivery.self, from: registration.payload)
+        let id = try WaitingInitiativeStore.notificationOccurrenceID(
+            delivery: delivery,
+            deliveredAt: deliveredAt,
+            calendar: calendar
+        )
+        if try context.fetch(FetchDescriptor<InitiativeOccurrence>())
+            .contains(where: { $0.id == id })
+        {
+            return try WaitingInitiativeStore.open(id: id, context: context)
+        }
+        try WaitingInitiativeStore.reconcile(context: context, now: now, calendar: calendar)
+        return try WaitingInitiativeStore.open(id: id, context: context)
     }
 
     /// Startup and explicit retry use the same validation before any model or tool execution.

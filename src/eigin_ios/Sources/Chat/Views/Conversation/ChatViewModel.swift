@@ -442,6 +442,7 @@ final class ChatViewModel {
                 let activeOnDemand = updatedSkills.last
                 let updatedRegistry = if isSmallContext {
                     ToolRegistry.smallChat(
+                        spaceID: spaceID,
                         chatID: chatID,
                         agentID: agent.id,
                         permissionPolicy: policy,

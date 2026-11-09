@@ -22748,13 +22748,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable notifications for Eigin in Settings, then try scheduling again."
+            "value": "Enable notifications for Eigin in Settings."
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Slå notifikationer til for Eigin i Indstillinger, og prøv at planlægge igen."
+            "value": "Slå notifikationer til for Eigin i Indstillinger."
           }
         }
       }
@@ -23020,13 +23020,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enabled · notification scheduling pending"
+            "value": "In-app invitations"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktiveret · afventer planlægning af notifikationer"
+            "value": "Invitationer i appen"
           }
         }
       }
@@ -23036,13 +23036,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enabled · notifications scheduled"
+            "value": "Notifications enabled"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktiveret · notifikationer planlagt"
+            "value": "Notifikationer slået til"
           }
         }
       }
@@ -23052,13 +23052,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enabled · notification scheduling needs attention"
+            "value": "Notification issue"
           }
         },
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aktiveret · planlægning af notifikationer kræver handling"
+            "value": "Problem med notifikationer"
           }
         }
       }
@@ -23355,6 +23355,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "This batch of tools was not run. Earlier completed work is saved. Ask the agent to check what remains."
+          }
+        }
+      }
+    },
+    "intent.waiting.title": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For you"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Til dig"
+          }
+        }
+      }
+    },
+    "intent.waiting.description": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A few things we can pick up when you’re ready."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Et par ting, vi kan tage fat på, når du er klar."
+          }
+        }
+      }
+    },
+    "intent.waiting.emptyTitle": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All caught up"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du er helt med"
+          }
+        }
+      }
+    },
+    "intent.waiting.emptyDescription": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When it’s time for something we’ve planned, you’ll find it here."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Når det er tid til noget, vi har planlagt, finder du det her."
+          }
+        }
+      }
+    },
+    "intent.waiting.avatarLabel": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For you, %@ waiting invitations"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Til dig, %@ ventende invitationer"
+          }
+        }
+      }
+    },
+    "intent.waiting.dismissLabel": {
+      "comment": "Waiting initiative sheet and accessibility",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip this time: %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spring over denne gang: %@"
           }
         }
       }

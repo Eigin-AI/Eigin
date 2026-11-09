@@ -1,21 +1,30 @@
 # Initiative
 
-An **initiative** is an agreed recurring invitation to work on an intent. Opening it starts current work in a new chat; repeated taps reopen that chat.
+Agreed notifications appear in **For you** and, when enabled, on the device. Both open the same chat.
+
+| Kind | Tool | Opening it |
+| --- | --- | --- |
+| Recurring initiative | `set_initiatives` | Starts current work on an intent |
+| One-off follow-up | `follow_up` | Shows the prepared message and briefing in the original space; waits for a reply |
 
 ## Scheduling
 
-Use `set_initiatives` for daily or weekly invitations with wording that fits the task across repeated occurrences. Check agreements with `list_initiatives` and stop them with `cancel_initiative`. Times follow the device's time zone. Same-time tasks combine within one agent and space; changing agreed times requires consent.
+- Use daily or weekly schedules for recurring initiatives. Changing agreed times requires consent.
+- Check agreements with `list_initiatives`; stop them with `cancel_initiative` or intent detail. Resolving an intent also cancels its initiatives.
+- Recurring times follow the device’s time zone when the app is active. Installed notifications keep their scheduled zone until then.
+- Saving works without notification permission. Check tool results for scheduling status.
 
-Scheduling requires notification permission. The tool reports saved agreements and delivery status separately. Cancel through the tool or intent detail; resolving an intent also cancels its invitations. Missed occurrences never replay automatically. Interrupted work can be resumed explicitly in its chat.
+## For you
+
+The avatar in either chat header opens the newest five due messages across the agent’s spaces.
+
+- Keep only the latest unopened occurrence of each recurring initiative.
+- Opening, dismissing, or overflow removes a message permanently; older items never refill the list.
+- Dismissing leaves future recurrence active. Discovery runs in the foreground; recurring work starts when opened.
+- Tracking begins at upgrade without historical backfill. Legacy follow-ups with unknown due times remain notification-only.
 
 ## Background work
 
-With permission, the agent prepares for future conversations and maintains its knowledge. Balanced runs occasionally; proactive runs more often. Reactive disables background work while keeping explicitly agreed initiatives.
+With permission, the agent prepares context and maintains knowledge. Balanced runs occasionally; proactive runs more often. Reactive keeps explicitly agreed notifications while disabling background work.
 
-Preparation gathers context for current intents and upcoming initiatives using authorized read tools. It saves scoped findings with sources and observation times. Conversations reuse those findings and prior initiative outputs, checking current facts when needed. Scheduled invitations work independently of preparation.
-
-Maintenance consolidates knowledge and may ask for clarification.
-
-## One-off follow-ups
-
-`follow_up` delivers a message prepared now. Opening it shows the message and briefing; it does not start new work.
+Preparation uses authorized read tools and saves scoped findings for later conversations. Maintenance consolidates knowledge and may ask for clarification.

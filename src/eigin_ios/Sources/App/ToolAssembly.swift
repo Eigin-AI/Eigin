@@ -125,6 +125,7 @@ extension ToolRegistry {
     /// can use reliably with simple string parameters: knowledge search and web
     /// access, plus explicitly timed follow-up notifications.
     @MainActor static func smallChat(
+        spaceID: UUID? = nil,
         chatID: UUID? = nil,
         agentID: UUID? = nil,
         permissionPolicy: ToolPermissionPolicy,
@@ -146,6 +147,7 @@ extension ToolRegistry {
             webFetch,
             FollowUpTool(
                 scheduler: Container.shared.followUpScheduler(),
+                spaceID: spaceID,
                 canPromptUser: (permissionPolicy as? AgentPermissionPolicy)?
                     .canPromptUser ?? true
             ),

@@ -10,7 +10,7 @@ struct InitiativeNotificationPresentationTests {
     @Test(arguments: [false, true])
     func communicationPresentationPreservesRecurrenceAndRouting(weekly: Bool) async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
@@ -64,7 +64,7 @@ struct InitiativeNotificationPresentationTests {
         #expect(trigger.dateComponents.hour == 10)
         #expect(trigger.dateComponents.minute == 57)
         #expect(trigger.dateComponents.weekday == (weekly ? 2 : nil))
-        #expect(trigger.dateComponents.timeZone == nil)
+        #expect(trigger.dateComponents.timeZone == Calendar.current.timeZone)
         let originalPayload = try #require(context.fetch(FetchDescriptor<InitiativeRegistration>())
             .first?.payload)
         try await scheduler.reconcile(context: context)
@@ -92,6 +92,10 @@ struct InitiativeNotificationPresentationTests {
             .dateComponents)
         #expect(try context.fetch(FetchDescriptor<InitiativeRegistration>()).first?
             .payload == originalPayload)
+        for cursor in try context.fetch(FetchDescriptor<InitiativeCursor>()) {
+            cursor.evaluatedThrough = Date.now.addingTimeInterval(-8 * 86400)
+        }
+        try context.save()
         let chatID = try InitiativeConversationService.open(
             registrationID: upgraded.identifier,
             deliveredAt: .now,

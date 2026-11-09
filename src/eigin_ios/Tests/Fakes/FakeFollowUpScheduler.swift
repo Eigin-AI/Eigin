@@ -6,6 +6,9 @@ final class FakeFollowUpScheduler: FollowUpScheduling {
     var scheduledDates: [Date?] = []
     var error: Error?
     let requestID = UUID()
+    var deliveryStatus: FollowUpDeliveryStatus = .scheduled
+    var prompted: Bool?
+    var spaceID: UUID?
 
     func schedule(
         title: String,
@@ -15,10 +18,18 @@ final class FakeFollowUpScheduler: FollowUpScheduling {
         deliverAt: Date?,
         agentID: UUID,
         agentName: String?,
-        agentEmoji: String?
-    ) async throws -> UUID {
+        agentEmoji: String?,
+        spaceID: UUID?,
+        canPromptUser: Bool
+    ) async throws -> FollowUpScheduleResult {
         if let error { throw error }
         scheduledDates.append(deliverAt)
-        return requestID
+        prompted = canPromptUser
+        self.spaceID = spaceID
+        return FollowUpScheduleResult(
+            requestID: requestID,
+            dueAt: deliverAt ?? .now,
+            deliveryStatus: deliveryStatus
+        )
     }
 }

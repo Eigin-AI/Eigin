@@ -10,7 +10,7 @@ import UserNotifications
 struct InitiativeToolsTests {
     @Test func splitToolsListAndCancelWithoutNotificationPermission() async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Test", providerID: UUID(), model: "test")

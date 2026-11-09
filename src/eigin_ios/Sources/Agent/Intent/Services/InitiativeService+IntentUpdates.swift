@@ -25,12 +25,6 @@ extension InitiativeService {
             return intent.schedules.first(where: { $0.id == agreement.scheduleID }) != next
         }
         if !rescheduled.isEmpty {
-            guard await NotificationPermission.requestIfNeeded(
-                canPromptUser: false,
-                authorization: scheduler.authorization
-            ) else {
-                throw InitiativeError.permissionRequired
-            }
             for agreement in rescheduled {
                 guard let schedule = schedules.first(where: { $0.id == agreement.scheduleID })
                 else { continue }
@@ -54,17 +48,9 @@ extension InitiativeService {
             agreement.updatedAt = .now
             agreement.registrationStatus = "pending"
         }
-        if !rescheduled.isEmpty {
-            let pending = await scheduler.notifications.pending()
-            let otherCount = pending
-                .count(where: { !$0.identifier.hasPrefix(InitiativeNotificationScheduler.prefix) })
-            _ = try scheduler.compile(
-                context: context,
-                otherRequestCount: otherCount,
-                strict: false
-            )
-        }
-        try context.save()
+        try WaitingInitiativeStore.reconcile(context: context)
+        try refreshWaiting()
+        await cleanDeliveredNotifications()
         do { try await scheduler.reconcile(context: context) }
         catch InitiativeError.permissionRequired where rescheduled.isEmpty {
             // Cancellation and metadata-only edits remain available without permission.

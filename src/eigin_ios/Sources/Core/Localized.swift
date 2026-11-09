@@ -2554,6 +2554,38 @@ enum Localized {
                 Localized.get("intent.state.scheduled")
             }
         }
+
+        enum Waiting {
+            /// Waiting initiative sheet and accessibility
+            static func avatarLabel(_ p1: String) -> String {
+                String(format: Localized.get("intent.waiting.avatarLabel"), p1)
+            }
+
+            /// Waiting initiative sheet and accessibility
+            static var description: String {
+                Localized.get("intent.waiting.description")
+            }
+
+            /// Waiting initiative sheet and accessibility
+            static func dismissLabel(_ p1: String) -> String {
+                String(format: Localized.get("intent.waiting.dismissLabel"), p1)
+            }
+
+            /// Waiting initiative sheet and accessibility
+            static var emptyDescription: String {
+                Localized.get("intent.waiting.emptyDescription")
+            }
+
+            /// Waiting initiative sheet and accessibility
+            static var emptyTitle: String {
+                Localized.get("intent.waiting.emptyTitle")
+            }
+
+            /// Waiting initiative sheet and accessibility
+            static var title: String {
+                Localized.get("intent.waiting.title")
+            }
+        }
     }
 
     enum Intents {

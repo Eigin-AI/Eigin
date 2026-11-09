@@ -21,6 +21,7 @@ import ProviderModelsScreen from "@gallery/screens/ProviderModelsScreen.svelte";
 import AgentScreen from "@gallery/screens/AgentScreen.svelte";
 import CallScreen from "@gallery/screens/CallScreen.svelte";
 import ChatListScreen from "@gallery/screens/ChatListScreen.svelte";
+import WaitingInitiativesScreen from "@gallery/screens/WaitingInitiativesScreen.svelte";
 import ChatScreen from "@gallery/screens/ChatScreen.svelte";
 import ConnectionsScreen from "@gallery/screens/ConnectionsScreen.svelte";
 import EiginProviderScreen from "@gallery/screens/EiginProviderScreen.svelte";
@@ -86,6 +87,14 @@ export const screenSections: { id: string; title: string }[] = [
  * screen opens it, because that is the only way to see it in place.
  */
 export const screenEntries: ScreenEntry[] = [
+  {
+    id: "waiting-initiatives",
+    title: "For you · Exploration",
+    section: "chats",
+    component: WaitingInitiativesScreen,
+    about:
+      "#362 · Tap the avatar for messages from your agent. Start a conversation or skip this occurrence. Only the latest unopened occurrence is shown per initiative. Scripted gallery data; no background work or native changes.",
+  },
   {
     id: "chat-list",
     title: "Chat list",

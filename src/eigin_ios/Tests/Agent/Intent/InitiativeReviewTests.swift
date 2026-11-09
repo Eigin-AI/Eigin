@@ -7,7 +7,7 @@ import UserNotifications
 @Suite("Initiative review regressions")
 @MainActor
 struct InitiativeReviewTests {
-    @Test func updateIntentRejectsReschedulingWithoutPermissionButAllowsRemoval() async throws {
+    @Test func updateIntentSavesReschedulingWithoutPermissionAndAllowsRemoval() async throws {
         let f = try fixture()
         _ = try await f.enable()
         let denied = InitiativeService(
@@ -25,13 +25,13 @@ struct InitiativeReviewTests {
         """), agent: f.agent)
         #expect(changed.isError)
         #expect(try ModelContext(f.container).fetch(FetchDescriptor<Intent>()).first?.schedules
-            .first?.hour == 7)
+            .first?.hour == 9)
         let removed = await tool.execute(updateCall(f, schedules: "[]"), agent: f.agent)
         #expect(!removed.isError)
         #expect(f.center.requests.isEmpty)
     }
 
-    @Test func updateIntentRejectsCapacityBeforeSavingAndReportsRegistrationFailure() async throws {
+    @Test func updateIntentSavesDespiteCapacityAndReportsRegistrationFailure() async throws {
         let f = try fixture()
         _ = try await f.enable()
         let second = Intent(
@@ -65,7 +65,7 @@ struct InitiativeReviewTests {
         """), agent: f.agent)
         #expect(result.isError)
         #expect(try ModelContext(f.container).fetch(FetchDescriptor<Intent>())
-            .first(where: { $0.id == f.intent.id })?.schedules.first?.frequency == .daily)
+            .first(where: { $0.id == f.intent.id })?.schedules.first?.frequency == .weekly)
         f.center.requests.removeAll { $0.identifier.hasPrefix("other-") }
         f.center.failAdds = true
         let failed = await tool.execute(updateCall(f, schedules: """
@@ -95,8 +95,9 @@ struct InitiativeReviewTests {
         let deniedJSON = try result(deniedResult)
         #expect(deniedResult.isError)
         #expect(deniedJSON["status"] as? String == "permission_required")
-        #expect(deniedJSON["changes_state"] as? String == "not_saved")
-        #expect((deniedJSON["initiatives"] as? [[String: Any]])?.isEmpty == true)
+        #expect(deniedJSON["changes_state"] as? String == "saved")
+        #expect((deniedJSON["initiatives"] as? [[String: Any]])?
+            .first?["in_app"] as? String == "enabled")
         let tool = SetInitiativesTool(service: f.service, spaceID: nil, canPromptUser: true)
         let unsupported = await tool.execute(
             setCall(f, extra: ",\"frequency\":\"monthly\""),
@@ -158,7 +159,7 @@ struct InitiativeReviewTests {
             return InitiativeStatus(initiative: agreement, intent: intent)
         }
         #expect(try status().state == .failed)
-        #expect(try status().nextOccurrence == nil)
+        #expect(try status().nextOccurrence != nil)
         f.center.dropAdds = false
         await f.service.reconcile()
         #expect(try status().state == .scheduled)
@@ -168,7 +169,7 @@ struct InitiativeReviewTests {
         agreement.registrationStatus = "pending"
         try context.save()
         #expect(try status().state == .pending)
-        #expect(try status().nextOccurrence == nil)
+        #expect(try status().nextOccurrence != nil)
         try await f.service.cancel(id: agreement.id, agentID: f.agent.id, spaceID: nil)
         #expect(try status().state == .disabled)
         #expect(try !status().canCancel)
@@ -198,12 +199,12 @@ struct InitiativeReviewTests {
             content: UNMutableNotificationContent(),
             trigger: nil
         ) }
-        f.center.pendingSnapshots = [[], competing]
+        f.center.pendingSnapshots = [competing, competing]
         let tool = SetInitiativesTool(service: f.service, spaceID: nil, canPromptUser: true)
         let response = await tool.execute(setCall(f), agent: f.agent)
         let json = try result(response)
         #expect(response.isError)
-        #expect(json["status"] as? String == "schedule_too_complex")
+        #expect(json["status"] as? String == "registration_failed")
         #expect(json["changes_state"] as? String == "saved")
         let agreements = try #require(json["initiatives"] as? [[String: Any]])
         #expect(agreements.first?["saved"] as? Bool == true)
@@ -338,7 +339,7 @@ struct InitiativeReviewTests {
         -> Fixture
     {
         let container = try ModelContainer(
-            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Test", providerID: UUID(), model: "test")

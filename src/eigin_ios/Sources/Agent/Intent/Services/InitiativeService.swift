@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftData
 
 /// A requested agreement; a supplied schedule updates the existing intent schedule in the same
@@ -51,7 +52,10 @@ extension InitiativeScheduleError: LocalizedError {
 }
 
 /// Owns permission checks, agreement persistence, and serialized notification reconciliation.
-@MainActor final class InitiativeService {
+@MainActor @Observable final class InitiativeService {
+    var waiting: [WaitingMessage] = []
+    var isActive = false
+    var dueRefresh: Task<Void, Never>?
     let modelContainer: ModelContainer
     let scheduler: InitiativeNotificationScheduler
     var working = false
@@ -74,12 +78,6 @@ extension InitiativeScheduleError: LocalizedError {
         guard !working else { throw InitiativeError.busy }
         working = true
         defer { finish() }
-        guard await NotificationPermission.requestIfNeeded(
-            canPromptUser: canPromptUser,
-            authorization: scheduler.authorization
-        ) else {
-            throw InitiativeError.permissionRequired
-        }
         let context = ModelContext(modelContainer)
         let intents = try context.fetch(FetchDescriptor<Intent>())
         var agreements = try context.fetch(FetchDescriptor<IntentInitiative>())
@@ -128,9 +126,6 @@ extension InitiativeScheduleError: LocalizedError {
             agreement.registrationStatus = "pending"
             agreement.updatedAt = .now
         }
-        let pending = await scheduler.notifications.pending()
-        let otherCount = pending
-            .count(where: { !$0.identifier.hasPrefix(InitiativeNotificationScheduler.prefix) })
         for agreement in agreements where changedIDs.contains(agreement.id) {
             guard let intent = intents.first(where: { $0.id == agreement.intentID }),
                   let schedule = intent.schedules.first(where: { $0.id == agreement.scheduleID })
@@ -146,10 +141,14 @@ extension InitiativeScheduleError: LocalizedError {
                 availableRequestCount: 7
             )
         }
-        _ = try scheduler.compile(context: context, otherRequestCount: otherCount, strict: false)
-        do { try context.save() }
+        do { try WaitingInitiativeStore.reconcile(context: context) }
         catch { throw InitiativeOperationFailure(underlying: error, changesState: .unknown) }
         do {
+            try refreshWaiting()
+            await cleanDeliveredNotifications()
+            _ = await NotificationPermission.requestIfNeeded(
+                canPromptUser: canPromptUser, authorization: scheduler.authorization
+            )
             try await scheduler.reconcile(context: context)
             return try list(agentID: agentID, spaceID: spaceID)
         } catch { throw InitiativeOperationFailure(underlying: error, changesState: .saved) }
@@ -167,10 +166,13 @@ extension InitiativeScheduleError: LocalizedError {
             intent.agentID == agentID,
             intent.spaceID == spaceID else { throw InitiativeError.inaccessibleIntent }
         agreement.enabled = false
-        do { try context.save() }
+        do { try WaitingInitiativeStore.reconcile(context: context) }
         catch { throw InitiativeOperationFailure(underlying: error, changesState: .unknown) }
-        do { try await scheduler.reconcile(context: context) }
-        catch InitiativeError.permissionRequired {
+        do {
+            try refreshWaiting()
+            await cleanDeliveredNotifications()
+            try await scheduler.reconcile(context: context)
+        } catch InitiativeError.permissionRequired {
             // Remaining agreements retain their permission error; cancellation is complete.
         } catch { throw InitiativeOperationFailure(underlying: error, changesState: .saved) }
     }
@@ -213,6 +215,7 @@ extension InitiativeScheduleError: LocalizedError {
                 "status": active ?
                     (agreement.schedulingError == nil ? agreement
                         .registrationStatus : "registration_failed") : "disabled",
+                "in_app": active ? "enabled" : "disabled",
                 "error": agreement.schedulingError ?? "",
             ]
         }
@@ -251,8 +254,11 @@ extension InitiativeScheduleError: LocalizedError {
         guard !working else { reconcileAgain = true; return }
         working = true
         defer { finish() }
-        do { try await scheduler.reconcile(context: ModelContext(modelContainer)) }
-        catch { AppLogger.warning(
+        do {
+            try refreshWaiting()
+            await cleanDeliveredNotifications()
+            try await scheduler.reconcile(context: ModelContext(modelContainer))
+        } catch { AppLogger.warning(
             "Initiative reconciliation failed: \(public: error.localizedDescription)",
             category: .backgroundPrompt
         ) }

@@ -22,6 +22,7 @@ enum AgentToolKit: ToolKit {
         return [
             FollowUpTool(
                 scheduler: Container.shared.followUpScheduler(),
+                spaceID: context.spaceID,
                 canPromptUser: context.canPromptUser
             ),
             ReadCoreTool(),

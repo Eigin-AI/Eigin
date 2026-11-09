@@ -19,7 +19,7 @@ extension Container {
                 withIntermediateDirectories: true
             )
             return try! ModelContainer(
-                for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+                for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
                 migrationPlan: EiginMigrationPlan.self
             )
         }.singleton
@@ -220,7 +220,14 @@ extension Container {
 
     @MainActor
     var followUpScheduler: Factory<any FollowUpScheduling> {
-        self { @MainActor in DefaultFollowUpScheduler(container: self.modelContainer()) }.singleton
+        self { @MainActor in DefaultFollowUpScheduler(container: self.modelContainer(), onChange: {
+            do { try Container.shared.initiativeService().refreshWaiting() }
+            catch { AppLogger.error(
+                "Could not refresh follow-ups: \(private: error.localizedDescription)",
+                category: .backgroundPrompt
+            ) }
+            Task { await Container.shared.initiativeService().cleanDeliveredNotifications() }
+        }) }.singleton
     }
 
     // MARK: - Schedule & Health
