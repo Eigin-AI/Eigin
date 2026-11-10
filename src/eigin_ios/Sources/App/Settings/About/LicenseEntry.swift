@@ -82,6 +82,14 @@ struct LicenseEntry: Identifiable {
             """
         ),
         LicenseEntry(
+            name: "unicode-segmentation",
+            repository: URL(string: "https://github.com/unicode-rs/unicode-segmentation"),
+            version: "1.13.3",
+            distribution: "Rust runtime in Eigin SDK",
+            kind: .mit,
+            copyright: "Copyright (c) 2015 The Rust Project Developers"
+        ),
+        LicenseEntry(
             name: "SwiftStreamingMarkdown",
             repository: URL(string: "https://github.com/microsoft/SwiftStreamingMarkdown"),
             version: nil,

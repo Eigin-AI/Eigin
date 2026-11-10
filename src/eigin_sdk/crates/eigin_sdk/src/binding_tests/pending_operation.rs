@@ -1,20 +1,8 @@
-//! Controlled operations exported only in host contract builds.
+//! Host-controlled pending operations for binding contracts.
 
 use std::future::poll_fn;
 use std::sync::{Arc, Mutex};
 use std::task::{Poll, Waker};
-
-use crate::InitializationError;
-
-mod diagnostics;
-
-/// Returns a real SDK error through the generated bindings.
-#[uniffi::export]
-pub async fn fail_initialization_fixture() -> Result<(), InitializationError> {
-    Err(InitializationError::Unavailable {
-        reason: "binding fixture".into(),
-    })
-}
 
 /// A predictable failure for host contract tests.
 #[derive(Debug, thiserror::Error, uniffi::Error)]

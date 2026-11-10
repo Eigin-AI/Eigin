@@ -1,3 +1,4 @@
+import EiginSDK
 import Foundation
 
 /// Progress phases reported during compaction.
@@ -168,27 +169,22 @@ enum CompactionService {
     /// tag is tolerated (take everything after the opening tag). Returns `nil`
     /// when unusable or too short to be useful.
     static func parseSummary(_ raw: String) -> String? {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let open = trimmed.range(of: "<conversation_summary>") else {
+        switch EiginSDK.Experimental.Context.parseSummary(raw) {
+        case .accepted(let summary):
+            return summary
+        case .missingOpeningTag(let trimmedLength):
             AppLogger.warning(
-                "Summary reply missing <conversation_summary> tag, skipping (\(public: trimmed.count) chars)",
+                "Summary reply missing <conversation_summary> tag, skipping (\(public: trimmedLength) chars)",
+                category: .chat
+            )
+            return nil
+        case .tooShort(let bodyLength):
+            AppLogger.warning(
+                "Summary block too short (\(public: bodyLength) chars), skipping",
                 category: .chat
             )
             return nil
         }
-        var body = String(trimmed[open.upperBound...])
-        if let close = body.range(of: "</conversation_summary>") {
-            body = String(body[..<close.lowerBound])
-        }
-        body = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard body.count >= 50 else {
-            AppLogger.warning(
-                "Summary block too short (\(public: body.count) chars), skipping",
-                category: .chat
-            )
-            return nil
-        }
-        return body
     }
 
     // MARK: - Retention
@@ -207,33 +203,11 @@ enum CompactionService {
         tokenBudget: Int,
         minimumTurns: Int = 2
     ) -> [ChatMessage] {
-        var retainedStart = messages.count
-        var budgetLeft = tokenBudget
-        var turnsKept = 0
-        var scanFrom = messages.count
-        while scanFrom > 0 {
-            // A turn is a user message plus everything after it; whole turns are
-            // kept so a tool-call round is never split.
-            guard
-                let turnStart = messages[..<scanFrom].lastIndex(where: {
-                    $0.role == "user"
-                })
-            else { break }
-            // A synthetic summary carrier marks where the previous summary's
-            // coverage begins — re-summarise it, don't retain it.
-            if messages[turnStart].content?.hasPrefix("<conversation_summary>") == true {
-                break
-            }
-            let turn = Array(messages[turnStart ..< scanFrom])
-            let turnTokens = TokenEstimator.estimate(messages: turn)
-            if turnsKept >= minimumTurns, turnTokens > budgetLeft { break }
-            budgetLeft -= turnTokens
-            turnsKept += 1
-            retainedStart = turnStart
-            scanFrom = turnStart
-        }
-        guard retainedStart < messages.count else { return [] }
-        return Array(messages[retainedStart...])
+        let selection = EiginSDK.Experimental.Context.retainedTail(
+            messages: ContextSDK.messages(messages), tokenBudget: tokenBudget,
+            minimumTurns: minimumTurns
+        )
+        return ContextSDK.apply(selection, to: messages)
     }
 
     // MARK: - Truncation
@@ -247,39 +221,10 @@ enum CompactionService {
         messages: [ChatMessage],
         tokenBudget: Int
     ) -> [ChatMessage] {
-        var accumulated = 0
-        var startIndex = messages.count
-
-        // Newest first; also count tool-call framing, via the shared estimator.
-        for i in stride(from: messages.count - 1, through: 0, by: -1) {
-            let msgTokens = TokenEstimator.estimate(messages: [messages[i]])
-            if accumulated + msgTokens > tokenBudget {
-                // Partial fit: truncate the oldest message to fill remaining budget.
-                let remaining = tokenBudget - accumulated - 4
-                if i == startIndex - 1, remaining > 20, messages[i].reasoningHistory == nil {
-                    let truncated = truncateContent(
-                        messages[i].content ?? "", maxTokens: remaining
-                    )
-                    var partial = messages[i]
-                    partial = ChatMessage(
-                        role: partial.role,
-                        content: truncated,
-                        toolCallID: partial.toolCallID,
-                        name: partial.name,
-                        toolCalls: partial.toolCalls
-                    )
-                    var result = [partial]
-                    result.append(contentsOf: messages[(i + 1)...])
-                    return result
-                }
-                break
-            }
-            accumulated += msgTokens
-            startIndex = i
-        }
-
-        if startIndex >= messages.count { return [] }
-        return Array(messages[startIndex...])
+        let selection = EiginSDK.Experimental.Context.truncateForBudget(
+            messages: ContextSDK.messages(messages), tokenBudget: tokenBudget
+        )
+        return ContextSDK.apply(selection, to: messages)
     }
 
     /// Sliding window with hysteresis, for small-context on-device models.
@@ -300,47 +245,9 @@ enum CompactionService {
         highMark: Int,
         lowMark: Int
     ) -> [ChatMessage] {
-        guard !messages.isEmpty else { return [] }
-        guard highMark > 0 else { return [messages[messages.count - 1]] }
-
-        // Cumulative tokens before each message. `cumulativeBefore[i]` is the cost
-        // of messages[0..<i]; these values don't change when newer messages are
-        // appended, which is what lets the boundary stay put across turns.
-        var cumulativeBefore = [Int](repeating: 0, count: messages.count + 1)
-        for i in messages.indices {
-            let cost = TokenEstimator.estimate(messages: [messages[i]])
-            cumulativeBefore[i + 1] = cumulativeBefore[i] + cost
-        }
-        let total = cumulativeBefore[messages.count]
-        if total <= highMark { return messages }
-
-        let low = max(0, min(lowMark, highMark - 1))
-        let step = highMark - low // ≥ 1
-        // Quantise the dropped-token threshold to whole multiples of `step` so it
-        // only increases in jumps. Within a jump the boundary — and therefore the
-        // kept prefix — is identical from one turn to the next. The flooring also
-        // bounds the kept size below `highMark`: kept = total - dropped ≤ low + r
-        // where 0 ≤ r < step, so kept < highMark.
-        let dropThreshold = ((total - low) / step) * step
-
-        // Drop the fewest oldest messages needed to clear the threshold.
-        var start = 0
-        while start < messages.count, cumulativeBefore[start] < dropThreshold {
-            start += 1
-        }
-        // Never drop everything: keep at least the most recent message.
-        if start >= messages.count { start = messages.count - 1 }
-        return Array(messages[start...])
+        let selection = EiginSDK.Experimental.Context.windowedForBudget(
+            messages: ContextSDK.messages(messages), highMark: highMark, lowMark: lowMark
+        )
+        return ContextSDK.apply(selection, to: messages)
     }
-
-    /// Truncates content to approximately `maxTokens` tokens, appending "…".
-    /// Uses the ~4 chars/token heuristic to avoid re-estimating repeatedly.
-    private static func truncateContent(_ content: String, maxTokens: Int) -> String {
-        let maxChars = maxTokens * 4
-        guard content.count > maxChars else { return content }
-        let start = content.index(content.endIndex, offsetBy: -(maxChars - 1))
-        return "…" + String(content[start...])
-    }
-
-    // MARK: - Private
 }

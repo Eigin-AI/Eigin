@@ -5,7 +5,10 @@ extern crate uniffi_runtime_wasm as _;
 
 uniffi::setup_scaffolding!();
 
+/// Context estimation, selection, and summary parsing.
+pub mod context;
 mod diagnostics;
+
 pub use diagnostics::*;
 
 /// A failure while preparing the SDK for use.

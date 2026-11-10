@@ -1,6 +1,7 @@
 //! Diagnostic events emitted only by host contract builds.
 
-use crate::diagnostics::{DiagnosticContext, DiagnosticLevel, DiagnosticPrivacy, emit};
+use crate::diagnostics::delivery::emit;
+use crate::diagnostics::{DiagnosticContext, DiagnosticLevel, DiagnosticPrivacy};
 
 /// Emits a representative event for cross-language tests.
 #[cfg(feature = "binding-tests")]

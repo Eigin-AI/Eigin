@@ -1,57 +1,29 @@
-import Foundation
+import EiginSDK
 
-/// Rough token-count estimator using character-based heuristics.
-///
-/// Intentionally conservative (overestimates slightly) so compaction triggers
-/// before hitting the actual context limit. Not a tokeniser — accuracy within ~20 %
-/// is sufficient for deciding when to compact.
+/// Rough token estimates delegated to the SDK's grapheme-based heuristic.
 enum TokenEstimator {
     /// Estimates token count for a single string.
     static func estimate(_ text: String) -> Int {
-        // ~4 characters per token on average for English + JSON
-        max(1, text.count / 4)
+        EiginSDK.Experimental.Context.estimate(text)
     }
 
-    /// Estimates token count for a message array including per-message framing overhead.
+    /// Estimates messages including framing, tools, and validated reasoning.
     static func estimate(messages: [ChatMessage]) -> Int {
-        var total = 0
-        for message in messages {
-            total += 4 // role, framing, separators
-            total += estimate(message.content ?? "")
-            if let history = message.reasoningHistory,
-               history.matches(message, origin: history.origin)
-            {
-                total += history.additionalInputTokens
-            }
-            if let toolCalls = message.toolCalls {
-                for call in toolCalls {
-                    total += 10 // function call framing
-                    total += estimate(call.function.name)
-                    total += estimate(call.function.arguments)
-                }
-            }
-            if let name = message.name {
-                total += estimate(name)
-            }
-        }
-        return total
+        EiginSDK.Experimental.Context.estimate(messages: ContextSDK.messages(messages))
     }
 
     /// Estimates token count for tool definitions.
     static func estimate(toolDefinitions: [ToolDefinition]) -> Int {
-        // Each tool definition is ~100-200 tokens of JSON Schema.
-        toolDefinitions.count * 150
+        EiginSDK.Experimental.Context.estimate(toolCount: toolDefinitions.count)
     }
 
-    /// Estimates total request size (messages + tool definitions).
+    /// Estimates messages and tool definitions together.
     static func estimateRequest(
         messages: [ChatMessage],
         toolDefinitions: [ToolDefinition]?
     ) -> Int {
-        var total = estimate(messages: messages)
-        if let tools = toolDefinitions {
-            total += estimate(toolDefinitions: tools)
-        }
-        return total
+        EiginSDK.Experimental.Context.estimateRequest(
+            messages: ContextSDK.messages(messages), toolCount: toolDefinitions?.count ?? 0
+        )
     }
 }

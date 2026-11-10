@@ -280,297 +280,40 @@ struct CompactionServiceTests {
         #expect(fake.capturedEventMessages.isEmpty)
     }
 
-    // MARK: - parseSummary()
+    // MARK: - App message conversion
 
-    @Test func parseSummaryExtractsTaggedBlock() {
-        let inner = "The conversation covered Swift concurrency in depth with examples."
-        let raw = "Sure, here is the summary.\n<conversation_summary>\n\(inner)\n</conversation_summary>\nDone."
-        #expect(CompactionService.parseSummary(raw) == inner)
-    }
-
-    @Test func parseSummaryRejectsUntaggedReply() {
-        // In-conversation, an untagged reply is likely the model answering the
-        // user — it must not become the summary.
-        #expect(CompactionService.parseSummary(
-            "The conversation covered Swift concurrency in depth with examples."
-        ) == nil)
-    }
-
-    @Test func parseSummaryAcceptsMissingCloseTag() {
-        // Streams can end before the closing tag arrives; the body after the
-        // opening tag is still the summary.
-        let inner = "The conversation covered Swift concurrency in depth with examples."
-        #expect(CompactionService.parseSummary(
-            "<conversation_summary>\n\(inner)"
-        ) == inner)
-    }
-
-    @Test func parseSummaryRejectsTooShort() {
-        #expect(CompactionService.parseSummary("Too short.") == nil)
-        #expect(CompactionService.parseSummary(
-            "<conversation_summary>short</conversation_summary>"
-        ) == nil)
-    }
-
-    // MARK: - truncateForBudget()
-
-    @Test func truncateKeepsNewestMessages() {
-        let messages = (0 ..< 5).map { _ in
-            ChatMessage(role: "user", content: String(repeating: "word ", count: 20))
-        }
-        // Each message: ~100 chars / 4 = 25 tokens + 4 framing = 29 tokens
-        // Budget of 60 tokens should fit ~2 messages
-        let result = CompactionService.truncateForBudget(messages: messages, tokenBudget: 60)
-
-        #expect(result.count < messages.count)
-        #expect(result.count >= 1)
-        // Should be the newest messages
-        #expect(result.last?.localID == messages.last?.localID)
-    }
-
-    @Test func truncateReturnsAllWhenWithinBudget() {
-        let messages = [
-            ChatMessage(role: "user", content: "Hello"),
-            ChatMessage(role: "assistant", content: "Hi there"),
-        ]
-        // Large budget — everything fits
-        let result = CompactionService.truncateForBudget(messages: messages, tokenBudget: 100_000)
-
-        #expect(result.count == messages.count)
-    }
-
-    @Test func truncateReturnsEmptyWhenNothingFits() {
-        let messages = [
-            ChatMessage(role: "user", content: "Hello world"),
-        ]
-        let result = CompactionService.truncateForBudget(messages: messages, tokenBudget: 0)
-
-        #expect(result.isEmpty)
-    }
-
-    // MARK: - windowedForBudget()
-
-    /// Builds a message whose estimated cost (content tokens + 4 framing) equals
-    /// `tokens`. `TokenEstimator.estimate` is `max(1, chars / 4)`, so
-    /// `4 * (tokens - 4)` characters yields `tokens - 4` content tokens.
-    private func sizedMessage(tokens: Int) -> ChatMessage {
-        let contentTokens = max(1, tokens - 4)
-        return ChatMessage(role: "user", content: String(repeating: "x", count: contentTokens * 4))
-    }
-
-    private func tokenCount(_ messages: [ChatMessage]) -> Int {
-        messages.reduce(0) { $0 + TokenEstimator.estimate($1.content ?? "") + 4 }
-    }
-
-    @Test func windowReturnsAllWhenUnderHighMark() {
-        let messages = (0 ..< 5).map { _ in sizedMessage(tokens: 100) } // 500 tokens total
-        let result = CompactionService.windowedForBudget(
-            messages: messages, highMark: 1000, lowMark: 500
+    @Test func partialMessageKeepsLegacyReconstructionDefaults() throws {
+        let call = ToolCall(
+            id: "call",
+            type: "function",
+            function: .init(name: "test", arguments: "{}")
         )
-        #expect(result.map(\.localID) == messages.map(\.localID))
-    }
-
-    @Test func windowEmptyInputReturnsEmpty() {
-        #expect(
-            CompactionService.windowedForBudget(messages: [], highMark: 1000, lowMark: 500).isEmpty
+        var message = ChatMessage(
+            role: "assistant", content: String(repeating: "x", count: 4000),
+            toolCallID: "result", name: "name", toolCalls: [call],
+            providerMetadata: ["signature": "value"], attachments: []
         )
-    }
-
-    @Test func windowNeverExceedsHighMark() {
-        let all = (0 ..< 40).map { _ in sizedMessage(tokens: 100) }
-        for n in 1 ... all.count {
-            let result = CompactionService.windowedForBudget(
-                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
-            )
-            #expect(!result.isEmpty)
-            // A single message can't be split, so the bound only applies when we
-            // actually kept more than one.
-            if result.count > 1 {
-                #expect(tokenCount(result) <= 1000)
-            }
-        }
-    }
-
-    @Test func windowKeepsContiguousNewestSuffix() {
-        let messages = (0 ..< 30).map { _ in sizedMessage(tokens: 100) }
-        let result = CompactionService.windowedForBudget(
-            messages: messages, highMark: 1000, lowMark: 500
+        message.isCompactionSummary = true
+        message.compactionRetainedMessageCount = 2
+        let newest = ChatMessage(role: "user", content: "newest")
+        let result = CompactionService.truncateForBudget(
+            messages: [message, newest],
+            tokenBudget: 40
         )
-        #expect(result.last?.localID == messages.last?.localID)
-        let resultIDs = result.map(\.localID)
-        let tail = Array(messages.map(\.localID).suffix(resultIDs.count))
-        #expect(resultIDs == tail)
-    }
-
-    @Test func windowKeepsAtLeastLastMessageWhenOversized() {
-        let messages = [sizedMessage(tokens: 50), sizedMessage(tokens: 5000)]
-        let result = CompactionService.windowedForBudget(
-            messages: messages, highMark: 1000, lowMark: 500
-        )
-        #expect(result.count == 1)
-        #expect(result.first?.localID == messages.last?.localID)
-    }
-
-    @Test func windowIsDeterministic() {
-        let messages = (0 ..< 25).map { _ in sizedMessage(tokens: 100) }
-        let a = CompactionService.windowedForBudget(
-            messages: messages,
-            highMark: 1000,
-            lowMark: 500
-        )
-        let b = CompactionService.windowedForBudget(
-            messages: messages,
-            highMark: 1000,
-            lowMark: 500
-        )
-        #expect(a.map(\.localID) == b.map(\.localID))
-    }
-
-    /// The core hysteresis property: as the conversation grows one message at a
-    /// time, the oldest kept message stays fixed for several turns and only jumps
-    /// at step boundaries — so the prefix (and the on-device KV cache) is reused
-    /// between jumps. With 100-token messages, high 1000 / low 500 (step 500),
-    /// the boundary advances exactly every 5 turns.
-    @Test func windowBoundaryIsStableBetweenSteps() {
-        let all = (0 ..< 30).map { _ in sizedMessage(tokens: 100) }
-
-        func oldestKeptIndex(messageCount n: Int) -> Int {
-            let result = CompactionService.windowedForBudget(
-                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
-            )
-            let oldestID = result.first!.localID
-            return all.firstIndex { $0.localID == oldestID }!
-        }
-
-        for n in 11 ... 14 {
-            #expect(oldestKeptIndex(messageCount: n) == 5)
-        }
-        for n in 15 ... 19 {
-            #expect(oldestKeptIndex(messageCount: n) == 10)
-        }
-        for n in 20 ... 24 {
-            #expect(oldestKeptIndex(messageCount: n) == 15)
-        }
-    }
-
-    @Test func windowBoundaryAdvancesMonotonicallyAndInfrequently() throws {
-        let all = (0 ..< 60).map { _ in sizedMessage(tokens: 100) }
-        var previousIndex = 0
-        var changes = 0
-        for n in 1 ... all.count {
-            let result = CompactionService.windowedForBudget(
-                messages: Array(all[0 ..< n]), highMark: 1000, lowMark: 500
-            )
-            let oldestID = try #require(result.first?.localID)
-            let index = try #require(all.firstIndex { $0.localID == oldestID })
-            #expect(index >= previousIndex) // boundary never moves backward
-            if index != previousIndex { changes += 1 }
-            previousIndex = index
-        }
-        // Step 500 / 100 per turn ⇒ ~1 change per 5 turns, far below the 60 turns.
-        // A plain per-turn truncation would change on nearly every turn.
-        #expect(changes < 20)
-    }
-
-    // MARK: - retainedTail()
-
-    private func user(_ content: String)
-        -> ChatMessage
-    {
-        ChatMessage(role: "user", content: content)
-    }
-
-    private func assistant(_ content: String) -> ChatMessage {
-        ChatMessage(
-            role: "assistant",
-            content: content
-        )
-    }
-
-    private func assistantWithTools(ids: [String]) -> ChatMessage {
-        ChatMessage(role: "assistant", toolCalls: ids.map {
-            ToolCall(id: $0, type: "function", function: .init(name: "test", arguments: "{}"))
-        })
-    }
-
-    private func toolResult(id: String) -> ChatMessage {
-        ChatMessage(role: "tool", content: "result", toolCallID: id)
-    }
-
-    @Test func retainedTailReturnsAllWhenWithinBudget() {
-        let messages = [user("hello"), assistant("hi"), user("more"), assistant("sure")]
-        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100_000)
-        #expect(result.map(\.localID) == messages.map(\.localID))
-    }
-
-    @Test func retainedTailKeepsMinimumTurnsEvenWhenOverBudget() {
-        // Two oversized turns exceed the budget, but the minimum keeps them anyway.
-        let messages = [
-            user("old"), assistant("old reply"),
-            user(String(repeating: "x", count: 4000)), assistant(String(
-                repeating: "x",
-                count: 4000
-            )),
-            user(String(repeating: "x", count: 4000)), assistant(String(
-                repeating: "x",
-                count: 4000
-            )),
-        ]
-        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100)
-        #expect(result.count == 4)
-        #expect(result.first?.localID == messages[2].localID)
-    }
-
-    @Test func retainedTailExtendsWithShortTurnsUpToBudget() {
-        // 10 turns of ~44 tokens each (~440 total). A 250-token budget keeps 2
-        // minimum turns, then packs in as many further turns as fit.
-        var messages: [ChatMessage] = []
-        for i in 0 ..< 10 {
-            messages.append(user("hello \(i)"))
-            messages.append(assistant("reply \(i)"))
-        }
-        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 250)
-        #expect(result.count > 4)
-        #expect(result.count <= messages.count)
-        // Contiguous newest suffix, cut on a turn boundary (even count).
-        #expect(result.last?.localID == messages.last?.localID)
-        #expect(result.first?.role == "user")
-        #expect(result.count.isMultiple(of: 2))
-    }
-
-    @Test func retainedTailNeverSplitsToolRound() {
-        let messages = [
-            user("first"), assistant("reply"),
-            sizedMessage(tokens: 1000), // oversized turn blows the budget mid-walk
-            user("go"),
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistant("done"),
-            user("again"), assistant("final"),
-        ]
-        // The budget stops the walk before the oversized turn, keeping the tool
-        // round that follows it fully intact.
-        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100)
-        #expect(result.map(\.localID) == Array(messages[3...].map(\.localID)))
-    }
-
-    @Test func retainedTailStopsAtSyntheticSummaryCarrier() {
-        let carrier = ChatMessage(
-            role: "user",
-            content: "<conversation_summary>\nOlder conversation summary.\n</conversation_summary>"
-        )
-        let messages = [
-            carrier, assistant("Understood"),
-            user("hello"), assistant("hi"),
-            user("more"), assistant("sure"),
-        ]
-        let result = CompactionService.retainedTail(messages: messages, tokenBudget: 100_000)
-        #expect(result.map(\.localID) == Array(messages[2...].map(\.localID)))
-    }
-
-    @Test func retainedTailEmptyWhenNoUserMessages() {
-        let messages = [assistant("a"), assistant("b")]
-        #expect(CompactionService.retainedTail(messages: messages, tokenBudget: 100).isEmpty)
+        let partial = try #require(result.first)
+        #expect(result.count == 2)
+        #expect(partial.localID != message.localID)
+        #expect(partial.content?.hasPrefix("…") == true)
+        #expect(partial.role == message.role)
+        #expect(partial.toolCallID == message.toolCallID)
+        #expect(partial.name == message.name)
+        #expect(partial.toolCalls?.first?.id == "call")
+        #expect(partial.providerMetadata == nil)
+        #expect(partial.attachments == nil)
+        #expect(partial.reasoningHistory == nil)
+        #expect(!partial.isCompactionSummary)
+        #expect(partial.compactionRetainedMessageCount == nil)
+        #expect(result.last?.localID == newest.localID)
     }
 
     // MARK: - Retained tail in the instruction

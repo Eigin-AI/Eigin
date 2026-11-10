@@ -30,7 +30,12 @@ struct ReasoningHistoryCompactionTests {
         #expect(CompactionService.truncateForBudget(messages: [message], tokenBudget: 40).isEmpty)
         var edited = message
         edited.content = "Changed answer"
+        #expect(TokenEstimator.estimate(messages: [edited]) == TokenEstimator.estimate(
+            messages: [edited.reasoningScoped(to: nil)]
+        ))
         #expect(edited.reasoningScoped(to: origin).reasoningHistory == nil)
         #expect(message.reasoningScoped(to: origin).reasoningHistory == history)
+        edited.content = String(repeating: "x", count: 4000)
+        #expect(CompactionService.truncateForBudget(messages: [edited], tokenBudget: 40).isEmpty)
     }
 }

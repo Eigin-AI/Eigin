@@ -8,6 +8,7 @@ Consumers: Eigin iOS, the browser test host, and the Rust CLI. Each consumer own
 |---|---|---|---|
 | [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | test | MIT OR Apache-2.0 |
 | [thiserror](https://github.com/dtolnay/thiserror) | 2.0.21 | runtime | MIT OR Apache-2.0 |
+| [unicode-segmentation](https://github.com/unicode-rs/unicode-segmentation) | 1.13.3 | runtime | MIT OR Apache-2.0 |
 | [uniffi](https://github.com/mozilla/uniffi-rs) | 0.31.0 | runtime | MPL-2.0 |
 | [uniffi-runtime-wasm](https://github.com/jhugman/uniffi-bindgen-react-native) | 0.31.0-6 | runtime | MPL-2.0 |
 | [uniffi_core](https://github.com/mozilla/uniffi-rs) | 0.31.0 | runtime | MPL-2.0 |
