@@ -46,3 +46,10 @@ Build commands generate required artifacts. Generated bindings and binaries are 
 - Browser fixture tests and Apple fixture tests run independently. Package tests cover bindings; application smoke tests cover packaging, startup, and visible status.
 
 See the [migration record](../../docs/plans/145-sdk-migration.md) for implementation decisions and verification evidence, and the [SDK dependency inventory](../../LICENSES/eigin_sdk.md) for attribution.
+
+## Diagnostics
+
+Hosts route SDK events through `EiginSDK.Diagnostics` (Swift) or
+`setDiagnosticReceiver` (browser). Private values require explicit opt-in.
+Callbacks are synchronous and may be concurrent on native hosts; return quickly
+and avoid SDK calls from callbacks. iOS routes events to AppLogger's `sdk` category.

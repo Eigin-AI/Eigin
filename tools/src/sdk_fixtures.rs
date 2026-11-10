@@ -1,4 +1,4 @@
-//! Test-only error propagation through the real SDK binding generators.
+//! Test-only diagnostics and error propagation through the real SDK binding generators.
 
 use anyhow::{Result, bail};
 use std::fs;
@@ -57,6 +57,7 @@ fn swift(sdk: &str) -> Result<()> {
     run(Command::new("cargo")
         .args([
             "build",
+            "--release",
             "--locked",
             "-p",
             "eigin_sdk",
@@ -75,7 +76,7 @@ fn swift(sdk: &str) -> Result<()> {
             "--",
             "generate",
             "--library",
-            &format!("{target}/debug/libeigin_sdk.dylib"),
+            &format!("{target}/release/libeigin_sdk.dylib"),
             "--language",
             "swift",
             "--out-dir",
@@ -89,15 +90,16 @@ fn swift(sdk: &str) -> Result<()> {
     let executable = format!("{target}/check-swift-errors");
     run(Command::new("swiftc").args([
         "-parse-as-library",
+        "-O",
         "-I",
         &generated,
         "-L",
-        &format!("{target}/debug"),
+        &format!("{target}/release"),
         "-leigin_sdk",
         "-Xlinker",
         "-rpath",
         "-Xlinker",
-        &format!("{target}/debug"),
+        &format!("{target}/release"),
         &format!("{generated}/eigin_sdk.swift"),
         &format!("{sdk}/tests/BindingErrors.swift"),
         "-o",

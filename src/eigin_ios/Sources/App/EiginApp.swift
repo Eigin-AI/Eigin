@@ -19,16 +19,18 @@ struct EiginApp: App {
 
         UserDefaults.standard.register(defaults: [
             StorageKey.logSinkToFile: true,
+            StorageKey.logFileLevel: AppLogger.LogLevel.info.rawValue,
         ])
 
+        SDKDiagnosticReceiver.install()
         Task {
             do {
                 try await EiginSDK.initialize()
-                AppLogger.info("Eigin SDK initialized", category: .general)
+                AppLogger.info("Eigin SDK initialized", category: .sdk)
             } catch {
                 AppLogger.error(
                     "SDK initialization failed: \(private: error.localizedDescription)",
-                    category: .general
+                    category: .sdk
                 )
             }
         }

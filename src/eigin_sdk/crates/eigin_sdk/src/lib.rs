@@ -5,6 +5,9 @@ extern crate uniffi_runtime_wasm as _;
 
 uniffi::setup_scaffolding!();
 
+mod diagnostics;
+pub use diagnostics::*;
+
 /// A failure while preparing the SDK for use.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum InitializationError {

@@ -10,7 +10,81 @@
         uniffiInitAsync,
         failInitializationFixture,
         InitializationError,
+        emitDiagnosticFixture,
+        setDiagnosticReceiver,
+        updateDiagnosticOptions,
+        clearDiagnosticReceiver,
+        DiagnosticLevel,
+        DiagnosticPrivacy,
       } from "./generated";
+      window.checkDiagnosticCallback = async () => {
+        await uniffiInitAsync(
+          new URL("./generated/eigin_sdk.wasm", import.meta.url),
+        );
+        const events = [];
+        const defaults = {
+          minimumLevel: DiagnosticLevel.Debug,
+          includePrivate: false,
+        };
+        setDiagnosticReceiver(
+          {
+            receive(event) {
+              events.push(event);
+            },
+          },
+          defaults,
+        );
+        emitDiagnosticFixture();
+        updateDiagnosticOptions({ ...defaults, includePrivate: true });
+        emitDiagnosticFixture();
+        updateDiagnosticOptions(defaults);
+        emitDiagnosticFixture();
+        updateDiagnosticOptions({
+          ...defaults,
+          minimumLevel: DiagnosticLevel.Error,
+        });
+        emitDiagnosticFixture();
+        let replacementCalls = 0;
+        setDiagnosticReceiver(
+          {
+            receive() {
+              replacementCalls++;
+              emitDiagnosticFixture(); // Recursive delivery must be dropped.
+            },
+          },
+          defaults,
+        );
+        emitDiagnosticFixture();
+        clearDiagnosticReceiver();
+        emitDiagnosticFixture();
+        const valid =
+          replacementCalls === 1 &&
+          events.length === 3 &&
+          events[0].fields.at(-1).value === undefined &&
+          events[0].fields.at(-1).privacy === DiagnosticPrivacy.Private &&
+          events[0].context.operationId === "operation-1" &&
+          events[1].fields.at(-1).value === "private fixture" &&
+          events[2].fields.at(-1).value === undefined;
+        const timings = {};
+        const measure = (label) => {
+          const start = performance.now();
+          for (let i = 0; i < 10000; i++) emitDiagnosticFixture();
+          timings[label] = performance.now() - start;
+        };
+        measure("no receiver");
+        setDiagnosticReceiver(
+          { receive() {} },
+          { ...defaults, minimumLevel: DiagnosticLevel.Error },
+        );
+        measure("filtered");
+        updateDiagnosticOptions(defaults);
+        measure("public");
+        updateDiagnosticOptions({ ...defaults, includePrivate: true });
+        measure("private enabled");
+        clearDiagnosticReceiver();
+        console.log("Browser bridge: 10000 events", JSON.stringify(timings));
+        return valid;
+      };
       window.checkTypedError = async () => {
         await uniffiInitAsync(
           new URL("./generated/eigin_sdk.wasm", import.meta.url),

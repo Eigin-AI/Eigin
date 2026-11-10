@@ -16,6 +16,11 @@ struct LogMessage: ExpressibleByStringInterpolation {
 
     let segments: [Segment]
 
+    /// Creates a message from values whose privacy has already been classified.
+    init(segments: [Segment]) {
+        self.segments = segments
+    }
+
     init(stringInterpolation: StringInterpolation) {
         segments = stringInterpolation.segments
     }
@@ -119,6 +124,7 @@ enum AppLogger {
 
     enum Category: String {
         case general
+        case sdk
         case chat
         case mcp
         case backgroundPrompt
