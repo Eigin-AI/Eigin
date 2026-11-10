@@ -24,44 +24,11 @@ pub async fn initialize() -> Result<(), InitializationError> {
     Ok(())
 }
 
-/// Exercises typed errors in binding tests; excluded from application builds.
 #[cfg(feature = "binding-tests")]
-#[uniffi::export]
-pub async fn fail_initialization_fixture() -> Result<(), InitializationError> {
-    // Suspend once to exercise cross-language future wakeups.
-    let mut yielded = false;
-    std::future::poll_fn(|context| {
-        if yielded {
-            std::task::Poll::Ready(())
-        } else {
-            yielded = true;
-            context.waker().wake_by_ref();
-            std::task::Poll::Pending
-        }
-    })
-    .await;
-    Err(InitializationError::Unavailable {
-        reason: "binding fixture".into(),
-    })
-}
+mod binding_tests;
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "binding-tests")]
-    #[test]
-    fn error_fixture_suspends_before_returning_its_error() {
-        use futures::FutureExt;
-        assert!(
-            super::fail_initialization_fixture()
-                .now_or_never()
-                .is_none()
-        );
-        let error = futures::executor::block_on(super::fail_initialization_fixture()).unwrap_err();
-        assert!(
-            matches!(error, super::InitializationError::Unavailable { reason } if reason == "binding fixture")
-        );
-    }
-
     #[test]
     fn initializes_repeatedly_without_host_services() {
         futures::executor::block_on(async {

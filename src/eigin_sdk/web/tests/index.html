@@ -5,28 +5,6 @@
     <title>SDK test host</title>
   </head>
   <body>
-    <script type="module">
-      import {
-        initialize,
-        setDiagnosticReceiver,
-        updateDiagnosticOptions,
-        clearDiagnosticReceiver,
-        DiagnosticLevel,
-      } from "../src/index.ts";
-      window.initializeSdk = initialize;
-      window.configureDiagnostics = async () => {
-        await setDiagnosticReceiver({
-          receive() {
-            throw new Error("No-op initialization should not emit diagnostics");
-          },
-        });
-        await initialize();
-        await updateDiagnosticOptions({
-          minimumLevel: DiagnosticLevel.Warning,
-          includePrivate: false,
-        });
-        await clearDiagnosticReceiver();
-      };
-    </script>
+    <script type="module" src="./host.ts"></script>
   </body>
 </html>

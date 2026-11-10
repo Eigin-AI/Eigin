@@ -150,6 +150,7 @@ src/eigin_sdk/apple/EiginSDK/Sources/EiginSDKBindings/
 src/eigin_cli/target/
 src/eigin_web/dist/
 src/eigin_sdk/web/tests/generated/
+src/eigin_sdk/tests/swift/Generated/
 
 # Local website recovery artifacts
 infra/scaleway/website-releases/

@@ -29,10 +29,9 @@ For browser tests, install engines once with `npx playwright install chromium fi
 | Generate Swift bindings and Apple XCFramework | `just generate sdk apple` |
 | Build Rust SDK for native and WASM | `just build sdk` |
 | Build all browser packages and applications | `just build web` |
-| Check native SDK and WASM compilation | `just test sdk` |
+| Test Rust, browser bindings, and Apple bindings/packages (macOS) | `just test sdk` |
 | Test the CLI | `just test cli` |
 | Test browser packages and applications | `just test web` |
-| Test Apple package and error bindings | `just test-sdk-apple` |
 | Run the CLI | `just run cli init` |
 | Run the browser test host | `just run web app` |
 
@@ -43,9 +42,35 @@ Build commands generate required artifacts. Generated bindings and binaries are 
 - Swift uses UniFFI 0.31.0. Browser bindings use `uniffi-bindgen-react-native` / `@ubjs` 0.31.0-6 and `wasm2`. Upgrade these together when compatible releases are available.
 - Apple uses a dynamic XCFramework alongside Firm’s static library. Xcode embeds and signs it for the application.
 - Browser checks compile WASM and exercise supported operations in Chromium, Firefox, and WebKit. Compilation alone cannot detect every unsupported platform operation; see the [Rust target documentation](https://doc.rust-lang.org/rustc/platform-support/wasm32-unknown-unknown.html).
-- Browser fixture tests and Apple fixture tests run independently. Package tests cover bindings; application smoke tests cover packaging, startup, and visible status.
+- Rust error declarations generate Swift and TypeScript error types and payload conversions. Adding an error requires no manual host model or mapping. Keep error types alongside their capabilities.
 
 See the [migration record](../../docs/plans/145-sdk-migration.md) for implementation decisions and verification evidence, and the [SDK dependency inventory](../../LICENSES/eigin_sdk.md) for attribution.
+
+## Test layers
+
+| Layer | Location | Coverage |
+|---|---|---|
+| SDK behavior | `crates/eigin_sdk/src/` | Real operation outcomes and error conditions |
+| Binding contracts | `tests/swift/Tests/BindingContractTests/`, `web/tests/contracts.ts` | Typed payloads, callbacks, pending work and wakeups |
+| Package smoke tests | `apple/EiginSDK/Tests/`, `web/tests/host.spec.ts` | Production artifact loading and initialization |
+
+`just test sdk` runs all three layers; Apple checks require macOS and Xcode and are skipped elsewhere.
+Default `just test` includes these checks, with browser tests run through the web workspaces.
+
+Focused commands, from the repository root:
+- Swift contracts: `cargo run --manifest-path tools/Cargo.toml -- check-sdk-bindings apple`.
+- Browser: `just generate sdk web`, then `npm test --workspace @eigin/sdk`.
+
+### Add coverage
+
+- Test real error conditions in Rust. Add host cases for new boundary shapes and important public contracts.
+- Add a Swift XCTest method using `ContractTestCase.check`, and a browser function exposed through `contracts.ts`
+  called directly from `contracts.spec.ts`. Assert generated variants and payloads.
+- For controlled outcomes, add a helper under the `binding_tests` module. These separate exports use the
+  `binding-tests` feature; production artifacts exclude them.
+- For wakeups, start `PendingOperation.run`, await `wait_until_pending`, then call `succeed` or `fail`.
+  Host test timeouts bound failures. Use one operation instance per case.
+- Add browser runtime coverage when platform-sensitive operations arrive; compilation alone cannot detect unsupported I/O.
 
 ## Diagnostics
 
