@@ -1,5 +1,7 @@
 # Guidelines
 
+For SDK binding and testing guidance, see [Developing the SDK](sdk.md).
+
 ## Submitting changes
 
 - Keep merge requests focused. One thing at a time.
