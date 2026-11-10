@@ -157,6 +157,7 @@ Record the properties actually exercised in the implementation log. Host-depende
 Every increment must remain usable headless and compile for WASM. Browser-sensitive operations also need runtime tests; compilation alone cannot prove networking or storage behavior.
 
 - Test behavior through Rust APIs and exercise the CLI as the headless integration surface.
+- Separate Rust behavior tests, shared host contract suites, and production-package smoke tests. `just test sdk` runs these layers; Apple checks run on macOS.
 - Test host packages and bindings separately from views; fake unavailable services at their boundaries.
 - Verify affected iOS flows, including relevant errors and cancellation.
 - Document deliberate behavior changes and delete replaced implementations when the increment is complete.
@@ -165,7 +166,7 @@ Every increment must remain usable headless and compile for WASM. Browser-sensit
 
 Resolve these in implementation issues as needed:
 
-- Initial packaging, build/CI setup, initialization API, and host verification.
+- Additional host coverage and CI validation as capabilities grow.
 - Algorithm selection, provider inventory, and issue boundaries.
 - Async/event interfaces, UI observation, batching, and cancellation.
 - Deprecation tooling and public compatibility/versioning policy.
@@ -190,9 +191,9 @@ Keep the main sections current; retain superseded decisions here. Link future en
 
 ## Implementation log
 
-### #330 — Initialization across hosts (awaiting human review)
+### #330 — Initialization across hosts (merged)
 
-- **Issue / MR:** [#330](https://code.eigin.ai/dev/eigin/-/issues/330); MR pending.
+- **Issue / MR:** [#330](https://code.eigin.ai/dev/eigin/-/issues/330); [!292](https://code.eigin.ai/dev/eigin/-/merge_requests/292).
 - **Responsibility moved:** Rust owns a minimal, repeatable async initialization entry point. No agent behavior moved.
 - **Integration:** iOS calls `EiginSDK.initialize()` during startup; the new Svelte app loads `@eigin/sdk`; `eigin init` calls Rust directly. Swift retains existing services and orchestration.
 - **Bindings:** UniFFI 0.31.0 for Swift; released `uniffi-bindgen-react-native` / `@ubjs` 0.31.0-6 using `wasm2` for browsers. Host packages keep generated bindings internal.
@@ -203,7 +204,7 @@ Keep the main sections current; retain superseded decisions here. Link future en
 - **Review follow-ups:** shared product versioning #355; scalable host/error and WASM runtime testing #356; diagnostics ownership #357. Rust toolchain upgraded to 1.99.1; UniFFI stays on the 0.31 line required by the released browser generator. The error fixture now suspends before returning to exercise future wakeups.
 - **Development guide:** [`src/eigin_sdk/README.md`](../../src/eigin_sdk/README.md).
 
-### #357 — Diagnostics and host logging (awaiting merge)
+### #357 — Diagnostics and host logging (merged)
 
 - **Issue / MR:** [#357](https://code.eigin.ai/dev/eigin/-/issues/357); [!319](https://code.eigin.ai/dev/eigin/-/merge_requests/319).
 - **Responsibility moved:** Rust defines structured diagnostics, severity filtering, and explicit private-value disclosure. Hosts own destinations and retention; no agent behavior moved.
@@ -211,6 +212,16 @@ Keep the main sections current; retain superseded decisions here. Link future en
 - **Verification:** native/WASM checks, Swift package and binding tests, 15 SDK browser tests, six web-app smoke tests, and iOS build passed. Rust-worker-to-Swift callbacks and clearing during delivery were exercised. Seven logger/adapter tests passed in an isolated macOS harness; the existing simulator SwiftData store blocked app-hosted test startup.
 - **Removed code:** none; initialization remains a no-op with app-owned outcome logs.
 - **Next increments:** propagate operation context explicitly as real SDK operations arrive. Streaming, cancellation, and async platform adapters remain unproven.
+
+### #356 — Shared host contract suites (awaiting merge)
+
+- **Issue / MR:** [#356](https://code.eigin.ai/dev/eigin/-/issues/356); [!318](https://code.eigin.ai/dev/eigin/-/merge_requests/318).
+- **Responsibility moved:** reusable SDK verification; no agent behavior moved. Rust remains the source for generated host types.
+- **Integration:** shared Swift XCTest and typed browser contracts use separate test-only exports. Diagnostics checks from #357 use these suites; production-wrapper smoke tests remain separate.
+- **Verification:** `just test sdk` passed 5 Rust tests, 8 Swift contracts, 1 Apple package smoke test, and 27 browser checks across Chromium, Firefox, and WebKit. Native/WASM builds, linting, and TypeScript checks passed. Production bindings exclude fixture exports. iOS flows were not rerun for this increment.
+- **Properties exercised:** typed errors and payloads, host-controlled pending work and wakeups, independent operations, diagnostic privacy/filtering, receiver replacement/lifetime, and native worker callbacks.
+- **Removed code:** standalone `BindingErrors.swift` and `errors.html`; cases now share host runners. Host checks are included in `just test sdk` and default `just test`.
+- **Next increments:** add contract cases for new boundary shapes and runtime tests for platform-sensitive operations. Streaming, cancellation, and async platform adapters remain unproven.
 
 For each completed increment, add:
 

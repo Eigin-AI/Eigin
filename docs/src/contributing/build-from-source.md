@@ -51,10 +51,14 @@ Arguments are positional; build and test default to all targets. On Linux, selec
 |---|---|
 | `just build [ios\|relay\|web\|sdk\|cli]` | Build the selected target; `web` builds all npm workspaces |
 | `just test [ios\|relay\|web\|website\|sdk\|cli]` | Run target checks; `website` includes website browser tests |
-| `just test-sdk-apple` | Independent Swift package and binding tests |
+| `just test sdk` | Rust and browser SDK checks, plus Apple bindings/package checks on macOS |
 | `just generate [all\|ios\|web\|sdk]` | Generate selected outputs; `sdk [apple\|web\|all]` selects host artifacts |
 | `just format` | Format source code |
 | `just --list` | List all commands |
+
+`just test` includes the SDK host checks; Apple checks require macOS and Xcode.
+See the [SDK test guide](https://code.eigin.ai/dev/eigin/-/blob/main/src/eigin_sdk/README.md#test-layers)
+for focused commands and adding cases.
 
 ## Run
 

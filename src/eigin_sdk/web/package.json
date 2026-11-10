@@ -20,7 +20,8 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
+    "check:tests": "tsc --project tsconfig.tests.json",
     "build": "npm run check",
-    "test": "cargo run --quiet --manifest-path ../../../tools/Cargo.toml -- check-sdk-bindings web && npm run check && playwright test"
+    "test": "cargo run --quiet --manifest-path ../../../tools/Cargo.toml -- check-sdk-bindings web && npm run check && npm run check:tests && playwright test"
   }
 }

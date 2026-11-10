@@ -1,4 +1,4 @@
-//! Test-only diagnostics and error propagation through the real SDK binding generators.
+//! Test-only contracts through the real SDK binding generators.
 
 use anyhow::{Result, bail};
 use std::fs;
@@ -83,27 +83,34 @@ fn swift(sdk: &str) -> Result<()> {
             &generated,
         ])
         .current_dir(sdk))?;
-    fs::copy(
-        format!("{generated}/eigin_sdkFFI.modulemap"),
-        format!("{generated}/module.modulemap"),
-    )?;
-    let executable = format!("{target}/check-swift-errors");
-    run(Command::new("swiftc").args([
-        "-parse-as-library",
-        "-O",
-        "-I",
-        &generated,
+    let package = format!("{sdk}/tests/swift");
+    let sources = format!("{package}/Generated");
+    if std::path::Path::new(&sources).exists() {
+        fs::remove_dir_all(&sources)?;
+    }
+    fs::create_dir_all(format!("{sources}/FFI"))?;
+    fs::create_dir_all(format!("{sources}/Swift"))?;
+    for (source, destination) in [
+        ("eigin_sdkFFI.modulemap", "FFI/module.modulemap"),
+        ("eigin_sdkFFI.h", "FFI/eigin_sdkFFI.h"),
+        ("eigin_sdk.swift", "Swift/eigin_sdk.swift"),
+    ] {
+        fs::copy(
+            format!("{generated}/{source}"),
+            format!("{sources}/{destination}"),
+        )?;
+    }
+    run(Command::new("swift").args([
+        "test",
+        "--package-path",
+        &package,
+        "-Xlinker",
         "-L",
+        "-Xlinker",
         &format!("{target}/release"),
-        "-leigin_sdk",
         "-Xlinker",
         "-rpath",
         "-Xlinker",
         &format!("{target}/release"),
-        &format!("{generated}/eigin_sdk.swift"),
-        &format!("{sdk}/tests/BindingErrors.swift"),
-        "-o",
-        &executable,
-    ]))?;
-    run(&mut Command::new(executable))
+    ]))
 }

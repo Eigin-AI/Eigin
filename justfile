@@ -104,7 +104,11 @@ test target="all" variant="unit" env="staging" verbose="false":
             just _test-relay {{ verbose }}
         fi
     fi
-    if [ "{{ target }}" = "sdk" ] || [ "{{ target }}" = "all" ]; then just _test-sdk; fi
+    if [ "{{ target }}" = "sdk" ]; then just _test-sdk; fi
+    if [ "{{ target }}" = "all" ]; then
+        just _test-sdk-rust
+        just _test-sdk-apple
+    fi
     if [ "{{ target }}" = "cli" ] || [ "{{ target }}" = "all" ]; then just _test-cli; fi
     if [ "{{ target }}" = "website" ]; then just _test-website; fi
     if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _test-web; fi
@@ -180,19 +184,34 @@ _build-cli:
     cargo +1.99.1 build --locked --manifest-path src/eigin_cli/Cargo.toml
 
 [private]
-_test-sdk: _build-sdk
+_test-sdk: _test-sdk-rust _test-sdk-apple _test-sdk-web
+
+[private]
+_test-sdk-rust: _build-sdk
     cargo +1.99.1 test --locked --manifest-path src/eigin_sdk/Cargo.toml --features binding-tests
-    cargo +1.99.1 clippy --locked --manifest-path src/eigin_sdk/Cargo.toml --all-targets -- -D warnings
+    cargo +1.99.1 clippy --locked --manifest-path src/eigin_sdk/Cargo.toml --all-targets --features binding-tests -- -D warnings
     cargo +1.99.1 fmt --manifest-path src/eigin_sdk/Cargo.toml --all -- --check
 
 [private]
 _test-cli:
     cargo +1.99.1 test --locked --manifest-path src/eigin_cli/Cargo.toml
 
-[doc('Test the Apple SDK package independently of the iOS application')]
-test-sdk-apple: (generate "sdk" "apple")
+[private]
+_test-sdk-apple:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "$(uname -s)" != "Darwin" ]; then
+        echo "Skipping Apple SDK checks: macOS and Xcode required."
+        exit 0
+    fi
+    {{ tools }} generate sdk apple
     {{ tools }} check-sdk-bindings apple
     swift test --package-path src/eigin_sdk/apple/EiginSDK
+
+[private]
+_test-sdk-web:
+    {{ tools }} generate sdk web
+    npm test --workspace @eigin/sdk
 
 # --- Release ---
 
