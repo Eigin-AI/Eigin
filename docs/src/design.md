@@ -19,7 +19,7 @@ The `design/` folder is the single source of truth for content generated into th
 
 ## Assets
 
-`design/assets/` holds fonts, icons, and the app icon. They're copied into platform resources and registered automatically at generation time. Proprietary fonts aren't committed: add them locally to activate them.
+`design/assets/` holds icons and fonts copied into platform resources during generation. Add licensed fonts locally; iOS and watchOS use system fonts when absent.
 
 ## Prompts
 

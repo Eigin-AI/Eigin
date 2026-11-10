@@ -29,19 +29,35 @@ struct IntentToolTests {
 
     private let policy = SpaceAccessPolicy(currentSpaceID: nil, publicSpaceIDs: [])
 
-    @Test(arguments: ["add_intent", "update_intent"], [
-        "",
-        #", "schedules": []"#,
-        #", "schedules": [{"content": "Inbox overview", "frequency": "daily", "hour": 8}]"#,
-    ])
-    @MainActor func scheduleGuidance(name: String, scheduleArguments: String) async throws {
+    private func envelope(_ result: ToolResult) throws -> [String: Any] {
+        try #require(JSONSerialization
+            .jsonObject(with: Data(result.content.utf8)) as? [String: Any])
+    }
+
+    enum ScheduleInput: CaseIterable {
+        case omitted, empty, daily
+
+        var arguments: String {
+            switch self {
+            case .omitted: ""
+            case .empty: #", "schedules": []"#
+            case .daily: #", "schedules": [{"content": "Inbox overview", "frequency": "daily", "hour": 8}]"#
+            }
+        }
+    }
+
+    @Test(arguments: ["add_intent", "update_intent"], ScheduleInput.allCases)
+    @MainActor func scheduleResponseMatchesSavedIntent(
+        name: String,
+        input: ScheduleInput
+    ) async throws {
         let (agent, service) = try makeFixture()
         let id = try await service.create(
             content: "Inbox overview", agentID: agent.id, spaceID: nil, chatID: nil,
             tasks: [], events: [], schedules: []
         )
         let call = makeCall(name: name, arguments: """
-        {"id": "\(id.uuidString)", "content": "Inbox overview"\(scheduleArguments)}
+        {"id": "\(id.uuidString)", "content": "Inbox overview"\(input.arguments)}
         """)
         let result = if name == "add_intent" {
             await AddIntentTool(intentService: service).execute(call, agent: agent)
@@ -49,18 +65,35 @@ struct IntentToolTests {
             await UpdateIntentTool(intentService: service).execute(call, agent: agent)
         }
         #expect(!result.isError)
-        let hasSchedules = scheduleArguments.contains("daily")
-        #expect(result.content.contains("guidance") == hasSchedules)
-        #expect(result.content.contains("set_initiatives") == hasSchedules)
-        if hasSchedules {
-            #expect(result.content.contains("do not create notifications"))
-            let intents = try await service.activeIntents(
-                agentID: agent.id, limit: 10, accessPolicy: policy
-            )
-            let scheduledIntent = try #require(intents.first { !$0.schedules.isEmpty })
-            let schedule = try #require(scheduledIntent.schedules.first)
-            #expect(result.content.contains(scheduledIntent.id.uuidString))
-            #expect(result.content.contains(schedule.id.uuidString))
+        let response = try #require(envelope(result)["result"] as? [String: Any])
+        let returnedID = try #require(response["id"] as? String)
+        #expect(response["action"] as? String == (name == "add_intent" ? "created" : "updated"))
+        if name == "update_intent" {
+            #expect(returnedID == id.uuidString)
+        }
+        let intents = try await service.activeIntents(
+            agentID: agent.id, limit: 10, accessPolicy: policy
+        )
+        let saved = try #require(intents.first { $0.id.uuidString == returnedID })
+        #expect(saved.schedules.count == (input == .daily ? 1 : 0))
+        if input == .daily {
+            let guidance = try #require(response["guidance"] as? String)
+            #expect(!guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            let schedules = try #require(response["schedules"] as? [[String: String]])
+            #expect(schedules.count == saved.schedules.count)
+            let schedule = try #require(saved.schedules.first)
+            #expect(schedules.first?["id"] == schedule.id.uuidString)
+            #expect(schedules.first?["content"] == schedule.content)
+            #expect(schedule.frequency == .daily)
+            #expect(schedule.hour == 8)
+        } else {
+            #expect(response["guidance"] == nil)
+            if name == "add_intent" || input == .empty {
+                let schedules = try #require(response["schedules"] as? [[String: String]])
+                #expect(schedules.isEmpty)
+            } else {
+                #expect(response["schedules"] == nil)
+            }
         }
     }
 
@@ -77,7 +110,10 @@ struct IntentToolTests {
             """), agent: agent
         )
         #expect(!result.isError)
-        #expect(!result.content.contains("guidance"))
+        let response = try #require(envelope(result)["result"] as? [String: Any])
+        #expect(response["guidance"] == nil)
+        let schedules = try #require(response["schedules"] as? [[String: String]])
+        #expect(schedules.isEmpty)
         let intents = try await service.activeIntents(
             agentID: agent.id, limit: 10, accessPolicy: policy
         )
@@ -98,7 +134,10 @@ struct IntentToolTests {
             await UpdateIntentTool(intentService: service).execute(call, agent: agent)
         }
         #expect(result.isError)
-        #expect(!result.content.contains("guidance"))
+        let response = try envelope(result)
+        #expect(response["result"] == nil)
+        let errors = try #require(response["errors"] as? [String])
+        #expect(!errors.isEmpty)
     }
 
     // MARK: - add_intent
@@ -117,7 +156,8 @@ struct IntentToolTests {
 
         let result = await tool.execute(call, agent: agent)
         #expect(!result.isError)
-        #expect(result.content.contains("created"))
+        let response = try #require(envelope(result)["result"] as? [String: Any])
+        #expect(response["action"] as? String == "created")
 
         let intents = try await service.activeIntents(
             agentID: agent.id,

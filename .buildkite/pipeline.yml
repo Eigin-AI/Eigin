@@ -22,6 +22,8 @@ steps:
 
   - label: ":pipeline: Select Linux tests"
     key: linux-select
+    depends_on:
+      - main-test-approval
     agents:
       queue: linux-small
     if: build.branch == "main" || (build.pull_request.id != null && build.pull_request.repository == pipeline.repository)
@@ -39,7 +41,7 @@ steps:
       --workdir /work
       --env PYTHONDONTWRITEBYTECODE=1
       rust:1-bookworm
-      python3 -m unittest discover -s .buildkite/tests
+      python3 .buildkite/scripts/check-ci.py
 
   # Same-repository branch writers are trusted with these CLA credentials.
   - label: ":memo: Contributor agreement"
@@ -87,3 +89,29 @@ steps:
         --env BUILDKITE_COMMIT --env BUILDKITE_BRANCH \
         --env BUILDKITE_PULL_REQUEST --env BUILDKITE_SOURCE \
         rust:1-bookworm python3 .buildkite/scripts/publish-docs.py
+
+  - input: "Run application tests"
+    key: main-test-approval
+    if: build.branch == "main"
+    depends_on:
+      - versions
+      - ci-tests
+    prompt: "Run Linux and certificate-free iOS tests for this main commit?"
+
+  - label: ":apple: iOS simulator tests"
+    key: ios-select
+    if: build.branch == "main" || (build.pull_request.id != null && build.pull_request.repository == pipeline.repository)
+    depends_on:
+      - main-test-approval
+      - versions
+      - ci-tests
+      - cla
+    agents:
+      queue: linux-small
+    timeout_in_minutes: 5
+    command: |
+      set -euo pipefail
+      docker run --rm --volume "$$PWD:/work:ro" --workdir /work \
+        --env BUILDKITE_BRANCH rust:1-bookworm \
+        python3 .buildkite/scripts/select-ios-tests.py > /tmp/ios-pipeline.json
+      buildkite-agent pipeline upload /tmp/ios-pipeline.json

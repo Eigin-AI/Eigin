@@ -2,6 +2,8 @@
 
 Buildkite builds and publishes docs on main webhook builds after Versions and
 CI regression tests pass. Fonts are bundled and served from the docs origin.
+Verify deployment when **Publish docs** succeeds. The overall build can remain
+pending **Run application tests** approval while docs are already published.
 
 ## Font setup
 
@@ -37,7 +39,7 @@ just docs serve
 1. Confirm the licence covers the replacement fonts.
 2. Update local files and the matching checksums in `docs/fonts.json` together.
 3. Replace the corresponding Secure Files before merging.
-4. Build locally and verify the deployed docs after CI completes.
+4. Build locally and verify the deployed docs after **Publish docs** succeeds.
 
 Website releases and hosting CORS configuration are independent of docs fonts.
 

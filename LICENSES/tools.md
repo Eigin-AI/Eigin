@@ -28,3 +28,9 @@ Direct dependencies of `tools/`. Resolved transitive dependencies are recorded i
 | [ttf-parser](https://github.com/harfbuzz/ttf-parser) | 0.25.1 | runtime | MIT OR Apache-2.0 |
 | [uuid](https://github.com/uuid-rs/uuid) | 1.23.3 | runtime | Apache-2.0 OR MIT |
 | [walkdir](https://github.com/BurntSushi/walkdir) | 2.5.0 | runtime | Unlicense/MIT |
+
+## CI test tooling
+
+| Dependency | Version | Scope | License |
+|---|---|---|---|
+| [PyYAML](https://github.com/yaml/pyyaml/tree/6.0.3) | 6.0.3 | Pipeline-flow tests; checksum-verified source distribution | MIT |
