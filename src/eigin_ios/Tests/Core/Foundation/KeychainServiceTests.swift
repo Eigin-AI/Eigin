@@ -26,7 +26,10 @@ struct KeychainServiceTests {
         let service = DefaultKeychainService(serviceKey: testServiceKey)
         let key = "test.delete.\(UUID().uuidString)"
 
+        defer { service.delete(key: key) }
+
         service.save(key: key, value: "toDelete")
+        #expect(service.read(key: key) == "toDelete")
         service.delete(key: key)
         #expect(service.read(key: key) == nil)
     }
@@ -37,6 +40,7 @@ struct KeychainServiceTests {
         defer { service.delete(key: key) }
 
         service.save(key: key, value: "first")
+        #expect(service.read(key: key) == "first")
         service.save(key: key, value: "second")
         #expect(service.read(key: key) == "second")
     }

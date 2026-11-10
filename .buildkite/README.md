@@ -1,18 +1,21 @@
 # Buildkite CI
 
-One `eigin` pipeline runs on the hosted Linux AMD64 queue `linux-small`.
+One `eigin` pipeline uses hosted `linux-small` and `macos-medium` queues.
 GitLab requires its external status to pass before merging.
+Main publishes docs automatically; application tests wait for approval.
 
 | Step | Runs on | Purpose |
 | --- | --- | --- |
 | Versions | Main and same-repository MRs | Version checks and version/release integration tests |
 | CI regression tests | Accepted builds | Python script tests; required before publishing |
-| Select Linux tests | Main and same-repository MRs | Upload affected relay, Postgres, and SDK jobs |
+| Select Linux tests | Approved main and same-repository MRs | Upload relay, Postgres, and SDK jobs |
 | Relay tests | Selected builds | Locked Rust test suite |
 | Relay Postgres integration | Selected builds | Ignored tests against disposable Postgres 16 |
 | Rust SDK checks | Selected builds | Native/WASM builds, binding fixtures, clippy, rustfmt |
 | CLA | Same-repository MRs | Verify signatures and post signing instructions |
 | Publish docs | Main webhook builds without an MR | Build and publish after Versions and CI tests pass |
+| Run application tests | Main | Approval after Versions and CI tests; docs remain independent |
+| iOS simulator tests | Approved main and same-repository MRs | Certificate-free staging build/tests; logs and xcresult artifacts |
 
 ## Provider setup
 
@@ -73,7 +76,7 @@ retry the checker for the current MR head; stale heads fail closed.
 
 ## Scripts and cache
 
-CI scripts use Python's standard library. The full `rust:1-bookworm` image supplies
+CI scripts use Python's standard library; pipeline-flow tests also use checksum-pinned PyYAML 6.0.3 (MIT), installed in a temporary directory by `check-ci.py`. The test runner supplies just 1.59.0 on Linux AMD64; other development hosts need just installed. The full `rust:1-bookworm` image supplies
 Python 3 through its Debian base; no per-job Python or pip installation is needed.
 Archive extraction validates paths and links using APIs available in Python 3.11.
 Cargo, curl, mdBook, and AWS CLI remain external tools.
@@ -88,7 +91,7 @@ supported. Node 22.23.4 and `just` 1.59.0 are checksum-pinned. Phase timings dis
 installation, compilation, and tests. Rust tracks `rust:1-bookworm`.
 
 ```sh
-python3 -m unittest discover -s .buildkite/tests
+python3 .buildkite/scripts/check-ci.py
 cargo test --locked --manifest-path tools/Cargo.toml --test docs_generate
 ```
 
@@ -143,7 +146,7 @@ Reproduce on a Linux Docker host from the repository root:
 bash .buildkite/scripts/run-linux-tests.sh relay
 bash .buildkite/scripts/run-linux-tests.sh postgres
 bash .buildkite/scripts/run-linux-tests.sh sdk
-python3 -m unittest discover -s .buildkite/tests
+python3 .buildkite/scripts/check-ci.py
 ```
 
 The wrapper defaults to the documented `/cache` paths. Set `LINUX_CACHE_DIR` to
@@ -168,3 +171,43 @@ failed GitLab status that blocks merging. These operational checks require a
 working Linux runner and the existing GitLab required-status configuration.
 
 For publishing operations, see [Docs releases](../docs/src/runbooks/docs-deployment.md).
+
+## iOS checks and main approval
+
+Same-repository MRs run iOS tests automatically after Versions, CI tests, and CLA.
+On main, **Run application tests** starts Linux and iOS tests for that commit.
+Docs publish independently; the overall build stays pending until approval.
+
+In **Settings → Builds**, enable **Cancel Intermediate Builds** and **Skip
+Intermediate Builds**, both filtered to `!main`. Main builds remain available
+for approval within Buildkite's retention limits.
+
+### macOS setup
+
+Use `macos-medium` with these tools and runtimes:
+
+| Tool | Selection |
+| --- | --- |
+| Xcode | 26.2, build 17C52 |
+| Simulator | iPhone 17 Pro, iOS 26.2; watchOS 26.2 installed |
+| Rust / SwiftFormat | 1.99.1 / 0.64.5 |
+| just / XcodeGen | 1.59.0 / 2.46.0, checksum-verified downloads |
+
+The job runs `just test ios --verbose` with ad-hoc signing for Keychain access.
+Certificates, provisioning profiles and licensed fonts are unnecessary.
+Local recipe defaults stay unchanged; CI overrides use `IOS_TEST_*` variables.
+Logs, summaries, resolved packages and xcresult archives are under `logs/ios-ci/`.
+Test and reporting failures fail the build. Transitive Swift dependencies remain
+partially unlocked.
+
+### Cost controls
+
+- 60-minute timeout; one macOS job at a time.
+- Separate main/MR 30 GB caches, keyed by Xcode build, Rust and layout version.
+- Cache Cargo outputs/downloads and Swift package checkouts/artifacts.
+- Stable source paths and timestamps let Cargo reuse unchanged builds.
+- Xcode DerivedData stays temporary; cold builds remain supported.
+- Keep MR caches out of credential-bearing jobs.
+
+After merge, verify docs publish while main waits for approval, then approve
+application tests and confirm newer main builds preserve older approvals.

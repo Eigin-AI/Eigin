@@ -64,16 +64,22 @@ docs command="build":
 [private]
 _test-ios env="staging" verbose="false": (generate "ios")
     #!/usr/bin/env bash
+    set -euo pipefail
     scheme=$([ "{{ env }}" = "staging" ] && echo "EiginDev" || echo "Eigin")
+    args=(-project "{{ ios_dir }}/Eigin-iOS.xcodeproj"
+        -scheme "$scheme" -destination "${IOS_TEST_DESTINATION:-{{ dest }}}"
+        -derivedDataPath "${IOS_TEST_DERIVED_DATA:-{{ ios_dir }}/DerivedData}" -skipMacroValidation
+        -skip-testing:EiginTests/ProviderIntegrationTests)
+    if [[ -n ${IOS_TEST_RESULT_BUNDLE:-} ]]; then args+=(-resultBundlePath "$IOS_TEST_RESULT_BUNDLE"); fi
+    if [[ -n ${IOS_TEST_PACKAGES:-} ]]; then args+=(-clonedSourcePackagesDirPath "$IOS_TEST_PACKAGES"); fi
+    if [[ ${IOS_TEST_AD_HOC_SIGNING:-false} == true ]]; then
+        args+=(CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
+    fi
     if [ "{{ verbose }}" = "true" ]; then
-        xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-            -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
-            -skip-testing:EiginTests/ProviderIntegrationTests test
+        xcodebuild "${args[@]}" test
     else
         {{ tools }} exec --log "{{ log_dir }}/ios-test.log" --label "Running iOS tests" -- \
-            xcodebuild -project "{{ ios_dir }}/Eigin-iOS.xcodeproj" \
-                -scheme "$scheme" -destination '{{ dest }}' -derivedDataPath "{{ ios_dir }}/DerivedData" -skipMacroValidation \
-                -skip-testing:EiginTests/ProviderIntegrationTests test
+            xcodebuild "${args[@]}" test
     fi
 
 [private]
