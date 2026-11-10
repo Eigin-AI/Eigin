@@ -110,7 +110,10 @@ struct AdvancedSettings: View {
                                 AppOption($0.displayName, value: $0.rawValue)
                             },
                             selection: logFileLevel
-                        ) { logFileLevel = $0 }
+                        ) {
+                            logFileLevel = $0
+                            SDKDiagnosticReceiver.updateOptions()
+                        }
 
                         if let url = logFileURL {
                             Divider().padding(.leading, Spacing.n24)

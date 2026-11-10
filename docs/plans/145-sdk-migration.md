@@ -42,6 +42,8 @@ Applications still own entitlements, permission descriptions, background-task re
 
 Keep generated bindings behind the integration package where practical. Test runtime adaptation and platform services independently of views.
 
+The SDK emits structured diagnostics through a host-provided receiver. Hosts own routing and storage; private values require explicit opt-in before crossing the SDK boundary.
+
 ## Migration approach
 
 Extract one bounded responsibility at a time. Keep iOS shippable after every completed increment.
@@ -200,6 +202,15 @@ Keep the main sections current; retain superseded decisions here. Link future en
 - **Lessons / next decisions:** package the Apple SDK as a dynamic XCFramework to isolate Rust runtime symbols from Firm’s current static library. Firm remains separate until a future extraction. Browser support has tested versions rather than a promised minimum; manual Safari and app-flow checks remain. After merging main, the user confirmed device launch and the SDK initialization log, plus simulator launch without a captured initialization log. Release signing and App Store archive validation remain unverified. Remote CI is deferred to its separate issue.
 - **Review follow-ups:** shared product versioning #355; scalable host/error and WASM runtime testing #356; diagnostics ownership #357. Rust toolchain upgraded to 1.99.1; UniFFI stays on the 0.31 line required by the released browser generator. The error fixture now suspends before returning to exercise future wakeups.
 - **Development guide:** [`src/eigin_sdk/README.md`](../../src/eigin_sdk/README.md).
+
+### #357 — Diagnostics and host logging (awaiting merge)
+
+- **Issue / MR:** [#357](https://code.eigin.ai/dev/eigin/-/issues/357); [!319](https://code.eigin.ai/dev/eigin/-/merge_requests/319).
+- **Responsibility moved:** Rust defines structured diagnostics, severity filtering, and explicit private-value disclosure. Hosts own destinations and retention; no agent behavior moved.
+- **Integration:** Swift uses `EiginSDK.Diagnostics`; browsers register a receiver through `@eigin/sdk`. The iOS adapter routes to AppLogger's `sdk` category and follows the selected minimum level and debug setting. OSLog stays redacted.
+- **Verification:** native/WASM checks, Swift package and binding tests, 15 SDK browser tests, six web-app smoke tests, and iOS build passed. Rust-worker-to-Swift callbacks and clearing during delivery were exercised. Seven logger/adapter tests passed in an isolated macOS harness; the existing simulator SwiftData store blocked app-hosted test startup.
+- **Removed code:** none; initialization remains a no-op with app-owned outcome logs.
+- **Next increments:** propagate operation context explicitly as real SDK operations arrive. Streaming, cancellation, and async platform adapters remain unproven.
 
 For each completed increment, add:
 

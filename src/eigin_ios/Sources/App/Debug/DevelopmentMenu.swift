@@ -147,7 +147,10 @@ struct DevelopmentMenu: View {
 
                 Toggle(isOn: Binding(
                     get: { UserDefaults.standard.bool(forKey: StorageKey.logDebugMode) },
-                    set: { UserDefaults.standard.set($0, forKey: StorageKey.logDebugMode) }
+                    set: {
+                        UserDefaults.standard.set($0, forKey: StorageKey.logDebugMode)
+                        SDKDiagnosticReceiver.updateOptions()
+                    }
                 )) {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "eye", color: .purple)

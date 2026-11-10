@@ -6,8 +6,27 @@
   </head>
   <body>
     <script type="module">
-      import { initialize } from "../src/index.ts";
+      import {
+        initialize,
+        setDiagnosticReceiver,
+        updateDiagnosticOptions,
+        clearDiagnosticReceiver,
+        DiagnosticLevel,
+      } from "../src/index.ts";
       window.initializeSdk = initialize;
+      window.configureDiagnostics = async () => {
+        await setDiagnosticReceiver({
+          receive() {
+            throw new Error("No-op initialization should not emit diagnostics");
+          },
+        });
+        await initialize();
+        await updateDiagnosticOptions({
+          minimumLevel: DiagnosticLevel.Warning,
+          includePrivate: false,
+        });
+        await clearDiagnosticReceiver();
+      };
     </script>
   </body>
 </html>
