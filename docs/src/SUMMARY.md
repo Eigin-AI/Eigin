@@ -10,6 +10,7 @@
 - [Development environment](./contributing/development-environment.md)
 - [Build from source](./contributing/build-from-source.md)
 - [Guidelines](./contributing/guidelines.md)
+  - [Developing the SDK](./contributing/sdk.md)
 - [Contributor agreement](./contributing/contributor-agreement.md)
   - [Individual agreement](./contributing/individual-agreement.md)
   - [Entity agreement](./contributing/entity-agreement.md)
@@ -23,6 +24,11 @@
 - [Privacy and security](./privacy.md)
 - [Watermarking](./watermarking.md)
 - [Design system](./design.md)
+
+# SDK
+
+- [Overview](./sdk/README.md)
+- [Getting started](./sdk/getting-started.md)
 
 # The Agent
 

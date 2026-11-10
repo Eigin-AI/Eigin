@@ -1,6 +1,8 @@
 # iOS
 
-Eigin's iOS app is built with Swift 6, SwiftUI, SwiftData, and targets iOS 26. It's the only Eigin client today.
+Eigin's iOS app is built with Swift 6, SwiftUI, SwiftData, and targets iOS 26. It provides the native UI and Apple platform integration for Eigin.
+
+The app hosts the [Eigin SDK](../sdk/README.md). Shared agent behavior is moving into the SDK; iOS still owns most orchestration, provider integration, and persistence today. Start with the SDK guide for portable capabilities and this page for the host implementation.
 
 ## Worth knowing
 

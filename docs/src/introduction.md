@@ -38,10 +38,10 @@ New to the codebase? Read in order:
 
 1. [Philosophy](./philosophy.md): why Eigin exists.
 2. [System context](./system-context.md): Eigin at the system level.
-3. [The Agent](./agents/README.md): the agent ontology.
-4. [Contributing](./contributing/README.md): how we work, and how to get involved.
+3. [SDK](./sdk/README.md): shared functionality, usage, and host responsibilities.
+4. [iOS](./ios/README.md): the native app and its platform integration.
 
-Then jump to whatever you're working on: [iOS](./ios/README.md), [Conversation](./conversation/README.md), [Tools](./tools/README.md), or [Voice](./voice/README.md).
+Explore the concepts behind the behavior in [The Agent](./agents/README.md), [Conversation](./conversation/README.md), [Tools](./tools/README.md), and [Voice](./voice/README.md). See [Contributing](./contributing/README.md) for how we work and how to get involved.
 
 ## Building from source
 
