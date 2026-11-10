@@ -36,3 +36,9 @@ test("rejects when the runtime cannot load", async ({ page }) => {
   });
   expect(failed).toBe(true);
 });
+
+test("round-trips Unicode context values through WASM", async ({ page }) => {
+  await page.goto("/tests/context.html");
+  await page.waitForFunction(() => typeof window.checkContext === "function");
+  expect(await page.evaluate(() => window.checkContext())).toBe(true);
+});
