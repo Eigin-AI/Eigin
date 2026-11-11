@@ -1,6 +1,4 @@
-#if !targetEnvironment(simulator)
 @preconcurrency import AVFoundation
-import FluidAudio
 
 /// Speech synthesizer backed by Pocket TTS via FluidAudio CoreML.
 ///
@@ -14,19 +12,24 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     var onCancel: ((_ text: String) -> Void)?
     var onWillSpeak: ((_ range: NSRange, _ text: String) -> Void)?
 
-    private let modelManager: PocketTTSModelManager
-    private let voiceName: String
+    private let makeSession: @MainActor () async throws -> any PocketTTSSession
+    private let prepareModel: @MainActor () async -> Void
+    private let scheduleUnload: @MainActor () -> Void
+    private let audioEnabled: Bool
 
     /// Audio output that resumes across route changes without repeating.
     private var resumablePlayer: ResumableAudioPlayer?
 
     // Session state
-    private var session: PocketTtsSession?
+    private var session: (any PocketTTSSession)?
+    private var sessionInputFinished = false
     private var utteranceTexts: [Int: String] = [:]
     private var nextUtteranceIndex: Int = 0
 
-    // Generation state
+    /// Generation state
     private var pendingTexts: [String] = []
+    /// Text not yet assigned to a session, including text arriving while one drains.
+    private var queuedTexts: [String] = []
     private var generationTask: Task<Void, Never>?
     /// Tracks the in-flight session cancellation so `startGenerating()` can
     /// await it before creating a new session — prevents Neural Engine contention.
@@ -62,9 +65,16 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
 
     private var converter: AVAudioConverter?
 
-    init(modelManager: PocketTTSModelManager, voiceName: String = "alba") {
-        self.modelManager = modelManager
-        self.voiceName = voiceName
+    init(
+        makeSession: @escaping @MainActor () async throws -> any PocketTTSSession,
+        prepare: @escaping @MainActor () async -> Void = {},
+        scheduleUnload: @escaping @MainActor () -> Void = {},
+        audioEnabled: Bool = true
+    ) {
+        self.makeSession = makeSession
+        prepareModel = prepare
+        self.scheduleUnload = scheduleUnload
+        self.audioEnabled = audioEnabled
     }
 
     func speak(_ text: String) {
@@ -75,16 +85,15 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
 
         pendingTexts.append(text)
 
-        if let session {
-            // Session already active — enqueue directly
+        if let session, !sessionInputFinished {
             utteranceTexts[nextUtteranceIndex] = text
             nextUtteranceIndex += 1
             session.enqueue(text)
-        } else if !isGenerationActive {
-            // No session and no pending generation — start one.
-            // If a generation task is already running, it will pick up
-            // the text from pendingTexts when it enqueues.
-            startGenerating()
+        } else {
+            queuedTexts.append(text)
+            if !isGenerationActive {
+                startGenerating()
+            }
         }
     }
 
@@ -104,11 +113,11 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
             }
         }
         pendingTexts.removeAll()
+        queuedTexts.removeAll()
         scheduledUtterances.removeAll()
         utteranceTexts.removeAll()
         nextUtteranceIndex = 0
         finishWhenReady = false
-        isGenerationActive = false
         playbackBuffer = nil
         for text in orphans {
             onFinish?(text)
@@ -116,17 +125,16 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     }
 
     func finishSpeaking() {
-        if let session {
+        if let session, !sessionInputFinished {
+            sessionInputFinished = true
             session.finish()
-        } else {
-            // Session not yet created — flag it so the generation task
-            // finishes the session after enqueuing texts.
+        } else if session == nil || !queuedTexts.isEmpty {
             finishWhenReady = true
         }
     }
 
     func prepare() async {
-        try? await modelManager.load()
+        await prepareModel()
     }
 
     func stopSpeaking() {
@@ -142,14 +150,16 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         let sessionToCancel = session
         sessionCancelTask = Task { await sessionToCancel?.cancel() }
         session = nil
+        sessionInputFinished = false
         utteranceTexts.removeAll()
         nextUtteranceIndex = 0
 
         pendingTexts.removeAll()
+        queuedTexts.removeAll()
         scheduledUtterances.removeAll()
         finishWhenReady = false
         tearDownAudio()
-        modelManager.scheduleUnload()
+        scheduleUnload()
     }
 
     /// Rebuild the output engine on the new route, resuming the unplayed tail
@@ -163,7 +173,7 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
     // MARK: - Audio Engine
 
     private func ensureEngineRunning() {
-        guard resumablePlayer == nil else { return }
+        guard audioEnabled, resumablePlayer == nil else { return }
         let player = ResumableAudioPlayer(sampleRate: Self.outputSampleRate)
         do {
             try player.start()
@@ -200,192 +210,128 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
         isGenerationActive = true
 
         generationTask = Task(priority: .userInitiated) { [weak self] in
-            defer { Task { @MainActor in self?.isGenerationActive = false } }
+            guard let self else { return }
+            defer { generationEnded(id: myID) }
 
-            // Wait for any previous session cancellation and generation to fully exit.
-            // This ensures the Neural Engine is released before we start a new session.
+            // Serialize inference, including startup that was canceled before session creation.
             await previousCancelTask?.value
             await previousTask?.value
+            guard generationID == myID, !Task.isCancelled else { return }
 
-            guard let self else { return }
-
-            await MainActor.run {
-                self.ensureEngineRunning()
-            }
-
-            let converter: AVAudioConverter? = await MainActor.run { self.converter }
-
-            await MainActor.run {
-                self.playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
-            }
-
-            // Per-session DSP state: fresh every generation run.
+            ensureEngineRunning()
+            let converter = converter
+            playbackBuffer = PlaybackBuffer(sampleRate: Self.outputSampleRate)
             let dsp = SpeechDSPProcessor(
                 config: Self.dspConfig,
                 sampleRate: Self.outputSampleRate
             )
             let fade = SpeechFade(sampleRate: Self.outputSampleRate)
 
-            // Load model into memory (idempotent — no-op if already loaded, cancels pending
-            // unload).
+            let session: any PocketTTSSession
             do {
-                try await modelManager.load()
+                session = try await makeSession()
             } catch {
-                // Nothing was spoken — fail loudly so the caller's counters drain.
-                if await MainActor.run(body: { self.generationID == myID }) {
-                    await MainActor.run { self.failGeneration() }
+                if generationID == myID, !Task.isCancelled {
+                    failGeneration()
                 }
                 return
             }
-
-            // Create session (voice prefill happens once here).
-            guard let manager = await MainActor.run(body: { self.modelManager.manager })
-            else { return }
-            let session: PocketTtsSession
-            do {
-                session = try await manager.makeSession(voice: voiceName)
-            } catch {
-                if await MainActor.run(body: { self.generationID == myID }) {
-                    await MainActor.run { self.failGeneration() }
-                }
+            guard generationID == myID, !Task.isCancelled else {
+                await session.cancel()
                 return
             }
 
-            await MainActor.run {
-                self.session = session
+            self.session = session
+            sessionInputFinished = false
+            for text in queuedTexts {
+                utteranceTexts[nextUtteranceIndex] = text
+                nextUtteranceIndex += 1
+                session.enqueue(text)
+            }
+            queuedTexts.removeAll()
+            if finishWhenReady {
+                finishWhenReady = false
+                sessionInputFinished = true
+                session.finish()
             }
 
-            // Enqueue all pending texts into the session.
-            // If finishSpeaking() was called before the session existed,
-            // finish the session now so the frame stream ends after these texts.
-            await MainActor.run {
-                for text in self.pendingTexts {
-                    self.utteranceTexts[self.nextUtteranceIndex] = text
-                    self.nextUtteranceIndex += 1
-                    session.enqueue(text)
-                }
-                if self.finishWhenReady {
-                    self.finishWhenReady = false
-                    session.finish()
-                }
-            }
-
-            // Read frames from the session stream.
-            var previousUtteranceIndex: Int = -1
+            var previousUtteranceIndex = -1
             var willSpeakFired: Set<Int> = []
-            // Utterance indices whose finish marker has been scheduled, so the
-            // end-of-stream sweep below only marks utterances that never got one.
             var finishedUtterances: Set<Int> = []
-
             do {
                 for try await frame in session.frames {
-                    try Task.checkCancellation()
-                    guard await MainActor.run(body: { self.generationID == myID }) else { break }
-
+                    guard generationID == myID, !Task.isCancelled else { return }
                     let uttIdx = frame.utteranceIndex ?? max(previousUtteranceIndex, 0)
-
-                    // Utterance boundary — the previous utterance's finish
-                    // marker is queued AFTER the boundary audio below, so it
-                    // fires only after the held tail has been scheduled.
                     var pendingFinishText: String?
                     if uttIdx != previousUtteranceIndex {
                         if previousUtteranceIndex >= 0,
                            !finishedUtterances.contains(previousUtteranceIndex)
                         {
                             finishedUtterances.insert(previousUtteranceIndex)
-                            pendingFinishText = await MainActor
-                                .run { self.utteranceTexts[previousUtteranceIndex] }
+                            pendingFinishText = utteranceTexts[previousUtteranceIndex]
                         }
                         previousUtteranceIndex = uttIdx
                     }
 
-                    // Buffer audio frames; start playback once enough headroom
-                    // has accumulated to mask transient generation stalls.
-                    let samples = frame.samples
-                    if !samples.isEmpty, let converter {
-                        if var resampled = Self.resample(samples, using: converter) {
-                            dsp.process(&resampled)
-                            let chunks = fade.append(samples: resampled, utteranceIndex: uttIdx)
-                            for chunk in chunks {
-                                await MainActor.run { self.appendAndSchedule(chunk) }
-                            }
+                    if !frame.samples.isEmpty, let converter,
+                       var resampled = Self.resample(frame.samples, using: converter)
+                    {
+                        dsp.process(&resampled)
+                        for chunk in fade.append(samples: resampled, utteranceIndex: uttIdx) {
+                            appendAndSchedule(chunk)
                         }
                     }
-
-                    if let prevText = pendingFinishText {
-                        await MainActor.run {
-                            self.scheduleFinishMarker(for: prevText)
-                        }
+                    if let pendingFinishText {
+                        scheduleFinishMarker(for: pendingFinishText)
                     }
-
-                    // Schedule willSpeak on first frame of each utterance
+                    guard generationID == myID, !Task.isCancelled else { return }
                     if !willSpeakFired.contains(uttIdx) {
                         willSpeakFired.insert(uttIdx)
-                        let text = await MainActor.run { self.utteranceTexts[uttIdx] }
-                        if let text {
-                            await MainActor.run {
-                                self.scheduleTextMarker(text: text, charCount: text.count)
-                            }
+                        if let text = utteranceTexts[uttIdx] {
+                            scheduleTextMarker(text: text, charCount: text.count)
                         }
                     }
                 }
-            } catch is CancellationError {
-                return
             } catch {
-                guard await MainActor.run(body: { self.generationID == myID }) else { return }
+                guard generationID == myID, !Task.isCancelled else { return }
             }
+            guard generationID == myID, !Task.isCancelled else { return }
 
-            // Release the held utterance tail (faded out) before draining
-            // the playback buffer so play order is preserved.
+            self.session = nil
             for chunk in fade.flush() {
-                await MainActor.run { self.appendAndSchedule(chunk) }
+                appendAndSchedule(chunk)
             }
-
-            // Flush any remaining buffered frames so the tail isn't dropped.
-            let tailFrames = await MainActor.run {
-                self.playbackBuffer?.flush() ?? []
-            }
-            for frame in tailFrames {
+            for frame in playbackBuffer?.flush() ?? [] {
                 if let buffer = Self.createBuffer(from: frame) {
-                    await MainActor.run {
-                        self.resumablePlayer?.schedule(buffer)
-                    }
+                    resumablePlayer?.schedule(buffer)
                 }
             }
 
-            // Stream ended — close the session before the sweep runs, so a
-            // speak() landing in the sweep's suspension hops starts a fresh
-            // generation (whose enqueue loop reads pendingTexts) instead of
-            // enqueueing into the finished session, which would orphan text.
-            // Then schedule a finish marker for every utterance that never got
-            // one. Normal path: just the last utterance. Also covers frames
-            // without utterance indices and streams that ended without frames
-            // at all, which previously dropped onFinish and wedged the turn.
-            guard await MainActor.run(body: { self.generationID == myID }) else { return }
-            let unmatched = await MainActor.run {
-                self.session = nil
-                self.isGenerationActive = false
-                return self.utteranceTexts
-                    .sorted { $0.key < $1.key }
-                    .filter { !finishedUtterances.contains($0.key) }
-                    .map { (index: $0.key, text: $0.value) }
-            }
+            // Account for each session's text before allowing another session to start.
+            let unmatched = utteranceTexts.sorted { $0.key < $1.key }
+                .filter { !finishedUtterances.contains($0.key) }
             for entry in unmatched {
-                guard await MainActor.run(body: { self.generationID == myID }) else { return }
-                await MainActor.run {
-                    self.scheduleFinishMarker(for: entry.text)
-                }
-            }
-            await MainActor.run {
-                self.session = nil
-                self.utteranceTexts.removeAll()
-                self.nextUtteranceIndex = 0
-                self.playbackBuffer = nil
+                guard generationID == myID, !Task.isCancelled else { return }
+                scheduleFinishMarker(for: entry.value)
             }
         }
     }
 
-    // MARK: - Audio Processing (nonisolated — runs off main actor)
+    /// Releases only the owning task's state, then starts text queued during its drain.
+    private func generationEnded(id: Int) {
+        guard generationID == id else { return }
+        session = nil
+        sessionInputFinished = false
+        utteranceTexts.removeAll()
+        nextUtteranceIndex = 0
+        playbackBuffer = nil
+        isGenerationActive = false
+        if !queuedTexts.isEmpty {
+            startGenerating()
+        }
+    }
+
+    // MARK: - Audio Processing
 
     /// Appends a resampled chunk to the playback buffer and schedules any
     /// frames it released onto the player node.
@@ -477,6 +423,9 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
 
     private func scheduleFinishMarker(for text: String) {
         guard let resumablePlayer else {
+            if let index = pendingTexts.firstIndex(of: text) {
+                pendingTexts.remove(at: index)
+            }
             onFinish?(text)
             return
         }
@@ -501,12 +450,10 @@ final class PocketTTSSpeechSynthesizer: SpeechSynthesizing, @unchecked Sendable 
                 pendingTexts.remove(at: idx)
             }
             if scheduledUtterances.isEmpty, pendingTexts.isEmpty {
-                modelManager.scheduleUnload()
+                scheduleUnload()
             }
 
             onFinish?(text)
         }
     }
 }
-
-#endif
