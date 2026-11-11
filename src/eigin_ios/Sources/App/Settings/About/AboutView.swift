@@ -130,7 +130,7 @@ struct AboutView: View {
                                 .foregroundStyle(colors.text.standard.base)
                             Text(
                                 Localized.Settings.About.licenseCountFormat(
-                                    String(LicenseEntry.all.count)
+                                    String(LicenseEntry.all.count + 1)
                                 )
                             )
                             .typography(Typography.tag)

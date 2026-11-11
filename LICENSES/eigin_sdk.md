@@ -1,26 +1,38 @@
-# Eigin SDK dependencies
+# Eigin SDK third-party notices
 
-Direct dependencies of `src/eigin_sdk/`. Resolved transitive dependencies are recorded in its Cargo lockfile.
+[Generated SDK notices](../src/eigin_sdk/THIRD-PARTY-NOTICES.txt) are the shared runtime inventory, copyright notices and full license texts. Host application dependencies remain in their own inventories.
 
-Consumers: Eigin iOS, the browser test host, and the Rust CLI. Each consumer owns its application dependencies.
+## Regeneration
 
-| Dependency | Version | Scope | License |
-|---|---|---|---|
-| [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | test | MIT OR Apache-2.0 |
-| [thiserror](https://github.com/dtolnay/thiserror) | 2.0.21 | runtime | MIT OR Apache-2.0 |
-| [unicode-segmentation](https://github.com/unicode-rs/unicode-segmentation) | 1.13.3 | runtime | MIT OR Apache-2.0 |
-| [uniffi](https://github.com/mozilla/uniffi-rs) | 0.31.0 | runtime | MPL-2.0 |
-| [uniffi-runtime-wasm](https://github.com/jhugman/uniffi-bindgen-react-native) | 0.31.0-6 | runtime | MPL-2.0 |
-| [uniffi_core](https://github.com/mozilla/uniffi-rs) | 0.31.0 | runtime | MPL-2.0 |
+```sh
+npm ci
+just sdk-notices
+just sdk-notices --check
+```
 
-## Browser package
+Regenerate after changing SDK, CLI or browser runtime dependencies. Commit all generated copies. SDK artifact generation also regenerates notices. `--check` fails on missing texts, missing installed npm packages, or stale output.
 
-| Dependency | Version | License |
-|---|---|---|
-| `@ubjs/core` | 0.31.0-6 | MPL-2.0 |
-| `@ubjs/wasm` | 0.31.0-6 | MPL-2.0 |
-| `uniffi-bindgen-react-native` (generator) | 0.31.0-6 | MPL-2.0 |
+The generator resolves normal dependencies from the SDK and CLI Cargo lockfiles for Apple, WebAssembly, macOS/Linux/Windows CLI targets. It combines those graphs with the browser SDK's locked npm runtime dependencies, including peers and optional dependencies. Build dependencies, procedural macros, test dependencies and the bindgen workspace member are excluded. A dependency used by both tooling and runtime remains included.
 
-Upstream: https://github.com/jhugman/uniffi-bindgen-react-native.
+This is a conservative cross-platform inventory, not a binary-size or linker-reachability report. New target families or non-default shipping features need corresponding generator coverage.
+
+## Text sources
+
+Cargo package archives and installed npm packages supply license, copyright and notice files.
+
+- Identical full license texts appear once in a shared section. Package entries reference them; copyright lines within those texts stay intact.
+- For `MIT OR Apache-2.0` (in either order), the generator selects MIT and omits the alternative Apache license file. The MIT text must be present.
+- Other license expressions retain their supplied texts. Supplemental copyright, attribution and notice files remain with each package.
+- Packages without license text fail generation unless they have an explicitly reviewed, version-pinned fallback.
+
+UniFFI 0.31.0 and the 0.31.0-6 browser runtimes omit their full MPL text from published packages. Their fallbacks use the preserved [upstream MPL text](uniffi/MPL-2.0.txt), the source-file notice and versioned upstream source links. Review these exceptions when updating versions.
+
+## Host distribution
+
+- **Apple:** the `EiginSDK` Swift package bundles the file as a resource and exposes `EiginSDK.thirdPartyNoticesURL`. The generated `NOTICES.json` catalog supplies the SDK version from `config/app.toml`, its AGPL-3.0 text from the repository `LICENSE`, and dependency metadata with shared license texts. iOS presents navigable subitems under Settings → About → Licenses → Eigin SDK, using the same detail screen as direct dependencies.
+- **Browser:** the SDK package carries `THIRD-PARTY-NOTICES.txt`. The browser host distributes an identical `SDK-NOTICES.txt` public asset and links to it.
+- **CLI:** `eigin notices` prints the shared artifact embedded in the executable.
+
+UniFFI is presented through the grouped Eigin SDK entry, including its source-availability notice and full MPL text. unicode-segmentation is also presented within the SDK group.
+
 Browser test/build tooling is listed in [web packages](web-packages.md).
-[UniFFI source notices and MPL text](uniffi/README.md) are also displayed by consumers that ship the runtime.

@@ -22,3 +22,14 @@ fn rejects_unknown_commands() {
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
 }
+
+#[test]
+fn prints_bundled_sdk_notices_without_initializing() {
+    let output = Command::new(env!("CARGO_BIN_EXE_eigin"))
+        .arg("notices")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stdout, eigin_sdk::THIRD_PARTY_NOTICES.as_bytes());
+    assert!(output.stderr.is_empty());
+}

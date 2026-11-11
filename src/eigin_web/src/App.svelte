@@ -17,4 +17,5 @@
   <h1>Eigin SDK test host</h1>
   <p>This page validates browser compatibility for the Eigin SDK. This test host will grow into the Eigin web application.</p>
   <p role="status">{status}</p>
+  <p><a href="./SDK-NOTICES.txt">Eigin SDK third-party notices</a></p>
 </main>

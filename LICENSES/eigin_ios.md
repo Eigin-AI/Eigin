@@ -15,7 +15,6 @@
 | swift-nio-imap (SwiftMail dependency) | https://github.com/apple/swift-nio-imap | resolved transitively | Apache 2.0 |
 | swift-nio-ssl (SwiftMail dependency) | https://github.com/apple/swift-nio-ssl | resolved transitively | Apache 2.0 |
 | LiteRT-LM (vendored, `src/eigin_ios/Packages/LiteRTLM`) | https://github.com/google-ai-edge/LiteRT-LM | 0.16.0 | Apache 2.0 |
-| unicode-segmentation (Eigin SDK runtime) | https://github.com/unicode-rs/unicode-segmentation | 1.13.3 | MIT (chosen from MIT OR Apache-2.0) |
 
 
 ## Test tooling
@@ -30,7 +29,7 @@ Minitest runs through Bundler and is not shipped in the app. Its installed
 ## SDK consumer
 
 The app consumes [Eigin SDK](eigin_sdk.md). Its Rust and browser dependency inventory belongs to the SDK.
-The app’s licenses view displays [UniFFI notices](uniffi/README.md) and unicode-segmentation's MIT attribution and license text for the shipped SDK runtime.
+The app’s Eigin SDK license group displays the SDK version, its AGPL-3.0 license, and navigable runtime dependency notices, including [UniFFI](uniffi/README.md) and unicode-segmentation.
 
 ## Notes
 

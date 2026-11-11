@@ -36,6 +36,9 @@ def main():
         phase(f"Install Node {NODE} and npm", lambda: install_node(tools))
         phase("Install just 1.59.0", lambda: install_just(tools))
         phase("Version check", lambda: run("cargo", "run", "--locked", "--manifest-path", "tools/Cargo.toml", "--", "version", "check"))
+        phase("Install locked npm packages", lambda: run("npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"))
+        phase("SDK notice coverage", lambda: run("cargo", "run", "--locked", "--manifest-path", "tools/Cargo.toml", "--", "sdk-notices", "--check"))
+        phase("SDK notice tests", lambda: run("cargo", "test", "--locked", "--manifest-path", "tools/Cargo.toml", "sdk::notices::tests"))
         for suite in ("version", "releases"):
             phase(f"{suite.title()} tests", lambda: run("cargo", "test", "--locked", "--manifest-path", "tools/Cargo.toml", "--test", suite))
 

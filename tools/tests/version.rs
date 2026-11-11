@@ -261,6 +261,7 @@ fn generation_synchronizes_versions_before_sdk_artifacts() {
     use std::os::unix::fs::PermissionsExt;
     let dir = fixture();
     let root = dir.path();
+    put(root, "LICENSE", "SDK license text");
     set_versions(root, "1.2.0", "0.1.0");
     for tool in ["ubrn", "vite"] {
         let path = format!("node_modules/.bin/{tool}");
@@ -273,6 +274,10 @@ fn generation_synchronizes_versions_before_sdk_artifacts() {
     }
     cli(root, &["generate", "sdk", "web"]).unwrap();
     version(root, "check").unwrap();
+    let catalog: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(root.join("src/eigin_sdk/NOTICES.json")).unwrap())
+            .unwrap();
+    assert_eq!(catalog["sdk"]["version"], "0.1.0");
     assert!(
         root.join("src/eigin_sdk/web/src/generated/test.ts")
             .exists()

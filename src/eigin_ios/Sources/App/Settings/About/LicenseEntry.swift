@@ -1,26 +1,40 @@
 import Foundation
 
-/// A third-party package shipped in the app. Mirrors `LICENSES/eigin_ios.md`
-/// at the repo root: add a row there and here together.
+/// License and attribution for a package or model distributed by the app.
 struct LicenseEntry: Identifiable {
     /// The license family the package ships under. Determines the license text
     /// shown in the app.
-    enum Kind: String {
-        case mit = "MIT"
-        case apache2 = "Apache 2.0"
-        case mpl2 = "MPL 2.0"
-        case bsd2 = "BSD 2-Clause"
-        case ccBy4 = "CC BY 4.0"
-        case gemma = "Gemma Terms of Use"
+    enum Kind {
+        case mit
+        case apache2
+        case mpl2
+        case bsd2
+        case ccBy4
+        case gemma
 
-        func licenseText() -> String {
+        case bundled(name: String, texts: [String])
+
+        var rawValue: String {
             switch self {
-            case .mit: LicenseTexts.mit
-            case .apache2: LicenseTexts.apache2
-            case .mpl2: LicenseTexts.mpl2
-            case .bsd2: LicenseTexts.bsd2
-            case .ccBy4: LicenseTexts.ccBy4
-            case .gemma: LicenseTexts.gemma
+            case .mit: "MIT"
+            case .apache2: "Apache 2.0"
+            case .mpl2: "MPL 2.0"
+            case .bsd2: "BSD 2-Clause"
+            case .ccBy4: "CC BY 4.0"
+            case .gemma: "Gemma Terms of Use"
+            case .bundled(let name, _): name
+            }
+        }
+
+        var texts: [String] {
+            switch self {
+            case .mit: [LicenseTexts.mit]
+            case .apache2: [LicenseTexts.apache2]
+            case .mpl2: [LicenseTexts.mpl2]
+            case .bsd2: [LicenseTexts.bsd2]
+            case .ccBy4: [LicenseTexts.ccBy4]
+            case .gemma: [LicenseTexts.gemma]
+            case .bundled(_, let texts): texts
             }
         }
     }
@@ -39,7 +53,7 @@ struct LicenseEntry: Identifiable {
     /// Package-specific license and source-availability notices.
     var notice: String?
     var id: String {
-        name
+        [name, version ?? "", distribution ?? ""].joined(separator: "|")
     }
 
     /// Short provenance for the list row: a version, or how it's included.
@@ -65,30 +79,6 @@ struct LicenseEntry: Identifiable {
 
     /// Every package distributed inside the app binary, in display order.
     static let all: [LicenseEntry] = [
-        LicenseEntry(
-            name: "UniFFI",
-            repository: URL(string: "https://github.com/mozilla/uniffi-rs/tree/v0.31.0"),
-            version: "0.31.0",
-            distribution: "Rust runtime in Eigin SDK",
-            kind: .mpl2,
-            copyright: "UniFFI project contributors",
-            notice: """
-            Eigin SDK incorporates UniFFI runtime crates, including uniffi and uniffi_core, under MPL 2.0. Their source code is unmodified and available at https://github.com/mozilla/uniffi-rs/tree/v0.31.0. Eigin's SDK integration source is available at https://code.eigin.ai/dev/eigin/-/tree/main/src/eigin_sdk.
-
-            Upstream source notice:
-            This Source Code Form is subject to the terms of the Mozilla Public
-            License, v. 2.0. If a copy of the MPL was not distributed with this
-            file, You can obtain one at http://mozilla.org/MPL/2.0/.
-            """
-        ),
-        LicenseEntry(
-            name: "unicode-segmentation",
-            repository: URL(string: "https://github.com/unicode-rs/unicode-segmentation"),
-            version: "1.13.3",
-            distribution: "Rust runtime in Eigin SDK",
-            kind: .mit,
-            copyright: "Copyright (c) 2015 The Rust Project Developers"
-        ),
         LicenseEntry(
             name: "SwiftStreamingMarkdown",
             repository: URL(string: "https://github.com/microsoft/SwiftStreamingMarkdown"),
