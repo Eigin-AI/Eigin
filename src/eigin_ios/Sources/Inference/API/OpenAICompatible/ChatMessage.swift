@@ -18,7 +18,7 @@ struct ChatMessage: Codable {
     var reasoningHistory: ReasoningHistory? = nil
 
     /// Provider-specific metadata (e.g. Gemini thought_signature).
-    /// Not part of CodingKeys — injected into the request body by the ProviderAdapter.
+    /// Not part of CodingKeys — passed to the SDK for provider-specific request conversion.
     var providerMetadata: [String: String]?
 
     /// Compaction event, local-only (not sent to the API): this message is a
@@ -87,7 +87,7 @@ struct ChatMessage: Codable {
     /// Custom encoding that omits nil optional fields instead of writing null.
     /// Gemini and other providers reject unexpected null fields.
     /// Provider-specific details (e.g. thought_signature) are injected by the
-    /// ProviderAdapter via JSON post-processing, not during encoding.
+    /// SDK request conversion, not during encoding.
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(role, forKey: .role)

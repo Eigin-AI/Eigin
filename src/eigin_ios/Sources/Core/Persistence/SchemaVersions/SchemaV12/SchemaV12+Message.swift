@@ -71,7 +71,7 @@ extension SchemaV12 {
                 localID: id.uuidString
             )
             if let data = reasoningHistoryData {
-                msg.reasoningHistory = ProviderAdapterFactory.decodeReasoningHistory(data)
+                msg.reasoningHistory = ReasoningHistory.decodeStored(data)
             }
             msg.isCompactionSummary = isCompactionSummary
             msg.compactionRetainedMessageCount = compactionRetainedMessageCount

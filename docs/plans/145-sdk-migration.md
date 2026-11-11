@@ -223,6 +223,16 @@ Keep the main sections current; retain superseded decisions here. Link future en
 - **Removed code:** standalone `BindingErrors.swift` and `errors.html`; cases now share host runners. Host checks are included in `just test sdk` and default `just test`.
 - **Next increments:** add contract cases for new boundary shapes and runtime tests for platform-sensitive operations. Streaming, cancellation, and async platform adapters remain unproven.
 
+### #332 — OpenAI-compatible inference
+
+- **Boundary:** provider behavior belongs under `inference::openai_compatible`; shared messages/events remain at the inference root. Hosts own model catalogs, credentials, persistence, tools and lifecycle policy.
+- **Async bindings:** UniFFI 0.31.0 async callback traits fail Swift 6 checks. Synchronous callbacks with single-use response handles support host networking without generated-code patches. A callback named `open` also produced invalid generated C; use `start_request`.
+- **Cancellation:** foreign tasks need explicit cancellation forwarding. The SDK exposes cancellable operation/stream handles; host packages adapt them to async methods and iterators. Browser iterator `return()` must interrupt pending work immediately; async generators queue it behind a pending read.
+- **Networking:** Apple retains its URLSession. Native HTTP owns its Tokio runtime so headless callers need no ambient executor. Keep provider semantics tested through injected HTTP; test transport-specific cancellation and byte delivery at each platform boundary.
+- **Host conversion:** new value-mapping helpers use the `*SDKConversion` suffix. Existing app protocols and persisted models stay host-owned until their consuming domain moves. Keep legacy reasoning decoding separate from these conversions.
+- **Packaging:** native TLS requires explicit Apple deployment targets and shipped dependency notices. The SDK owns the shared notice inventory and host resource copies.
+- **Open merge gates:** real-device foreground/background/resume, stop and budget-expiry/checkpoint checks; comparable production transport measurements for text/tools (first-event latency, throughput, reads/callbacks, allocations and buffering). Keep the MR draft until these are recorded or explicitly revised by the approver. Authenticated remote streaming/CORS and release signing also remain unverified.
+
 For each completed increment, add:
 
 - **Issue / MR:** links to scope and implementation.

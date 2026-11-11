@@ -1,3 +1,4 @@
+import EiginSDK
 import Foundation
 
 /// Errors thrown by ``OpenAICompatibleClient`` during URL construction, response validation, or
@@ -24,20 +25,6 @@ enum OpenAICompatibleClientError: LocalizedError {
             return false
         }
         guard let body else { return false }
-        let lower = body.lowercased()
-        let hints = [
-            "model_not_found",
-            "model not found",
-            "no such model",
-            "unknown model",
-            "invalid model",
-            "unsupported model",
-        ]
-        if hints.contains(where: { lower.contains($0) }) { return true }
-        // Phrasings like "The model `x` does not exist" or "model 'x' is not available".
-        return lower.contains("model")
-            && (lower.contains("does not exist")
-                || lower.contains("is not available")
-                || lower.contains("not a valid model"))
+        return EiginSDK.Experimental.Inference.isModelNotFound(status: UInt16(code), body: body)
     }
 }

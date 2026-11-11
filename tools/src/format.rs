@@ -4,7 +4,7 @@ use std::process::Command;
 /// Format all code in the repo.
 ///
 /// - Swift: runs swiftformat on iOS sources, tests, and scripts.
-/// - Rust: runs cargo fmt on the relay and tools crates.
+/// - Rust: runs cargo fmt on the relay, tools, SDK and CLI crates.
 /// - Web: runs prettier + eslint --fix on design/web.
 #[derive(clap::Args)]
 pub struct FormatArgs {}

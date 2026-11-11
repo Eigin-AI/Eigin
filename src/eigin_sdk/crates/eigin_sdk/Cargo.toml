@@ -16,6 +16,15 @@ binding-tests = []
 uniffi.workspace = true
 thiserror = "2"
 unicode-segmentation = "1.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+url = "2"
+web-time = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uniffi-runtime-wasm = "=0.31.0-6"

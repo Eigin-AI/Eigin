@@ -1,4 +1,5 @@
 @testable import Eigin
+import EiginSDK
 import Foundation
 import Testing
 
@@ -59,29 +60,51 @@ struct ImageWireConversionTests {
         }
     }
 
-    // MARK: - ChatCompletionMessage (OpenAI-compatible wire format)
+    private func wireJSON(
+        _ message: ChatMessage,
+        store: any ChatAttachmentStoring
+    ) async throws -> [String: Any] {
+        let session = FakeURLProtocol.fakeSession()
+        let base = "https://image-wire-\(UUID().uuidString.lowercased()).test/v1"
+        let url = base + "/chat/completions"
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data("data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"
+                .utf8),
+            statusCode: 200
+        )
+        let client = EiginSDK.Experimental.Inference.OpenAICompatible(
+            configuration: .init(baseUrl: base, apiToken: "test", extraHeaders: [:]),
+            session: session
+        )
+        let completion = try await client.stream(.init(
+            model: "test", messages: [OpenAICompatibleSDKConversion.message(message, store: store)],
+            tools: nil, reasoningEffort: nil, promptCacheKey: nil, modelFamily: nil,
+            isRelay: false, reasoningOrigin: nil, textOnly: false
+        ))
+        defer { completion.cancel() }
+        let body = try #require(FakeURLProtocol.lastRequestBody(for: url))
+        let root = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        return try #require((root["messages"] as? [[String: Any]])?.first)
+    }
 
-    @Test func wireMessageWithoutAttachmentsEncodesPlainTextContent() throws {
+    // MARK: - Host attachment conversion through the SDK
+
+    @Test func wireMessageWithoutAttachmentsEncodesPlainTextContent() async throws {
         let message = ChatMessage(role: "user", content: "hello")
-        let wire = ChatCompletionMessage(message, store: StubStore())
-
-        let data = try JSONEncoder().encode(wire)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let json = try await wireJSON(message, store: StubStore())
 
         #expect(json["content"] as? String == "hello")
     }
 
-    @Test func wireMessageWithAttachmentsEncodesContentPartsArray() throws {
+    @Test func wireMessageWithAttachmentsEncodesContentPartsArray() async throws {
         let store = StubStore(data: Data("stubimage".utf8))
         let message = ChatMessage(
             role: "user",
             content: "Describe this.",
             attachments: [attachment()]
         )
-        let wire = ChatCompletionMessage(message, store: store)
-
-        let data = try JSONEncoder().encode(wire)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let json = try await wireJSON(message, store: store)
         let parts = try #require(json["content"] as? [[String: Any]])
 
         #expect(parts.count == 2)
@@ -94,29 +117,23 @@ struct ImageWireConversionTests {
         #expect(imageURL["detail"] as? String == "high")
     }
 
-    @Test func wireMessageImageOnlyOmitsTextPart() throws {
+    @Test func wireMessageImageOnlyOmitsTextPart() async throws {
         let message = ChatMessage(role: "user", content: nil, attachments: [attachment()])
-        let wire = ChatCompletionMessage(message, store: StubStore())
-
-        let data = try JSONEncoder().encode(wire)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let json = try await wireJSON(message, store: StubStore())
         let parts = try #require(json["content"] as? [[String: Any]])
 
         #expect(parts.count == 1)
         #expect(parts[0]["type"] as? String == "image_url")
     }
 
-    @Test func wireMessageKeepsTextPartWhenAttachmentBytesUnavailable() throws {
+    @Test func wireMessageKeepsTextPartWhenAttachmentBytesUnavailable() async throws {
         // Text alongside an unloadable image: the text part is still included,
         // just without a matching image part (mirrors legacy behavior).
         let att = attachment()
         let store = StubStore()
         store.missingIDs = [att.id]
         let message = ChatMessage(role: "user", content: "hello", attachments: [att])
-        let wire = ChatCompletionMessage(message, store: store)
-
-        let data = try JSONEncoder().encode(wire)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let json = try await wireJSON(message, store: store)
         let parts = try #require(json["content"] as? [[String: Any]])
 
         #expect(parts.count == 1)
@@ -124,17 +141,14 @@ struct ImageWireConversionTests {
         #expect(parts[0]["text"] as? String == "hello")
     }
 
-    @Test func wireMessageOmitsContentWhenImageOnlyAndBytesUnavailable() throws {
+    @Test func wireMessageOmitsContentWhenImageOnlyAndBytesUnavailable() async throws {
         // Image-only message whose bytes can't be loaded: no parts were built,
         // so content falls back to the (nil) plain text and is omitted entirely.
         let att = attachment()
         let store = StubStore()
         store.missingIDs = [att.id]
         let message = ChatMessage(role: "user", content: nil, attachments: [att])
-        let wire = ChatCompletionMessage(message, store: store)
-
-        let data = try JSONEncoder().encode(wire)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let json = try await wireJSON(message, store: store)
 
         #expect(json["content"] == nil)
     }

@@ -69,13 +69,11 @@ pub fn clear_diagnostic_receiver() {
 }
 
 /// Builder available only after the receiver and severity filters pass.
-#[allow(dead_code)] // Used by binding fixtures until the first production SDK operation.
 pub(crate) struct EventBuilder {
     include_private: bool,
     fields: Vec<DiagnosticField>,
 }
 
-#[allow(dead_code)] // Used by binding fixtures until the first production SDK operation.
 impl EventBuilder {
     pub(crate) fn field(
         &mut self,
@@ -93,7 +91,6 @@ impl EventBuilder {
 }
 
 /// Emits lazily so disabled diagnostics do not format fields or context.
-#[allow(dead_code)] // Production operations will use this as they move into the SDK.
 pub(crate) fn emit(
     level: DiagnosticLevel,
     component: &'static str,
@@ -133,7 +130,10 @@ pub(crate) fn emit(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    // Serialize tests that register or emit through the global receiver.
+    pub(crate) static RECEIVER_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -158,6 +158,7 @@ mod tests {
 
     #[test]
     fn filters_privacy_and_manages_receiver_lifetime_under_concurrency() {
+        let _registration = RECEIVER_TEST_LOCK.lock().unwrap();
         clear_diagnostic_receiver();
         emit(DiagnosticLevel::Info, "test", "Silent", |_| {
             panic!("no receiver")

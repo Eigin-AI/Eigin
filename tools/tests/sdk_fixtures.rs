@@ -39,6 +39,7 @@ fn browser_fixture_check_does_not_invoke_native_compilers() {
         .env("TEST_ROOT", root)
         .env("TEST_LOG", &log)
         .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
+        .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
         .output()
         .unwrap();
     assert!(
@@ -55,6 +56,7 @@ fn browser_fixture_check_does_not_invoke_native_compilers() {
 #[test]
 fn sdk_web_generation_restores_missing_npm_tooling() {
     let directory = version_support::fixture();
+    fs::write(directory.path().join("LICENSE"), "SDK license text").unwrap();
     let root = directory.path();
     let bin = root.join("bin");
     fs::create_dir_all(&bin).unwrap();
@@ -83,10 +85,14 @@ touch "$TEST_ROOT/node_modules/.bin/vite"
         let output = Command::new(env!("CARGO_BIN_EXE_eigin-tools"))
             .args(["generate", "sdk", "web"])
             .current_dir(root)
-            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
+            .env(
+                "PATH",
+                format!("{}:{}", bin.display(), std::env::var("PATH").unwrap()),
+            )
             .env("TEST_ROOT", root)
             .env("TEST_LOG", &log)
             .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
+            .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
             .output()
             .unwrap();
         assert!(

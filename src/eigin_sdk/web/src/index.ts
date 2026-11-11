@@ -1,3 +1,5 @@
+export * from "./inference";
+
 import {
   initialize as initializeRust,
   uniffiInitAsync,

@@ -190,6 +190,10 @@ fn cli(root: &Path, args: &[&str]) -> Result<String> {
         .args(args)
         .env("GIT_DIR", String::from_utf8(git_dir.stdout).unwrap().trim())
         .env("GIT_WORK_TREE", root)
+        .env(
+            "UBRN_WASM_BINDGEN",
+            root.join("node_modules/.bin/wasm-bindgen"),
+        )
         .output()?;
     if !output.status.success() {
         bail!("{}", String::from_utf8_lossy(&output.stderr));
@@ -263,7 +267,7 @@ fn generation_synchronizes_versions_before_sdk_artifacts() {
     let root = dir.path();
     put(root, "LICENSE", "SDK license text");
     set_versions(root, "1.2.0", "0.1.0");
-    for tool in ["ubrn", "vite"] {
+    for tool in ["ubrn", "vite", "wasm-bindgen"] {
         let path = format!("node_modules/.bin/{tool}");
         put(
             root,

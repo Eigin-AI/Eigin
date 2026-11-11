@@ -6,7 +6,7 @@ use crate::{config, localize};
 /// Lint all code in the repo without modifying files.
 ///
 /// - Swift: runs swiftformat --lint on iOS sources, tests, and scripts.
-/// - Rust: runs cargo fmt --check on the relay and tools crates.
+/// - Rust: runs cargo fmt --check on the relay, tools, SDK and CLI crates.
 /// - Web: runs prettier --check + eslint on design/web.
 /// - Localization: validates that all String(localized:) keys exist in Localized.swift.
 #[derive(clap::Args)]
@@ -42,6 +42,23 @@ pub fn run(_args: LintArgs) -> Result<()> {
         if !run_cmd(
             Command::new("cargo").args(["fmt", "--manifest-path", manifest, "--", "--check"]),
             label,
+        )? {
+            failed = true;
+        }
+    }
+
+    for manifest in ["src/eigin_sdk/Cargo.toml", "src/eigin_cli/Cargo.toml"] {
+        if !run_cmd(
+            Command::new("cargo").args([
+                "+1.99.1",
+                "fmt",
+                "--manifest-path",
+                &format!("{root}/{manifest}"),
+                "--all",
+                "--",
+                "--check",
+            ]),
+            "cargo fmt --check (SDK/CLI)",
         )? {
             failed = true;
         }

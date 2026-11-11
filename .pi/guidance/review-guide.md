@@ -167,3 +167,17 @@ Fake at the boundary, to trigger upstream conditions the test needs or to stand 
 ```
 
 Nothing to flag is a normal result: say `LGTM — nothing to flag.` and stop.
+
+## SDK structure and usage
+
+- Name domain concepts explicitly, including private types; distinguish callback handles, operations and streams.
+- Keep module declarations as catalogs; put implementation and shared types in focused files.
+- Express multi-step work through named helpers and visible sections; consider splitting files beyond 150–200 lines by responsibility.
+- Use `*SDKConversion` for new host-to-SDK value mapping; retain existing host APIs until their consuming domain moves.
+- Keep provider behavior tests at the injected HTTP boundary; host tests cover host-specific contracts rather than repeating provider semantics.
+- Keep test fixtures visibly test-only; inline local tests and group cross-component cases separately.
+- Explain SDK concepts and consumer workflows in published docs; keep module comments brief and avoid standalone implementation inventories.
+- Keep migration records focused on structural choices and reusable lessons; track verification gates explicitly without long execution logs.
+
+- Keep introductory SDK pages short and outside-in: purpose, how to use it, and links; put transport mechanics beside the implementation.
+- Name the SDK as the owner of behavior; mention Rust only when the implementation language matters.

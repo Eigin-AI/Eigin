@@ -1,25 +1,19 @@
+import EiginSDK
 import Factory
 import Foundation
 
-/// HTTP client for any provider that implements the OpenAI-compatible REST API (`/models`,
-/// `/chat/completions`).
-/// The base URL should already include the version prefix (e.g. `https://api.openai.com/v1`).
+/// App-facing adapter for SDK inference. Credentials, attachments and selection stay in the host.
 struct OpenAICompatibleClient: LLMClient {
     let baseURL: String
     let apiToken: String
-    /// Extra headers applied to every request (e.g. the relay's `X-Eigin-Key`).
     let extraHeaders: [String: String]
     let session: URLSession
     let providerID: UUID?
     let isEiginRelay: Bool
 
     init(
-        baseURL: String,
-        apiToken: String,
-        extraHeaders: [String: String] = [:],
-        session: URLSession = .shared,
-        providerID: UUID? = nil,
-        isEiginRelay: Bool = false
+        baseURL: String, apiToken: String, extraHeaders: [String: String] = [:],
+        session: URLSession = .shared, providerID: UUID? = nil, isEiginRelay: Bool = false
     ) {
         self.baseURL = baseURL
         self.apiToken = apiToken
@@ -29,367 +23,100 @@ struct OpenAICompatibleClient: LLMClient {
         self.isEiginRelay = isEiginRelay
     }
 
-    /// Applies the configured extra headers to a request.
-    private func applyExtraHeaders(to request: inout URLRequest) {
-        for (field, value) in extraHeaders {
-            request.setValue(value, forHTTPHeaderField: field)
-        }
-    }
-
-    /// Resolves the provider adapter for a specific model, using both the base URL
-    /// and model name so routed models (e.g. Mistral on OpenRouter) get the right adapter.
-    private func adapter(for model: String) -> ProviderAdapter {
-        ProviderAdapterFactory.adapter(for: baseURL, model: model, isEiginRelay: isEiginRelay)
-    }
-
-    /// Fetches the list of available model IDs from the provider, deduplicated and returned sorted
-    /// alphabetically. Some providers (e.g. Mistral) list the same model ID more than once.
-    func fetchModels() async throws -> [String] {
-        let url = try buildURL(path: "/models")
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        applyExtraHeaders(to: &request)
-
-        let (data, response) = try await session.data(for: request)
-        try validateResponse(response)
-
-        let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
-        return Set(modelsResponse.data.map(\.id)).sorted()
-    }
-
-    /// Validates the API key by making a minimal non-streaming completion request.
-    /// Only throws on authentication failures (401/403). Other HTTP errors (404, 400, etc.)
-    /// are ignored because they likely mean the chosen model doesn't support chat completions,
-    /// not that the key is invalid — especially for providers like Google whose `/models`
-    /// endpoint already requires auth.
-    func validateAPIKey(model: String) async throws {
-        let url = try buildURL(path: "/chat/completions")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        applyExtraHeaders(to: &request)
-
-        var body = ChatCompletionRequest(
-            model: model,
-            messages: [ChatCompletionMessage(
-                ChatMessage(role: "user", content: "hi"),
-                store: Container.shared.chatAttachmentStore()
-            )],
-            stream: false
+    private var sdk: EiginSDK.Experimental.Inference.OpenAICompatible {
+        .init(
+            configuration: .init(baseUrl: baseURL, apiToken: apiToken, extraHeaders: extraHeaders),
+            session: session
         )
-        body.maxTokens = 1
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (_, response) = try await session.data(for: request)
-
-        guard let http = response as? HTTPURLResponse else {
-            throw OpenAICompatibleClientError.invalidResponse
-        }
-        // Only treat auth failures as validation errors
-        if http.statusCode == 401 || http.statusCode == 403 {
-            throw OpenAICompatibleClientError.httpError(http.statusCode)
-        }
     }
 
-    /// Opens a streaming chat completion request and yields content deltas as they arrive via
-    /// server-sent events.
+    func fetchModels() async throws -> [String] {
+        do { return try await sdk.fetchModels() }
+        catch { throw OpenAICompatibleSDKConversion.error(error) }
+    }
+
+    func validateAPIKey(model: String) async throws {
+        do { try await sdk.validateAPIKey(model: model) }
+        catch { throw OpenAICompatibleSDKConversion.error(error) }
+    }
+
     func chatCompletionStream(
         messages: [ChatMessage],
         model: String
     ) async throws -> AsyncThrowingStream<String, Error> {
-        let url = try buildURL(path: "/chat/completions")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        applyExtraHeaders(to: &request)
-
-        let store = Container.shared.chatAttachmentStore()
-        let body = ChatCompletionRequest(
-            model: model,
-            messages: messages.map { ChatCompletionMessage(
-                $0,
-                store: store
-            ) },
-            stream: true
-        )
-        let encoded = try JSONEncoder().encode(body)
-        request.httpBody = try adapter(for: model).processRequestBody(
-            encoded,
+        let completion = try await start(
             messages: messages,
-            reasoningOrigin: reasoningOrigin(for: model)
+            model: model,
+            tools: nil,
+            cacheKey: nil,
+            reasoningEffort: nil,
+            textOnly: true
         )
-
-        let (bytes, response) = try await session.bytes(for: request)
-        try validateResponse(response)
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    for try await line in bytes.lines {
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = String(line.dropFirst(6))
-
-                        if payload == "[DONE]" { break }
-
-                        guard let chunkData = payload.data(using: .utf8) else { continue }
-
-                        // Check for inline error before normal decoding
-                        if let streamError = try? JSONDecoder().decode(
-                            StreamErrorResponse.self,
-                            from: chunkData
-                        ) {
-                            throw OpenAICompatibleClientError.httpError(
-                                0,
-                                body: streamError.error.message
-                            )
-                        }
-
-                        let chunk = try JSONDecoder().decode(
-                            ChatCompletionChunk.self,
-                            from: chunkData
-                        )
-
-                        if let content = chunk.choices.first?.delta.content {
-                            continuation.yield(content)
-                        }
-                    }
-
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
+        return AsyncThrowingStream(unfolding: {
+            do {
+                while let event = try await completion.next() {
+                    if case .contentDelta(let text) = event { return text }
                 }
-            }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
-        }
+                return nil
+            } catch { throw OpenAICompatibleSDKConversion.error(error) }
+        })
     }
 
-    /// Opens a streaming chat completion request and yields structured events
-    /// including content deltas and tool calls.
     func chatCompletionEventStream(
-        messages: [ChatMessage],
-        model: String,
-        tools: [ToolDefinition]? = nil,
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]? = nil,
         cacheKey: String? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         try await chatCompletionEventStream(
-            messages: messages, model: model, tools: tools, cacheKey: cacheKey, reasoningEffort: nil
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            reasoningEffort: nil
         )
     }
 
     func chatCompletionEventStream(
-        messages: [ChatMessage],
-        model: String,
-        tools: [ToolDefinition]? = nil,
-        cacheKey: String?,
-        reasoningEffort: ReasoningEffort?
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]? = nil,
+        cacheKey: String?, reasoningEffort: ReasoningEffort?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        let url = try buildURL(path: "/chat/completions")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        applyExtraHeaders(to: &request)
-
-        let resolvedAdapter = adapter(for: model)
-        let store = Container.shared.chatAttachmentStore()
-        var body = ChatCompletionRequest(
-            model: model,
-            messages: messages.map { ChatCompletionMessage(
-                $0,
-                store: store
-            ) },
-            stream: true
-        )
-        body.reasoningEffort = reasoningEffort
-        body.tools = tools
-        body.promptCacheKey = resolvedAdapter.usesPromptCacheKey ? cacheKey : nil
-        let encoded = try JSONEncoder().encode(body)
-        request.httpBody = try resolvedAdapter.processRequestBody(
-            encoded,
+        let completion = try await start(
             messages: messages,
-            reasoningOrigin: reasoningOrigin(for: model)
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            reasoningEffort: reasoningEffort,
+            textOnly: false
         )
-
-        AppLogger.debug(
-            "Request: \(public: model) with \(public: messages.count) messages, tools: \(public: tools?.count ?? 0)",
-            category: .network
-        )
-        let (bytes, response) = try await session.bytes(for: request)
-
-        // Handle HTTP errors before returning the stream
-        if let http = response as? HTTPURLResponse, !(200 ... 299).contains(http.statusCode) {
-            var errorBody = ""
-            for try await line in bytes.lines {
-                errorBody += line
-                if errorBody.count > 500 { break }
-            }
-            AppLogger.error(
-                "HTTP \(public: http.statusCode) error: \(private: errorBody.prefix(500))",
-                category: .network
-            )
-            throw OpenAICompatibleClientError.httpError(
-                http.statusCode,
-                body: errorBody.isEmpty ? nil : String(errorBody.prefix(2000))
-            )
-        }
-
-        return AsyncThrowingStream { continuation in
-            let task = Task {
-                var didRefuse = false
-                do {
-                    var accumulator = ToolCallAccumulator()
-                    var reasoning = resolvedAdapter
-                        .makeReasoningCapture(origin: reasoningOrigin(for: model))
-                    var didFinish = false
-                    var lineCount = 0
-
-                    for try await line in bytes.lines {
-                        lineCount += 1
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = String(line.dropFirst(6))
-
-                        if payload == "[DONE]" {
-                            AppLogger.debug(
-                                "[DONE] at line \(public: lineCount)",
-                                category: .network
-                            )
-                            break
-                        }
-
-                        guard let chunkData = payload.data(using: .utf8) else { continue }
-
-                        let chunk: ChatCompletionChunk
-                        do {
-                            chunk = try JSONDecoder().decode(
-                                ChatCompletionChunk.self,
-                                from: chunkData
-                            )
-                        } catch {
-                            // Check for an inline error object before skipping
-                            if let streamError = try? JSONDecoder().decode(
-                                StreamErrorResponse.self,
-                                from: chunkData
-                            ) {
-                                AppLogger.error(
-                                    "Inline error: \(public: streamError.error.type) — \(private: streamError.error.message)",
-                                    category: .network
-                                )
-                                throw OpenAICompatibleClientError.httpError(
-                                    0,
-                                    body: streamError.error.message
-                                )
-                            }
-                            reasoning?.invalidate()
-                            AppLogger.debug("Skipping unparseable stream chunk", category: .network)
-                            continue
-                        }
-
-                        guard let choice = chunk.choices.first else { continue }
-
-                        if let refusal = choice.delta.refusal, !refusal.isEmpty {
-                            continuation.yield(.contentDelta(refusal))
-                            didRefuse = true
-                        }
-                        reasoning?.append(chunk: chunkData)
-
-                        // Accumulate content deltas
-                        if let content = choice.delta.content {
-                            continuation.yield(.contentDelta(content))
-                        }
-
-                        // Accumulate tool call deltas
-                        if let toolCallDeltas = choice.delta.toolCalls {
-                            for delta in toolCallDeltas {
-                                accumulator.feed(delta)
-                            }
-                        }
-
-                        // Check finish reason — break out immediately to avoid
-                        // writing to the continuation after it's consumed.
-                        if let reason = choice.finishReason {
-                            if didRefuse { throw StreamCompletionError.policyStop }
-                            if reason == "length" { throw StreamCompletionError.outputLimit }
-                            if reason == "content_filter" { throw StreamCompletionError.policyStop }
-                            guard reason == "stop" || reason == "tool_calls" else {
-                                throw StreamCompletionError.policyStop
-                            }
-                            if reason == "stop" || reason == "tool_calls",
-                               let history = reasoning?.completed()
-                            {
-                                continuation.yield(.reasoningHistory(history))
-                            }
-                            if reason == "tool_calls" ||
-                                (resolvedAdapter.treatsStopAsToolCalls && accumulator.hasToolCalls)
-                            {
-                                // Emit provider metadata before tool calls so the
-                                // consumer can attach it to the assistant message.
-                                if let meta = accumulator.capturedProviderMetadata {
-                                    continuation.yield(.providerMetadata(meta))
-                                }
-                                let calls = accumulator.finalize()
-                                if !calls.isEmpty {
-                                    for call in calls {
-                                        continuation.yield(.toolCall(call))
-                                    }
-                                    continuation.yield(.finished(.toolCalls))
-                                } else {
-                                    continuation.yield(.finished(.stop))
-                                }
-                            } else {
-                                continuation.yield(.finished(.stop))
-                            }
-                            didFinish = true
-                            break
-                        }
-                    }
-
-                    AppLogger.debug(
-                        "Stream done. \(public: lineCount) lines, didFinish=\(public: didFinish)",
-                        category: .network
-                    )
-
-                    if !didFinish { throw StreamCompletionError.interrupted }
-
-                    continuation.finish()
-                } catch {
-                    continuation
-                        .finish(throwing: didRefuse ? StreamCompletionError.policyStop : error)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
-        }
+        return AsyncThrowingStream(unfolding: {
+            do { return try await completion.next().map(OpenAICompatibleSDKConversion.event) }
+            catch { throw OpenAICompatibleSDKConversion.error(error) }
+        })
     }
 
-    private func reasoningOrigin(for model: String) -> ReasoningOrigin? {
-        ReasoningOrigin.destination(
+    private func start(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool
+    ) async throws -> EiginSDK.Experimental.Inference.Stream {
+        let store = Container.shared.chatAttachmentStore()
+        let origin = ReasoningOrigin.destination(
             providerID: providerID,
             baseURL: baseURL,
             model: model
         )
-    }
-
-    private func buildURL(path: String) throws -> URL {
-        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
-        guard let url = URL(string: base + path) else {
-            throw OpenAICompatibleClientError.invalidURL(baseURL)
-        }
-        return url
-    }
-
-    private func validateResponse(_ response: URLResponse) throws {
-        guard let http = response as? HTTPURLResponse else {
-            throw OpenAICompatibleClientError.invalidResponse
-        }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw OpenAICompatibleClientError.httpError(http.statusCode)
-        }
+        let input = try EiginSDK.Experimental.Inference.Input(
+            model: model, messages: messages.map { OpenAICompatibleSDKConversion.message(
+                $0,
+                store: store
+            ) },
+            tools: tools?.map(OpenAICompatibleSDKConversion.tool),
+            reasoningEffort: reasoningEffort?.rawValue,
+            promptCacheKey: cacheKey,
+            modelFamily: OpenAICompatibleSDKConversion
+                .family(KnownModelCatalog.lookup(model)?.family),
+            isRelay: isEiginRelay || ProviderPreset.isRelay(baseURL),
+            reasoningOrigin: origin.map(OpenAICompatibleSDKConversion.origin), textOnly: textOnly
+        )
+        do { return try await sdk.stream(input) }
+        catch { throw OpenAICompatibleSDKConversion.error(error) }
     }
 }
