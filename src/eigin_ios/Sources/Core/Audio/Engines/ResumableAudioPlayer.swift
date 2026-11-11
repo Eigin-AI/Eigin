@@ -1,4 +1,3 @@
-#if !targetEnvironment(simulator)
 @preconcurrency import AVFoundation
 
 /// An `AVAudioEngine` + `AVAudioPlayerNode` pair that survives audio route
@@ -157,4 +156,3 @@ final class ResumableAudioPlayer {
         }
     }
 }
-#endif
