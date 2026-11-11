@@ -12,6 +12,10 @@ tools     := "cargo run --quiet --manifest-path tools/Cargo.toml --"
 
 # --- Cross-cutting ---
 
+[doc('Generate shared SDK runtime notices (pass --check to verify)')]
+sdk-notices *args="":
+    {{ tools }} sdk-notices {{ args }}
+
 [doc('Manage product and SDK versions (show | sync | check)')]
 version action="show":
     {{ tools }} version {{ quote(action) }}

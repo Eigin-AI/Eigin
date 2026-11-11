@@ -35,6 +35,11 @@ enum Command {
     Version(version::Args),
     /// Run all code generation tasks for the project.
     Generate(generate::GenerateArgs),
+    /// Generate shared SDK runtime notices, or check committed output.
+    SdkNotices {
+        #[arg(long)]
+        check: bool,
+    },
     /// Check test-only SDK bindings for web or Apple.
     CheckSdkBindings(sdk_fixtures::Args),
     /// Manage and upload self-hosted model assets.
@@ -70,6 +75,7 @@ enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Command::SdkNotices { check } => sdk::notices::generate(&config::repo_root()?, check),
         Command::Version(args) => version::run(args),
         Command::Generate(args) => generate::run(args),
         Command::CheckSdkBindings(args) => sdk_fixtures::run_check(args),

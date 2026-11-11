@@ -11,6 +11,9 @@ mod diagnostics;
 
 pub use diagnostics::*;
 
+/// License and copyright notices for SDK runtime dependencies across supported hosts.
+pub const THIRD_PARTY_NOTICES: &str = include_str!("../../../THIRD-PARTY-NOTICES.txt");
+
 /// A failure while preparing the SDK for use.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum InitializationError {

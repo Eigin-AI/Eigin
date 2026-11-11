@@ -29,8 +29,8 @@ class VersionsTests(unittest.TestCase):
                 patch.object(versions, "run") as run, contextlib.redirect_stdout(output):
             versions.main()
         self.assertIn("check", run.call_args_list[0].args)
-        self.assertEqual([c.args[-1] for c in run.call_args_list[1:]], ["version", "releases"])
-        self.assertEqual(output.getvalue().count("Duration:"), 5)
+        self.assertEqual([c.args[-1] for c in run.call_args_list[1:]], ["--no-fund", "--check", "sdk::notices::tests", "version", "releases"])
+        self.assertEqual(output.getvalue().count("Duration:"), 8)
 
     def test_failed_command_stops_tests(self):
         with patch.object(versions, "install_node"), patch.object(versions, "install_just"), \

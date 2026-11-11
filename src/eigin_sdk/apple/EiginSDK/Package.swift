@@ -8,7 +8,11 @@ let package = Package(
     targets: [
         .binaryTarget(name: "eigin_sdkFFI", path: "Artifacts/EiginSDKBindings.xcframework"),
         .target(name: "EiginSDKBindings", dependencies: ["eigin_sdkFFI"]),
-        .target(name: "EiginSDK", dependencies: ["EiginSDKBindings"]),
+        .target(
+            name: "EiginSDK",
+            dependencies: ["EiginSDKBindings"],
+            resources: [.copy("Resources/THIRD-PARTY-NOTICES.txt"), .copy("Resources/NOTICES.json")]
+        ),
         .testTarget(name: "EiginSDKTests", dependencies: ["EiginSDK"]),
     ]
 )
