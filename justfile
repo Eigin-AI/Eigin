@@ -318,8 +318,9 @@ assets *args:
 # because a device can be called "Daniel's iPhone (2)".
 
 [doc('Run a target (target: relay | web | ios | cli; cli runs in foreground). web: [site | gallery | app]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
-run target="relay" mode="" value="" env="":
-    @{{ tools }} run {{ quote(target) }} {{ quote(mode) }} {{ quote(value) }} {{ quote(env) }}
+[positional-arguments]
+run target="relay" *args:
+    @target="$1"; shift; {{ tools }} run "$target" -- "$@"
 
 [doc('Stop a detached target (target: relay | web; web: [site | gallery | app])')]
 stop target="relay" mode="":

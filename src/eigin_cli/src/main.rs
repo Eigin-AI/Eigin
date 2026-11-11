@@ -1,3 +1,5 @@
+mod inference;
+
 use clap::{Parser, Subcommand};
 use std::process::ExitCode;
 
@@ -14,24 +16,31 @@ enum Command {
     Init,
     /// Print bundled SDK third-party license and copyright notices.
     Notices,
+    /// Discover models and run inference without an agent.
+    Inference {
+        #[command(subcommand)]
+        command: inference::Command,
+    },
 }
 
 fn main() -> ExitCode {
-    let result = match Cli::parse().command {
-        Command::Notices => {
-            print!("{}", eigin_sdk::THIRD_PARTY_NOTICES);
-            return ExitCode::SUCCESS;
-        }
-        Command::Init => futures::executor::block_on(eigin_sdk::initialize()),
-    };
-    match result {
-        Ok(()) => {
-            println!("Eigin SDK initialized");
-            ExitCode::SUCCESS
-        }
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("{error}");
             ExitCode::FAILURE
         }
     }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
+    match Cli::parse().command {
+        Command::Notices => print!("{}", eigin_sdk::THIRD_PARTY_NOTICES),
+        Command::Init => {
+            futures::executor::block_on(eigin_sdk::initialize())?;
+            println!("Eigin SDK initialized");
+        }
+        Command::Inference { command } => inference::run(command)?,
+    }
+    Ok(())
 }

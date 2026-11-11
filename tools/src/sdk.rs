@@ -7,6 +7,8 @@ use std::process::Command;
 
 mod apple;
 pub mod notices;
+mod wasm_bindgen;
+pub(crate) use wasm_bindgen::ensure as ensure_wasm_bindgen;
 
 /// Independently selectable SDK host artifacts.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
@@ -38,6 +40,7 @@ fn web(root: &str) -> Result<()> {
         fs::remove_dir_all(&staging)?;
     }
     run(Command::new(cli)
+        .env("UBRN_WASM_BINDGEN", wasm_bindgen::ensure(root)?)
         .args([
             "build",
             "wasm2",

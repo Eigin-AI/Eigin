@@ -26,9 +26,13 @@ Rather than a client per provider, Eigin uses a small set:
 
 A factory selects the client from the base URL: the relay URL routes to the relay client, other cloud URLs to OpenAI or Anthropic, and `local://` to the on-device client. Adding an OpenAI-compatible provider is just adding a preset.
 
+## Using providers
+
+See [SDK inference](sdk/inference.md) for provider configuration, streaming, cancellation and host responsibilities. The host selects models and supplies routing hints; the SDK implements OpenAI-compatible requests and provider adaptations.
+
 ## Provider adapters
 
-Some providers are mostly OpenAI-compatible but have quirks. A provider adapter handles the adjustments instead of branching inside the client:
+Some providers are mostly OpenAI-compatible but have quirks. SDK provider adapters handle these adjustments:
 
 - **Gemini**: sends `stop` as the finish reason even with tool calls present. The adapter checks for pending tool calls on stop and injects Gemini-specific metadata.
 - **Mistral**: requires tool call IDs to be alphanumeric and at most 9 characters. The adapter sanitizes them.
@@ -93,6 +97,6 @@ The detour isn't persisted: the agent's provider and model still point at the be
 ## Extending
 
 - **New OpenAI-compatible provider**: add a preset.
-- **Provider with quirks**: add a preset and an adapter.
+- **Provider with compatible-API quirks**: add a preset and a Rust SDK adapter; cover the wire behavior in SDK tests.
 - **Completely different API**: implement the client protocol and add a URL check in the factory.
 - **New models or re-ranking**: update the catalog.

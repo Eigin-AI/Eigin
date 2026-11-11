@@ -9,9 +9,11 @@ export default defineConfig({
     { name: "firefox", use: { browserName: "firefox" } },
     { name: "webkit", use: { browserName: "webkit" } },
   ],
-  webServer: {
-    command: "vite --port 5276 --strictPort",
-    url: "http://localhost:5276/tests/index.html",
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      command: "vite --port 5276 --strictPort",
+      url: "http://localhost:5276/tests/index.html",
+      reuseExistingServer: false,
+    },
+  ],
 });

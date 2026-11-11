@@ -8,6 +8,10 @@ uniffi::setup_scaffolding!();
 /// Context estimation, selection, and summary parsing.
 pub mod context;
 mod diagnostics;
+/// Platform HTTP byte transport and cancellation.
+pub mod http;
+/// Portable inference provider operations.
+pub mod inference;
 
 pub use diagnostics::*;
 

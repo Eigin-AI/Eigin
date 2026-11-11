@@ -12,3 +12,5 @@ path = "src/main.rs"
 eigin_sdk = { path = "../eigin_sdk/crates/eigin_sdk" }
 clap = { version = "4", features = ["derive"] }
 futures = { version = "0.3", features = ["executor"] }
+ctrlc = "3"
+serde_json = "1"

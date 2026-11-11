@@ -8,3 +8,5 @@ Consumes [Eigin SDK](eigin_sdk.md) through a local Rust dependency.
 |---|---|---|---|
 | [clap](https://github.com/clap-rs/clap) | 4.6.7 | runtime | MIT OR Apache-2.0 |
 | [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | runtime | MIT OR Apache-2.0 |
+| [ctrlc](https://github.com/Detegr/rust-ctrlc) | 3.5.2 | runtime | MIT OR Apache-2.0 |
+| [serde_json](https://github.com/serde-rs/json) | 1.0.154 | runtime | MIT OR Apache-2.0 |

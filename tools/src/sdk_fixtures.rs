@@ -37,6 +37,7 @@ pub fn run_check(args: Args) -> Result<()> {
 fn web(root: &str, sdk: &str) -> Result<()> {
     crate::sdk::ensure_web_dependencies(root)?;
     run(Command::new(format!("{root}/node_modules/.bin/ubrn"))
+        .env("UBRN_WASM_BINDGEN", crate::sdk::ensure_wasm_bindgen(root)?)
         .args([
             "build",
             "wasm2",

@@ -8,6 +8,9 @@ use super::{copy_if_changed, run};
 fn cargo(root: &str) -> Command {
     let mut command = Command::new("cargo");
     command.current_dir(format!("{root}/src/eigin_sdk"));
+    // Match the package/framework minimums for Rust and native TLS dependencies.
+    command.env("IPHONEOS_DEPLOYMENT_TARGET", "26.0");
+    command.env("MACOSX_DEPLOYMENT_TARGET", "15.0");
     command
 }
 

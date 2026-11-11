@@ -6,6 +6,10 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 
 > The agent runtime is moving from iOS into the SDK. As each domain moves, its concepts and usage documentation will live here. Most runtime behavior still lives in iOS today.
 
+## SDK capabilities
+
+- [Inference](inference.md): choose a provider, consume events and manage cancellation.
+
 ## Agent concepts
 
 - [The Agent](../agents/README.md): identity, knowledge, skills, and intents.

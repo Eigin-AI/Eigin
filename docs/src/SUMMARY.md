@@ -29,6 +29,7 @@
 
 - [Overview](./sdk/README.md)
 - [Getting started](./sdk/getting-started.md)
+- [Inference](./sdk/inference.md)
 
 # The Agent
 

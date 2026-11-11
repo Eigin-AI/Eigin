@@ -18,9 +18,10 @@ use logs::Since;
 /// Start a target: `relay [env]`, `ios simulator [env]`, `ios device [name] [env]`, `web`.
 #[derive(clap::Args)]
 pub struct RunArgs {
-    /// relay | ios | web
+    /// relay | ios | web | cli
     target: String,
-    /// Mode for ios (simulator | device), then a device name and environment.
+    /// Target arguments, forwarded unchanged to the foreground CLI.
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<String>,
 }
 
@@ -170,7 +171,7 @@ pub fn run(args: RunArgs) -> Result<()> {
                     "src/eigin_cli/Cargo.toml",
                     "--",
                 ])
-                .args(args.args.iter().filter(|arg| !arg.is_empty()))
+                .args(&args.args)
                 .current_dir(&root)
                 .status()?;
             if !status.success() {
