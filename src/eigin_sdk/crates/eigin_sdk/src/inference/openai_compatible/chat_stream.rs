@@ -18,7 +18,7 @@ struct StreamState {
 
 /// Cancellable, pull-based provider stream. Only one open/next may be pending.
 #[derive(uniffi::Object)]
-pub struct InferenceStream {
+pub struct OpenAiCompatibleStream {
     http: Arc<HttpOperation>,
     core: Mutex<Option<StreamState>>,
     cancelled: AtomicBool,
@@ -26,7 +26,7 @@ pub struct InferenceStream {
     model: String,
 }
 
-impl InferenceStream {
+impl OpenAiCompatibleStream {
     pub(super) fn new(
         http: Arc<HttpOperation>,
         request: HttpRequest,
@@ -99,7 +99,7 @@ impl InferenceStream {
 }
 
 #[uniffi::export]
-impl InferenceStream {
+impl OpenAiCompatibleStream {
     /// Opens HTTP and validates status without consuming successful response data.
     pub async fn open(&self) -> Result<(), InferenceError> {
         let mut lease = self.lease()?;
@@ -222,14 +222,14 @@ impl InferenceStream {
     }
 }
 
-impl Drop for InferenceStream {
+impl Drop for OpenAiCompatibleStream {
     fn drop(&mut self) {
         self.cancel();
     }
 }
 
 struct StreamAccessGuard<'a> {
-    owner: &'a InferenceStream,
+    owner: &'a OpenAiCompatibleStream,
     core: Option<StreamState>,
     completed: bool,
 }

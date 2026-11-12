@@ -13,7 +13,7 @@ mod request_body;
 mod stream;
 
 use super::types;
-pub use chat_stream::InferenceStream;
+pub use chat_stream::OpenAiCompatibleStream;
 pub use operations::{ApiKeyValidationOperation, ModelDiscoveryOperation};
 pub use provider::OpenAiCompatibleProvider;
 

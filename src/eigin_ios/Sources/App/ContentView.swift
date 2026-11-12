@@ -7,7 +7,6 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.themeManager) private var themeManager
     @Injected(\.languageManager) private var languageManager
-    @Injected(\.relayClient) private var relayClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Injected(\.tabBarVisibility) private var tabBarVisibility
@@ -128,7 +127,11 @@ struct ContentView: View {
             modelContext.insert(provider)
         }
         Task { @MainActor in
-            guard let models = try? await relayClient.models(), !models.isEmpty else { return }
+            guard let models = try? await LLMClientFactory.client(
+                baseURL: provider.baseURL,
+                apiToken: "",
+                providerID: provider.id
+            ).fetchModels(), !models.isEmpty else { return }
             provider.availableModels = models
             // The Eigin relay is the user's own provider, and its models come and go
             // with the relay — there is no per-model toggle for it — so every known

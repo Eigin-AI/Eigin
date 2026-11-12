@@ -13,7 +13,6 @@ import SwiftUI
 /// are replaced in later stages.
 struct OnboardingFlow: View {
     @Environment(\.modelContext) private var modelContext
-    @Injected(\.relayClient) private var relayClient
 
     @AppStorage(StorageKey.onboardingStep) private var stepRaw = OnboardingStep.welcome.rawValue
     @AppStorage(StorageKey.onboardingComplete) private var onboardingComplete = false
@@ -178,7 +177,11 @@ struct OnboardingFlow: View {
         conversationProvider = provider
 
         Task { @MainActor in
-            if let models = try? await relayClient.models(), !models.isEmpty {
+            if let models = try? await LLMClientFactory.client(
+                baseURL: provider.baseURL,
+                apiToken: "",
+                providerID: provider.id
+            ).fetchModels(), !models.isEmpty {
                 provider.availableModels = models
                 // The Eigin relay is the user's own provider, and its models come and
                 // go with the relay — there is no per-model toggle for it — so every

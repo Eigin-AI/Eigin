@@ -1,9 +1,9 @@
 import Foundation
 
-/// Manages the device's credit wallets: which one to spend, failover when one is exhausted,
+/// Manages the device's credit wallets: which one to spend, recording exhaustion,
 /// eviction of dead wallets, and refreshing balances from the relay.
 ///
-/// Balance handling is lazy: the redeem response seeds the balance, `withCredits` corrects it
+/// Balance handling is lazy: the redeem response seeds the balance, `markExhausted` corrects it
 /// on a 402, and `refreshBalances` reconciles on demand.
 protocol CreditWalletManager: Sendable {
     /// All wallets currently held on device.
@@ -16,11 +16,8 @@ protocol CreditWalletManager: Sendable {
     func evictEmpty()
     /// Reconcile every wallet's balance against the relay, dropping unknown tokens.
     func refreshBalances() async
-    /// Run `operation` with a spendable wallet's token, failing over to the next wallet on a
-    /// 402 and throwing `CreditsError.noCreditsRemaining` when none remain.
-    func withCredits<T: Sendable>(
-        _ operation: @Sendable (String) async throws -> T
-    ) async throws -> T
+    /// Records a rejected wallet and evicts it from the spendable collection.
+    func markExhausted(token: String)
 }
 
 /// Default `CreditWalletManager` backed by a `CreditWalletStore` and the relay.
@@ -70,20 +67,11 @@ struct DefaultCreditWalletManager: CreditWalletManager {
         evictEmpty()
     }
 
-    func withCredits<T: Sendable>(
-        _ operation: @Sendable (String) async throws -> T
-    ) async throws -> T {
-        while let wallet = spendableWallet() {
-            do {
-                return try await operation(wallet.token)
-            } catch RelayClientError.insufficientCredits {
-                var exhausted = wallet
-                exhausted.credits = 0
-                exhausted.updatedAt = Date()
-                store.upsert(exhausted)
-                evictEmpty()
-            }
-        }
-        throw CreditsError.noCreditsRemaining
+    func markExhausted(token: String) {
+        guard var wallet = store.all().first(where: { $0.token == token }) else { return }
+        wallet.credits = 0
+        wallet.updatedAt = Date()
+        store.upsert(wallet)
+        evictEmpty()
     }
 }

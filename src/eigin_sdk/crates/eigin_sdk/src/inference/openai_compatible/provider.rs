@@ -1,4 +1,4 @@
-use super::{adapters::Adapter, chat_stream::InferenceStream, types::*};
+use super::{adapters::Adapter, chat_stream::OpenAiCompatibleStream, types::*};
 use super::{
     operations::{ApiKeyValidationOperation, ModelDiscoveryOperation},
     request::request,
@@ -62,15 +62,24 @@ impl OpenAiCompatibleProvider {
     pub fn stream(
         &self,
         input: InferenceCompletionInput,
-    ) -> Result<Arc<InferenceStream>, InferenceError> {
+    ) -> Result<Arc<OpenAiCompatibleStream>, InferenceError> {
         let adapter = Adapter::select(&self.config.base_url, &input);
         let body = adapter.request(&input)?;
         let request = request(&self.config, "/chat/completions", Some(body))?;
-        Ok(InferenceStream::new(
+        Ok(OpenAiCompatibleStream::new(
             HttpOperation::with_transport(self.transport.clone()),
             request,
             adapter,
             input,
         ))
+    }
+}
+
+impl OpenAiCompatibleProvider {
+    pub(crate) fn with_shared_transport(
+        config: InferenceProviderConfig,
+        transport: Arc<dyn HttpTransport>,
+    ) -> Arc<Self> {
+        Arc::new(Self { config, transport })
     }
 }

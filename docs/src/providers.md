@@ -19,7 +19,7 @@ Inference can run entirely on-device: offline, on your own hardware. The local p
 Rather than a client per provider, Eigin uses a small set:
 
 - **OpenAI-compatible client**: any provider implementing the OpenAI REST API (`/models`, `/chat/completions`). Covers OpenAI, Google, Mistral, OpenRouter, and most others.
-- **Relay client**: the OpenAI-compatible client pointed at the [Eigin Relay](./relay.md), plus credit-wallet management. No API key: each request is authorized with a credit token instead.
+- **Eigin Relay client**: connects to [Eigin Relay](./relay.md) using purchased credits.
 - **Anthropic client**: a native implementation for the Messages API, which differs enough to warrant its own client (auth headers, content blocks, typed SSE events, system prompt handling).
 - **Responses client**: OpenAI's Responses API, used for the ChatGPT subscription sign-in flow. The credential is a short-lived OAuth access token rather than an API key.
 - **Local client**: bridges the agent loop to the on-device model, holding session state per chat.
@@ -28,7 +28,7 @@ A factory selects the client from the base URL: the relay URL routes to the rela
 
 ## Using providers
 
-See [SDK inference](sdk/inference.md) for provider configuration, streaming, cancellation and host responsibilities. The host selects models and supplies routing hints; the SDK implements OpenAI-compatible requests and provider adaptations.
+The SDK handles communication with OpenAI-compatible providers and Eigin Relay. See [SDK inference](sdk/inference.md) to use them.
 
 ## Provider adapters
 

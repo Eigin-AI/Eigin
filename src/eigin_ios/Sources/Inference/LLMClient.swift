@@ -32,9 +32,8 @@ enum LLMClientFactory {
         if ProviderPreset.isRelay(baseURL) {
             // The relay has no keychain key; it resolves a credit token per request via the wallet
             // manager. `apiToken` is unused here.
-            return RelayLLMClient(
+            return EiginRelayLLMClient(
                 walletManager: Container.shared.creditWalletManager(),
-                relayClient: Container.shared.relayClient(),
                 providerID: providerID
             )
         }

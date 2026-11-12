@@ -78,7 +78,7 @@ struct ImageWireConversionTests {
             session: session
         )
         let completion = try await client.stream(.init(
-            model: "test", messages: [OpenAICompatibleSDKConversion.message(message, store: store)],
+            model: "test", messages: [InferenceSDKConversion.message(message, store: store)],
             tools: nil, reasoningEffort: nil, promptCacheKey: nil, modelFamily: nil,
             isRelay: false, reasoningOrigin: nil, textOnly: false
         ))

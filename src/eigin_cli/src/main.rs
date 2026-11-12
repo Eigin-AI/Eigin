@@ -16,6 +16,15 @@ enum Command {
     Init,
     /// Print bundled SDK third-party license and copyright notices.
     Notices,
+    /// Early SDK operations; commands may change as higher-level APIs arrive.
+    Experimental {
+        #[command(subcommand)]
+        command: ExperimentalCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum ExperimentalCommand {
     /// Discover models and run inference without an agent.
     Inference {
         #[command(subcommand)]
@@ -40,7 +49,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             futures::executor::block_on(eigin_sdk::initialize())?;
             println!("Eigin SDK initialized");
         }
-        Command::Inference { command } => inference::run(command)?,
+        Command::Experimental {
+            command: ExperimentalCommand::Inference { command },
+        } => inference::run(command)?,
     }
     Ok(())
 }

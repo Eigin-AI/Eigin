@@ -19,10 +19,6 @@ final class FakeRelayClient: RelayClient, @unchecked Sendable {
         throw RelayClientError.notConfigured
     }
 
-    var modelsHandler: @Sendable () async throws -> [String] = {
-        throw RelayClientError.notConfigured
-    }
-
     var assetHandler: @Sendable (String) async throws -> AssetManifest = { _ in
         throw RelayClientError.notConfigured
     }
@@ -41,10 +37,6 @@ final class FakeRelayClient: RelayClient, @unchecked Sendable {
 
     func balance(token: String) async throws -> BalanceResponse {
         try await balanceHandler(token)
-    }
-
-    func models() async throws -> [String] {
-        try await modelsHandler()
     }
 
     func asset(id: String) async throws -> AssetManifest {

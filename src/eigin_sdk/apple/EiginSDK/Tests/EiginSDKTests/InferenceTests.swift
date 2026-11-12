@@ -5,8 +5,17 @@ import Testing
 
 @Suite("Apple inference cancellation")
 struct InferenceTests {
-    @Test(arguments: [false, true])
-    func taskCancellationStopsURLSession(beforeBody: Bool) async throws {
+    @Test func missingRelayKeyFailsDuringConstruction() {
+        #expect(throws: EiginSDK.Experimental.Inference.Failure.self) {
+            _ = try EiginSDK.Experimental.Inference.EiginRelay(
+                configuration: .init(baseUrl: "https://configuration.test", relayKey: ""),
+                walletSource: CancellationWallets()
+            )
+        }
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func taskCancellationStopsURLSession(beforeBody: Bool, relay: Bool) async throws {
         let probe = CancellationProbe(sendHeaders: beforeBody)
         let id = UUID().uuidString
         CancellationURLProtocol.probes.withLock { $0[id] = probe }
@@ -16,13 +25,23 @@ struct InferenceTests {
         configuration.protocolClasses = [CancellationURLProtocol.self]
         let session = URLSession(configuration: configuration)
         defer { session.invalidateAndCancel() }
-        let provider = EiginSDK.Experimental.Inference.OpenAICompatible(configuration: .init(
-            baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
-        ), session: session)
+        let open: @Sendable (EiginSDK.Experimental.Inference.Input) async throws -> EiginSDK.Experimental.Inference.Stream
+        if relay {
+            let provider = try EiginSDK.Experimental.Inference.EiginRelay(
+                configuration: .init(baseUrl: "https://cancellation.test/\(id)", relayKey: "relay-key"),
+                walletSource: CancellationWallets(), session: session
+            )
+            open = { try await provider.stream($0) }
+        } else {
+            let provider = EiginSDK.Experimental.Inference.OpenAICompatible(configuration: .init(
+                baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
+            ), session: session)
+            open = { try await provider.stream($0) }
+        }
 
         let reading = Mutex(false)
         let task = Task {
-            let stream = try await provider.stream(.init(model: "test", messages: [], tools: nil, reasoningEffort: nil, promptCacheKey: nil, modelFamily: nil, isRelay: false, reasoningOrigin: nil, textOnly: false))
+            let stream = try await open(.init(model: "test", messages: [], tools: nil, reasoningEffort: nil, promptCacheKey: nil, modelFamily: nil, isRelay: false, reasoningOrigin: nil, textOnly: false))
             reading.withLock { $0 = true }
             _ = try await stream.next()
         }
@@ -82,5 +101,15 @@ private final class CancellationURLProtocol: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {
         probe?.stopped.withLock { $0 = true }
+    }
+}
+
+private final class CancellationWallets: EiginSDK.Experimental.Inference.EiginRelayWalletSource {
+    func nextToken(excluded: [String]) throws -> String? {
+        excluded.isEmpty ? "token" : nil
+    }
+
+    func markExhausted(token _: String) throws {
+        Issue.record("Cancellation must not exhaust a wallet")
     }
 }

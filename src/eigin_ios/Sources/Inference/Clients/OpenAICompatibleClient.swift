@@ -1,5 +1,4 @@
 import EiginSDK
-import Factory
 import Foundation
 
 /// App-facing adapter for SDK inference. Credentials, attachments and selection stay in the host.
@@ -32,12 +31,12 @@ struct OpenAICompatibleClient: LLMClient {
 
     func fetchModels() async throws -> [String] {
         do { return try await sdk.fetchModels() }
-        catch { throw OpenAICompatibleSDKConversion.error(error) }
+        catch { throw InferenceSDKConversion.error(error) }
     }
 
     func validateAPIKey(model: String) async throws {
         do { try await sdk.validateAPIKey(model: model) }
-        catch { throw OpenAICompatibleSDKConversion.error(error) }
+        catch { throw InferenceSDKConversion.error(error) }
     }
 
     func chatCompletionStream(
@@ -52,14 +51,7 @@ struct OpenAICompatibleClient: LLMClient {
             reasoningEffort: nil,
             textOnly: true
         )
-        return AsyncThrowingStream(unfolding: {
-            do {
-                while let event = try await completion.next() {
-                    if case .contentDelta(let text) = event { return text }
-                }
-                return nil
-            } catch { throw OpenAICompatibleSDKConversion.error(error) }
-        })
+        return InferenceSDKStream.text(completion)
     }
 
     func chatCompletionEventStream(
@@ -87,36 +79,20 @@ struct OpenAICompatibleClient: LLMClient {
             reasoningEffort: reasoningEffort,
             textOnly: false
         )
-        return AsyncThrowingStream(unfolding: {
-            do { return try await completion.next().map(OpenAICompatibleSDKConversion.event) }
-            catch { throw OpenAICompatibleSDKConversion.error(error) }
-        })
+        return InferenceSDKStream.events(completion)
     }
 
     private func start(
         messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
         cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool
     ) async throws -> EiginSDK.Experimental.Inference.Stream {
-        let store = Container.shared.chatAttachmentStore()
-        let origin = ReasoningOrigin.destination(
-            providerID: providerID,
-            baseURL: baseURL,
-            model: model
-        )
-        let input = try EiginSDK.Experimental.Inference.Input(
-            model: model, messages: messages.map { OpenAICompatibleSDKConversion.message(
-                $0,
-                store: store
-            ) },
-            tools: tools?.map(OpenAICompatibleSDKConversion.tool),
-            reasoningEffort: reasoningEffort?.rawValue,
-            promptCacheKey: cacheKey,
-            modelFamily: OpenAICompatibleSDKConversion
-                .family(KnownModelCatalog.lookup(model)?.family),
-            isRelay: isEiginRelay || ProviderPreset.isRelay(baseURL),
-            reasoningOrigin: origin.map(OpenAICompatibleSDKConversion.origin), textOnly: textOnly
+        let input = try InferenceSDKConversion.input(
+            messages: messages, model: model, tools: tools, cacheKey: cacheKey,
+            reasoningEffort: reasoningEffort, textOnly: textOnly,
+            baseURL: baseURL, providerID: providerID,
+            isRelay: isEiginRelay || ProviderPreset.isRelay(baseURL)
         )
         do { return try await sdk.stream(input) }
-        catch { throw OpenAICompatibleSDKConversion.error(error) }
+        catch { throw InferenceSDKConversion.error(error) }
     }
 }

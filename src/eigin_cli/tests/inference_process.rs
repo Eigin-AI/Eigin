@@ -23,11 +23,12 @@ impl Drop for CliProcess {
 #[test]
 fn chat_auth_choices_preserve_partial_output_and_ctrl_c_failure() {
     for authenticated in [false, true] {
-        run_chat(authenticated);
+        run_chat(authenticated, false);
     }
+    run_chat(true, true);
 }
 
-fn run_chat(authenticated: bool) {
+fn run_chat(authenticated: bool, relay: bool) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
@@ -63,14 +64,33 @@ fn run_chat(authenticated: bool) {
     });
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_eigin"));
-    if authenticated {
-        command.args(["inference", "chat", "--api-key-env", "EIGIN_TEST_API_KEY"]);
+    if relay {
+        command.args([
+            "experimental",
+            "inference",
+            "chat",
+            "--provider",
+            "eigin-relay",
+            "--relay-key-env",
+            "EIGIN_RELAY_KEY",
+            "--credit-token-env",
+            "EIGIN_TEST_API_KEY",
+        ]);
+    } else if authenticated {
+        command.args([
+            "experimental",
+            "inference",
+            "chat",
+            "--api-key-env",
+            "EIGIN_TEST_API_KEY",
+        ]);
     } else {
-        command.args(["inference", "chat", "--no-auth"]);
+        command.args(["experimental", "inference", "chat", "--no-auth"]);
     }
     let mut cli = CliProcess(
         command
             .args(["--base-url", &base, "--model", "test", "--prompt", "hello"])
+            .env("EIGIN_RELAY_KEY", "relay-key")
             .env("EIGIN_TEST_API_KEY", "selected-test-key")
             .env("OPENAI_API_KEY", "must-not-be-sent")
             .env("NO_PROXY", "127.0.0.1")
@@ -141,4 +161,79 @@ fn drain_request(socket: &mut TcpStream) -> String {
     assert!(length < 1024 * 1024);
     socket.read_exact(&mut vec![0; length]).unwrap();
     headers
+}
+
+#[test]
+fn relay_failover_uses_distinct_wallets_and_explicit_relay_key() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let server = thread::spawn(move || {
+        for (token, status, body) in [
+            ("first", "402 Payment Required", ""),
+            (
+                "second",
+                "200 OK",
+                "data: {\"choices\":[{\"delta\":{\"content\":\"hello\"},\"finish_reason\":\"stop\"}]}\n\n",
+            ),
+        ] {
+            let deadline = Instant::now() + TIMEOUT;
+            let mut socket = loop {
+                match listener.accept() {
+                    Ok((socket, _)) => break socket,
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(Instant::now() < deadline, "missing relay attempt");
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(e) => panic!("{e}"),
+                }
+            };
+            socket.set_nonblocking(false).unwrap();
+            socket.set_read_timeout(Some(TIMEOUT)).unwrap();
+            let request = drain_request(&mut socket).to_lowercase();
+            assert!(request.starts_with("post /v1/chat/completions "));
+            assert!(request.contains(&format!("authorization: bearer {token}\r\n")));
+            assert!(request.contains("x-eigin-key: relay-key\r\n"));
+            write!(
+                socket,
+                "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            )
+            .unwrap();
+        }
+    });
+    let output = Command::new(env!("CARGO_BIN_EXE_eigin"))
+        .args([
+            "experimental",
+            "inference",
+            "chat",
+            "--provider",
+            "eigin-relay",
+            "--base-url",
+            &base,
+            "--relay-key-env",
+            "RELAY_KEY",
+            "--credit-token-env",
+            "WALLET_A",
+            "--credit-token-env",
+            "WALLET_B",
+            "--model",
+            "test",
+            "--prompt",
+            "hi",
+        ])
+        .env("RELAY_KEY", "relay-key")
+        .env("WALLET_A", "first")
+        .env("WALLET_B", "second")
+        .env("NO_PROXY", "127.0.0.1")
+        .env("no_proxy", "127.0.0.1")
+        .output()
+        .unwrap();
+    server.join().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "hello\n");
 }

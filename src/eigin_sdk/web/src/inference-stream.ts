@@ -1,8 +1,10 @@
-import {
-  InferenceError,
-  type InferenceEvent,
-  type InferenceStreamLike,
-} from "./generated";
+import { InferenceError, type InferenceEvent } from "./generated";
+
+type StreamOperation = {
+  open(): Promise<void>;
+  next(): Promise<InferenceEvent | undefined>;
+  cancel(): void;
+};
 
 type InferenceRead = IteratorResult<InferenceEvent>;
 
@@ -12,13 +14,13 @@ function endOfStream(): InferenceRead {
 
 /** Explicit return interrupts pending I/O immediately. */
 export class InferenceEventIterator implements AsyncIterableIterator<InferenceEvent> {
-  private operation?: InferenceStreamLike;
+  private operation?: StreamOperation;
   private closed = false;
   private pending = false;
   private readonly cancel = () => this.operation?.cancel();
 
   constructor(
-    private readonly create: () => InferenceStreamLike,
+    private readonly create: () => StreamOperation,
     private readonly signal?: AbortSignal,
   ) {}
 
@@ -72,7 +74,7 @@ export class InferenceEventIterator implements AsyncIterableIterator<InferenceEv
     throw error;
   }
 
-  private async open(): Promise<InferenceStreamLike> {
+  private async open(): Promise<StreamOperation> {
     if (this.operation) return this.operation;
 
     const operation = this.create();
