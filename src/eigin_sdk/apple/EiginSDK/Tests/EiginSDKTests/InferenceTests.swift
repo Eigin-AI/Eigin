@@ -14,7 +14,7 @@ struct InferenceTests {
         }
     }
 
-    @Test(arguments: [false, true], ["compatible", "relay", "responses"])
+    @Test(arguments: [false, true], ["compatible", "relay", "responses", "anthropic"])
     func taskCancellationStopsURLSession(beforeBody: Bool, providerKind: String) async throws {
         let probe = CancellationProbe(sendHeaders: beforeBody)
         let id = UUID().uuidString
@@ -26,7 +26,12 @@ struct InferenceTests {
         let session = URLSession(configuration: configuration)
         defer { session.invalidateAndCancel() }
         let open: @Sendable (EiginSDK.Experimental.Inference.Input) async throws -> EiginSDK.Experimental.Inference.Stream
-        if providerKind == "responses" {
+        if providerKind == "anthropic" {
+            let provider = EiginSDK.Experimental.Inference.Anthropic(configuration: .init(
+                baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
+            ), session: session)
+            open = { try await provider.stream($0) }
+        } else if providerKind == "responses" {
             let provider = EiginSDK.Experimental.Inference.OpenAIResponses(configuration: .init(
                 baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
             ), session: session)
@@ -57,6 +62,30 @@ struct InferenceTests {
             try await task.value
             Issue.record("Expected Swift task cancellation")
         } catch is CancellationError {}
+        try await waitUntil { probe.stopped.withLock { $0 } }
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func anthropicOperationsCancelDuringHeadersAndBody(sendHeaders: Bool, validation: Bool) async throws {
+        let probe = CancellationProbe(sendHeaders: sendHeaders)
+        let id = UUID().uuidString
+        CancellationURLProtocol.probes.withLock { $0[id] = probe }
+        defer { CancellationURLProtocol.probes.withLock { $0.removeValue(forKey: id) } }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [CancellationURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let provider = EiginSDK.Experimental.Inference.Anthropic(configuration: .init(
+            baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
+        ), session: session)
+        let task = Task {
+            if validation { try await provider.validateAPIKey(model: "test") }
+            else { _ = try await provider.fetchModels() }
+        }
+        try await waitUntil { probe.started.withLock { $0 } }
+        task.cancel()
+        do { try await task.value; Issue.record("Expected cancellation") }
+        catch is CancellationError {}
         try await waitUntil { probe.stopped.withLock { $0 } }
     }
 }

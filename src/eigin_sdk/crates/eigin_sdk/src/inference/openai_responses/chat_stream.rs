@@ -27,6 +27,7 @@ impl OpenAiResponsesStream {
                 parser,
                 "inference.openai-responses",
                 HttpFailurePolicy {
+                    completed_line_character_limit: None,
                     body_limit: 4000,
                     retain_partial_body: true,
                     normalize: super::error::normalize,

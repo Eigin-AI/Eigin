@@ -16,3 +16,6 @@ mod request;
 pub use openai_responses::*;
 
 mod streaming;
+
+pub mod anthropic;
+pub use anthropic::*;

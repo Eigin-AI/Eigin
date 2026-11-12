@@ -1,6 +1,6 @@
 # Inference
 
-The SDK supports OpenAI-compatible endpoints, OpenAI Responses, and Eigin Relay. Your app chooses models, stores conversations and executes tools.
+The SDK supports OpenAI-compatible endpoints, OpenAI Responses, native Anthropic Messages, and Eigin Relay. Your app chooses models, stores conversations and executes tools.
 
 ## Use a provider
 
@@ -8,11 +8,11 @@ The SDK supports OpenAI-compatible endpoints, OpenAI Responses, and Eigin Relay.
 2. Discover models, then start a stream with messages and optional tools.
 3. Consume events until completion. Cancel when the user stops.
 
-| Platform | OpenAI-compatible | OpenAI Responses | Eigin Relay |
-|---|---|---|---|
-| Apple | `EiginSDK.Experimental.Inference.OpenAICompatible` | `EiginSDK.Experimental.Inference.OpenAIResponses` | `EiginSDK.Experimental.Inference.EiginRelay` |
-| Browser | `OpenAICompatible` | `OpenAIResponses` | `EiginRelay` |
-| Rust | `OpenAiCompatibleProvider` | `OpenAiResponsesProvider` | `EiginRelayProvider` |
+| Platform | OpenAI-compatible | OpenAI Responses | Anthropic | Eigin Relay |
+|---|---|---|---|---|
+| Apple | `EiginSDK.Experimental.Inference.OpenAICompatible` | `EiginSDK.Experimental.Inference.OpenAIResponses` | `EiginSDK.Experimental.Inference.Anthropic` | `EiginSDK.Experimental.Inference.EiginRelay` |
+| Browser | `OpenAICompatible` | `OpenAIResponses` | `Anthropic` | `EiginRelay` |
+| Rust | `OpenAiCompatibleProvider` | `OpenAiResponsesProvider` | `AnthropicProvider` | `EiginRelayProvider` |
 
 The browser package and these inference APIs are experimental. Apple uses your URLSession, browsers use Fetch, and native callers can use SDK-managed HTTP.
 
@@ -23,7 +23,9 @@ For Eigin Relay, supply the relay root URL, application key and an `EiginRelayWa
 
 The SDK handles switching wallets. Your app owns storage, purchases and balance refresh. Model discovery needs only the application key.
 
-Browser endpoints must allow CORS. Deployed relay browser access remains unverified; only expose credentials intended for browser use.
+Browser endpoints must allow CORS. Deployed relay browser access remains unverified; only expose credentials intended for browser use.[^anthropic-browser]
+
+[^anthropic-browser]: Direct Anthropic browser requests require `anthropic-dangerous-direct-browser-access: true` in `extraHeaders`. This exposes the supplied key to page code; keep application secrets on a backend. Authenticated browser streaming remains unverified.
 
 ## Try it
 
@@ -35,6 +37,10 @@ just run cli experimental inference chat --base-url https://api.openai.com/v1 \
 
 just run cli experimental inference chat --provider openai-responses \
   --base-url https://api.openai.com/v1 --api-key-env CHATGPT_ACCESS_TOKEN \
+  --model YOUR_MODEL --prompt 'Hello'
+
+just run cli experimental inference chat --provider anthropic \
+  --base-url https://api.anthropic.com/v1 --api-key-env ANTHROPIC_API_KEY \
   --model YOUR_MODEL --prompt 'Hello'
 
 just run cli experimental inference chat --provider eigin-relay \

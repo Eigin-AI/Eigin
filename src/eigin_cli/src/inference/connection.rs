@@ -14,11 +14,12 @@ enum ProviderKind {
     #[value(name = "openai-responses")]
     OpenAiResponses,
     EiginRelay,
+    Anthropic,
 }
 
 #[derive(Args)]
 pub(crate) struct Connection {
-    /// Versioned OpenAI endpoint, or relay root URL.
+    /// Versioned provider endpoint, or relay root URL.
     #[arg(long)]
     base_url: String,
     #[arg(long, value_enum, default_value = "openai-compatible")]
@@ -26,7 +27,7 @@ pub(crate) struct Connection {
     /// Read credentials from this environment variable, never from arguments.
     #[arg(long, conflicts_with = "no_auth")]
     api_key_env: Option<String>,
-    /// Connect to an OpenAI-compatible endpoint without an API key.
+    /// Connect to a provider endpoint without an API key.
     #[arg(long)]
     no_auth: bool,
     /// Read the relay application key from this environment variable.
@@ -40,7 +41,9 @@ pub(crate) struct Connection {
 impl Connection {
     pub(super) fn provider(self, chat: bool) -> Result<Provider, Error> {
         match self.provider {
-            ProviderKind::OpenAiCompatible | ProviderKind::OpenAiResponses => {
+            ProviderKind::OpenAiCompatible
+            | ProviderKind::OpenAiResponses
+            | ProviderKind::Anthropic => {
                 if self.relay_key_env.is_some() || !self.credit_token_env.is_empty() {
                     return Err(invalid(
                         "EiginRelay credentials require --provider eigin-relay",
@@ -60,6 +63,7 @@ impl Connection {
                     ProviderKind::OpenAiResponses => {
                         Provider::OpenAiResponses(OpenAiResponsesProvider::new(config)?)
                     }
+                    ProviderKind::Anthropic => Provider::Anthropic(AnthropicProvider::new(config)?),
                     _ => Provider::OpenAiCompatible(OpenAiCompatibleProvider::new(config)?),
                 })
             }
@@ -127,6 +131,7 @@ impl EiginRelayWalletSource for Wallets {
 pub(super) enum Provider {
     OpenAiCompatible(Arc<OpenAiCompatibleProvider>),
     OpenAiResponses(Arc<OpenAiResponsesProvider>),
+    Anthropic(Arc<AnthropicProvider>),
     EiginRelay(Arc<EiginRelayProvider>),
 }
 impl Provider {
@@ -134,6 +139,7 @@ impl Provider {
         match self {
             Self::OpenAiCompatible(p) => Discovery::Compatible(p.discovery()),
             Self::OpenAiResponses(p) => Discovery::Responses(p.discovery()),
+            Self::Anthropic(p) => Discovery::Anthropic(p.discovery()),
             Self::EiginRelay(p) => Discovery::Compatible(p.discovery()),
         }
     }
@@ -141,6 +147,7 @@ impl Provider {
         match self {
             Self::OpenAiCompatible(p) => Ok(Stream::OpenAiCompatible(p.stream(input)?)),
             Self::OpenAiResponses(p) => Ok(Stream::OpenAiResponses(p.stream(input)?)),
+            Self::Anthropic(p) => Ok(Stream::Anthropic(p.stream(input)?)),
             Self::EiginRelay(p) => Ok(Stream::EiginRelay(p.stream(input)?)),
         }
     }
@@ -150,6 +157,7 @@ impl Provider {
 pub(super) enum Stream {
     OpenAiCompatible(Arc<OpenAiCompatibleStream>),
     OpenAiResponses(Arc<OpenAiResponsesStream>),
+    Anthropic(Arc<AnthropicStream>),
     EiginRelay(Arc<EiginRelayStream>),
 }
 impl Stream {
@@ -157,6 +165,7 @@ impl Stream {
         match self {
             Self::OpenAiCompatible(s) => s.cancel(),
             Self::OpenAiResponses(s) => s.cancel(),
+            Self::Anthropic(s) => s.cancel(),
             Self::EiginRelay(s) => s.cancel(),
         }
     }
@@ -164,6 +173,7 @@ impl Stream {
         match self {
             Self::OpenAiCompatible(s) => s.next().await,
             Self::OpenAiResponses(s) => s.next().await,
+            Self::Anthropic(s) => s.next().await,
             Self::EiginRelay(s) => s.next().await,
         }
     }
@@ -173,18 +183,21 @@ impl Stream {
 pub(super) enum Discovery {
     Compatible(Arc<ModelDiscoveryOperation>),
     Responses(Arc<OpenAiResponsesModelDiscovery>),
+    Anthropic(Arc<AnthropicModelDiscovery>),
 }
 impl Discovery {
     pub(super) fn cancel(&self) {
         match self {
             Self::Compatible(op) => op.cancel(),
             Self::Responses(op) => op.cancel(),
+            Self::Anthropic(op) => op.cancel(),
         }
     }
     pub(super) async fn fetch_models(&self) -> Result<Vec<String>, InferenceError> {
         match self {
             Self::Compatible(op) => op.fetch_models().await,
             Self::Responses(op) => op.fetch_models().await,
+            Self::Anthropic(op) => op.fetch_models().await,
         }
     }
 }
