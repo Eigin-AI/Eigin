@@ -9,9 +9,10 @@ enum InferenceSDKConversion {
     static func input(
         messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
         cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool,
-        baseURL: String, providerID: UUID?, isRelay: Bool
+        baseURL: String, providerID: UUID?, isRelay: Bool,
+        attachmentStore: (any ChatAttachmentStoring)? = nil
     ) throws -> EiginSDK.Experimental.Inference.Input {
-        let store = Container.shared.chatAttachmentStore()
+        let store = attachmentStore ?? Container.shared.chatAttachmentStore()
         let destination = ReasoningOrigin.destination(
             providerID: providerID,
             baseURL: baseURL,

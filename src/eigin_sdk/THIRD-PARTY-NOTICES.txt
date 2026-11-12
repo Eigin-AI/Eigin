@@ -1014,11 +1014,20 @@ the individual files for PD/CC0-dedicated sections).
 LICENSE-MIT: see license text 60 below.
 
 ================================================================
+uuid 1.29.2 (Cargo)
+License: Apache-2.0 OR MIT
+Source: https://github.com/uuid-rs/uuid
+
+Selected license: MIT
+
+LICENSE-MIT: see license text 61 below.
+
+================================================================
 want 0.3.2 (Cargo)
 License: MIT
 Source: https://github.com/seanmonstar/want
 
-LICENSE: see license text 61 below.
+LICENSE: see license text 62 below.
 
 ================================================================
 wasm-bindgen 0.2.130 (Cargo)
@@ -1045,7 +1054,7 @@ Source: https://github.com/daxpedda/web-time
 
 Selected license: MIT
 
-LICENSE-MIT: see license text 62 below.
+LICENSE-MIT: see license text 63 below.
 
 ================================================================
 windows-link 0.2.1 (Cargo)
@@ -1054,7 +1063,7 @@ Source: https://github.com/microsoft/windows-rs
 
 Selected license: MIT
 
-license-mit: see license text 63 below.
+license-mit: see license text 64 below.
 
 ================================================================
 windows-sys 0.61.2 (Cargo)
@@ -1063,7 +1072,7 @@ Source: https://github.com/microsoft/windows-rs
 
 Selected license: MIT
 
-license-mit: see license text 63 below.
+license-mit: see license text 64 below.
 
 ================================================================
 writeable 0.6.4 (Cargo)
@@ -1093,7 +1102,7 @@ Source: https://github.com/RustCrypto/utils
 
 Selected license: MIT
 
-LICENSE-MIT: see license text 64 below.
+LICENSE-MIT: see license text 65 below.
 
 ================================================================
 zerotrie 0.2.5 (Cargo)
@@ -4350,6 +4359,37 @@ DEALINGS IN THE SOFTWARE.
 ================================================================
 License text 61
 
+Copyright (c) 2014 The Rust Project Developers
+Copyright (c) 2018 Ashley Mannix, Christopher Armstrong, Dylan DPC, Hunar Roop Kahlon
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+
+================================================================
+License text 62
+
 Copyright (c) 2018-2019 Sean McArthur
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -4373,7 +4413,7 @@ THE SOFTWARE.
 
 
 ================================================================
-License text 62
+License text 63
 
 MIT License
 
@@ -4399,7 +4439,7 @@ SOFTWARE.
 
 
 ================================================================
-License text 63
+License text 64
 
     MIT License
 
@@ -4425,7 +4465,7 @@ License text 63
 
 
 ================================================================
-License text 64
+License text 65
 
 Copyright (c) 2018-2026 The RustCrypto Project Developers
 

@@ -1,6 +1,7 @@
 import {
   EiginRelay,
   OpenAICompatible,
+  OpenAIResponses,
   type InferenceCompletionInput,
 } from "../src";
 
@@ -63,7 +64,9 @@ async function withStalledFetch(
   }
 }
 
-async function provider(kind: "openai-compatible" | "eigin-relay") {
+async function provider(
+  kind: "openai-compatible" | "eigin-relay" | "openai-responses",
+) {
   if (kind === "eigin-relay")
     return EiginRelay.create(
       { baseUrl: "https://cancellation.test", relayKey: "relay-key" },
@@ -76,7 +79,9 @@ async function provider(kind: "openai-compatible" | "eigin-relay") {
         },
       },
     );
-  return OpenAICompatible.create({
+  return (
+    kind === "openai-responses" ? OpenAIResponses : OpenAICompatible
+  ).create({
     baseUrl: "https://cancellation.test/v1",
     apiToken: "test",
     extraHeaders: new Map(),
@@ -85,7 +90,11 @@ async function provider(kind: "openai-compatible" | "eigin-relay") {
 
 export const providerTests = {
   async returnInterruptsPendingRead() {
-    for (const kind of ["openai-compatible", "eigin-relay"] as const) {
+    for (const kind of [
+      "openai-compatible",
+      "eigin-relay",
+      "openai-responses",
+    ] as const) {
       for (const phase of ["headers", "body"] as const) {
         await withStalledFetch(phase, async (ready, aborted) => {
           const stream = (await provider(kind)).stream(input);
@@ -103,26 +112,28 @@ export const providerTests = {
   },
 
   async discoveryCancellation() {
-    for (const validate of [false, true]) {
-      await withStalledFetch("headers", async (ready, aborted) => {
-        const client = await OpenAICompatible.create({
-          baseUrl: "https://cancellation.test/v1",
-          apiToken: "test",
-          extraHeaders: new Map(),
+    for (const providerType of [OpenAICompatible, OpenAIResponses]) {
+      for (const validate of [false, true]) {
+        await withStalledFetch("headers", async (ready, aborted) => {
+          const client = await providerType.create({
+            baseUrl: "https://cancellation.test/v1",
+            apiToken: "test",
+            extraHeaders: new Map(),
+          });
+          const controller = new AbortController();
+          const pending = validate
+            ? client.validateAPIKey("test", controller.signal)
+            : client.fetchModels(controller.signal);
+          const rejected = pending.then(
+            () => false,
+            () => true,
+          );
+          await ready;
+          controller.abort();
+          assert(await rejected, "aborted operation must reject");
+          assert(aborted(), "operation cancellation must abort Fetch");
         });
-        const controller = new AbortController();
-        const pending = validate
-          ? client.validateAPIKey("test", controller.signal)
-          : client.fetchModels(controller.signal);
-        const rejected = pending.then(
-          () => false,
-          () => true,
-        );
-        await ready;
-        controller.abort();
-        assert(await rejected, "aborted operation must reject");
-        assert(aborted(), "operation cancellation must abort Fetch");
-      });
+      }
     }
   },
 };

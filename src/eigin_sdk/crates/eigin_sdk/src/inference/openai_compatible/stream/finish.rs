@@ -3,7 +3,7 @@ use super::StreamParser;
 
 impl StreamParser {
     pub(super) fn finish(&mut self, reason: &str) -> Result<(), InferenceError> {
-        if self.refused {
+        if self.output.refused {
             return Err(InferenceError::PolicyStop);
         }
         match reason {
@@ -16,7 +16,8 @@ impl StreamParser {
             .as_ref()
             .and_then(ReasoningCapture::completed)
         {
-            self.events
+            self.output
+                .events
                 .push_back(InferenceEvent::ReasoningHistory { history });
         }
         let mut finish = InferenceFinishReason::Stop;
@@ -24,20 +25,25 @@ impl StreamParser {
             || (matches!(self.adapter, Adapter::Gemini) && !self.calls.is_empty())
         {
             if !self.metadata.is_empty() {
-                self.events.push_back(InferenceEvent::ProviderMetadata {
-                    values: std::mem::take(&mut self.metadata),
-                });
+                self.output
+                    .events
+                    .push_back(InferenceEvent::ProviderMetadata {
+                        values: std::mem::take(&mut self.metadata),
+                    });
             }
             for (_, call) in std::mem::take(&mut self.calls) {
                 if !call.id.is_empty() && !call.name.is_empty() {
-                    self.events.push_back(InferenceEvent::ToolCall { call });
+                    self.output
+                        .events
+                        .push_back(InferenceEvent::ToolCall { call });
                     finish = InferenceFinishReason::ToolCalls;
                 }
             }
         }
-        self.events
+        self.output
+            .events
             .push_back(InferenceEvent::Finished { reason: finish });
-        self.done = true;
+        self.output.done = true;
         Ok(())
     }
 }

@@ -21,14 +21,14 @@ Rather than a client per provider, Eigin uses a small set:
 - **OpenAI-compatible client**: any provider implementing the OpenAI REST API (`/models`, `/chat/completions`). Covers OpenAI, Google, Mistral, OpenRouter, and most others.
 - **Eigin Relay client**: connects to [Eigin Relay](./relay.md) using purchased credits.
 - **Anthropic client**: a native implementation for the Messages API, which differs enough to warrant its own client (auth headers, content blocks, typed SSE events, system prompt handling).
-- **Responses client**: OpenAI's Responses API, used for the ChatGPT subscription sign-in flow. The credential is a short-lived OAuth access token rather than an API key.
+- **Responses client**: an adapter to the SDK's OpenAI Responses provider, used for the ChatGPT subscription sign-in flow. The credential is a short-lived OAuth access token rather than an API key.
 - **Local client**: bridges the agent loop to the on-device model, holding session state per chat.
 
 A factory selects the client from the base URL: the relay URL routes to the relay client, other cloud URLs to OpenAI or Anthropic, and `local://` to the on-device client. Adding an OpenAI-compatible provider is just adding a preset.
 
 ## Using providers
 
-The SDK handles communication with OpenAI-compatible providers and Eigin Relay. See [SDK inference](sdk/inference.md) to use them.
+The SDK handles communication with OpenAI-compatible providers, OpenAI Responses, and Eigin Relay. See [SDK inference](sdk/inference.md) to use them.
 
 ## Provider adapters
 

@@ -11,12 +11,14 @@ type Error = Box<dyn std::error::Error>;
 enum ProviderKind {
     #[value(name = "openai-compatible")]
     OpenAiCompatible,
+    #[value(name = "openai-responses")]
+    OpenAiResponses,
     EiginRelay,
 }
 
 #[derive(Args)]
 pub(crate) struct Connection {
-    /// OpenAI-compatible versioned endpoint, or relay root URL.
+    /// Versioned OpenAI endpoint, or relay root URL.
     #[arg(long)]
     base_url: String,
     #[arg(long, value_enum, default_value = "openai-compatible")]
@@ -38,7 +40,7 @@ pub(crate) struct Connection {
 impl Connection {
     pub(super) fn provider(self, chat: bool) -> Result<Provider, Error> {
         match self.provider {
-            ProviderKind::OpenAiCompatible => {
+            ProviderKind::OpenAiCompatible | ProviderKind::OpenAiResponses => {
                 if self.relay_key_env.is_some() || !self.credit_token_env.is_empty() {
                     return Err(invalid(
                         "EiginRelay credentials require --provider eigin-relay",
@@ -49,13 +51,17 @@ impl Connection {
                     None if self.no_auth => String::new(),
                     None => return Err(invalid("Choose --api-key-env NAME or --no-auth")),
                 };
-                Ok(Provider::OpenAiCompatible(OpenAiCompatibleProvider::new(
-                    InferenceProviderConfig {
-                        base_url: self.base_url,
-                        api_token,
-                        extra_headers: Default::default(),
-                    },
-                )?))
+                let config = InferenceProviderConfig {
+                    base_url: self.base_url,
+                    api_token,
+                    extra_headers: Default::default(),
+                };
+                Ok(match self.provider {
+                    ProviderKind::OpenAiResponses => {
+                        Provider::OpenAiResponses(OpenAiResponsesProvider::new(config)?)
+                    }
+                    _ => Provider::OpenAiCompatible(OpenAiCompatibleProvider::new(config)?),
+                })
             }
             ProviderKind::EiginRelay => {
                 if self.api_key_env.is_some() || self.no_auth {
@@ -120,18 +126,21 @@ impl EiginRelayWalletSource for Wallets {
 
 pub(super) enum Provider {
     OpenAiCompatible(Arc<OpenAiCompatibleProvider>),
+    OpenAiResponses(Arc<OpenAiResponsesProvider>),
     EiginRelay(Arc<EiginRelayProvider>),
 }
 impl Provider {
-    pub(super) fn discovery(&self) -> Arc<ModelDiscoveryOperation> {
+    pub(super) fn discovery(&self) -> Discovery {
         match self {
-            Self::OpenAiCompatible(p) => p.discovery(),
-            Self::EiginRelay(p) => p.discovery(),
+            Self::OpenAiCompatible(p) => Discovery::Compatible(p.discovery()),
+            Self::OpenAiResponses(p) => Discovery::Responses(p.discovery()),
+            Self::EiginRelay(p) => Discovery::Compatible(p.discovery()),
         }
     }
     pub(super) fn stream(&self, input: InferenceCompletionInput) -> Result<Stream, InferenceError> {
         match self {
             Self::OpenAiCompatible(p) => Ok(Stream::OpenAiCompatible(p.stream(input)?)),
+            Self::OpenAiResponses(p) => Ok(Stream::OpenAiResponses(p.stream(input)?)),
             Self::EiginRelay(p) => Ok(Stream::EiginRelay(p.stream(input)?)),
         }
     }
@@ -140,19 +149,42 @@ impl Provider {
 #[derive(Clone)]
 pub(super) enum Stream {
     OpenAiCompatible(Arc<OpenAiCompatibleStream>),
+    OpenAiResponses(Arc<OpenAiResponsesStream>),
     EiginRelay(Arc<EiginRelayStream>),
 }
 impl Stream {
     pub(super) fn cancel(&self) {
         match self {
             Self::OpenAiCompatible(s) => s.cancel(),
+            Self::OpenAiResponses(s) => s.cancel(),
             Self::EiginRelay(s) => s.cancel(),
         }
     }
     pub(super) async fn next(&self) -> Result<Option<InferenceEvent>, InferenceError> {
         match self {
             Self::OpenAiCompatible(s) => s.next().await,
+            Self::OpenAiResponses(s) => s.next().await,
             Self::EiginRelay(s) => s.next().await,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(super) enum Discovery {
+    Compatible(Arc<ModelDiscoveryOperation>),
+    Responses(Arc<OpenAiResponsesModelDiscovery>),
+}
+impl Discovery {
+    pub(super) fn cancel(&self) {
+        match self {
+            Self::Compatible(op) => op.cancel(),
+            Self::Responses(op) => op.cancel(),
+        }
+    }
+    pub(super) async fn fetch_models(&self) -> Result<Vec<String>, InferenceError> {
+        match self {
+            Self::Compatible(op) => op.fetch_models().await,
+            Self::Responses(op) => op.fetch_models().await,
         }
     }
 }

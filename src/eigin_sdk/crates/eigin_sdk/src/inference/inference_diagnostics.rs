@@ -8,9 +8,10 @@ use web_time::Instant;
 static NEXT_OPERATION: AtomicU64 = AtomicU64::new(1);
 
 /// Per-request observations shared by streaming and one-shot provider operations.
-pub(super) struct InferenceDiagnostics {
+pub(crate) struct InferenceDiagnostics {
     context: DiagnosticContext,
     kind: &'static str,
+    category: &'static str,
     started: Mutex<Option<Instant>>,
     finished: AtomicBool,
     status: AtomicU16,
@@ -20,7 +21,7 @@ pub(super) struct InferenceDiagnostics {
 }
 
 impl InferenceDiagnostics {
-    pub fn new(kind: &'static str) -> Self {
+    pub fn for_provider(kind: &'static str, category: &'static str) -> Self {
         Self {
             context: DiagnosticContext {
                 operation_id: format!(
@@ -30,6 +31,7 @@ impl InferenceDiagnostics {
                 parent_operation_id: None,
             },
             kind,
+            category,
             started: Mutex::new(None),
             finished: AtomicBool::new(false),
             status: AtomicU16::new(0),
@@ -65,41 +67,36 @@ impl InferenceDiagnostics {
     }
 
     pub fn record(&self, message: &'static str, model: Option<&str>, excerpt: Option<&str>) {
-        emit(
-            DiagnosticLevel::Debug,
-            "inference.openai-compatible",
-            message,
-            |event| {
-                event.field("operation", DiagnosticPrivacy::Public, || self.kind.into());
-                event.field("elapsed_ms", DiagnosticPrivacy::Public, || {
-                    self.started
-                        .lock()
-                        .unwrap()
-                        .map(|start| start.elapsed().as_millis())
-                        .unwrap_or(0)
-                        .to_string()
+        emit(DiagnosticLevel::Debug, self.category, message, |event| {
+            event.field("operation", DiagnosticPrivacy::Public, || self.kind.into());
+            event.field("elapsed_ms", DiagnosticPrivacy::Public, || {
+                self.started
+                    .lock()
+                    .unwrap()
+                    .map(|start| start.elapsed().as_millis())
+                    .unwrap_or(0)
+                    .to_string()
+            });
+            for (name, value) in [
+                ("bytes_received", self.bytes.load(Ordering::Relaxed)),
+                ("chunks_received", self.chunks.load(Ordering::Relaxed)),
+                ("events_delivered", self.events.load(Ordering::Relaxed)),
+            ] {
+                event.field(name, DiagnosticPrivacy::Public, || value.to_string());
+            }
+            let status = self.status.load(Ordering::Relaxed);
+            if status != 0 {
+                event.field("status", DiagnosticPrivacy::Public, || status.to_string());
+            }
+            if let Some(model) = model {
+                event.field("model", DiagnosticPrivacy::Private, || model.into());
+            }
+            if let Some(excerpt) = excerpt {
+                event.field("excerpt", DiagnosticPrivacy::Private, || {
+                    excerpt.chars().take(256).collect()
                 });
-                for (name, value) in [
-                    ("bytes_received", self.bytes.load(Ordering::Relaxed)),
-                    ("chunks_received", self.chunks.load(Ordering::Relaxed)),
-                    ("events_delivered", self.events.load(Ordering::Relaxed)),
-                ] {
-                    event.field(name, DiagnosticPrivacy::Public, || value.to_string());
-                }
-                let status = self.status.load(Ordering::Relaxed);
-                if status != 0 {
-                    event.field("status", DiagnosticPrivacy::Public, || status.to_string());
-                }
-                if let Some(model) = model {
-                    event.field("model", DiagnosticPrivacy::Private, || model.into());
-                }
-                if let Some(excerpt) = excerpt {
-                    event.field("excerpt", DiagnosticPrivacy::Private, || {
-                        excerpt.chars().take(256).collect()
-                    });
-                }
-                Some(self.context.clone())
-            },
-        );
+            }
+            Some(self.context.clone())
+        });
     }
 }

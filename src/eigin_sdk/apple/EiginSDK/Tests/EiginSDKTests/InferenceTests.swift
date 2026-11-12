@@ -14,8 +14,8 @@ struct InferenceTests {
         }
     }
 
-    @Test(arguments: [false, true], [false, true])
-    func taskCancellationStopsURLSession(beforeBody: Bool, relay: Bool) async throws {
+    @Test(arguments: [false, true], ["compatible", "relay", "responses"])
+    func taskCancellationStopsURLSession(beforeBody: Bool, providerKind: String) async throws {
         let probe = CancellationProbe(sendHeaders: beforeBody)
         let id = UUID().uuidString
         CancellationURLProtocol.probes.withLock { $0[id] = probe }
@@ -26,7 +26,12 @@ struct InferenceTests {
         let session = URLSession(configuration: configuration)
         defer { session.invalidateAndCancel() }
         let open: @Sendable (EiginSDK.Experimental.Inference.Input) async throws -> EiginSDK.Experimental.Inference.Stream
-        if relay {
+        if providerKind == "responses" {
+            let provider = EiginSDK.Experimental.Inference.OpenAIResponses(configuration: .init(
+                baseUrl: "https://cancellation.test/\(id)", apiToken: "test", extraHeaders: [:]
+            ), session: session)
+            open = { try await provider.stream($0) }
+        } else if providerKind == "relay" {
             let provider = try EiginSDK.Experimental.Inference.EiginRelay(
                 configuration: .init(baseUrl: "https://cancellation.test/\(id)", relayKey: "relay-key"),
                 walletSource: CancellationWallets(), session: session
