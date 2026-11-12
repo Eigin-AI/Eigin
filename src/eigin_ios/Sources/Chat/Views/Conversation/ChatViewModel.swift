@@ -56,8 +56,14 @@ final class ChatViewModel {
     static let maxStagedAttachments = 4
 
     private var didLoad = false
+    private var isInitiativeChat = false
 
     // MARK: - Computed
+
+    /// Suggestions belong to user-started chats before a turn begins.
+    var allowsIcebreakers: Bool {
+        window.isPreloaded && !isInitiativeChat && !isTurnInProgress
+    }
 
     var isStreaming: Bool {
         chatLoop.phase == .waiting || chatLoop.phase == .streaming
@@ -189,16 +195,21 @@ final class ChatViewModel {
         preloadAllMessages()
     }
 
-    func preloadAllMessages() {
+    /// Loads history and chat origin before publishing feed readiness.
+    @discardableResult
+    func preloadAllMessages() -> Task<Void, Never> {
         let id = chatID
-        Task {
+        return Task {
             let descriptor = FetchDescriptor<Message>(
                 predicate: #Predicate<Message> { $0.chat?.id == id },
                 sortBy: [SortDescriptor(\.timestamp)]
             )
             window.allPersisted = (try? modelContext.fetch(descriptor)) ?? []
-            window.isPreloaded = true
+            isInitiativeChat = (try? modelContext.fetchCount(
+                FetchDescriptor<InitiativeOccurrence>(predicate: #Predicate { $0.chatID == id })
+            )).map { $0 > 0 } ?? true
             window.messages = window.loadInitialWindow()
+            window.isPreloaded = true
         }
     }
 

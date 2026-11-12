@@ -261,6 +261,7 @@ struct ChatView: View {
                             attachmentStore.delete(id: attachment.id)
                         }
                     ),
+                    allowsIcebreakers: viewModel.allowsIcebreakers,
                     isLoaded: viewModel.window.isPreloaded,
                     isContentReady: isContentReady,
                     onUserMessageFooterAction: (!viewModel.isTurnInProgress && canSend)
