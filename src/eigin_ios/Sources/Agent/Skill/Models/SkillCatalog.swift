@@ -36,8 +36,8 @@ enum SkillCatalog {
         connectedCapabilities: Set<Capability>
     ) -> [Skill] {
         skills.filter { skill in
-            skill.requiredCapabilities.isEmpty
-                || !skill.requiredCapabilities.isDisjoint(with: connectedCapabilities)
+            skill.connectionPresetID == nil && (skill.requiredCapabilities.isEmpty
+                || !skill.requiredCapabilities.isDisjoint(with: connectedCapabilities))
         }
     }
 
@@ -75,6 +75,9 @@ enum SkillCatalog {
     /// Reminders" (a skill needs all of its capabilities). `nil` when the
     /// skill needs nothing connected.
     static func connectionNeeded(for skill: Skill, connected: Set<Capability>) -> String? {
+        if let presetID = skill.connectionPresetID {
+            return MCPPreset.all.first { $0.id == presetID }?.displayName
+        }
         let missing = missingCapabilities(of: skill, connected: connected)
         guard !missing.isEmpty else { return nil }
         let names = providerNames(for: missing)

@@ -1,5 +1,11 @@
 import Foundation
 
+/// The connection requested by a skill, independent of integration capabilities.
+enum SkillConnectionTarget: Equatable {
+    case capabilities(Set<Capability>)
+    case mcpPreset(String)
+}
+
 /// Requires a later user message before a skill can present a connection sheet.
 @MainActor final class SkillConnectionGate {
     enum Decision {
@@ -14,7 +20,7 @@ import Foundation
     }
 
     private struct Entry {
-        let missing: Set<Capability>
+        let target: SkillConnectionTarget
         let messageID: String
         var attempt: UUID?
         var finished = false
@@ -40,20 +46,35 @@ import Foundation
         missing: Set<Capability>,
         messageID: String?
     ) -> Decision {
+        request(
+            chatID: chatID,
+            skillID: skillID,
+            target: .capabilities(missing),
+            messageID: messageID
+        )
+    }
+
+    /// Reserves a preset or capability connection using the same consent boundary.
+    func request(
+        chatID: UUID,
+        skillID: String,
+        target: SkillConnectionTarget,
+        messageID: String?
+    ) -> Decision {
         guard let messageID, messages[chatID] == messageID else { return .waitForUser }
         let key = Key(chatID: chatID, skillID: skillID)
         if var entry = entries[key] {
             if entry.attempt != nil, !entry.finished { return .waitForUser }
             if entry.finished, entry.messageID == messageID { return .waitForUser }
-            if !entry.finished, entry.missing == missing {
+            if !entry.finished, entry.target == target {
                 guard entry.messageID != messageID else { return .waitForUser }
                 let attempt = UUID()
-                entry = Entry(missing: missing, messageID: messageID, attempt: attempt)
+                entry = Entry(target: target, messageID: messageID, attempt: attempt)
                 entries[key] = entry
                 return .connect(attempt)
             }
         }
-        entries[key] = Entry(missing: missing, messageID: messageID)
+        entries[key] = Entry(target: target, messageID: messageID)
         return .askUser
     }
 

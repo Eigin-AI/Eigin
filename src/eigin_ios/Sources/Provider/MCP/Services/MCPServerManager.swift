@@ -73,7 +73,8 @@ final class MCPServerManager: @unchecked Sendable {
             serverName: server.name,
             endpoint: endpoint,
             authProvider: authProvider,
-            httpConfiguration: httpConfiguration
+            httpConfiguration: httpConfiguration,
+            toolNamespace: server.toolNamespace
         )
 
         // Bound the connect on the activation/turn path so a slow or dead server

@@ -17,7 +17,12 @@ struct ConnectCapabilitySheet: View {
 
     var body: some View {
         let providers = request.providers
-        if providers.count == 1, let only = providers.first {
+        if let preset = MCPPreset.all.first(where: { $0.id == request.presetID }) {
+            ConnectIntegrationSheet(
+                target: .preset(preset), doneLabel: Localized.Common.Actions.continue,
+                offersDecline: true, onResolved: onResolved
+            )
+        } else if providers.count == 1, let only = providers.first {
             connectSheet(for: only)
         } else {
             chooser(providers)
@@ -44,8 +49,9 @@ struct ConnectCapabilitySheet: View {
             ConnectIntegrationSheet(
                 target: .type(type),
                 doneLabel: Localized.Common.Actions.continue,
-                onConnected: { onResolved(.connected) },
-                onCancelled: { back(onBack) }
+                onResolved: { result in
+                    if case .cancelled = result { back(onBack) } else { onResolved(result) }
+                }
             )
         }
     }

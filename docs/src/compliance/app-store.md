@@ -217,17 +217,17 @@ The App is free. Hosted AI through Eigin is paid with prepaid credits bought as 
 
 ### 4.7 Mini apps, chatbots, plug-ins
 
-This guideline covers software a host app offers that is not part of its binary. Eigin is itself the AI assistant, not a host for third-party chatbots.
+Eigin uses direct integrations and MCP to connect to the user's service accounts.
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 4.7, 4.7.1 – 4.7.5 | N/A | Eigin offers no catalog of third-party software. A user may connect a tool server of their own (MCP) by entering its address ([MCP](../tools/mcp.md)). Even so, the spirit of 4.7.3 is met: every action on such a server needs the user's approval, and external tools ask by default ([permissions](../tools/permissions.md)) |
+| 4.7, 4.7.1 – 4.7.5 | N/A | Service integrations use client code bundled in the App. MCP presets supply endpoints and setup guidance; MCP tools execute on external servers ([MCP](../tools/mcp.md)). Authentication is user-approved. External tools ask by default, with per-tool overrides ([permissions](../tools/permissions.md)) |
 
 ### 4.8 Login services
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| 4.8 | N/A | The App has no primary account, so no login service sets one up. Third-party sign-in is used only to connect the user's own mail and calendar accounts, as a client of those services, which the guideline exempts |
+| 4.8 | N/A | The App has no primary account, so no login service sets one up. Third-party sign-in connects the user's own service accounts, including mail, calendar, and MCP services, as a client of those services |
 
 ### 4.9, 4.10
 

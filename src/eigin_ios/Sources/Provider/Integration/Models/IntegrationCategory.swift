@@ -11,6 +11,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
     /// What iOS gives permission for: Apple Health, Calendar, Reminders, Location.
     case platform
     case music
+    case finance
 
     var id: String {
         rawValue
@@ -21,6 +22,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         case .email: Localized.Integrations.Category.Email.displayName
         case .familyAndSchool: Localized.Integrations.Category.FamilyAndSchool.displayName
         case .platform: Localized.Integrations.Category.Platform.displayName
+        case .finance: Localized.Integrations.Category.Finance.displayName
         case .music: Localized.Integrations.Category.Music.displayName
         }
     }
@@ -33,6 +35,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         case .familyAndSchool: "figure.child"
         case .platform: "iphone"
         case .music: "music.note"
+        case .finance: "eurosign.circle"
         }
     }
 }
@@ -46,7 +49,7 @@ extension IntegrationCategory {
     /// Whether the category has at least one connectable provider. Those
     /// without one appear in the browse grid as disabled tiles.
     var isAvailable: Bool {
-        !integrationTypes.isEmpty
+        !integrationTypes.isEmpty || MCPPreset.all.contains { $0.category == self }
     }
 
     /// Categories ordered for the browse grid, available ones first.

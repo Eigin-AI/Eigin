@@ -62,14 +62,14 @@ struct MistralReasoningReplayTests {
         let storeURL = directory.appendingPathComponent("store")
         do {
             let container = try ModelContainer(
-                for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+                for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
                 configurations: ModelConfiguration(url: storeURL)
             )
             container.mainContext.insert(Message.from(message))
             try container.mainContext.save()
         }
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(url: storeURL)
         )
         let loaded = try #require(container.mainContext.fetch(FetchDescriptor<Message>()).first)

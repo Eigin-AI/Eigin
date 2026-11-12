@@ -50,7 +50,11 @@ final class SkillSession {
     /// Catalog candidates excluding skills already active in this session or chat.
     func candidates(context: ModelContext?) -> [Skill] {
         let ids = context.flatMap { chat(context: $0) }.map {
-            Set($0.activeSkillEntries.map(\.skillID))
+            Set($0.activeSkillEntries.map(\.skillID).filter { id in
+                guard let context else { return true }
+                return SkillCatalog.skill(forID: id, mcpServers: servers(context: context))?
+                    .connectionPresetID == nil
+            })
         } ?? Set(activeSkills.map(\.id))
         return SkillCatalog.activatable(
             from: BundledSkill.all + mcpSkills(context: context),
@@ -84,6 +88,7 @@ final class SkillSession {
         } else if activeSkills.isEmpty {
             activeSkills = initialSkills
         }
+        toolsBySkill = toolsBySkill.filter { key, _ in activeSkills.contains { $0.id == key } }
         unavailableNotes = []
         for (index, skill) in activeSkills.enumerated() {
             if isSmallContext, BundledSkill.skill(forID: skill.id) == nil { continue }
@@ -119,6 +124,26 @@ final class SkillSession {
         }
         guard !skill.alwaysActive else {
             return failure("Skill '\(skillID)' is always active", toolCallID: toolCallID)
+        }
+        if let presetID = skill.connectionPresetID,
+           let preset = MCPPreset.all.first(where: { $0.id == presetID })
+        {
+            guard toolAccess == .interactive else {
+                return failure(
+                    Prompt.Skills.backgroundConnectionUnavailable(connections: preset.displayName),
+                    toolCallID: toolCallID
+                )
+            }
+            targetChat?.activeSkillEntries.removeAll { $0.skillID == skillID }
+            activeSkills.removeAll { $0.id == skillID }
+            toolsBySkill.removeValue(forKey: skillID)
+            let request = connectionRequest ?? SkillConnectionRequest(
+                chatID: chatID, onConnectCapability: nil,
+                capabilityDeclines: DeclinedCapabilities(), connectionGate: nil, userMessageID: nil
+            )
+            if let result = await request.connect(
+                preset: preset, agent: agent, context: context, toolCallID: toolCallID
+            ) { return result }
         }
         let missing = SkillCatalog.missingCapabilities(
             of: skill,

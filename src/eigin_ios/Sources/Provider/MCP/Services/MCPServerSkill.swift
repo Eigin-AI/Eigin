@@ -1,28 +1,17 @@
 import Foundation
 
-/// Projects enabled MCP servers into runtime ``Skill`` values so they flow
-/// through the same activation catalog, tool gating, and active-instruction
-/// injection as bundled skills — see #140.
-///
-/// Purely a function of persisted server data: no connection is attempted, so
-/// the catalog always lists every enabled server (a disconnected/unreachable
-/// server still shows up; the agent discovers connection problems when it
-/// tries to activate it — see ``ActivateSkillTool``). `requiredTools` are
-/// derived from ``MCPServer/cachedToolNames``, populated the first time a
-/// server connects and refreshed on every reconnect. A server that has never
-/// connected projects with an empty tool list.
+/// Projects saved MCP connections and bundled presets into skills without connecting.
 enum MCPServerSkill {
-    /// Projects every enabled server into a skill, disambiguating IDs when two
-    /// servers sanitize to the same name.
+    /// Includes unconnected presets and enabled custom servers, with distinct skill IDs.
     static func project(servers: [MCPServer]) -> [Skill] {
         var seenIDs: Set<String> = []
-        return servers.filter(\.isEnabled).map { server in
+        return servers.filter { $0.isEnabled && !isPresetServer($0) }.map { server in
             let id = assignID(to: server, disambiguating: &seenIDs)
             return skill(id: id, server: server)
-        }
+        } + MCPPreset.all.map { presetSkill($0, servers: servers) }
     }
 
-    /// Resolves a single enabled server's projected skill by ID, if any.
+    /// Resolves a preset or enabled custom server skill by ID.
     static func skill(forID id: String, servers: [MCPServer]) -> Skill? {
         project(servers: servers).first { $0.id == id }
     }
@@ -30,10 +19,32 @@ enum MCPServerSkill {
     /// Resolves the underlying server backing a projected skill ID, if any —
     /// used to connect the right server on activation.
     static func server(forSkillID id: String, servers: [MCPServer]) -> MCPServer? {
+        if let preset = MCPPreset.forSkillID(id) {
+            return preset.server(in: servers).flatMap { $0.isEnabled ? $0 : nil }
+        }
         var seenIDs: Set<String> = []
-        return servers.filter(\.isEnabled).first { server in
+        return servers.filter { $0.isEnabled && !isPresetServer($0) }.first { server in
             assignID(to: server, disambiguating: &seenIDs) == id
         }
+    }
+
+    private static func isPresetServer(_ server: MCPServer) -> Bool {
+        MCPPreset.all.contains { $0.id == server.presetID }
+    }
+
+    private static func presetSkill(_ preset: MCPPreset, servers: [MCPServer]) -> Skill {
+        let server = preset.server(in: servers).flatMap { $0.isEnabled ? $0 : nil }
+        let connected = server.map { skill(id: preset.skillID, server: $0) }
+        let instructions = [preset.instructions, connected?.instruction].compactMap { $0 }
+            .joined(separator: "\n\n")
+        return Skill(
+            id: preset.skillID, displayName: preset.displayName,
+            description: preset.description, instruction: instructions,
+            smallInstruction: preset.instructions,
+            requiredTools: connected?.requiredTools ?? [], alwaysActive: false,
+            customDescriptor: "Dinero Danish accounting: invoices, bookkeeping, purchases, payments, financial reports and account setup.",
+            connectionPresetID: server == nil ? preset.id : nil
+        )
     }
 
     // MARK: - ID assignment
@@ -61,7 +72,7 @@ enum MCPServerSkill {
         let requiredTools: Set<ToolCapability> = Set(toolNames.map { toolName in
             ToolCapability(
                 kind: .discovered,
-                key: MCPNaming.toolName(serverName: server.name, toolName: toolName),
+                key: MCPNaming.toolName(serverName: server.toolNamespace, toolName: toolName),
                 displayName: "\(server.name): \(toolName.titleCased)",
                 defaultPermissionLevel: MCPToolProxy.defaultCapability.defaultPermissionLevel,
                 category: .extensions

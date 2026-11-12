@@ -347,6 +347,15 @@ enum SchemaV14: VersionedSchema {
     }
 }
 
+/// Associates preset-created MCP connections with their bundled catalog entry.
+enum SchemaV15: VersionedSchema {
+    static let versionIdentifier = Schema.Version(15, 0, 0)
+
+    static var models: [any PersistentModel.Type] {
+        SchemaV14.models.filter { $0 != SchemaV6.MCPServer.self } + [MCPServer.self]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -389,7 +398,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
             SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
-            SchemaV11.self, SchemaV12.self, SchemaV13.self, SchemaV14.self,
+            SchemaV11.self, SchemaV12.self, SchemaV13.self, SchemaV14.self, SchemaV15.self,
         ]
     }
 
@@ -397,7 +406,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
             migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10, migrateV10toV11,
-            migrateV11toV12, migrateV12toV13, migrateV13toV14,
+            migrateV11toV12, migrateV12toV13, migrateV13toV14, migrateV14toV15,
         ]
     }
 
@@ -467,6 +476,9 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
     static let migrateV11toV12 = MigrationStage.lightweight(
         fromVersion: SchemaV11.self,
         toVersion: SchemaV12.self
+    )
+    static let migrateV14toV15 = MigrationStage.lightweight(
+        fromVersion: SchemaV14.self, toVersion: SchemaV15.self
     )
     static let migrateV13toV14 = MigrationStage.lightweight(
         fromVersion: SchemaV13.self, toVersion: SchemaV14.self

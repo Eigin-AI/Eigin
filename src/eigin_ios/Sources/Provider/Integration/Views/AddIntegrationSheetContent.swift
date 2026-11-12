@@ -16,6 +16,8 @@ struct AddIntegrationSheetContent: View {
     @Injected(\.integrationOAuthService) private var oauthService
     @Query(sort: \Integration.createdAt) private var integrations: [Integration]
 
+    @Query private var servers: [MCPServer]
+
     /// An entry was picked; the presenter stacks the connect sheet.
     let onSelect: (ConnectTarget) -> Void
 
@@ -69,8 +71,8 @@ struct AddIntegrationSheetContent: View {
             .transition(.opacity)
         }
 
-        if !listedTypes.isEmpty {
-            AppRowsGroup(label: listLabel, rows: listedTypes.map(typeRowSpec))
+        if !listedEntries.isEmpty {
+            AppRowsGroup(label: listLabel, rows: listedEntries.map(entryRowSpec))
                 .transition(.opacity)
         }
 
@@ -115,17 +117,18 @@ struct AddIntegrationSheetContent: View {
     /// is the Recommended list — the things we would suggest first — minus
     /// anything already connected, because the sheet connects one account
     /// per type and offering it again would be offering a thing you cannot do.
-    private var listedTypes: [IntegrationType] {
-        let types = if let selectedCategory {
-            searchText.isEmpty
-                ? selectedCategory.integrationTypes
-                : IntegrationSearch.matching(searchText, in: selectedCategory.integrationTypes)
-        } else {
-            searchText.isEmpty
-                ? BundledIntegrationType.recommended
-                : IntegrationSearch.matching(searchText, in: BundledIntegrationType.all)
-        }
-        return types.filter { !isConnected($0) }
+    private var listedEntries: [IntegrationCatalogEntry] {
+        let types = selectedCategory == nil && searchText.isEmpty
+            ? BundledIntegrationType.recommended : BundledIntegrationType.all
+        var entries = types.filter { !isConnected($0) }.map(IntegrationCatalogEntry.integration)
+        entries += MCPPreset.all.filter { preset in
+            preset.server(in: servers)?.isEnabled != true
+        }.map(IntegrationCatalogEntry.mcpPreset)
+        if let selectedCategory { entries = entries.filter { $0.category == selectedCategory } }
+        return searchText.isEmpty ? entries : IntegrationCatalogEntry.matching(
+            searchText,
+            in: entries
+        )
     }
 
     /// Only categories with something in them: an empty one is a promise
@@ -144,7 +147,7 @@ struct AddIntegrationSheetContent: View {
 
     private var queryHasNoMatches: Bool {
         guard !searchText.isEmpty else { return false }
-        return listedTypes.isEmpty
+        return listedEntries.isEmpty
     }
 
     private var noMatchesTitle: String {
@@ -159,24 +162,18 @@ struct AddIntegrationSheetContent: View {
             : Localized.Integration.Add.emptyCategoryBody
     }
 
-    private func typeRowSpec(_ type: IntegrationType) -> AppRowSpec {
+    private func entryRowSpec(_ entry: IntegrationCatalogEntry) -> AppRowSpec {
         AppRowSpec(
-            id: type.id,
-            title: type.displayName,
-            description: type.description,
-            icon: rowIcon(for: type),
-            action: { onSelect(.type(type)) }
+            id: entry.id, title: entry.displayName, description: entry.description,
+            icon: entry.image ?? Iconography.Functional.mail,
+            action: { onSelect(entry.target) }
         )
-    }
-
-    private func rowIcon(for type: IntegrationType) -> Image? {
-        type.brandImage
-            ?? Iconography.Functional.mail
     }
 
     private func categoryIcon(_ category: IntegrationCategory) -> Image? {
         switch category {
         case .email, .music: Iconography.Functional.mail
+        case .finance: Image(systemName: category.systemImage)
         case .familyAndSchool: Iconography.Functional.school
         case .platform: Iconography.Functional.lock
         }
@@ -192,6 +189,7 @@ extension ConnectTarget: Identifiable {
         switch self {
         case .type(let type): "type-\(type.id)"
         case .address: "address"
+        case .preset(let preset): "preset-\(preset.id)"
         }
     }
 }

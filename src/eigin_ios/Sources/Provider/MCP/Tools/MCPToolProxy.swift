@@ -42,7 +42,7 @@ struct MCPToolProxy: Tool {
 
     init(mcpTool: MCP.Tool, serverName: String, connection: MCPServerConnection) {
         // Namespace to avoid collisions: "mcp__<server>__<tool>"
-        name = MCPNaming.toolName(serverName: serverName, toolName: mcpTool.name)
+        name = MCPNaming.toolName(serverName: connection.toolNamespace, toolName: mcpTool.name)
         let toolLabel = mcpTool.title ?? mcpTool.name.titleCased
         displayName = "\(serverName): \(toolLabel)"
         self.mcpTool = mcpTool

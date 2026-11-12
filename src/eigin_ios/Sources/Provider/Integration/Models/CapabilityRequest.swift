@@ -11,6 +11,9 @@ struct CapabilityRequest: Identifiable, Equatable {
     /// Who is asking, for the sheet's description.
     let agentName: String
 
+    /// A preset uses the same chat presentation without inventing capabilities.
+    var presetID: String?
+
     var providers: [IntegrationType] {
         providerIDs.compactMap(BundledIntegrationType.type(forID:))
     }
@@ -19,10 +22,17 @@ struct CapabilityRequest: Identifiable, Equatable {
 /// How a request to connect a capability ended.
 enum CapabilityConnectResult: Sendable {
     case connected
-    /// Not now, or closing the sheet before connecting.
+    /// An explicit choice to leave the service unconnected.
     case declined
-    /// The reply was stopped while the sheet was up: not an answer either way.
+    /// Setup or the reply was stopped without a decision.
     case cancelled
+    /// Setup failed before a connection could be verified.
+    case failed(String)
+
+    /// Dismissing an error reports it without recording a refusal.
+    static func dismissed(failure: String?) -> Self {
+        if let failure { .failed(failure) } else { .cancelled }
+    }
 }
 
 /// Asks the person to connect a capability and waits for the answer. Only a

@@ -125,6 +125,11 @@ struct SkillConnectionRequest {
                 Prompt.Skills.connectionCancelled(connections: names),
                 toolCallID: id
             )
+        case .failed(let reason):
+            return notConnected(
+                Prompt.Skills.connectionFailed(connections: names, reason: reason),
+                toolCallID: id
+            )
         }
     }
 

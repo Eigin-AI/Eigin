@@ -143,7 +143,7 @@ struct AgenticChatLoopTests {
         var continuation = service.capturedEventMessages
         if checkpoint {
             let store = try ModelContainer(
-                for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+                for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)
             )
             for message in savedCheckpoint {

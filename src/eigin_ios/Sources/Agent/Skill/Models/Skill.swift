@@ -28,6 +28,9 @@ struct Skill: Identifiable {
     /// Latin-script model, so one English descriptor matches Danish queries too.
     var customDescriptor: String?
 
+    /// Preset setup is required before this projected skill can be activated.
+    var connectionPresetID: String?
+
     /// The matching target for skill retrieval (hints + search).
     var descriptor: String {
         customDescriptor ?? description

@@ -2006,6 +2006,12 @@ enum Localized {
                 }
             }
 
+            enum Finance {
+                static var displayName: String {
+                    Localized.get("integrations.category.finance.displayName")
+                }
+            }
+
             enum Music {
                 /// Display name for the Music integration category (browse grid) — no provider yet
                 static var displayName: String {
@@ -2033,6 +2039,16 @@ enum Localized {
             /// skill needs. The argument is what is needed, lowercased, e.g. 'email'.
             static func chooseTitle(_ p1: String) -> String {
                 String(format: Localized.get("integrations.chat.chooseTitle"), p1)
+            }
+        }
+
+        enum Dinero {
+            static var connectionDescription: String {
+                Localized.get("integrations.dinero.connectionDescription")
+            }
+
+            static var description: String {
+                Localized.get("integrations.dinero.description")
             }
         }
 

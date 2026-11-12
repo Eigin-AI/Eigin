@@ -22,6 +22,7 @@ struct MCPServerSkillTests {
             makeServer(name: "Linear", toolNames: ["list_tickets"]),
         ]
         let skills = MCPServerSkill.project(servers: servers)
+            .filter { MCPPreset.forSkillID($0.id) == nil }
         #expect(skills.count == 2)
         #expect(skills.map(\.id).sorted() == ["mcp__gitlab", "mcp__linear"])
     }
@@ -32,6 +33,7 @@ struct MCPServerSkillTests {
             makeServer(name: "Linear", isEnabled: true),
         ]
         let skills = MCPServerSkill.project(servers: servers)
+            .filter { MCPPreset.forSkillID($0.id) == nil }
         #expect(skills.count == 1)
         #expect(skills.first?.id == "mcp__linear")
     }
@@ -41,6 +43,7 @@ struct MCPServerSkillTests {
         // catalog is cache-driven, not connection-driven.
         let server = makeServer(name: "Never Connected")
         let skills = MCPServerSkill.project(servers: [server])
+            .filter { MCPPreset.forSkillID($0.id) == nil }
         #expect(skills.count == 1)
         #expect(skills.first?.requiredTools.isEmpty == true)
     }
@@ -68,6 +71,7 @@ struct MCPServerSkillTests {
         let a = makeServer(name: "Notes")
         let b = makeServer(name: "Notes")
         let skills = MCPServerSkill.project(servers: [a, b])
+            .filter { MCPPreset.forSkillID($0.id) == nil }
         #expect(skills.count == 2)
         #expect(Set(skills.map(\.id)).count == 2)
         #expect(skills.map(\.id).contains("mcp__notes"))

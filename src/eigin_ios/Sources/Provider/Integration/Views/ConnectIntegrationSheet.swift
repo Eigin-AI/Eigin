@@ -7,6 +7,7 @@ import SwiftUI
 enum ConnectTarget {
     case type(IntegrationType)
     case address
+    case preset(MCPPreset)
 }
 
 /// Connecting one integration, whichever way it lets you in.
@@ -21,14 +22,13 @@ struct ConnectIntegrationSheet: View {
     let target: ConnectTarget
     /// The last step's button. A chat waiting on the answer says Continue.
     var doneLabel: String = Localized.Common.Actions.done
-    var onConnected: () -> Void = {}
-    var onCancelled: () -> Void = {}
+    var offersDecline = false
+    var onResolved: (CapabilityConnectResult) -> Void = { _ in }
 
     private enum Step {
         case start
         case working
-        /// Only the address route reaches this: the server answered, and it
-        /// wants credentials of its own rather than a sign-in.
+        /// MCP setup needs client credentials before sign-in can proceed.
         case credentials
         case failed
         case done
@@ -62,6 +62,7 @@ struct ConnectIntegrationSheet: View {
     @State private var oauthConfig: OAuthConfiguration?
     @State private var tempServerID = UUID()
     @State private var discoveredToolNames: [String] = []
+    @State private var discoveredInstructions: String?
 
     /// The Aula login sheet runs over the working step.
     @State private var showingAulaLogin = false
@@ -77,8 +78,14 @@ struct ConnectIntegrationSheet: View {
         if case .type(let t) = target { t } else { nil }
     }
 
+    private var preset: MCPPreset? {
+        if case .preset(let preset) = target { preset } else { nil }
+    }
+
     private var name: String {
         switch target {
+        case .preset(let preset):
+            preset.displayName
         case .type(let t):
             t.displayName
         case .address:
@@ -98,8 +105,7 @@ struct ConnectIntegrationSheet: View {
                     title: step == .done ? Localized.Integration.Connect.connectedTitle : name,
                     description: step == .done ? nil : description,
                     onDismiss: {
-                        discardAttempt()
-                        onCancelled()
+                        dismissConnection()
                     }
                 )
             },
@@ -108,6 +114,9 @@ struct ConnectIntegrationSheet: View {
                     .padding(.horizontal, Spacing.n16)
             }
         )
+        .onDisappear {
+            if type == nil { discardAttempt() }
+        }
         .alert(
             Localized.Ui.integrations,
             isPresented: Binding(
@@ -161,6 +170,8 @@ struct ConnectIntegrationSheet: View {
             case .platform:
                 type.description
             }
+        case .preset(let preset):
+            preset.connectionDescription
         case .address:
             Localized.Integration.Connect.addressDescription
         }
@@ -229,6 +240,22 @@ struct ConnectIntegrationSheet: View {
                 EmptyView()
             }
 
+        case .preset(let preset):
+            VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
+                AppButton(Localized.Integration.Connect.continueWith(preset.displayName)) {
+                    address = preset.endpoint.absoluteString
+                    connectAddress()
+                } trailing: {
+                    Iconography.Functional.Arrow.upRight
+                }
+                if offersDecline {
+                    AppButton(Localized.Common.Actions.notNow, variant: .secondary) {
+                        discardAttempt()
+                        onResolved(.declined)
+                    }
+                }
+            }
+
         case .address:
             VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                 AppTextInput(label: Localized.Integration.Connect.addressField, text: $address)
@@ -254,26 +281,23 @@ struct ConnectIntegrationSheet: View {
             )
 
             AppButton(Localized.Common.Actions.cancel, variant: .secondary) {
-                connectAttempt += 1
+                discardAttempt()
                 step = .start
             }
         }
     }
 
-    /// The header is the sheet's only close; without Save, a probed OAuth
-    /// server's tokens would stay under the temporary id forever. The
-    /// migration in `saveServer` deletes them anyway, so this is a no-op
-    /// for a saved connection.
+    /// Ends setup with its actual outcome and removes temporary credentials.
+    private func dismissConnection() {
+        let result = CapabilityConnectResult
+            .dismissed(failure: step == .failed ? failure ?? failedFallbackBody : nil)
+        discardAttempt()
+        onResolved(result)
+    }
+
     private func discardAttempt() {
         connectAttempt += 1
-        if detectedAuthType == .oauth {
-            for suffix in MCPServer.keychainSuffixes {
-                keychainService.delete(key: keychainService.mcpKey(
-                    for: tempServerID,
-                    suffix: suffix
-                ))
-            }
-        }
+        MCPConnectionSave.discard(temporaryID: tempServerID, keychain: keychainService)
     }
 
     private var workingTitle: String {
@@ -282,7 +306,7 @@ struct ConnectIntegrationSheet: View {
             type.authKind.isBrowserSignIn
                 ? Localized.Integration.Connect.Working.waitingTitle
                 : Localized.Integration.Connect.Working.checkingTitle
-        case .address:
+        case .address, .preset:
             Localized.Integration.Connect.Working.checkingTitle
         }
     }
@@ -293,12 +317,12 @@ struct ConnectIntegrationSheet: View {
             type.authKind.isBrowserSignIn
                 ? Localized.Integration.Connect.Working.waitingBody(type.displayName)
                 : Localized.Integration.Connect.Working.checkingBody
-        case .address:
+        case .address, .preset:
             Localized.Integration.Connect.Working.checkingBody
         }
     }
 
-    // MARK: - Credentials (address route only)
+    // MARK: - Credentials (MCP setup)
 
     private var isCredentialsFormValid: Bool {
         !trimmed(clientID).isEmpty
@@ -341,8 +365,7 @@ struct ConnectIntegrationSheet: View {
             VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                 AppButton(Localized.Provider.tryAgain) { step = .start }
                 AppButton(Localized.Integration.Connect.chooseAnother, variant: .secondary) {
-                    discardAttempt()
-                    onCancelled()
+                    dismissConnection()
                 }
             }
         }
@@ -355,7 +378,7 @@ struct ConnectIntegrationSheet: View {
             case .oauth, .webSession, .platform: Localized.Integration.Connect.Failed.signInTitle
             case .imap: Localized.Integration.Connect.Failed.mailTitle
             }
-        case .address:
+        case .address, .preset:
             Localized.Integration.Connect.Failed.addressTitle
         }
     }
@@ -369,7 +392,7 @@ struct ConnectIntegrationSheet: View {
             case .imap:
                 Localized.Integration.Connect.Failed.mailBody
             }
-        case .address:
+        case .address, .preset:
             Localized.Integration.Connect.Failed.addressBody
         }
     }
@@ -394,10 +417,13 @@ struct ConnectIntegrationSheet: View {
             }
 
             AppButton(doneLabel) {
-                if case .address = target {
-                    saveServer()
+                do {
+                    if type == nil { try saveServer() }
+                    onResolved(.connected)
+                } catch {
+                    failure = error.localizedDescription
+                    step = .failed
                 }
-                onConnected()
             }
         }
     }
@@ -406,6 +432,8 @@ struct ConnectIntegrationSheet: View {
         switch target {
         case .type(let type):
             type.brandImage
+        case .preset(let preset):
+            preset.brandImage
         case .address:
             Iconography.Functional.globe
         }
@@ -532,13 +560,17 @@ struct ConnectIntegrationSheet: View {
 
     private func connectAddress() {
         step = .working
+        discardAttempt()
         discoveredToolNames = []
+        discoveredInstructions = nil
         tempServerID = UUID()
         oauthConfig = nil
         detectedAuthType = .none
-        chosenName = Self.suggestedName(from: Self.normalizedAddress(address))
+        chosenName = preset?.displayName ?? Self
+            .suggestedName(from: Self.normalizedAddress(address))
         connectAttempt += 1
         let attempt = connectAttempt
+        let serverID = tempServerID
 
         Task {
             func isCurrent() -> Bool {
@@ -556,17 +588,26 @@ struct ConnectIntegrationSheet: View {
                 // The server has to be asked what it needs before we can ask
                 // you for it.
                 let config = try await mcpOAuthService.discoverOAuth(for: endpoint)
+                guard isCurrent() else { return }
                 if let config {
-                    guard isCurrent() else { return }
                     oauthConfig = config
                     detectedAuthType = .oauth
                     if config.needsClientCredentials {
                         step = .credentials
                         return
                     }
-                    try await authorizeAndConnect(config: config, endpoint: endpoint)
+                    try await authorizeAndConnect(
+                        config: config,
+                        endpoint: endpoint,
+                        serverID: serverID,
+                        attempt: attempt
+                    )
                 } else {
-                    try await connectAndDiscover(endpoint: endpoint, authProvider: NoAuthProvider())
+                    try await connectAndDiscover(
+                        endpoint: endpoint,
+                        authProvider: NoAuthProvider(),
+                        attempt: attempt
+                    )
                 }
                 guard isCurrent() else { return }
                 step = .done
@@ -597,6 +638,8 @@ struct ConnectIntegrationSheet: View {
         )
         oauthConfig = config
         step = .working
+        let attempt = connectAttempt
+        let serverID = tempServerID
 
         Task {
             guard let endpoint = URL(string: Self.normalizedAddress(address)) else {
@@ -606,12 +649,20 @@ struct ConnectIntegrationSheet: View {
             }
 
             do {
-                try await authorizeAndConnect(config: config, endpoint: endpoint)
+                try await authorizeAndConnect(
+                    config: config,
+                    endpoint: endpoint,
+                    serverID: serverID,
+                    attempt: attempt
+                )
+                guard attempt == connectAttempt else { return }
                 step = .done
                 Haptics.success()
             } catch MCPOAuthError.userCancelled {
+                guard attempt == connectAttempt else { return }
                 step = .credentials
             } catch {
+                guard attempt == connectAttempt else { return }
                 AppLogger.error(
                     "Client-credentials connect failed for \(public: endpoint.diagnosticsAddress): \(public: error.localizedDescription)",
                     category: .mcp
@@ -624,59 +675,56 @@ struct ConnectIntegrationSheet: View {
     }
 
     /// Runs OAuth authorization then connects to verify.
-    private func authorizeAndConnect(config: OAuthConfiguration, endpoint: URL) async throws {
-        _ = try await mcpOAuthService.authorize(config: config, serverID: tempServerID)
-        let authProvider = OAuthAuthProvider(oauthService: mcpOAuthService, serverID: tempServerID)
-        try await connectAndDiscover(endpoint: endpoint, authProvider: authProvider)
+    private func authorizeAndConnect(
+        config: OAuthConfiguration, endpoint: URL, serverID: UUID, attempt: Int
+    ) async throws {
+        defer {
+            if attempt != connectAttempt {
+                MCPConnectionSave.discard(temporaryID: serverID, keychain: keychainService)
+            }
+        }
+        _ = try await mcpOAuthService.authorize(config: config, serverID: serverID)
+        guard attempt == connectAttempt else { throw CancellationError() }
+        let authProvider = OAuthAuthProvider(oauthService: mcpOAuthService, serverID: serverID)
+        try await connectAndDiscover(
+            endpoint: endpoint,
+            authProvider: authProvider,
+            attempt: attempt
+        )
     }
 
-    /// Connects to the server, discovers tools, then disconnects the test
-    /// connection — the real connection is established by
-    /// ``MCPServerManager`` after saving.
-    private func connectAndDiscover(endpoint: URL, authProvider: any MCPAuthProvider) async throws {
+    /// Verifies setup without keeping a live connection or persisting a server.
+    private func connectAndDiscover(
+        endpoint: URL, authProvider: any MCPAuthProvider, attempt: Int
+    ) async throws {
         let connection = MCPServerConnection(
-            serverName: chosenName,
-            endpoint: endpoint,
-            authProvider: authProvider
+            serverName: chosenName, endpoint: endpoint, authProvider: authProvider
         )
-        try await connection.connect()
-        let tools = await connection.tools()
-        discoveredToolNames = tools.map(\.name)
-        await connection.disconnect()
+        do {
+            try await connection.connect()
+            let tools = await connection.tools()
+            let instructions = await connection.instructions()
+            await connection.disconnect()
+            guard attempt == connectAttempt else { throw CancellationError() }
+            discoveredToolNames = tools.map(\.name)
+            discoveredInstructions = instructions
+        } catch {
+            await connection.disconnect()
+            throw error
+        }
     }
 
     /// Marks the model with everything learned, and migrates keychain tokens
     /// from the temporary id to the real one.
-    private func saveServer() {
+    private func saveServer() throws {
         let normalized = Self.normalizedAddress(address)
-        let server = MCPServer(
-            name: chosenName.isEmpty ? Self.suggestedName(from: normalized) : chosenName,
-            url: normalized,
-            authType: detectedAuthType
+        try MCPConnectionSave.save(
+            .init(
+                name: chosenName.isEmpty ? Self.suggestedName(from: normalized) : chosenName,
+                url: normalized, authType: detectedAuthType, toolNames: discoveredToolNames,
+                instructions: discoveredInstructions, oauth: oauthConfig, temporaryID: tempServerID
+            ), preset: preset, context: modelContext, keychain: keychainService
         )
-        server.cachedToolNames = discoveredToolNames
-
-        if let config = oauthConfig {
-            server.oauthClientID = config.clientID
-            server.oauthAuthURL = config.authorizationEndpoint.absoluteString
-            server.oauthTokenURL = config.tokenEndpoint.absoluteString
-            server.oauthScopes = config.scopes?.joined(separator: " ")
-        }
-
-        modelContext.insert(server)
-
-        if detectedAuthType == .oauth {
-            for suffix in MCPServer.keychainSuffixes {
-                let oldKey = keychainService.mcpKey(for: tempServerID, suffix: suffix)
-                if let value = keychainService.read(key: oldKey) {
-                    keychainService.save(
-                        key: keychainService.mcpKey(for: server.id, suffix: suffix),
-                        value: value
-                    )
-                    keychainService.delete(key: oldKey)
-                }
-            }
-        }
     }
 
     // MARK: - Helpers

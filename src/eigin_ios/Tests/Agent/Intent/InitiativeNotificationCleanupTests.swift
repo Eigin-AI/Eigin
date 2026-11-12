@@ -57,7 +57,7 @@ struct InitiativeNotificationCleanupTests {
 
     @Test func travelReplacesPendingRequestsAndPreservesRetainedDelivery() async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
@@ -124,7 +124,7 @@ struct InitiativeNotificationCleanupTests {
 
     private func fixture(count: Int, deliveredDaysAgo: Int = 0) async throws -> Fixture {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext

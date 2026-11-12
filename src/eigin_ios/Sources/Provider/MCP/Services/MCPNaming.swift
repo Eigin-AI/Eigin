@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// Shared name derivation for MCP servers and their tools.
@@ -25,11 +26,18 @@ enum MCPNaming {
         "mcp__\(sanitize(serverName))"
     }
 
-    /// The namespaced tool name: `mcp__<sanitized_server_name>__<tool_name>`.
-    /// Double underscores mark the namespace boundaries so a single-underscore
-    /// server or tool name (e.g. "my_server") can't be misread as part of the
-    /// delimiter when the name is split back apart.
+    /// Namespaces tools within provider function-name limits, hashing shortened or escaped names.
     static func toolName(serverName: String, toolName: String) -> String {
-        "mcp\(namespaceDelimiter)\(sanitize(serverName))\(namespaceDelimiter)\(toolName)"
+        let original = "mcp\(namespaceDelimiter)\(sanitize(serverName))\(namespaceDelimiter)\(toolName)"
+        let safe = sanitizedFunctionName(original)
+        guard safe.count > 64 || safe != original else { return safe }
+        let hash = SHA256.hash(data: Data(original.utf8)).prefix(8)
+            .map { String(format: "%02x", $0) }.joined()
+        let suffix = "_\(hash)"
+        return "\(safe.prefix(64 - suffix.count))\(suffix)"
+    }
+
+    private static func sanitizedFunctionName(_ name: String) -> String {
+        name.replacingOccurrences(of: "[^A-Za-z0-9_-]", with: "_", options: .regularExpression)
     }
 }

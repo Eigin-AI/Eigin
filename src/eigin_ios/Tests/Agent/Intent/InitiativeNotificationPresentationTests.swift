@@ -10,7 +10,7 @@ struct InitiativeNotificationPresentationTests {
     @Test(arguments: [false, true])
     func communicationPresentationPreservesRecurrenceAndRouting(weekly: Bool) async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
