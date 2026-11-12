@@ -80,8 +80,11 @@ impl EventParser for StreamParser {
             }
             "content_block_stop" => {
                 if let Ok(stop) = serde_json::from_slice::<BlockStop>(payload)
-                    && let Some(call) = self.tools.remove(&stop.index)
+                    && let Some(mut call) = self.tools.remove(&stop.index)
                 {
+                    if call.arguments.is_empty() {
+                        call.arguments = "{}".into();
+                    }
                     self.output
                         .events
                         .push_back(InferenceEvent::ToolCall { call });
