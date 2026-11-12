@@ -1,23 +1,21 @@
+use crate::inference::streaming::{EventParser, ParsedEvents};
 use serde_json::Value;
 mod finish;
 mod tool_calls;
 mod wire;
 
 use super::{adapters::Adapter, reasoning::ReasoningCapture, types::*};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap};
 use wire::{CompletionChunk, project_content};
 
 pub(super) struct StreamParser {
+    output: ParsedEvents,
     adapter: Adapter,
     text_only: bool,
-    pub done: bool,
-    pub refused: bool,
     calls: BTreeMap<i64, InferenceToolCall>,
     next_index: i64,
     metadata: HashMap<String, String>,
     reasoning: Option<ReasoningCapture>,
-    pub events: VecDeque<InferenceEvent>,
-    pub error: Option<InferenceError>,
     bytes_seen: usize,
 }
 
@@ -30,22 +28,19 @@ impl StreamParser {
                 None
             };
         Self {
+            output: ParsedEvents::default(),
             adapter,
             text_only: input.text_only,
-            done: false,
-            refused: false,
             calls: BTreeMap::new(),
             next_index: 1000,
             metadata: HashMap::new(),
             reasoning,
-            events: VecDeque::new(),
-            error: None,
             bytes_seen: 0,
         }
     }
 
     pub fn line(&mut self, line: &[u8]) {
-        if self.done || self.error.is_some() {
+        if self.output.done || self.output.error.is_some() {
             return;
         }
         let Some(payload) = line.strip_prefix(b"data:") else {
@@ -58,13 +53,13 @@ impl StreamParser {
         }
         self.bytes_seen += payload.len();
         if self.bytes_seen > 16 * 1024 * 1024 {
-            self.error = Some(InferenceError::LimitExceeded {
+            self.output.error = Some(InferenceError::LimitExceeded {
                 limit: "16 MiB stream data".into(),
             });
             return;
         }
         if let Err(error) = self.chunk(payload) {
-            self.error = Some(if self.refused {
+            self.output.error = Some(if self.output.refused {
                 InferenceError::PolicyStop
             } else {
                 error
@@ -113,23 +108,27 @@ impl StreamParser {
         };
         if self.text_only {
             if let Some(text) = visible {
-                self.events.push_back(InferenceEvent::ContentDelta { text });
+                self.output
+                    .events
+                    .push_back(InferenceEvent::ContentDelta { text });
             }
             return Ok(());
         }
         if let Some(refusal) = &choice.delta.refusal
             && !refusal.is_empty()
         {
-            self.events.push_back(InferenceEvent::ContentDelta {
+            self.output.events.push_back(InferenceEvent::ContentDelta {
                 text: refusal.clone(),
             });
-            self.refused = true;
+            self.output.refused = true;
         }
         if let (Some(reasoning), Some(content)) = (&mut self.reasoning, &choice.delta.content) {
             reasoning.append(content);
         }
         if let Some(text) = visible {
-            self.events.push_back(InferenceEvent::ContentDelta { text });
+            self.output
+                .events
+                .push_back(InferenceEvent::ContentDelta { text });
         }
         if let Some(calls) = &choice.delta.tool_calls {
             for delta in calls {
@@ -143,17 +142,32 @@ impl StreamParser {
     }
 
     pub fn eof(&mut self) {
-        if self.done || self.error.is_some() {
+        if self.output.done || self.output.error.is_some() {
             return;
         }
         if self.text_only {
-            self.done = true;
+            self.output.done = true;
         } else {
-            self.error = Some(if self.refused {
+            self.output.error = Some(if self.output.refused {
                 InferenceError::PolicyStop
             } else {
                 InferenceError::Interrupted
             });
         }
+    }
+}
+
+impl EventParser for StreamParser {
+    fn output(&self) -> &ParsedEvents {
+        &self.output
+    }
+    fn output_mut(&mut self) -> &mut ParsedEvents {
+        &mut self.output
+    }
+    fn line(&mut self, line: &[u8]) {
+        self.line(line);
+    }
+    fn eof(&mut self) {
+        self.eof();
     }
 }

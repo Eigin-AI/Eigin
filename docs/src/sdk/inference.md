@@ -1,6 +1,6 @@
 # Inference
 
-The SDK supports OpenAI-compatible endpoints and Eigin Relay. Your app chooses models, stores conversations and executes tools.
+The SDK supports OpenAI-compatible endpoints, OpenAI Responses, and Eigin Relay. Your app chooses models, stores conversations and executes tools.
 
 ## Use a provider
 
@@ -8,11 +8,11 @@ The SDK supports OpenAI-compatible endpoints and Eigin Relay. Your app chooses m
 2. Discover models, then start a stream with messages and optional tools.
 3. Consume events until completion. Cancel when the user stops.
 
-| Platform | OpenAI-compatible | Eigin Relay |
-|---|---|---|
-| Apple | `EiginSDK.Experimental.Inference.OpenAICompatible` | `EiginSDK.Experimental.Inference.EiginRelay` |
-| Browser | `OpenAICompatible` | `EiginRelay` |
-| Rust | `OpenAiCompatibleProvider` | `EiginRelayProvider` |
+| Platform | OpenAI-compatible | OpenAI Responses | Eigin Relay |
+|---|---|---|---|
+| Apple | `EiginSDK.Experimental.Inference.OpenAICompatible` | `EiginSDK.Experimental.Inference.OpenAIResponses` | `EiginSDK.Experimental.Inference.EiginRelay` |
+| Browser | `OpenAICompatible` | `OpenAIResponses` | `EiginRelay` |
+| Rust | `OpenAiCompatibleProvider` | `OpenAiResponsesProvider` | `EiginRelayProvider` |
 
 The browser package and these inference APIs are experimental. Apple uses your URLSession, browsers use Fetch, and native callers can use SDK-managed HTTP.
 
@@ -32,6 +32,10 @@ Use the experimental CLI with credentials from explicitly named environment vari
 ```sh
 just run cli experimental inference chat --base-url https://api.openai.com/v1 \
   --api-key-env OPENAI_API_KEY --model YOUR_MODEL --prompt 'Hello'
+
+just run cli experimental inference chat --provider openai-responses \
+  --base-url https://api.openai.com/v1 --api-key-env CHATGPT_ACCESS_TOKEN \
+  --model YOUR_MODEL --prompt 'Hello'
 
 just run cli experimental inference chat --provider eigin-relay \
   --base-url https://YOUR_RELAY --relay-key-env EIGIN_RELAY_KEY \

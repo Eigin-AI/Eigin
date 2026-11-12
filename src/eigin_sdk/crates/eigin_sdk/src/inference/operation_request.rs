@@ -10,7 +10,7 @@ use std::{
 
 const MAX_RESPONSE_BYTES: usize = 4 * 1024 * 1024;
 
-pub(super) struct ProviderRequest {
+pub(crate) struct ProviderRequest {
     config: InferenceProviderConfig,
     http: Arc<HttpOperation>,
     started: AtomicBool,
@@ -24,12 +24,21 @@ impl ProviderRequest {
         transport: Arc<dyn HttpTransport>,
         kind: &'static str,
     ) -> Self {
+        Self::for_provider(config, transport, kind, "inference.openai-compatible")
+    }
+
+    pub fn for_provider(
+        config: InferenceProviderConfig,
+        transport: Arc<dyn HttpTransport>,
+        kind: &'static str,
+        category: &'static str,
+    ) -> Self {
         Self {
             config,
             http: HttpOperation::with_transport(transport),
             started: AtomicBool::new(false),
             cancelled: AtomicBool::new(false),
-            diagnostics: InferenceDiagnostics::new(kind),
+            diagnostics: InferenceDiagnostics::for_provider(kind, category),
         }
     }
 

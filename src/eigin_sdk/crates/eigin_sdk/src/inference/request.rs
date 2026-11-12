@@ -1,7 +1,7 @@
 use super::types::*;
 use crate::http::HttpRequest;
 
-pub(super) fn request(
+pub(crate) fn request(
     config: &InferenceProviderConfig,
     path: &str,
     body: Option<Vec<u8>>,

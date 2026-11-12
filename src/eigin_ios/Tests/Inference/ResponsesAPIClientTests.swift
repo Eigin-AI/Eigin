@@ -113,6 +113,36 @@ struct ResponsesAPIClientTests {
         }
     }
 
+    @Test(arguments: [
+        "subscription_sharing_user_not_eligible",
+        "subscription_sharing_usage_limit_exceeded",
+        "subscription_sharing_invalid_user",
+        "subscription_sharing_usage_unavailable",
+        "subscription_sharing_unsupported_capability",
+    ])
+    func subscriptionFailuresPreserveCardsAndRetryPolicy(code: String) async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(baseURL)/responses", data: Data("{\"code\":\"\(code)\"}".utf8), statusCode: 400
+        )
+        let expected: ResponsesAPIError = switch code {
+        case "subscription_sharing_user_not_eligible": .planNotEligible
+        case "subscription_sharing_usage_limit_exceeded": .usageLimitExceeded
+        case "subscription_sharing_invalid_user": .invalidUser
+        case "subscription_sharing_usage_unavailable": .usageUnavailable
+        default: .unsupportedCapability(param: nil)
+        }
+        do {
+            _ = try await ResponsesAPIClient(apiToken: "token", session: session)
+                .chatCompletionEventStream(messages: [], model: "test")
+            Issue.record("Expected subscription failure before streaming")
+        } catch let error as ResponsesAPIError {
+            #expect(error == expected)
+            #expect(error.isRetryable == (code == "subscription_sharing_usage_unavailable"))
+            #expect(ConnectionError(from: error).title == ConnectionError(from: expected).title)
+        }
+    }
+
     // MARK: - validateAPIKey
 
     @Test(arguments: [401, 403])
@@ -230,29 +260,33 @@ struct ResponsesAPIClientTests {
         #expect(tool["parameters"] != nil)
     }
 
-    @Test func builderMapsImageAttachments() throws {
-        let store = StubAttachmentStore(data: Data([0xFF, 0xD8, 0xFF]))
+    @Test(arguments: [false, true])
+    func hostLoadsImageAttachments(unreadable: Bool) async throws {
+        let store = StubAttachmentStore(data: unreadable ? nil : Data([0xFF, 0xD8, 0xFF]))
         let attachment = MessageAttachment(
-            id: UUID(), kind: .image, mimeType: "image/jpeg", byteCount: 3
+            id: UUID(),
+            kind: .image,
+            mimeType: "image/jpeg",
+            byteCount: 3
         )
-        let body = ResponsesRequestBuilder.body(
-            messages: [ChatMessage(
-                role: "user",
-                content: "what's this?",
-                attachments: [attachment]
-            )],
-            model: "gpt-6.1-sol",
-            attachmentStore: store
-        )
-
-        let data = try JSONEncoder().encode(body)
-        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        let input = try #require(json["input"] as? [[String: Any]])
+        let session = FakeURLProtocol.fakeSession()
+        let url = "\(baseURL)/responses"
+        FakeURLProtocol.stubResponse(for: url, data: Data(Self.emptyStream.utf8), statusCode: 200)
+        let client = ResponsesAPIClient(apiToken: "token", session: session, attachmentStore: store)
+        _ = try await collect(client.chatCompletionEventStream(messages: [ChatMessage(
+            role: "user", content: "", attachments: [attachment]
+        )], model: "test"))
+        let body = try sentBody(for: url)
+        let input = try #require(body["input"] as? [[String: Any]])
         let content = try #require(input.first?["content"] as? [[String: Any]])
-        let image = try #require(content.last)
-        #expect(image["type"] as? String == "input_image")
-        let dataURL = try #require(image["image_url"] as? String)
-        #expect(dataURL.hasPrefix("data:image/jpeg;base64,"))
+        #expect(content.count == 1)
+        if unreadable {
+            #expect(content[0]["type"] as? String == "input_text")
+            #expect(content[0]["text"] as? String == "")
+        } else {
+            #expect(content[0]["type"] as? String == "input_image")
+            #expect(content[0]["image_url"] as? String == "data:image/jpeg;base64,/9j/")
+        }
     }
 
     // MARK: - SSE mapping
@@ -402,9 +436,9 @@ struct ResponsesAPIClientTests {
     /// Minimal attachment store returning fixed bytes, mirroring
     /// ``ImageWireConversionTests``' stub.
     private final class StubAttachmentStore: ChatAttachmentStoring, @unchecked Sendable {
-        let fixedData: Data
+        let fixedData: Data?
 
-        init(data: Data) {
+        init(data: Data?) {
             fixedData = data
         }
 
@@ -413,7 +447,7 @@ struct ResponsesAPIClientTests {
                 id: id,
                 kind: .image,
                 mimeType: "image/jpeg",
-                byteCount: fixedData.count
+                byteCount: fixedData?.count ?? 0
             )
         }
 

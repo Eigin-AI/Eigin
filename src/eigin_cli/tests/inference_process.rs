@@ -23,12 +23,13 @@ impl Drop for CliProcess {
 #[test]
 fn chat_auth_choices_preserve_partial_output_and_ctrl_c_failure() {
     for authenticated in [false, true] {
-        run_chat(authenticated, false);
+        run_chat(authenticated, "compatible");
     }
-    run_chat(true, true);
+    run_chat(true, "relay");
+    run_chat(true, "responses");
 }
 
-fn run_chat(authenticated: bool, relay: bool) {
+fn run_chat(authenticated: bool, provider: &'static str) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
@@ -58,13 +59,32 @@ fn run_chat(authenticated: bool, relay: bool) {
             authenticated.then_some("Bearer selected-test-key")
         );
         socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 99999\r\n\r\n").unwrap();
-        socket.write_all(b"data: {\"choices\":[{\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n").unwrap();
+        if provider == "responses" {
+            assert!(headers.starts_with("POST /responses "));
+            socket
+                .write_all(
+                    b"data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\n",
+                )
+                .unwrap();
+        } else {
+            socket.write_all(b"data: {\"choices\":[{\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n").unwrap();
+        }
         // Leave the response unfinished until the CLI cancels it.
         assert_eq!(socket.read(&mut [0]).unwrap(), 0);
     });
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_eigin"));
-    if relay {
+    if provider == "responses" {
+        command.args([
+            "experimental",
+            "inference",
+            "chat",
+            "--provider",
+            "openai-responses",
+            "--api-key-env",
+            "EIGIN_TEST_API_KEY",
+        ]);
+    } else if provider == "relay" {
         command.args([
             "experimental",
             "inference",
@@ -189,6 +209,7 @@ fn relay_failover_uses_distinct_wallets_and_explicit_relay_key() {
                 }
             };
             socket.set_nonblocking(false).unwrap();
+            socket.set_nonblocking(false).unwrap();
             socket.set_read_timeout(Some(TIMEOUT)).unwrap();
             let request = drain_request(&mut socket).to_lowercase();
             assert!(request.starts_with("post /v1/chat/completions "));
@@ -236,4 +257,90 @@ fn relay_failover_uses_distinct_wallets_and_explicit_relay_key() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert_eq!(String::from_utf8(output.stdout).unwrap(), "hello\n");
+}
+
+#[test]
+fn responses_models_tools_and_subscription_errors_run_headless() {
+    for (command, path, status, body, expected, success) in [
+        (
+            "models",
+            "/models",
+            "200 OK",
+            "{\"models\":[{\"slug\":\"z\"},{\"slug\":\"a\"}]}",
+            "z\na\n",
+            true,
+        ),
+        (
+            "chat",
+            "/responses",
+            "200 OK",
+            "data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"function_call\",\"call_id\":\"c\",\"name\":\"weather\",\"arguments\":\"{}\"}}\n\ndata: {\"type\":\"response.completed\"}\n\n",
+            "\"name\":\"weather\"",
+            true,
+        ),
+        (
+            "chat",
+            "/responses",
+            "403 Forbidden",
+            "subscription_sharing_user_not_eligible",
+            "not eligible",
+            false,
+        ),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = thread::spawn(move || {
+            let deadline = Instant::now() + TIMEOUT;
+            let mut socket = loop {
+                match listener.accept() {
+                    Ok((socket, _)) => break socket,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(Instant::now() < deadline, "CLI did not connect");
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("{error}"),
+                }
+            };
+            socket.set_nonblocking(false).unwrap();
+            socket.set_read_timeout(Some(TIMEOUT)).unwrap();
+            let headers = drain_request(&mut socket);
+            assert!(headers.lines().next().unwrap().contains(path));
+            write!(socket,"HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
+        });
+        let mut cli = Command::new(env!("CARGO_BIN_EXE_eigin"));
+        cli.args([
+            "experimental",
+            "inference",
+            command,
+            "--provider",
+            "openai-responses",
+            "--api-key-env",
+            "TEST_RESPONSES_TOKEN",
+            "--base-url",
+            &base,
+        ]);
+        if command == "chat" {
+            cli.args(["--model", "test", "--prompt", "hi"]);
+        }
+        let output = cli
+            .env("TEST_RESPONSES_TOKEN", "test")
+            .env("NO_PROXY", "127.0.0.1")
+            .env("no_proxy", "127.0.0.1")
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.success(),
+            success,
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let text = String::from_utf8_lossy(if success {
+            &output.stdout
+        } else {
+            &output.stderr
+        });
+        assert!(text.contains(expected), "{text}");
+        server.join().unwrap();
+    }
 }

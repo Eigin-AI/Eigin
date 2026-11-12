@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Endpoint and explicit credentials for one OpenAI-compatible provider.
+/// Endpoint and explicit credentials for one inference provider.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct InferenceProviderConfig {
     pub base_url: String,
@@ -123,6 +123,16 @@ pub enum InferenceError {
         domain: Option<String>,
         code: Option<i64>,
     },
+    #[error("ChatGPT subscription is not eligible")]
+    SubscriptionPlanNotEligible,
+    #[error("ChatGPT subscription usage limit reached")]
+    SubscriptionUsageLimitExceeded,
+    #[error("ChatGPT sign-in is invalid")]
+    SubscriptionInvalidUser,
+    #[error("ChatGPT usage service is unavailable")]
+    SubscriptionUsageUnavailable,
+    #[error("Unsupported subscription capability: {param:?}")]
+    SubscriptionUnsupportedCapability { param: Option<String> },
     #[error("No credits remaining")]
     NoCredits,
     #[error("Relay wallet source unavailable")]

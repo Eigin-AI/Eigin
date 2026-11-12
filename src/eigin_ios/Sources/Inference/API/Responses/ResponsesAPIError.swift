@@ -46,51 +46,6 @@ enum ResponsesAPIError: Error, LocalizedError, Equatable {
         }
     }
 
-    /// Maps an HTTP failure to the most specific SIWC error. Subscription
-    /// error codes appear in `error.code` or in a `detail` body and outrank
-    /// the status code.
-    static func make(statusCode: Int, body: String?) -> ResponsesAPIError {
-        if let code = subscriptionCode(in: body) {
-            switch code {
-            case "subscription_sharing_user_not_eligible":
-                return .planNotEligible
-            case "subscription_sharing_usage_limit_exceeded":
-                return .usageLimitExceeded
-            case "subscription_sharing_invalid_user":
-                return .invalidUser
-            case "subscription_sharing_usage_unavailable", "subscription_sharing_user_unavailable":
-                return .usageUnavailable
-            case "subscription_sharing_unsupported_capability":
-                return .unsupportedCapability(param: param(in: body))
-            default:
-                return .httpError(statusCode, body: body)
-            }
-        }
-        return .httpError(statusCode, body: body)
-    }
-
-    static func subscriptionCode(in body: String?) -> String? {
-        guard let body else { return nil }
-        let codes = [
-            "subscription_sharing_user_not_eligible",
-            "subscription_sharing_usage_limit_exceeded",
-            "subscription_sharing_invalid_user",
-            "subscription_sharing_usage_unavailable",
-            "subscription_sharing_user_unavailable",
-            "subscription_sharing_unsupported_capability",
-        ]
-        return codes.first { body.contains($0) }
-    }
-
-    /// Best-effort `param` extraction from an API error body.
-    static func param(in body: String?) -> String? {
-        guard let body,
-              let data = body.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return nil }
-        return object["param"] as? String
-    }
-
     /// Whether the connection phase can be retried.
     var isRetryable: Bool {
         switch self {

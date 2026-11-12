@@ -2,13 +2,12 @@
 
 mod adapters;
 mod chat_stream;
-mod inference_diagnostics;
 mod message;
-mod operation_request;
+use super::operation_request;
 mod operations;
 mod provider;
 mod reasoning;
-mod request;
+use super::request;
 mod request_body;
 mod stream;
 
