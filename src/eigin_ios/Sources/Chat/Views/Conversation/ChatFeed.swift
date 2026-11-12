@@ -266,7 +266,6 @@ struct ChatFeed: View {
             minHeight: isAgentOpened ? scroll.viewportHeight : 0,
             alignment: .topLeading
         )
-        .animation(.easeIn(duration: 0.2), value: shouldShowThinkingIndicator)
     }
 
     private var feedContent: some View {
@@ -319,9 +318,6 @@ struct ChatFeed: View {
                             minHeight: scroll.viewportHeight,
                             alignment: .topLeading
                         )
-                        // Animates the indicator shrinking out (and the reply
-                        // taking its place) instead of popping.
-                        .animation(.easeIn(duration: 0.2), value: shouldShowThinkingIndicator)
                     } else {
                         // When the conversation opens with an agent-initiated
                         // message (no user turn yet), the same minHeight +
@@ -467,7 +463,8 @@ struct ChatFeed: View {
             // touch the scroll position for the rest of the turn.
             .onChange(of: throttler.phase) {
                 let phase = throttler.phase
-                UIApplication.shared.isIdleTimerDisabled = phase == .waiting || phase == .streaming
+                UIApplication.shared
+                    .isIdleTimerDisabled = phase == .waiting || phase == .streaming
                 scroll.phaseChanged(to: phase, items: items)
             }
             // The indicator mounts/remounts only on this edge, so a stall
@@ -521,14 +518,6 @@ struct ChatFeed: View {
                     activity: thinkingIndicatorState.activity,
                     isStalled: isAwaitingUserInput
                 )
-                // Entry is part of the indicator's own timeline; removal scales
-                // it away so the reply takes its place.
-                .transition(.asymmetric(
-                    insertion: .identity,
-                    removal: .scale(scale: 0, anchor: .leading)
-                        .combined(with: .opacity)
-                        .animation(.easeIn(duration: 0.2))
-                ))
             }
         }
     }
@@ -594,8 +583,15 @@ struct ChatFeed: View {
             onContinue: onContinue,
             onSelectError: { sheets.selectedError = $0 }
         )
-        .growIn(isNew: scroll.isLiveRow(item.id, phase: throttler.phase))
+        .growIn(isNew: growsOnInsertion(item))
         .id(item.id)
+    }
+
+    private func growsOnInsertion(_ item: ChatItem) -> Bool {
+        // Assistant text reveals through streaming and needs its natural height from the first
+        // frame.
+        if case .message(_, let role, _, _) = item, role == "assistant" { return false }
+        return scroll.isLiveRow(item.id, phase: throttler.phase)
     }
 
     private func sendMessage(mode: InteractionMode = .text) {

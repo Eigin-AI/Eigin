@@ -17,6 +17,23 @@ struct ChatItemBuildTests {
 
     // MARK: - Tests
 
+    @Test("Tool group identity persists as consecutive calls and results arrive")
+    @MainActor
+    func toolGroupIdentityPersists() throws {
+        var messages: [ChatMessage] = []
+        var groupID: String?
+        for id in ["a", "b", "c"] {
+            messages.append(ChatMessage(role: "assistant", toolCalls: [toolCall(id: id)]))
+            let pending = try #require(buildItems(from: messages).first)
+            if let groupID { #expect(pending.id == groupID) }
+            else { groupID = pending.id }
+            messages.append(ChatMessage(role: "tool", content: "ok", toolCallID: id))
+            let completed = buildItems(from: messages)
+            #expect(completed.count == 1)
+            #expect(completed.first?.id == groupID)
+        }
+    }
+
     @Test("Single round with multiple tool calls produces one group")
     @MainActor
     func singleRoundToolGroup() {

@@ -40,10 +40,7 @@ struct ThinkingIndicator: View {
     }
 
     private func indicatorAndCopy(at date: Date) -> some View {
-        // The stage is computed at this level so the swap animation lives
-        // on an ancestor — transitions on the view being replaced never see
-        // their own removal. The clock pauses during stalls via
-        // `clockStart`/`priorElapsed`, so the ladder resumes where it left off.
+        // The activity clock pauses during stalls so the ladder resumes in place.
         let elapsed = (clockStart.map { date.timeIntervalSince($0) } ?? 0) + priorElapsed
         let label = Self.label(for: activity, elapsed: elapsed, isStalled: isStalled)
         return HStack(spacing: Spacing.n12) {
@@ -56,15 +53,13 @@ struct ThinkingIndicator: View {
             )
             .frame(width: Self.slotSize.width, height: Self.slotSize.height)
 
-            // A single Text morphing between rungs: no structural change, so
-            // the label never plays its own transition while the indicator
-            // itself scales away — it always exits with the indicator.
+            // Animate copy locally so tool insertion cannot animate the blob's placement.
             Text(label)
                 .typography(Typography.chatMessage)
                 .foregroundStyle(colors.text.standard.muted.opacity(0.6))
                 .contentTransition(.interpolate)
+                .animation(.easeInOut(duration: 0.4), value: label)
         }
-        .animation(.easeInOut(duration: 0.4), value: label)
     }
 
     /// The copy for a state: ladder rung for thinking/working, a fixed label

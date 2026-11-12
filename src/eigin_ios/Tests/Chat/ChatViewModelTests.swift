@@ -49,6 +49,56 @@ struct ChatViewModelTests {
         return vm
     }
 
+    @Test("Icebreakers stay unavailable for initiative chats across startup and reload")
+    @MainActor
+    func initiativeIcebreakerEligibility() async throws {
+        let (chat, _, _, container) = try makeContext()
+        let occurrence = InitiativeOccurrence(
+            id: "icebreaker-occurrence", registrationID: "icebreaker-test",
+            deliveredAt: .now, chatID: chat.id, intentIDs: []
+        )
+        container.mainContext.insert(occurrence)
+        try container.mainContext.save()
+        let vm = makeViewModel(chat: chat, container: container)
+        #expect(!vm.allowsIcebreakers)
+        await vm.preloadAllMessages().value
+        #expect(vm.window.isPreloaded)
+        #expect(vm.chatItems.isEmpty)
+        #expect(!vm.allowsIcebreakers)
+
+        occurrence.startedAt = .now
+        try container.mainContext.save()
+        #expect(!vm.allowsIcebreakers)
+        occurrence.completedAt = .now
+        try container.mainContext.save()
+        #expect(!vm.allowsIcebreakers)
+
+        let reopened = makeViewModel(chat: chat, container: container)
+        await reopened.preloadAllMessages().value
+        #expect(reopened.window.isPreloaded)
+        #expect(!reopened.allowsIcebreakers)
+    }
+
+    @Test("Ordinary empty chats allow icebreakers after preload, until preparation starts")
+    @MainActor
+    func emptyChatIcebreakerEligibility() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Hello"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        #expect(!vm.allowsIcebreakers)
+        await vm.preloadAllMessages().value
+        #expect(vm.window.isPreloaded)
+        #expect(vm.allowsIcebreakers)
+
+        vm.continueTurn(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        #expect(vm.isTurnInProgress)
+        #expect(!vm.isStreaming)
+        #expect(!vm.allowsIcebreakers)
+        vm.handleStop()
+        await vm.streamTask?.value
+    }
+
     // MARK: - cleanTitle
 
     @Test("cleanTitle strips wrapping quotes")
@@ -718,9 +768,9 @@ struct ChatViewModelTests {
             .finished(.stop),
         ])
         let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
-        vm.window.messages = history
-        vm.window.allPersisted = persisted
-        vm.window.isPreloaded = true
+        await vm.preloadAllMessages().value
+        #expect(vm.window.isPreloaded)
+        #expect(!vm.allowsIcebreakers)
         #expect(vm.streamTask == nil)
         if interrupted {
             vm.showInitiativeError(InitiativeError.interrupted)
@@ -738,6 +788,7 @@ struct ChatViewModelTests {
                 context: context
             ))
             #expect(try InitiativeConversationService.claimStart(chatID: chat.id, context: context))
+            #expect(!vm.allowsIcebreakers)
             vm.continueTurn(
                 agent: agent,
                 provider: provider,

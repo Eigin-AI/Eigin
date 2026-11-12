@@ -85,8 +85,9 @@ struct MorphBlob: View {
             TimelineView(.animation(minimumInterval: reduceMotion
                     ? 0.5 : lively ? nil : 0.25))
             { context in
-                Canvas { canvas, frame in
-                    canvas.fill(path(in: frame, at: context.date), with: .color(color))
+                GeometryReader { geometry in
+                    path(in: geometry.size, at: context.date)
+                        .fill(color)
                 }
             }
         }

@@ -54,8 +54,6 @@ struct ToolGroupView: View {
                             .alignmentGuide(.toolText) { $0[.leading] }
                     } else if let last = tools.last {
                         ToolRowView(tool: last)
-                            .id(last.id)
-                            .transition(.blurReplace)
                             .alignmentGuide(.toolText) { $0[.leading] }
                         if isGrouped {
                             Text(verbatim: "(\(tools.count))")
@@ -67,9 +65,6 @@ struct ToolGroupView: View {
                         }
                     }
                 }
-                .animation(Animations.smooth, value: isGrouped)
-                .animation(Animations.smooth, value: tools.last?.id)
-                .animation(Animations.smooth, value: tools.count)
             }
             .buttonStyle(.plain)
 
