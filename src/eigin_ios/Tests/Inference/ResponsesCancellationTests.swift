@@ -8,7 +8,13 @@ struct ResponsesCancellationTests {
     @Test(arguments: [false, true], [false, true])
     func cancellingConsumerStopsNetworkWork(bodyPending: Bool, textOnly: Bool) async throws {
         let token = UUID().uuidString
-        let probe = PendingInferenceURLProtocol.Probe(sendHeaders: bodyPending)
+        let probe = PendingInferenceURLProtocol.Probe(
+            sendHeaders: bodyPending,
+            initialBody: Data(
+                "data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\n"
+                    .utf8
+            )
+        )
         PendingInferenceURLProtocol.probes.withLock { $0["Bearer \(token)"] = probe }
         defer {
             _ = PendingInferenceURLProtocol.probes

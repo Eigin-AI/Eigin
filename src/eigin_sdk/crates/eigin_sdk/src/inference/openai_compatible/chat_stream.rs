@@ -29,6 +29,7 @@ impl OpenAiCompatibleStream {
                 parser,
                 "inference.openai-compatible",
                 HttpFailurePolicy {
+                    completed_line_character_limit: None,
                     body_limit: 2000,
                     retain_partial_body: false,
                     normalize: |status, body| InferenceError::Http { status, body },

@@ -36,6 +36,8 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Test at three boundaries.** SDK behavior tests exercise injected capabilities; binding contracts exercise language/runtime translation; host smoke tests exercise the assembled package. Keep UI tests focused on app integration. Sources: [#356], [#332].
 - **Keep fixtures out of production exports.** Test-only binding exports provide controlled pending work, typed failures, and callback delivery. Production wrappers need their own smoke tests. Source: [#356].
 - **Preserve decoder and error precedence semantics.** A permissive JSON value parser can accept malformed events that a typed host decoder skipped. Carry terminal state such as refusal through later failures, and retain partial HTTP error bodies when reads fail. Source: [#334].
+- **Check observable behavior against the code.** Comments can misdescribe fallback values. Capture the actual request or event at the HTTP boundary before porting it. Source: [#333].
+- **Preserve error-read stopping conditions.** A byte cap and a completed-line cutoff return at different times when a server stalls. Test partial bodies, line endings, and read failures; document intentional safety bounds in the MR. Source: [#333].
 - **Fake the unavailable boundary.** Provider tests inject HTTP responses. Wallet host tests use the real manager and store with a fake Keychain boundary. Avoid separate tests for trivial forwarding when the integrated behavior is covered. Sources: [#332], [#335].
 - **Check suspended work, not just immediate success.** Binding tests should cover wakeups, typed failures, independent operations, and cancellation while work is pending. Sources: [#330], [#356], [#332].
 - **Test cancellation at transitions.** Exercise both sides of successful opening and replacement of an active attempt. A test that only cancels pending headers misses these races. Source: [#335].
@@ -66,6 +68,7 @@ These are open constraints, not established capabilities:
 [#154]: https://code.eigin.ai/dev/eigin/-/issues/154
 [#330]: https://code.eigin.ai/dev/eigin/-/issues/330
 [#332]: https://code.eigin.ai/dev/eigin/-/issues/332
+[#333]: https://code.eigin.ai/dev/eigin/-/issues/333
 [#334]: https://code.eigin.ai/dev/eigin/-/issues/334
 [#335]: https://code.eigin.ai/dev/eigin/-/issues/335
 [#356]: https://code.eigin.ai/dev/eigin/-/issues/356

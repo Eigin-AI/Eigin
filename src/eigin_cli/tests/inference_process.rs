@@ -27,6 +27,7 @@ fn chat_auth_choices_preserve_partial_output_and_ctrl_c_failure() {
     }
     run_chat(true, "relay");
     run_chat(true, "responses");
+    run_chat(true, "anthropic");
 }
 
 fn run_chat(authenticated: bool, provider: &'static str) {
@@ -56,10 +57,18 @@ fn run_chat(authenticated: bool, provider: &'static str) {
         });
         assert_eq!(
             authorization,
-            authenticated.then_some("Bearer selected-test-key")
+            (authenticated && provider != "anthropic").then_some("Bearer selected-test-key")
         );
         socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 99999\r\n\r\n").unwrap();
-        if provider == "responses" {
+        if provider == "anthropic" {
+            assert!(headers.starts_with("POST /messages "));
+            assert!(
+                headers
+                    .to_lowercase()
+                    .contains("x-api-key: selected-test-key")
+            );
+            socket.write_all(b"event: content_block_delta\ndata: {\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hello\"}}\n\n").unwrap();
+        } else if provider == "responses" {
             assert!(headers.starts_with("POST /responses "));
             socket
                 .write_all(
@@ -74,13 +83,17 @@ fn run_chat(authenticated: bool, provider: &'static str) {
     });
 
     let mut command = Command::new(env!("CARGO_BIN_EXE_eigin"));
-    if provider == "responses" {
+    if provider == "responses" || provider == "anthropic" {
         command.args([
             "experimental",
             "inference",
             "chat",
             "--provider",
-            "openai-responses",
+            if provider == "anthropic" {
+                "anthropic"
+            } else {
+                "openai-responses"
+            },
             "--api-key-env",
             "EIGIN_TEST_API_KEY",
         ]);

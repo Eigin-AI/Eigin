@@ -25,7 +25,10 @@ protocol LLMClient: Sendable {
 
 /// Creates the appropriate ``LLMClient`` based on the provider's base URL.
 enum LLMClientFactory {
-    static func client(baseURL: String, apiToken: String, providerID: UUID? = nil) -> LLMClient {
+    static func client(
+        baseURL: String, apiToken: String, providerID: UUID? = nil,
+        session: URLSession = .shared
+    ) -> LLMClient {
         if ProviderPreset.isLocal(baseURL) {
             return LocalClient()
         }
@@ -34,26 +37,31 @@ enum LLMClientFactory {
             // manager. `apiToken` is unused here.
             return EiginRelayLLMClient(
                 walletManager: Container.shared.creditWalletManager(),
-                providerID: providerID
+                session: session, providerID: providerID
             )
         }
         if ProviderPreset.isAnthropic(baseURL) {
-            return AnthropicClient(baseURL: baseURL, apiToken: apiToken)
+            return AnthropicClient(baseURL: baseURL, apiToken: apiToken, session: session)
         }
         if ProviderPreset.isChatGPTSubscription(baseURL) {
             // ChatGPT subscription sign-in: Responses API with a short-lived
             // access token. The sentinel never reaches the wire.
-            return ResponsesAPIClient(apiToken: apiToken)
+            return ResponsesAPIClient(apiToken: apiToken, session: session)
         }
         if ProviderPreset.isInfercomSignIn(baseURL) {
             // Infercom sign-in: OpenAI-compatible API with the exchanged,
             // refreshable Bearer token. The sentinel never reaches the wire.
             return OpenAICompatibleClient(
                 baseURL: InfercomSignInConstants.apiBaseURL,
-                apiToken: apiToken
+                apiToken: apiToken, session: session
             )
         }
-        return OpenAICompatibleClient(baseURL: baseURL, apiToken: apiToken, providerID: providerID)
+        return OpenAICompatibleClient(
+            baseURL: baseURL,
+            apiToken: apiToken,
+            session: session,
+            providerID: providerID
+        )
     }
 }
 

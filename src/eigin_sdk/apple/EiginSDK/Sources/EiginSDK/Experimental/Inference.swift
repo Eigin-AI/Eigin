@@ -75,6 +75,11 @@ public extension EiginSDK.Experimental {
                 cancelOperation = { operation.cancel() }
             }
 
+            init(_ operation: AnthropicStream) {
+                read = { try await operation.next() }
+                cancelOperation = { operation.cancel() }
+            }
+
             deinit { cancelOperation() }
 
             public func next() async throws -> Event? {

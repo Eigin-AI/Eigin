@@ -5,11 +5,13 @@ import Synchronization
 final class PendingInferenceURLProtocol: URLProtocol, @unchecked Sendable {
     final class Probe: Sendable {
         let sendHeaders: Bool
+        let initialBody: Data
         let started = Mutex(false)
         let stopped = Mutex(false)
 
-        init(sendHeaders: Bool) {
+        init(sendHeaders: Bool, initialBody: Data) {
             self.sendHeaders = sendHeaders
+            self.initialBody = initialBody
         }
     }
 
@@ -25,7 +27,8 @@ final class PendingInferenceURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func startLoading() {
-        let token = request.value(forHTTPHeaderField: "Authorization") ?? ""
+        let token = request.value(forHTTPHeaderField: "Authorization")
+            ?? request.value(forHTTPHeaderField: "x-api-key") ?? ""
         probe = Self.probes.withLock { $0[token] }
         if probe?.sendHeaders == true {
             let response = HTTPURLResponse(
@@ -37,10 +40,7 @@ final class PendingInferenceURLProtocol: URLProtocol, @unchecked Sendable {
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(
                 self,
-                didLoad: Data(
-                    "data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\n"
-                        .utf8
-                )
+                didLoad: probe!.initialBody
             )
         }
         probe?.started.withLock { $0 = true }
