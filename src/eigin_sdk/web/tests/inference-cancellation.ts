@@ -1,4 +1,8 @@
-import { OpenAICompatible, type InferenceCompletionInput } from "../src";
+import {
+  EiginRelay,
+  OpenAICompatible,
+  type InferenceCompletionInput,
+} from "../src";
 
 const input: InferenceCompletionInput = {
   model: "test",
@@ -59,7 +63,19 @@ async function withStalledFetch(
   }
 }
 
-async function provider() {
+async function provider(kind: "openai-compatible" | "eigin-relay") {
+  if (kind === "eigin-relay")
+    return EiginRelay.create(
+      { baseUrl: "https://cancellation.test", relayKey: "relay-key" },
+      {
+        nextToken(excluded) {
+          return excluded.length ? undefined : "token";
+        },
+        markExhausted() {
+          throw new Error("Cancellation must not exhaust a wallet");
+        },
+      },
+    );
   return OpenAICompatible.create({
     baseUrl: "https://cancellation.test/v1",
     apiToken: "test",
@@ -69,25 +85,31 @@ async function provider() {
 
 export const providerTests = {
   async returnInterruptsPendingRead() {
-    for (const phase of ["headers", "body"] as const) {
-      await withStalledFetch(phase, async (ready, aborted) => {
-        const stream = (await provider()).stream(input);
-        const pending = stream.next();
-        await ready;
-        await stream.return!();
-        assert(
-          (await pending).done === true,
-          "return must finish a pending next",
-        );
-        assert(aborted(), "return must abort Fetch");
-      });
+    for (const kind of ["openai-compatible", "eigin-relay"] as const) {
+      for (const phase of ["headers", "body"] as const) {
+        await withStalledFetch(phase, async (ready, aborted) => {
+          const stream = (await provider(kind)).stream(input);
+          const pending = stream.next();
+          await ready;
+          await stream.return!();
+          assert(
+            (await pending).done === true,
+            "return must finish a pending next",
+          );
+          assert(aborted(), "return must abort Fetch");
+        });
+      }
     }
   },
 
   async discoveryCancellation() {
     for (const validate of [false, true]) {
       await withStalledFetch("headers", async (ready, aborted) => {
-        const client = await provider();
+        const client = await OpenAICompatible.create({
+          baseUrl: "https://cancellation.test/v1",
+          apiToken: "test",
+          extraHeaders: new Map(),
+        });
         const controller = new AbortController();
         const pending = validate
           ? client.validateAPIKey("test", controller.signal)

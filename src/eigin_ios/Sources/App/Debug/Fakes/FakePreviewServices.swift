@@ -94,11 +94,7 @@ struct PreviewCreditWalletManager: CreditWalletManager {
     func evictEmpty() {}
     func refreshBalances() async {}
 
-    func withCredits<T: Sendable>(
-        _ operation: @Sendable (String) async throws -> T
-    ) async throws -> T {
-        try await operation("eict_preview")
-    }
+    func markExhausted(token _: String) {}
 }
 
 /// A credits service for previews that vends a sample catalog without StoreKit or the relay.

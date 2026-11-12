@@ -10,6 +10,8 @@ Start with the [SDK guide](../../docs/src/sdk/README.md) for an introduction and
 | Apple | `apple/EiginSDK` | Swift applications, including Eigin iOS |
 | Browser | `web` (`@eigin/sdk`) | Browser applications, including the Eigin web test host |
 
+The browser package is experimental; its API can change as the SDK develops.
+
 ## Setup
 
 Install Rustup, Node.js 22.17+ with npm 10+, and `just`.

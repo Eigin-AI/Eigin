@@ -1,4 +1,5 @@
 export * from "./inference";
+export * from "./eigin-relay";
 
 import {
   initialize as initializeRust,

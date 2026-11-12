@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import Synchronization
 import Testing
 
 @Suite("CreditWalletManager")
@@ -41,29 +42,14 @@ struct CreditWalletManagerTests {
         #expect(manager.wallets().map(\.token) == ["good"])
     }
 
-    @Test func withCreditsFailsOverToNextWallet() async throws {
+    @Test func exhaustionEvictsOnlyRejectedWallet() {
         let manager = makeManager()
         manager.add(wallet("a", credits: 100))
         manager.add(wallet("b", credits: 100))
-
-        let result = try await manager.withCredits { token in
-            if token == "a" { throw RelayClientError.insufficientCredits(nil) }
-            return token
-        }
-
-        #expect(result == "b")
-        // The exhausted wallet is evicted.
+        manager.markExhausted(token: "a")
         #expect(manager.wallets().map(\.token) == ["b"])
-    }
-
-    @Test func withCreditsThrowsWhenAllExhausted() async {
-        let manager = makeManager()
-        manager.add(wallet("a", credits: 100))
-        await #expect(throws: CreditsError.noCreditsRemaining) {
-            _ = try await manager.withCredits { _ in
-                throw RelayClientError.insufficientCredits(nil)
-            }
-        }
+        manager.markExhausted(token: "missing")
+        #expect(manager.wallets().map(\.token) == ["b"])
     }
 
     @Test func refreshBalancesUpdatesKnownAndDropsUnknown() async {
@@ -80,5 +66,39 @@ struct CreditWalletManagerTests {
 
         #expect(manager.wallets().map(\.token) == ["known"])
         #expect(manager.wallets().first?.credits == 7)
+    }
+
+    @Test func concurrentSelectionAndExhaustionKeepTheRemainingWallet() throws {
+        let keychain = FakeKeychainService()
+        let manager = DefaultCreditWalletManager(relayClient: FakeRelayClient(), keychain: keychain)
+        for token in ["first", "second"] {
+            manager.add(CreditWallet(
+                token: token,
+                credits: 100,
+                status: .active,
+                productID: nil,
+                updatedAt: .distantPast
+            ))
+        }
+        let source = EiginRelayWalletAdapter(manager: manager)
+        let selections = Mutex<[String?]>([])
+        let failures = Mutex(0)
+        DispatchQueue.concurrentPerform(iterations: 32) { _ in
+            do {
+                let token = try source.nextToken(excluded: ["first"])
+                selections.withLock { $0.append(token) }
+                try source.markExhausted(token: "first")
+            } catch {
+                failures.withLock { $0 += 1 }
+            }
+        }
+        #expect(failures.withLock { $0 } == 0)
+        #expect(selections.withLock { $0.count == 32 && $0.allSatisfy { $0 == "second" } })
+        let reloaded = DefaultCreditWalletManager(
+            relayClient: FakeRelayClient(),
+            keychain: keychain
+        )
+        #expect(reloaded.wallets().map(\.token) == ["second"])
+        #expect(try source.nextToken(excluded: ["first", "second"]) == nil)
     }
 }

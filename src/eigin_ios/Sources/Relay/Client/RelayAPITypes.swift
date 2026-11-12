@@ -46,15 +46,6 @@ struct CreditProduct: Decodable, Sendable {
     let credits: Int
 }
 
-/// Response from `GET /v1/models` (OpenAI-compatible).
-struct ModelsListResponse: Decodable {
-    let data: [ModelObject]
-
-    struct ModelObject: Decodable {
-        let id: String
-    }
-}
-
 /// Manifest for a mirrored model asset, from `GET /v1/assets/{id}`: the
 /// pinned version's file list with checksums and short-lived presigned URLs.
 struct AssetManifest: Codable, Sendable, Equatable {

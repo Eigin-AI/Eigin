@@ -2,9 +2,12 @@ import EiginSDKBindings
 import Foundation
 
 public extension EiginSDK.Experimental {
-    /// OpenAI-compatible inference values and Apple runtime adaptation.
+    /// Inference values and Apple runtime adaptation.
     enum Inference {
         public typealias Configuration = InferenceProviderConfig
+        public typealias EiginRelayConfiguration = EiginRelayProviderConfig
+        public typealias EiginRelayWalletSource = EiginSDKBindings.EiginRelayWalletSource
+        public typealias EiginRelayWalletFailure = EiginRelayWalletError
         public typealias Input = InferenceCompletionInput
         public typealias Message = InferenceMessage
         public typealias Image = InferenceImage
@@ -29,7 +32,7 @@ public extension EiginSDK.Experimental {
             public func fetchModels() async throws -> [String] {
                 let operation = provider.discovery()
                 defer { operation.cancel() }
-                return try await withInferenceCancellation(cancel: { operation.cancel() }) {
+                return try await withCancellation(cancel: { operation.cancel() }, mapError: inferenceError) {
                     try await operation.fetchModels()
                 }
             }
@@ -37,7 +40,7 @@ public extension EiginSDK.Experimental {
             public func validateAPIKey(model: String) async throws {
                 let operation = provider.keyValidation()
                 defer { operation.cancel() }
-                try await withInferenceCancellation(cancel: { operation.cancel() }) {
+                try await withCancellation(cancel: { operation.cancel() }, mapError: inferenceError) {
                     try await operation.validateApiKey(model: model)
                 }
             }
@@ -45,7 +48,7 @@ public extension EiginSDK.Experimental {
             /// Validates HTTP status before returning a pull-based stream handle.
             public func stream(_ input: Input) async throws -> Stream {
                 let operation = try provider.stream(input: input)
-                try await withInferenceCancellation(cancel: { operation.cancel() }) {
+                try await withCancellation(cancel: { operation.cancel() }, mapError: inferenceError) {
                     try await operation.open()
                 }
                 return Stream(operation)
@@ -54,21 +57,29 @@ public extension EiginSDK.Experimental {
 
         /// Releases network resources when cancelled or no longer retained by its consumer.
         public final class Stream: Sendable {
-            private let operation: InferenceStream
-            fileprivate init(_ operation: InferenceStream) {
-                self.operation = operation
+            private let read: @Sendable () async throws -> Event?
+            private let cancelOperation: @Sendable () -> Void
+
+            init(_ operation: OpenAiCompatibleStream) {
+                read = { try await operation.next() }
+                cancelOperation = { operation.cancel() }
             }
 
-            deinit { operation.cancel() }
+            init(_ operation: EiginRelayStream) {
+                read = { try await operation.next() }
+                cancelOperation = { operation.cancel() }
+            }
+
+            deinit { cancelOperation() }
 
             public func next() async throws -> Event? {
-                try await withInferenceCancellation(cancel: { self.operation.cancel() }) {
-                    try await self.operation.next()
+                try await withCancellation(cancel: cancelOperation, mapError: inferenceError) {
+                    try await self.read()
                 }
             }
 
             public func cancel() {
-                operation.cancel()
+                cancelOperation()
             }
         }
 

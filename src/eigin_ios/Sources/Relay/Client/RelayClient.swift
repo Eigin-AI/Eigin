@@ -13,8 +13,6 @@ protocol RelayClient: Sendable {
     func redeem(type: String, proof: String) async throws -> RedeemResponse
     /// Current balance for a credit token.
     func balance(token: String) async throws -> BalanceResponse
-    /// Available model IDs. The catalog is public, gated only by the relay key.
-    func models() async throws -> [String]
     /// Manifest for a mirrored model asset: pinned version, file list with
     /// checksums, and short-lived presigned download URLs.
     func asset(id: String) async throws -> AssetManifest
@@ -77,13 +75,6 @@ struct DefaultRelayClient: RelayClient {
         var request = try makeRequest(path: "/v1/credits/balance", token: token)
         request.httpMethod = "GET"
         return try await decode(request)
-    }
-
-    func models() async throws -> [String] {
-        var request = try makeRequest(path: "/v1/models")
-        request.httpMethod = "GET"
-        let response: ModelsListResponse = try await decode(request)
-        return response.data.map(\.id).sorted()
     }
 
     func asset(id: String) async throws -> AssetManifest {

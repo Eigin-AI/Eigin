@@ -45,16 +45,6 @@ struct RelayClientTests {
         #expect(response.status == .refunded)
     }
 
-    @Test func modelsParsesSortedIDs() async throws {
-        FakeURLProtocol.stubResponse(
-            for: "https://relay.test/v1/models",
-            data: Data(#"{"object":"list","data":[{"id":"zebra"},{"id":"alpha"}]}"#.utf8),
-            statusCode: 200
-        )
-        let models = try await makeClient().models()
-        #expect(models == ["alpha", "zebra"])
-    }
-
     @Test func searchReturnsRawBody() async throws {
         FakeURLProtocol.stubResponse(
             for: "https://relay.test/v1/search?q=swift",

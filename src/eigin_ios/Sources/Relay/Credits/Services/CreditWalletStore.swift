@@ -1,6 +1,7 @@
 import Foundation
 
 /// Keychain-backed persistence for the credit-wallet collection.
+/// Collection updates are read/modify/write operations; concurrent writers can overwrite snapshots.
 ///
 /// The whole collection is stored as a single JSON blob under
 /// `KeychainService.creditWalletsKey` (the keychain holds only strings). This is an internal

@@ -123,6 +123,12 @@ pub enum InferenceError {
         domain: Option<String>,
         code: Option<i64>,
     },
+    #[error("No credits remaining")]
+    NoCredits,
+    #[error("Relay wallet source unavailable")]
+    WalletUnavailable,
+    #[error("Relay is not configured")]
+    EiginRelayNotConfigured,
     #[error("Inference cancelled")]
     Cancelled,
     #[error("Inference operation already in use")]

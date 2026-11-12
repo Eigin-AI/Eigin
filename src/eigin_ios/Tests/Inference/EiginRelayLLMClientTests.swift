@@ -2,12 +2,9 @@
 import Foundation
 import Testing
 
-/// Verifies the relay inference client's credit wiring: an HTTP 402 from the relay (wallet below
-/// the
-/// admit floor) is translated so ``CreditWalletManager/withCredits(_:)`` fails over to the next
-/// wallet, and is surfaced as ``CreditsError/noCreditsRemaining`` once none remain.
-@Suite("RelayLLMClient", .serialized)
-struct RelayLLMClientTests {
+/// Exercises SDK relay failover through the app wallet and URLSession adapters.
+@Suite("EiginRelayLLMClient", .serialized)
+struct EiginRelayLLMClientTests {
     /// A minimal valid SSE body: one content delta then a stop.
     private let successSSE = Data(
         [
@@ -39,10 +36,12 @@ struct RelayLLMClientTests {
         return manager
     }
 
-    private func makeClient(host: String, manager: DefaultCreditWalletManager) -> RelayLLMClient {
-        RelayLLMClient(
+    private func makeClient(
+        host: String,
+        manager: DefaultCreditWalletManager
+    ) -> EiginRelayLLMClient {
+        EiginRelayLLMClient(
             walletManager: manager,
-            relayClient: FakeRelayClient(),
             baseURL: URL(string: host)!,
             eiginKey: "relay-key",
             session: FakeURLProtocol.fakeSession()
@@ -52,7 +51,7 @@ struct RelayLLMClientTests {
     @Test func failsOverToNextWalletWhenRelayReturns402() async throws {
         let host = "https://failover.test"
         let url = "\(host)/v1/chat/completions"
-        // First wallet is rejected (below the admit floor); the second succeeds.
+        // First wallet is rejected (insufficient credits); the second succeeds.
         FakeURLProtocol.enqueueResponse(for: url, data: Data(), statusCode: 402)
         FakeURLProtocol.enqueueResponse(for: url, data: successSSE, statusCode: 200)
 
@@ -107,5 +106,39 @@ struct RelayLLMClientTests {
         }
         // The lone wallet was zeroed and evicted.
         #expect(manager.wallets().isEmpty)
+    }
+
+    @Test func discoveryUsesSDKWithoutWalletAuthorization() async throws {
+        let host = "https://relay-models.test"
+        let url = "\(host)/v1/models"
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data(#"{"data":[{"id":"zebra"},{"id":"alpha"}]}"#.utf8),
+            statusCode: 200
+        )
+        let models = try await makeClient(host: host, manager: makeManager([])).fetchModels()
+        #expect(models == ["alpha", "zebra"])
+        let request = try #require(FakeURLProtocol.lastRequest(for: url))
+        #expect(request.value(forHTTPHeaderField: "X-Eigin-Key") == "relay-key")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test func transportErrorsKeepURLSessionCategoryAndWallet() async throws {
+        let host = "https://relay-offline.test"
+        FakeURLProtocol.stubError(
+            for: "\(host)/v1/chat/completions",
+            error: URLError(.notConnectedToInternet)
+        )
+        let manager = makeManager([("a", 100)])
+        do {
+            _ = try await makeClient(host: host, manager: manager).chatCompletionStream(
+                messages: [],
+                model: "test"
+            )
+            Issue.record("Expected offline error")
+        } catch let error as URLError {
+            #expect(error.code == .notConnectedToInternet)
+        }
+        #expect(manager.wallets().map(\.token) == ["a"])
     }
 }

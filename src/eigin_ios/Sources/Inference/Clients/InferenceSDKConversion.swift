@@ -1,9 +1,29 @@
 import EiginSDK
+import Factory
 import Foundation
 
 /// Maps app-owned messages and metadata onto value-based SDK inputs.
-enum OpenAICompatibleSDKConversion {
+enum InferenceSDKConversion {
     private typealias SDK = EiginSDK.Experimental.Inference
+
+    static func input(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool,
+        baseURL: String, providerID: UUID?, isRelay: Bool
+    ) throws -> EiginSDK.Experimental.Inference.Input {
+        let store = Container.shared.chatAttachmentStore()
+        let destination = ReasoningOrigin.destination(
+            providerID: providerID,
+            baseURL: baseURL,
+            model: model
+        )
+        return try .init(
+            model: model, messages: messages.map { message($0, store: store) },
+            tools: tools?.map(tool), reasoningEffort: reasoningEffort?.rawValue,
+            promptCacheKey: cacheKey, modelFamily: family(KnownModelCatalog.lookup(model)?.family),
+            isRelay: isRelay, reasoningOrigin: destination.map(origin), textOnly: textOnly
+        )
+    }
 
     static func message(_ message: ChatMessage, store: any ChatAttachmentStoring) -> EiginSDK
         .Experimental.Inference.Message
@@ -107,9 +127,12 @@ enum OpenAICompatibleSDKConversion {
         case .OutputLimit: return StreamCompletionError.outputLimit
         case .PolicyStop: return StreamCompletionError.policyStop
         case .Cancelled: return CancellationError()
-        case .Transport(let reason, _, _):
-            return URLError(.unknown, userInfo: [NSLocalizedDescriptionKey: reason])
+        case .Transport(let reason, let domain, let code):
+            let urlCode = domain == NSURLErrorDomain ? code
+                .map { URLError.Code(rawValue: Int($0)) } : nil
+            return URLError(urlCode ?? .unknown, userInfo: [NSLocalizedDescriptionKey: reason])
         case .InvalidData, .Busy: return OpenAICompatibleClientError.invalidResponse
+        default: return failure
         }
     }
 }
