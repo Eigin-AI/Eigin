@@ -83,6 +83,22 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             )
         }
 
+        // Resource identifiers must retain the exact spelling advertised by the server.
+        let resourceURL: URL
+        if let resource = resourceMeta.resource {
+            guard let url = URL(string: resource),
+                  let scheme = url.scheme?.lowercased(),
+                  ["https", "http"].contains(scheme),
+                  let host = url.host, !host.isEmpty,
+                  url.fragment == nil
+            else {
+                throw MCPOAuthError.metadataDiscoveryFailed("Invalid OAuth resource URL")
+            }
+            resourceURL = url
+        } else {
+            resourceURL = serverURL
+        }
+
         guard let authServers = resourceMeta.authorizationServers, !authServers.isEmpty else {
             throw MCPOAuthError.noAuthorizationServers
         }
@@ -127,7 +143,7 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         }
 
         return OAuthConfiguration(
-            resourceURL: serverURL,
+            resourceURL: resourceURL,
             authorizationEndpoint: authEndpoint,
             tokenEndpoint: tokenEndpoint,
             clientID: clientID,

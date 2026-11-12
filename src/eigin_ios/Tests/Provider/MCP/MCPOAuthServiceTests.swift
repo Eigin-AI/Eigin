@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("MCPOAuthService discovery")
+@Suite("MCPOAuthService discovery", .serialized)
 struct MCPOAuthServiceTests {
     private let serverURL = URL(string: "https://mcp.example.com/mcp")!
     private let resourceMetadataURL = "https://mcp.example.com/.well-known/oauth-protected-resource"
@@ -75,6 +75,70 @@ struct MCPOAuthServiceTests {
         )
         #expect(json["redirect_uris"] as? [String] == ["ai.eigin://oauth/callback"])
         #expect(json["scope"] as? String == "mcp:tools:read mcp:tools:call")
+    }
+
+    @Test(arguments: ["https://mcp.example.com/", "https://mcp.example.com/resource"])
+    func discoveryUsesAdvertisedResource(resource: String) async throws {
+        let enteredURL = try #require(URL(string: "https://mcp.example.com"))
+        stubOAuthChain(
+            registrationStatus: 201,
+            registrationBody: Data(#"{"client_id":"client-123"}"#.utf8)
+        )
+        FakeURLProtocol.stubResponse(for: enteredURL.absoluteString, data: Data(), statusCode: 401)
+        FakeURLProtocol.stubResponse(
+            for: resourceMetadataURL,
+            data: Data(
+                #"{"resource":"\#(resource)","authorization_servers":["https://auth.example.com"]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+
+        let config = try #require(try await makeService().discoverOAuth(for: enteredURL))
+        #expect(config.resourceURL.absoluteString == resource)
+    }
+
+    @Test func discoveryFallsBackToServerURLWhenResourceIsMissing() async throws {
+        stubOAuthChain(
+            registrationStatus: 201,
+            registrationBody: Data(#"{"client_id":"client-123"}"#.utf8)
+        )
+
+        let config = try #require(try await makeService().discoverOAuth(for: serverURL))
+        #expect(config.resourceURL == serverURL)
+    }
+
+    @Test(arguments: [
+        "",
+        "/relative",
+        "https://",
+        "ftp://mcp.example.com",
+        "https://mcp.example.com/#fragment",
+    ])
+    func discoveryRejectsInvalidResource(resource: String) async throws {
+        stubOAuthChain(
+            registrationStatus: 201,
+            registrationBody: Data(#"{"client_id":"client-123"}"#.utf8)
+        )
+        FakeURLProtocol.stubResponse(
+            for: resourceMetadataURL,
+            data: Data(
+                #"{"resource":"\#(resource)","authorization_servers":["https://auth.example.com"]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+
+        do {
+            _ = try await makeService().discoverOAuth(for: serverURL)
+            Issue.record("Expected invalid resource failure")
+        } catch let error as MCPOAuthError {
+            guard case .metadataDiscoveryFailed(let reason) = error else {
+                Issue.record("Wrong error case: \(error)")
+                return
+            }
+            #expect(reason.contains("resource"))
+        }
     }
 
     @Test func registrationFailureSurfacesStatusAndBody() async throws {

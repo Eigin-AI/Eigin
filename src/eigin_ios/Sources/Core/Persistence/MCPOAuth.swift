@@ -3,9 +3,11 @@ import Foundation
 // MARK: - Discovery Metadata
 
 struct ProtectedResourceMetadata: Codable {
+    let resource: String?
     let authorizationServers: [String]?
 
     enum CodingKeys: String, CodingKey {
+        case resource
         case authorizationServers = "authorization_servers"
     }
 }
