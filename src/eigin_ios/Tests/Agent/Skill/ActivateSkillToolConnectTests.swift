@@ -37,7 +37,7 @@ struct ActivateSkillToolConnectTests {
 
     private func makeFixture() throws -> (Agent, Chat, ModelContainer) {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Wren", providerID: UUID(), model: "test-model")
@@ -79,6 +79,130 @@ struct ActivateSkillToolConnectTests {
         #expect(first.content.contains("confirmation_required"))
         #expect(!chat.isSkillActive("health"))
         connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+    }
+
+    @Test func presetSetupContinuesWithLiveToolsAndServerInstructions() async throws {
+        let (agent, chat, container) = try makeFixture()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [InitiativeMCPProtocol.self]
+        Container.shared.mcpServerManager.register {
+            MCPServerManager(
+                keychainService: PreviewKeychainService(), oauthService: StoredBackgroundMCPAuth(),
+                httpConfiguration: configuration
+            )
+        }
+        let handler: ConnectCapabilityHandler = { request in
+            #expect(request.presetID == "dinero")
+            let server = MCPServer(name: "Dinero", url: "https://dinero.test/mcp", authType: .oauth)
+            server.presetID = "dinero"
+            server.cachedToolNames = ["obsolete"]
+            container.mainContext.insert(server)
+            return .connected
+        }
+        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let result = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(!result.isError)
+        #expect(chat.isSkillActive(MCPPreset.dinero.skillID))
+        #expect(result.content.contains("Use current GitLab data."))
+        #expect(result.content.contains("list_issues"))
+        #expect(!result.content.contains("obsolete"))
+        let servers = try container.mainContext.fetch(FetchDescriptor<MCPServer>())
+        #expect(MCPServerSkill.project(servers: servers).count == 1)
+    }
+
+    @Test func presetSetupRequiresLaterReplyAndVerifiesConnection() async throws {
+        let (agent, chat, container) = try makeFixture()
+        defer { _ = container }
+        let asks = Asks()
+        let handler: ConnectCapabilityHandler = { request in
+            asks.requests.append(request)
+            return .connected
+        }
+        let first = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(first.content.contains("confirmation_required"))
+        #expect(asks.requests.isEmpty)
+        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        #expect(asks.requests.isEmpty)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let incomplete = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(asks.requests.count == 1)
+        #expect(asks.requests.first?.presetID == "dinero")
+        #expect(asks.requests.first?.capabilities.isEmpty == true)
+        #expect(incomplete.content.contains("Dinero"))
+        #expect(!chat.isSkillActive(MCPPreset.dinero.skillID))
+    }
+
+    @Test(arguments: [false, true])
+    func presetDeclineOrCancellationLeavesSkillInactive(cancelled: Bool) async throws {
+        let (agent, chat, container) = try makeFixture()
+        defer { _ = container }
+        let handler: ConnectCapabilityHandler = { _ in
+            cancelled ? .dismissed(failure: nil) : .declined
+        }
+        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let result = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(!result.isError)
+        #expect(!chat.isSkillActive(MCPPreset.dinero.skillID))
+        #expect(result.content.contains(cancelled ? "stopped" : "declined to connect"))
+        #expect(try container.mainContext.fetch(FetchDescriptor<MCPServer>()).isEmpty)
+    }
+
+    @Test func dismissedSetupFailureReportsErrorWithoutRecordingDecline() async throws {
+        let (agent, chat, container) = try makeFixture()
+        defer { _ = container }
+        let asks = Asks()
+        let handler: ConnectCapabilityHandler = { request in
+            asks.requests.append(request)
+            return .dismissed(failure: "Authentication server unavailable. Try again.")
+        }
+        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let failed = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(failed.content.contains("connection_failed"))
+        #expect(failed.content.contains("Authentication server unavailable"))
+        #expect(!failed.content.contains("declined"))
+        #expect(!declines.isPresetDeclined(MCPPreset.dinero.id))
+        #expect(!chat.isSkillActive(MCPPreset.dinero.skillID))
+        #expect(try container.mainContext.fetch(FetchDescriptor<MCPServer>()).isEmpty)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        let retry = await activate(
+            MCPPreset.dinero.skillID,
+            chat: chat,
+            agent: agent,
+            handler: handler
+        )
+        #expect(retry.content.contains("confirmation_required"))
+        #expect(asks.requests.count == 1)
+        connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
+        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        #expect(asks.requests.count == 2)
     }
 
     @Test func initialAndSameTurnRetriesNeverOpenASheet() async throws {

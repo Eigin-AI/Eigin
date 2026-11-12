@@ -12,7 +12,7 @@ struct ActivateSkillToolMCPTests {
     private func makeFixture() throws -> (Agent, Chat, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV6.models, version: SchemaV6.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: config
         )
         let agent = Agent(name: "TestAgent", providerID: UUID(), model: "test-model")

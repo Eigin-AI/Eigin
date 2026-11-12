@@ -140,13 +140,13 @@ struct ConnectionsView: View {
             } else if let target = connectTarget {
                 ConnectIntegrationSheet(
                     target: target,
-                    onConnected: {
-                        Haptics.success()
+                    onResolved: { result in
                         connectTarget = nil
-                    },
-                    onCancelled: {
-                        connectTarget = nil
-                        showAddIntegration = true
+                        if case .connected = result {
+                            Haptics.success()
+                        } else {
+                            showAddIntegration = true
+                        }
                     }
                 )
             }

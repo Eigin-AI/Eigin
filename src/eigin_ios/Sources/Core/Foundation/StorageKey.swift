@@ -30,4 +30,9 @@ enum StorageKey {
     static func capabilityDeclined(_ capability: String) -> String {
         "capabilityDeclined.\(capability)"
     }
+
+    /// Whether the person declined setup for a bundled MCP preset.
+    static func mcpPresetDeclined(_ presetID: String) -> String {
+        "mcpPresetDeclined.\(presetID)"
+    }
 }

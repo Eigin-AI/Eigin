@@ -8,7 +8,7 @@ import Testing
 struct PreparationTests {
     @Test func sourcedFindingsPersistInIntentScopeAndKeepObservationTime() async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
@@ -66,7 +66,7 @@ struct PreparationTests {
 
     @Test func privateIntentsCannotBePreparedOutsideTheirSpace() async throws {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Test", providerID: UUID(), model: "test")

@@ -105,7 +105,7 @@ struct SearchSkillsToolMCPTests {
     private func makeFixture() throws -> (Agent, Chat, ModelContainer) {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
-            for: Schema(SchemaV6.models, version: SchemaV6.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: config
         )
         let agent = Agent(name: "TestAgent", providerID: UUID(), model: "test-model")
@@ -113,6 +113,21 @@ struct SearchSkillsToolMCPTests {
         let chat = Chat(agentID: agent.id)
         container.mainContext.insert(chat)
         return (agent, chat, container)
+    }
+
+    @Test @MainActor func searchFindsUnconnectedDineroAndExplainsSetup() async throws {
+        let (agent, chat, container) = try makeFixture()
+        defer { _ = container }
+        let tool = SearchSkillsTool(chatID: chat.id, skillIndex: SkillIndex(embed: { _ in nil }))
+        let result = await tool.execute(
+            ToolCall(
+                id: "search-dinero", type: "function",
+                function: .init(name: "search_skills", arguments: #"{"query":"Dinero"}"#)
+            ), agent: agent
+        )
+        #expect(!result.isError)
+        #expect(result.content.contains(MCPPreset.dinero.skillID))
+        #expect(result.content.contains("asks the user to connect Dinero"))
     }
 
     @Test @MainActor func searchSurfacesInstructionlessMCPServerByName() async throws {

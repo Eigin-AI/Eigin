@@ -28,4 +28,19 @@ struct DeclinedCapabilities: @unchecked Sendable {
     func clear(_ capability: Capability) {
         defaults.removeObject(forKey: StorageKey.capabilityDeclined(capability.rawValue))
     }
+
+    /// Whether setup for a bundled MCP preset was declined.
+    func isPresetDeclined(_ presetID: String) -> Bool {
+        defaults.bool(forKey: StorageKey.mcpPresetDeclined(presetID))
+    }
+
+    /// Suppresses repeated chat offers until the preset is connected from Settings.
+    func declinePreset(_ presetID: String) {
+        defaults.set(true, forKey: StorageKey.mcpPresetDeclined(presetID))
+    }
+
+    /// Clears a declined preset after successful setup.
+    func clearPreset(_ presetID: String) {
+        defaults.removeObject(forKey: StorageKey.mcpPresetDeclined(presetID))
+    }
 }

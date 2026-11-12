@@ -212,8 +212,8 @@ struct IntegrationScreen: View {
         switch subject {
         case .builtin(let integration):
             BundledIntegrationType.type(forID: integration.typeID)?.brandImage
-        case .server:
-            nil
+        case .server(let server):
+            MCPPreset.all.first { $0.id == server.presetID }?.brandImage
         }
     }
 

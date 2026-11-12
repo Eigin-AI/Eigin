@@ -1,6 +1,54 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "integrations.category.finance.displayName": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Økonomi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finance"
+          }
+        }
+      }
+    },
+    "integrations.dinero.description": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbejd med fakturaer, bogføring og rapporter i Dinero."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work with invoices, bookkeeping, and reports in Dinero."
+          }
+        }
+      }
+    },
+    "integrations.dinero.connectionDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind på Dinero med Visma Connect. Dineros MCP kræver abonnementet Pro eller Total."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to Dinero with Visma Connect. Dinero MCP requires the Pro or Total subscription tier."
+          }
+        }
+      }
+    },
     "a11y_task_list_item_checked": {
       "comment": "Accessibility suffix for a completed task list item",
       "localizations": {

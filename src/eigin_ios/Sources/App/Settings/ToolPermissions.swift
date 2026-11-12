@@ -94,7 +94,7 @@ struct ToolPermissions: View {
     }
 
     private func discoveredControl(server: MCPServer, toolName: String) -> some View {
-        let fullName = Self.mcpToolName(server: server.name, tool: toolName)
+        let fullName = Self.mcpToolName(server: server.toolNamespace, tool: toolName)
         let segments: [AppSegment<ToolPermissionLevel?>] = [
             AppSegment(Localized.Settings.Permissions.defaultLabel, value: nil),
         ] + ToolPermissionLevel.allCases.map { AppSegment($0.displayName, value: Optional($0)) }

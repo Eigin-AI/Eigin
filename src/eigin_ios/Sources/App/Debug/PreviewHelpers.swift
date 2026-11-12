@@ -30,7 +30,7 @@ struct PreviewEnvironment: ViewModifier {
         // Matches the schema `CurrentModels` resolves to, so the container
         // holds every model a view can query.
         let container = try! ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: config
         )
 

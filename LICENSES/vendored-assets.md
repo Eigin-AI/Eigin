@@ -9,6 +9,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 | MingCute Icon | https://github.com/MingcuteDesign/MingCute | 3.x | Apache-2.0 | `design/assets/icons/functional/*.svg`; `src/eigin_website/static/assets/icons/mingcute/*.svg` |
 | SnapshotHelper.swift | https://github.com/fastlane/fastlane | 1.30 | MIT | `src/eigin_ios/EiginUITests/SnapshotHelper.swift`, drives fastlane snapshot from the screenshot UI tests |
 | Simple Icons | https://github.com/simple-icons/simple-icons | 15.x; footer marks 11.15.0 | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
+| Dinero brand mark | https://mcp.dinero.dk/dinero-logo-primary-500.svg | — | Rights retained by Dinero | `design/assets/icons/service/dinero.svg`, generated connection icons |
 | Fira Code Regular | https://github.com/tonsky/FiraCode/tree/5.2 | 5.002 (font metadata) | [SIL OFL 1.1](FiraCode-LICENSE.txt) | Bundled docs code font; notice published at `fonts/FiraCode-LICENSE.txt` |
 | Provider brand marks | Sourced from each provider's own brand assets | — | Trademarks of their owners | `design/assets/icons/provider/*.svg`, marks for the AI providers Eigin can connect to |
 
@@ -24,6 +25,8 @@ after a trademark request, so it is redrawn here as the four squares of the
 company logo, monochrome like the rest of the set. The arrangement is a simple
 geometric figure, below the threshold of copyright; the mark itself remains
 Microsoft's trademark.
+
+`service/dinero.svg` is the symbol extracted from [Dinero's official logo](https://mcp.dinero.dk/dinero-logo-primary-500.svg), adjusted for monochrome display. Dinero retains rights to the artwork and trademark; this asset is outside the Simple Icons CC0 set.
 
 Either way the marks themselves stay the trademarks of their owners. Eigin
 shows them only to identify which service a connection points at, which is

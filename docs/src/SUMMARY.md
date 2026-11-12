@@ -63,6 +63,7 @@
 - [Microsoft](./integrations/microsoft.md)
 - [IMAP](./integrations/imap.md)
 - [Aula](./integrations/aula.md)
+- [MCP presets](./integrations/mcp-presets.md)
 - [Platform integrations](./integrations/platform.md)
 
 # Voice

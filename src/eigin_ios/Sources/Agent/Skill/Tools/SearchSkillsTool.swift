@@ -146,7 +146,8 @@ struct SearchSkillsTool: Tool {
     @MainActor private func activatableSkills(agent: Agent) -> [Skill] {
         guard skillSession != nil || chatID != nil else {
             return SkillCatalog.activatable(
-                from: BundledSkill.all, activeIDs: [], connectedCapabilities: []
+                from: BundledSkill.all + MCPServerSkill.project(servers: []), activeIDs: [],
+                connectedCapabilities: []
             )
         }
         return session(agent: agent).candidates(context: agent.modelContext)

@@ -8,7 +8,7 @@ import UserNotifications
 struct FollowUpSchedulerTests {
     @MainActor private func fixture() throws -> (ModelContainer, Agent, Space) {
         let container = try ModelContainer(
-            for: Schema(SchemaV14.models, version: SchemaV14.versionIdentifier),
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let agent = Agent(name: "Test", providerID: UUID(), model: "test")
@@ -170,7 +170,7 @@ struct FollowUpSchedulerTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("follow-ups.store")
-        let schema = Schema(SchemaV14.models, version: SchemaV14.versionIdentifier)
+        let schema = Schema(SchemaV15.models, version: SchemaV15.versionIdentifier)
         let agentID: UUID
         do {
             let writable = try ModelContainer(
