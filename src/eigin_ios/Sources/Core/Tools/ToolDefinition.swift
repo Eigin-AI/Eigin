@@ -53,9 +53,11 @@ struct JSONSchema: Encodable, Sendable {
             let type: String
             var properties: [String: Property]?
             var required: [String]?
+            var `enum`: [String]?
 
             enum CodingKeys: String, CodingKey {
                 case type, properties, required
+                case `enum`
             }
         }
     }

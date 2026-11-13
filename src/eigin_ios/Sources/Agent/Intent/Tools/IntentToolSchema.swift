@@ -72,10 +72,7 @@ enum IntentToolSchema {
                     description: "How often it recurs.",
                     enum: ScheduleFrequency.allCases.map(\.rawValue)
                 ),
-                "weekdays": .init(
-                    type: "array",
-                    description: "For weekly: days it fires on, 1=Sunday … 7=Saturday."
-                ),
+                "weekdays": WeekdayArguments.schema,
                 "month_days": .init(
                     type: "array",
                     description: "For monthly: days of the month (1–31)."
