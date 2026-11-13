@@ -715,6 +715,7 @@ final class LiveCallService: @unchecked Sendable {
             // Auto-compact if approaching context limits (silent, no progress UI)
             let compactionResult = await MessagePipeline.compactIfNeeded(
                 apiMessages: turn.apiMessages,
+                historyMessageIDs: turn.historyMessageIDs,
                 estimatedTokens: turn.estimatedTokens,
                 contextWindow: turn.contextWindow,
                 baseURL: provider.baseURL, providerID: provider.id,

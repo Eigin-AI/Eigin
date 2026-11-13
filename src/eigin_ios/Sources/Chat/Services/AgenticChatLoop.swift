@@ -485,6 +485,9 @@ final class AgenticChatLoop {
                         call, agent: agent, executor: currentExecutor
                     )
 
+                    // A stopped turn has already persisted its checkpoint.
+                    try Task.checkCancellation()
+                    if shouldStop { return [] }
                     afterToolCall?()
 
                     let toolMessage = ChatMessage(
@@ -776,6 +779,7 @@ final class AgenticChatLoop {
             case .interactive:
                 isAwaitingUserInteraction = true
                 result = await executor.execute(call, agent: agent)
+                guard !Task.isCancelled, !shouldStop else { return result }
                 isAwaitingUserInteraction = false
             case .background:
                 result = await executeWithTimeout(call, agent: agent, executor: executor)
@@ -848,6 +852,7 @@ final class AgenticChatLoop {
             }
         }
 
+        guard !Task.isCancelled, !shouldStop else { return result }
         AppLogger.debug(
             "Tool \(public: toolName) result: isError=\(public: result.isError), content=\(private: result.content.prefix(100))",
             category: .chat
@@ -917,7 +922,7 @@ final class AgenticChatLoop {
             for call in calls where !completedIDs.contains(call.id) {
                 result.append(ChatMessage(
                     role: "tool",
-                    content: "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.",
+                    content: ToolResult.interruptedContent,
                     toolCallID: call.id, name: call.function.name
                 ))
             }

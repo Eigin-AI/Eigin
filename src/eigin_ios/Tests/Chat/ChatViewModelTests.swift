@@ -429,6 +429,74 @@ struct ChatViewModelTests {
         #expect(vm.chatError != nil)
     }
 
+    @Test(
+        "Sending during options persists one result through replacement and retry",
+        arguments: [false, true]
+    )
+    @MainActor
+    func sendingDuringOptionsKeepsResultsPaired(retry: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        func options(_ id: String) -> [ChatStreamEvent] {
+            [.toolCall(ToolCall(
+                id: id, type: "function",
+                function: .init(
+                    name: "present_options",
+                    arguments: #"{"options":[{"label":"Continue","description":"Continue"}]}"#
+                )
+            )), .finished(.toolCalls)]
+        }
+        service.enqueueEventStreams([
+            options("original"), options("replacement"),
+            [.contentDelta("Done"), .finished(.stop)],
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.window.isPreloaded = true
+        defer { vm.handleStop() }
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        let firstTask = vm.streamTask
+        let deadline = ContinuousClock.now + .seconds(5)
+        while vm.chatLoop.pendingOptions?.id != "original", ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(vm.chatLoop.pendingOptions?.id == "original")
+        vm.messageText = "Something else"
+        if retry {
+            service.throwOnEventStream(OpenAICompatibleClientError.httpError(400, body: nil))
+        }
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await firstTask?.value
+        if retry {
+            await vm.streamTask?.value
+            #expect(vm.chatError != nil)
+            vm.retryLastTurn(
+                agent: agent,
+                provider: provider,
+                space: nil,
+                spaces: [],
+                mcpServers: []
+            )
+        }
+        #expect(vm.isTurnInProgress)
+        let replacementDeadline = ContinuousClock.now + .seconds(5)
+        while vm.chatLoop.pendingOptions?.id != "replacement",
+              ContinuousClock.now < replacementDeadline
+        {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(vm.chatLoop.pendingOptions?.id == "replacement")
+        #expect(vm.chatLoop.isAwaitingUserInteraction)
+        #expect(vm.window.allPersisted.count { $0.toolCallID == "original" } == 1)
+        #expect(service.capturedEventMessages.count { $0.toolCallID == "original" } == 1)
+        vm.chatLoop.resolveOptions(.selected(label: "Continue"))
+        await vm.streamTask?.value
+        #expect(vm.chatError == nil)
+        #expect(!vm.isTurnInProgress)
+        #expect(vm.window.allPersisted.count { $0.toolCallID == "original" } == 1)
+        #expect(vm.window.allPersisted.count { $0.toolCallID == "replacement" } == 1)
+        #expect(service.capturedEventMessages.count { $0.toolCallID == "replacement" } == 1)
+    }
+
     @Test("a cancellation error does not surface as a chatError")
     @MainActor
     func cancellationDoesNotSetChatError() async throws {
@@ -441,6 +509,8 @@ struct ChatViewModelTests {
         await vm.streamTask?.value
 
         #expect(vm.chatError == nil)
+        #expect(!vm.isStreaming)
+        #expect(!vm.isTurnInProgress)
     }
 
     @Test("setLiveCallError surfaces the error as a chatError")

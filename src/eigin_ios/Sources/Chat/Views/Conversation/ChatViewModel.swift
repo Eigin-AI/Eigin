@@ -37,6 +37,7 @@ final class ChatViewModel {
     private let skillConnectionGate = SkillConnectionGate()
     var chatLoop = AgenticChatLoop(isBootstrap: false)
     var streamTask: Task<Void, Never>?
+    private var activeTurnID: UUID?
     private(set) var chatError: ConnectionError?
     var isCompacting = false
     /// True from the moment a turn is kicked off (user send or retry) until the
@@ -340,11 +341,16 @@ final class ChatViewModel {
             return
         }
 
+        let turnID = UUID()
+        activeTurnID = turnID
         isTurnInProgress = true
         streamTask = Task {
             defer {
-                self.endBackgroundGrace()
-                self.isTurnInProgress = false
+                if self.activeTurnID == turnID {
+                    self.activeTurnID = nil
+                    self.endBackgroundGrace()
+                    self.isTurnInProgress = false
+                }
             }
             guard existingChat() != nil else { return }
             let msgs =
@@ -379,7 +385,8 @@ final class ChatViewModel {
                 agent: agent, provider: provider, messages: msgs, conversationID: chatID
             )
 
-            guard existingChat() != nil else { return }
+            guard activeTurnID == turnID, !Task.isCancelled,
+                  existingChat() != nil else { return }
             let activeSkills = self.resolvedActiveSkills(
                 integrations: integrations,
                 mcpServers: servers
@@ -416,9 +423,11 @@ final class ChatViewModel {
                 skillConnectionGate: self.skillConnectionGate,
                 userMessageID: initiatingUserMessageID
             ) } catch {
+                guard activeTurnID == turnID, !Task.isCancelled else { return }
                 chatError = ConnectionError(from: error)
                 return
             }
+            guard activeTurnID == turnID, !Task.isCancelled else { return }
 
             // Persist the user message before compaction: the summary row lands
             // right after the latest user message, and the retained count equals
@@ -430,7 +439,8 @@ final class ChatViewModel {
                 turn: turn, provider: provider, model: routedModel, agent: agent
             )
 
-            guard existingChat() != nil else { return }
+            guard activeTurnID == turnID, !Task.isCancelled,
+                  existingChat() != nil else { return }
             let registry = turn.registry
 
             // Rebuild tool registry mid-turn when skills are activated.
@@ -492,6 +502,8 @@ final class ChatViewModel {
                     conversationID: chatID,
                     continuationInstruction: continuationInstruction
                 )
+                guard activeTurnID == turnID else { return }
+                try Task.checkCancellation()
                 guard existingChat() != nil else {
                     chatLoop.abort()
                     return
@@ -508,10 +520,8 @@ final class ChatViewModel {
                     generateTitle(agent: agent, provider: provider, model: routedModel)
                 }
             } catch {
-                // A user-initiated stop cancels streamTask, which surfaces here as a
-                // cancellation error (Swift's CancellationError or URLSession's -999).
-                // That's not a failure — handleStop already snapshotted the partial
-                // response, so settle quietly without painting an error banner.
+                // A stopped predecessor must leave the replacement turn untouched.
+                guard activeTurnID == turnID else { return }
                 if !(Task.isCancelled || error is CancellationError) {
                     let checkpoint = chatLoop.buildCheckpoint()
                     if existingChat() != nil {
@@ -520,8 +530,8 @@ final class ChatViewModel {
                         persistMessages(checkpoint)
                     }
                     chatError = ConnectionError(from: error)
-                    chatLoop.settle()
                 }
+                chatLoop.settle()
                 chatLoop.abort()
             }
         }
@@ -564,6 +574,8 @@ final class ChatViewModel {
     }
 
     func handleStop() {
+        activeTurnID = nil
+        isTurnInProgress = false
         endBackgroundGrace()
         let checkpoint = chatLoop.stop()
         window.messages.append(contentsOf: checkpoint)
@@ -666,6 +678,7 @@ final class ChatViewModel {
 
         let result = await MessagePipeline.compactIfNeeded(
             apiMessages: turn.apiMessages,
+            historyMessageIDs: turn.historyMessageIDs,
             estimatedTokens: turn.estimatedTokens,
             contextWindow: turn.contextWindow,
             needsCompaction: existingChat()?.needsCompaction ?? false,

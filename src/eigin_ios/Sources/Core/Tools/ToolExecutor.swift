@@ -2,6 +2,9 @@ import Foundation
 
 /// The result of executing a single tool call.
 struct ToolResult {
+    /// Stable text identifying interrupted results in persisted conversation history.
+    static let interruptedContent = "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state."
+
     let toolCallID: String
     let content: String
     let isError: Bool
