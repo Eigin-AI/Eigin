@@ -30,7 +30,7 @@ struct SetInitiativesTool: InitiativeTool {
                         ),
                         "notification": .init(
                             type: "string",
-                            description: "Task-appropriate invitation, at most 200 characters. Keep it accurate and pleasant across repeated occurrences; never claim unfinished work is ready."
+                            description: "Short, task-appropriate invitation, aiming for 40–50 characters (maximum 200). Also used as the initiative title and initial chat title, so lead with the topic. Keep it accurate and pleasant across repeated occurrences; never claim unfinished work is ready."
                         ),
                         "frequency": .init(
                             type: "string",

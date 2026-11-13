@@ -14,6 +14,40 @@ struct WaitingInitiativeStoreTests {
 
     private let baseline = Date(timeIntervalSince1970: 1_767_225_600) // 2026-01-01 UTC
 
+    @Test(arguments: [
+        ("Invitation 1", "Invitation 1"),
+        (
+            "Review this week’s meals and plan next week’s groceries",
+            "Review this week’s meals and plan next"
+        ),
+        ("Læs bl.a. om søvn", "Læs bl.a. om søvn"),
+    ])
+    func openingSeedsTitle(invitation: String, expected: String) throws {
+        let f = try fixture(count: 1)
+        let agreement = try #require(f.mainContext.fetch(FetchDescriptor<IntentInitiative>()).first)
+        agreement.notificationBody = invitation
+        try f.mainContext.save()
+        try reconcile(f, at: baseline)
+        try reconcile(f, at: baseline.addingTimeInterval(3600))
+        let item = try #require(items(f).first)
+        let id = try WaitingInitiativeStore.open(id: item.id, context: f.mainContext)
+        let context = ModelContext(f)
+        let chat = try #require(context.fetch(FetchDescriptor<Chat>()).first)
+        #expect(chat.id == id)
+        #expect(chat.title == expected)
+        #expect(chat.titleOrigin == .seeded)
+
+        chat.title = "My title"
+        chat.titleOrigin = .edited
+        try context.save()
+        let reopenedContext = ModelContext(f)
+        #expect(try WaitingInitiativeStore.open(id: item.id, context: reopenedContext) == id)
+        let reopened = try #require(reopenedContext.fetch(FetchDescriptor<Chat>()).first)
+        #expect(reopened.title == "My title")
+        #expect(reopened.titleOrigin == .edited)
+        #expect(try reopenedContext.fetchCount(FetchDescriptor<Chat>()) == 1)
+    }
+
     @Test func upgradeBaselineDoesNotBackfillAndSurvivesNewContext() throws {
         let f = try fixture(count: 1)
         try reconcile(f, at: baseline.addingTimeInterval(86400))
