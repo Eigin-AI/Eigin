@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "errors.chat.invalidHistoryTitle": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne chat kan ikke fortsætte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This chat can’t continue"
+          }
+        }
+      }
+    },
+    "errors.chat.invalidHistoryBody": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne chat kunne ikke repareres automatisk. Start en ny chat for at fortsætte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This chat couldn’t be repaired automatically. Start a new chat to continue."
+          }
+        }
+      }
+    },
     "integrations.category.finance.displayName": {
       "localizations": {
         "da": {

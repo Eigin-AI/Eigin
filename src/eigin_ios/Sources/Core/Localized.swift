@@ -1004,6 +1004,14 @@ enum Localized {
                 Localized.get("errors.chat.interruptedTitle")
             }
 
+            static var invalidHistoryBody: String {
+                Localized.get("errors.chat.invalidHistoryBody")
+            }
+
+            static var invalidHistoryTitle: String {
+                Localized.get("errors.chat.invalidHistoryTitle")
+            }
+
             /// Chat card for a stream completion failure
             static var invalidToolCallBody: String {
                 Localized.get("errors.chat.invalidToolCallBody")

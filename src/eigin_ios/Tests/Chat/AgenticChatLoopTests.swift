@@ -447,6 +447,117 @@ struct AgenticChatLoopTests {
         #expect(saved.withLock { $0.contains { $0.toolCallID == "done" } })
     }
 
+    @Test(arguments: [false, true])
+    @MainActor func stoppedOptionsCannotAppendASecondResultAfterSettling(
+        cancelTask: Bool
+    ) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "options", type: "function",
+            function: .init(name: "present_options", arguments: "{}")
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        let (entered, signal) = AsyncStream<Void>.makeStream()
+        let executor = SuspendedOptionsExecutor { _ in
+            signal.yield(())
+            _ = await loop.presentOptions(OptionSet(id: call.id, question: nil, options: []))
+        }
+        let task = Task {
+            try await loop.run(
+                messages: [], tools: nil, agent: agent, provider: provider,
+                chatService: service, toolExecutor: executor
+            )
+        }
+        for await _ in entered {
+            break
+        }
+        let checkpoint = loop.stop()
+        loop.settle()
+        if cancelTask { task.cancel() }
+        do {
+            let returned = try await task.value
+            #expect(returned.isEmpty)
+        } catch is CancellationError {
+            #expect(cancelTask)
+        }
+
+        #expect(checkpoint.count { $0.toolCallID == call.id } == 1)
+        #expect(loop.buildCheckpoint().isEmpty)
+        let lateCommit = loop.completeRound()
+        #expect(lateCommit.isEmpty)
+        #expect((checkpoint + lateCommit).count { $0.toolCallID == call.id } == 1)
+    }
+
+    @Test @MainActor func cancelledOptionsCannotClearReplacementInteraction() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let service = FakeChatService()
+        let calls = ["old", "new"].map {
+            ToolCall(
+                id: $0,
+                type: "function",
+                function: .init(name: "present_options", arguments: "{}")
+            )
+        }
+        service.enqueueEventStreams(calls.map { [.toolCall($0), .finished(.toolCalls)] }
+            + [[.contentDelta("Done"), .finished(.stop)]])
+        let (entered, signal) = AsyncStream<Void>.makeStream()
+        var entry = entered.makeAsyncIterator()
+        let (returning, returningSignal) = AsyncStream<Void>.makeStream()
+        var releaseOld: CheckedContinuation<Void, Never>?
+        let executor = SuspendedOptionsExecutor { call in
+            signal.yield(())
+            _ = await loop.presentOptions(OptionSet(id: call.id, question: nil, options: []))
+            if call.id == "old" {
+                await withCheckedContinuation {
+                    releaseOld = $0
+                    returningSignal.yield(())
+                }
+            }
+        }
+        let oldTask = Task {
+            try await loop.run(
+                messages: [],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+        }
+        _ = await entry.next()
+        _ = loop.stop()
+        loop.settle()
+        oldTask.cancel()
+        for await _ in returning {
+            break
+        }
+        let replacement = Task {
+            try await loop.run(
+                messages: [],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+        }
+        _ = await entry.next()
+        #expect(loop.pendingOptions?.id == "new")
+        releaseOld?.resume()
+        do { _ = try await oldTask.value } catch is CancellationError {}
+        #expect(loop.isAwaitingUserInteraction)
+        #expect(loop.pendingOptions?.id == "new")
+        #expect(!loop.buildCheckpoint().contains { $0.toolCallID == "old" })
+        loop.resolveOptions(.selected(label: "Continue"))
+        let completed = try await replacement.value
+        #expect(completed.count { $0.toolCallID == "new" } == 1)
+    }
+
     @Test @MainActor func stoppedBatchPersistsPairedResultsAndContinuesWithoutReplay() async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
@@ -1314,5 +1425,18 @@ struct AgenticChatLoopTests {
         let outcomes = await router.outcomes()
         let ttft = try #require(outcomes.last?.timeToFirstToken)
         #expect(ttft > .milliseconds(100))
+    }
+}
+
+private struct SuspendedOptionsExecutor: ToolExecutor {
+    let executeOptions: @MainActor @Sendable (ToolCall) async -> Void
+
+    func executionMode(for toolName: String) -> ToolExecutionMode {
+        .interactive
+    }
+
+    @MainActor func execute(_ toolCall: ToolCall, agent: Agent) async -> ToolResult {
+        await executeOptions(toolCall)
+        return ToolResult(toolCallID: toolCall.id, content: "Dismissed", isError: false)
     }
 }

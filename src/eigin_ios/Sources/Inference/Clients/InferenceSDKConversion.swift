@@ -2,6 +2,11 @@ import EiginSDK
 import Factory
 import Foundation
 
+/// Conversation history contains ambiguous results that cannot be sent safely.
+enum ToolHistoryError: Error {
+    case duplicateResult
+}
+
 /// Maps app-owned messages and metadata onto value-based SDK inputs.
 enum InferenceSDKConversion {
     private typealias SDK = EiginSDK.Experimental.Inference
@@ -12,6 +17,12 @@ enum InferenceSDKConversion {
         baseURL: String, providerID: UUID?, isRelay: Bool,
         attachmentStore: (any ChatAttachmentStoring)? = nil
     ) throws -> EiginSDK.Experimental.Inference.Input {
+        var resultIDs = Set<String>()
+        for message in messages where message.role == "tool" {
+            if let id = message.toolCallID, !resultIDs.insert(id).inserted {
+                throw ToolHistoryError.duplicateResult
+            }
+        }
         let store = attachmentStore ?? Container.shared.chatAttachmentStore()
         let destination = ReasoningOrigin.destination(
             providerID: providerID,

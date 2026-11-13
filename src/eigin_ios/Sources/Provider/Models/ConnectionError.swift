@@ -35,6 +35,7 @@ struct ConnectionError: Equatable {
     /// mapper, not another branch here.
     init(from error: Error) {
         let mappers: [@Sendable (Error) -> ConnectionError?] = [
+            Self.toolHistoryCard,
             Self.missingReplyCard,
             Self.streamCompletionCard,
             Self.firstEventTimeoutCard,
@@ -50,6 +51,14 @@ struct ConnectionError: Equatable {
     }
 
     // MARK: - Mappers
+
+    private static func toolHistoryCard(for error: Error) -> ConnectionError? {
+        guard error is ToolHistoryError else { return nil }
+        return ConnectionError(
+            title: Localized.Errors.Chat.invalidHistoryTitle,
+            suggestion: Localized.Errors.Chat.invalidHistoryBody
+        )
+    }
 
     private static func streamCompletionCard(for error: Error) -> ConnectionError? {
         guard let error = error as? StreamCompletionError else { return nil }

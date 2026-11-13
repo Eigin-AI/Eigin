@@ -60,6 +60,7 @@ enum WatchTurnRunner {
 
         let compacted = await MessagePipeline.compactIfNeeded(
             apiMessages: turn.apiMessages,
+            historyMessageIDs: turn.historyMessageIDs,
             estimatedTokens: turn.estimatedTokens,
             contextWindow: turn.contextWindow,
             baseURL: context.provider.baseURL,

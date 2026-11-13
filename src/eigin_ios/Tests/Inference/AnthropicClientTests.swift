@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("AnthropicClient", .serialized)
@@ -33,6 +34,128 @@ struct AnthropicClientTests {
             #expect(!complete)
         }
         #expect(finished == complete)
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func conflictingToolResultsAreRejectedAfterRepair(
+        duplicate: Bool,
+        interrupted: Bool
+    ) async throws {
+        let base = "https://history-\(UUID().uuidString).test/v1"
+        let url = "\(base)/messages"
+        FakeURLProtocol.stubResponse(
+            for: url, data: Data(Self.finishedStream.utf8), statusCode: 200
+        )
+        let calls = ["first", "second"].map {
+            ToolCall(id: $0, type: "function", function: .init(name: "read_core", arguments: "{}"))
+        }
+        let messages = [
+            ChatMessage(role: "assistant", content: nil, toolCalls: calls),
+            ChatMessage(role: "tool", content: "One", toolCallID: "first"),
+            ChatMessage(role: "tool", content: "Two", toolCallID: "second"),
+        ] +
+            (duplicate ? [ChatMessage(
+                role: "tool",
+                content: "Conflicting output",
+                toolCallID: "first"
+            )] : [])
+            + (interrupted ? [
+                ChatMessage(role: "tool", content: "One", toolCallID: "first"),
+                ChatMessage(
+                    role: "tool",
+                    content: ToolResult.interruptedContent,
+                    toolCallID: "first"
+                ),
+            ] : [])
+        let client = AnthropicClient(
+            baseURL: base,
+            apiToken: "token",
+            session: FakeURLProtocol.fakeSession()
+        )
+        do {
+            let stream = try await client.chatCompletionEventStream(
+                messages: MessagePipeline.repairSequence(messages),
+                model: "test",
+                tools: nil
+            )
+            for try await _ in stream {}
+            #expect(!duplicate)
+            #expect(FakeURLProtocol.lastRequest(for: url) != nil)
+        } catch let error as ToolHistoryError {
+            #expect(duplicate)
+            #expect(FakeURLProtocol.lastRequest(for: url) == nil)
+            #expect(RoutingFailure(from: error) == .notTheModelsFault)
+            let card = ConnectionError(from: error)
+            #expect(card.title == Localized.Errors.Chat.invalidHistoryTitle)
+            #expect(card.suggestion == Localized.Errors.Chat.invalidHistoryBody)
+            #expect(card.recovery == nil)
+        }
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func persistedInterruptedHistoryCanBeSentWithoutRewritingIt(
+        realFirst: Bool
+    ) async throws {
+        let store = try ModelContainer(
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let placeholder = ChatMessage(
+            role: "tool",
+            content: ToolResult.interruptedContent,
+            toolCallID: "options"
+        )
+        let actual = ChatMessage(role: "tool", content: "Dismissed", toolCallID: "options")
+        let duplicates = realFirst ? [actual, placeholder] : [placeholder, actual]
+        let history = [
+            ChatMessage(role: "user", content: "Help me choose"),
+            ChatMessage(role: "assistant", content: "Choose an option", toolCalls: [
+                ToolCall(
+                    id: "options",
+                    type: "function",
+                    function: .init(name: "present_options", arguments: "{}")
+                ),
+            ]),
+        ] + duplicates + [ChatMessage(role: "user", content: "Something else")]
+        for (index, message) in history.enumerated() {
+            let row = Message.from(message)
+            row.timestamp = Date(timeIntervalSince1970: Double(index))
+            store.mainContext.insert(row)
+        }
+        try store.mainContext.save()
+        let context = ModelContext(store)
+        let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
+        let loaded = try context.fetch(descriptor).map { $0.toChatMessage() }
+        let repaired = MessagePipeline.repairSequence(loaded)
+        let base = "https://repaired-\(UUID().uuidString).test/v1"
+        let url = "\(base)/messages"
+        FakeURLProtocol.stubResponse(
+            for: url,
+            data: Data(Self.finishedStream.utf8),
+            statusCode: 200
+        )
+        let client = AnthropicClient(
+            baseURL: base,
+            apiToken: "token",
+            session: FakeURLProtocol.fakeSession()
+        )
+        let stream = try await client.chatCompletionEventStream(
+            messages: repaired,
+            model: "test",
+            tools: nil
+        )
+        for try await _ in stream {}
+        let data = try #require(FakeURLProtocol.lastRequestBody(for: url))
+        let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let messages = try #require(body["messages"] as? [[String: Any]])
+        let results = messages.flatMap { $0["content"] as? [[String: Any]] ?? [] }
+            .filter { $0["type"] as? String == "tool_result" }
+        #expect(results.count == 1)
+        #expect(results.first?["tool_use_id"] as? String == "options")
+        #expect(results.first?["content"] as? String == "Dismissed")
+        let unchanged = try ModelContext(store).fetch(descriptor).map { $0.toChatMessage() }
+        #expect(unchanged.map(\.localID) == loaded.map(\.localID))
+        #expect(unchanged.map(\.content) == loaded.map(\.content))
     }
 
     // MARK: - validateAPIKey

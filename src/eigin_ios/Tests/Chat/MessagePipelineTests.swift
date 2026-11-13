@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("MessagePipeline.repairSequence")
@@ -55,6 +56,88 @@ struct MessagePipelineTests {
         ]
         let result = MessagePipeline.repairSequence(input)
         #expect(result.count == 3)
+    }
+
+    @Test(arguments: [false, true])
+    func interruptedAndRealResultsRecoverInEitherOrder(realFirst: Bool) {
+        let placeholder = ChatMessage(
+            role: "tool",
+            content: "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.",
+            toolCallID: "A"
+        )
+        let real = toolResult(id: "A")
+        let duplicates = realFirst ? [real, placeholder] : [placeholder, real]
+        let input = [user(), assistantWithTools(ids: ["A", "B"])]
+            + duplicates + [toolResult(id: "B"), user("continue")]
+        let repaired = MessagePipeline.repairSequence(input)
+        #expect(repaired.filter { $0.toolCallID == "A" }.map(\.content) == ["result"])
+        #expect(repaired.count == 5)
+        #expect(repaired.first?.localID == input.first?.localID)
+        #expect(repaired.last?.localID == input.last?.localID)
+        #expect(MessagePipeline.repairSequence(repaired).map(\.localID) == repaired.map(\.localID))
+    }
+
+    @Test func identicalResultsCollapseWithoutChangingOtherCalls() {
+        let input = [
+            user(),
+            assistantWithTools(ids: ["A", "B"]),
+            toolResult(id: "A"),
+            toolResult(id: "B"),
+            toolResult(id: "A"),
+        ]
+        let repaired = MessagePipeline.repairSequence(input)
+        #expect(repaired.map(\.localID) == Array(input.prefix(4)).map(\.localID))
+    }
+
+    @Test func repeatedInterruptedPlaceholdersCollapse() {
+        let results = (0 ..< 3).map { _ in
+            ChatMessage(role: "tool", content: ToolResult.interruptedContent, toolCallID: "A")
+        }
+        let repaired = MessagePipeline.repairSequence([assistantWithTools(ids: ["A"])] + results)
+        #expect(repaired.count == 2)
+        #expect(repaired.last?.localID == results.first?.localID)
+    }
+
+    @Test(arguments: ["metadata", "attachment", "name", "similarText"])
+    func ambiguousPlaceholdersKeepTheirPayload(payload: String) {
+        var placeholder = ChatMessage(
+            role: "tool",
+            content: ToolResult.interruptedContent,
+            toolCallID: "A"
+        )
+        switch payload {
+        case "metadata": placeholder.providerMetadata = ["signature": "private-state"]
+        case "attachment":
+            placeholder.attachments = [MessageAttachment(
+                id: UUID(),
+                kind: .image,
+                mimeType: "image/png",
+                byteCount: 1
+            )]
+        case "name": placeholder.name = "different_tool"
+        default: placeholder.content = ToolResult.interruptedContent + " Additional output."
+        }
+        let input = [assistantWithTools(ids: ["A"]), placeholder, toolResult(id: "A")]
+        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
+    }
+
+    @Test func differentRealResultsRemainUnresolved() {
+        let results = [
+            toolResult(id: "A"),
+            ChatMessage(role: "tool", content: "Different", toolCallID: "A"),
+        ]
+        let input = [assistantWithTools(ids: ["A"])] + results
+        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
+    }
+
+    @Test func matchingResultsAcrossRoundsAreNotMerged() {
+        let input = [
+            assistantWithTools(ids: ["A"]),
+            toolResult(id: "A"),
+            assistantWithTools(ids: ["A"]),
+            toolResult(id: "A"),
+        ]
+        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
     }
 
     @Test func orphanedAssistantDropped() {
@@ -331,6 +414,74 @@ struct RetentionCompactionTests {
         )
         #expect(estimate <
             Int(Double(contextWindow) * MessagePipeline.Compaction.threshold(for: contextWindow)))
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func repairedResultsSurviveCompactionAndReload(previousSummary: Bool) async throws {
+        let store = try ModelContainer(
+            for: Schema(SchemaV12.models, version: SchemaV12.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        var history = Array(conversation(turns: 30).dropFirst()) + [
+            user("Choose an option"),
+            ChatMessage(role: "assistant", content: "Options", toolCalls: [
+                ToolCall(
+                    id: "options",
+                    type: "function",
+                    function: .init(name: "present_options", arguments: "{}")
+                ),
+            ]),
+            ChatMessage(
+                role: "tool",
+                content: ToolResult.interruptedContent,
+                toolCallID: "options"
+            ),
+            ChatMessage(role: "tool", content: "Dismissed", toolCallID: "options"),
+        ]
+        if previousSummary {
+            var previous = ChatMessage(role: "system", content: "Earlier summary")
+            previous.isCompactionSummary = true
+            previous.compactionRetainedMessageCount = history.count
+            history.append(previous)
+        }
+        history.append(user("Something else"))
+        for (index, message) in history.enumerated() {
+            let row = Message.from(message)
+            row.timestamp = Date(timeIntervalSince1970: Double(index))
+            store.mainContext.insert(row)
+        }
+        try store.mainContext.save()
+        let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
+        let loaded = try ModelContext(store).fetch(descriptor).map { $0.toChatMessage() }
+        let conversation = MessagePipeline.splitAtLatestSummary(loaded).conversation
+        let apiMessages = [ChatMessage(role: "system", content: "System")]
+            + MessagePipeline.repairSequence(conversation)
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta(
+                "<conversation_summary>The user discussed project architecture and deployment plans in detail.</conversation_summary>"
+            ),
+            .finished(.stop),
+        ])
+        let compacted = await MessagePipeline.compactIfNeeded(
+            apiMessages: apiMessages, historyMessageIDs: loaded.map(\.localID),
+            estimatedTokens: 60000, contextWindow: 100_000,
+            baseURL: dummyURL, providerID: dummyProviderID, model: dummyModel, chatService: service
+        )
+        let summary = try #require(compacted.summary)
+        let retained = Array(compacted.apiMessages.dropFirst(2))
+        #expect(summary.compactionRetainedMessageCount == retained
+            .count + (previousSummary ? 2 : 1))
+        let summaryRow = Message.from(summary)
+        summaryRow.timestamp = Date(timeIntervalSince1970: Double(history.count))
+        store.mainContext.insert(summaryRow)
+        try store.mainContext.save()
+        let reloaded = try ModelContext(store).fetch(descriptor).map { $0.toChatMessage() }
+        let restored = MessagePipeline
+            .repairSequence(MessagePipeline.splitAtLatestSummary(reloaded).conversation)
+        #expect(restored.map(\.localID) == retained.map(\.localID))
+        #expect(restored.filter { $0.toolCallID == "options" }.map(\.content) == ["Dismissed"])
+        #expect(reloaded.count == loaded.count + 1)
     }
 
     @Test func splitAtLatestSummaryHonoursRetainedCount() {

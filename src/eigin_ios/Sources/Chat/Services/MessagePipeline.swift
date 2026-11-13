@@ -65,6 +65,8 @@ enum MessagePipeline {
 
     struct TurnInputs {
         let apiMessages: [ChatMessage]
+        /// Original history order used to retain stored rows through compaction.
+        let historyMessageIDs: [String]
         let registry: ToolRegistry
         let skillSession: SkillSession
         let estimatedTokens: Int
@@ -296,6 +298,7 @@ enum MessagePipeline {
 
         return TurnInputs(
             apiMessages: apiMessages,
+            historyMessageIDs: messages.map(\.localID),
             registry: registry,
             skillSession: skillSession,
             estimatedTokens: estimatedTokens,
@@ -325,7 +328,7 @@ enum MessagePipeline {
         ) ?? messages.startIndex
         let conversation = Array(messages[retainedStart ..< summaryIndex])
             + Array(messages[(summaryIndex + 1)...])
-        return (messages[summaryIndex].content, conversation)
+        return (messages[summaryIndex].content, conversation.filter { !$0.isCompactionSummary })
     }
 
     /// Builds API messages for normal-context chat turns.
@@ -489,6 +492,8 @@ enum MessagePipeline {
     ///   like Gemini require function calls after a user or tool-response turn.
     ///
     /// Stray `role: "tool"` messages without a preceding assistant are also dropped.
+    /// Recoverable duplicate results are collapsed; conflicting results remain for dispatch
+    /// validation.
     static func repairSequence(_ messages: [ChatMessage]) -> [ChatMessage] {
         var result: [ChatMessage] = []
         var i = 0
@@ -504,7 +509,11 @@ enum MessagePipeline {
                 }
                 let afterSystem = result.last?.role == "system"
                 if foundIDs == expectedIDs, !afterSystem {
-                    result.append(contentsOf: messages[i ..< j])
+                    result.append(msg)
+                    result.append(contentsOf: ToolResultRepair.repair(
+                        messages[(i + 1) ..< j],
+                        calls: toolCalls
+                    ))
                 }
                 i = j
             } else if msg.role == "tool" {
@@ -534,6 +543,7 @@ enum MessagePipeline {
     /// Callers should update their `needsCompaction` flag from the result.
     static func compactIfNeeded(
         apiMessages: [ChatMessage],
+        historyMessageIDs: [String]? = nil,
         estimatedTokens: Int,
         contextWindow: Int,
         needsCompaction: Bool = false,
@@ -679,10 +689,14 @@ enum MessagePipeline {
             content: "Summary of earlier conversation:\n\n\(summary)"
         )
         summaryMessage.isCompactionSummary = true
-        // The triggering user message is persisted before the summary row (see
-        // ``ChatViewModel.send``), so the payload's retained tail is the same
-        // rows in the store and this count marks the retention boundary in both.
-        summaryMessage.compactionRetainedMessageCount = retained.count
+        // Retention counts stored rows, including duplicates removed from the request.
+        let historyIDs = historyMessageIDs ?? conversationMessages.map(\.localID)
+        let retainedIDs = Set(retained.map(\.localID))
+        let boundary = historyIDs.firstIndex(where: retainedIDs.contains) ?? historyIDs.endIndex
+        summaryMessage.compactionRetainedMessageCount = historyIDs.distance(
+            from: boundary,
+            to: historyIDs.endIndex
+        )
 
         AppLogger.info("Summary stored (\(public: summary.count) chars)", category: .chat)
 
