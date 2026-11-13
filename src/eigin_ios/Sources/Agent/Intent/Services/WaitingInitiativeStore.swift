@@ -197,6 +197,12 @@ import SwiftData
             context: context
         )
         let chat = Chat(agentID: item.agentID, spaceID: item.spaceID)
+        if let invitation = delivery.members.first?.body,
+           let title = ChatTitleGenerator.cleanTitle(invitation)
+        {
+            chat.title = title
+            chat.titleOrigin = .seeded
+        }
         context.insert(chat)
         context.insert(InitiativeOccurrence(
             id: item.id,
