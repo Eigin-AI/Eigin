@@ -79,17 +79,17 @@ struct IntentToolTests {
         if input == .daily {
             let guidance = try #require(response["guidance"] as? String)
             #expect(!guidance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            let schedules = try #require(response["schedules"] as? [[String: String]])
+            let schedules = try #require(response["schedules"] as? [[String: Any]])
             #expect(schedules.count == saved.schedules.count)
             let schedule = try #require(saved.schedules.first)
-            #expect(schedules.first?["id"] == schedule.id.uuidString)
-            #expect(schedules.first?["content"] == schedule.content)
+            #expect(schedules.first?["id"] as? String == schedule.id.uuidString)
+            #expect(schedules.first?["content"] as? String == schedule.content)
             #expect(schedule.frequency == .daily)
             #expect(schedule.hour == 8)
         } else {
             #expect(response["guidance"] == nil)
             if name == "add_intent" || input == .empty {
-                let schedules = try #require(response["schedules"] as? [[String: String]])
+                let schedules = try #require(response["schedules"] as? [[String: Any]])
                 #expect(schedules.isEmpty)
             } else {
                 #expect(response["schedules"] == nil)
@@ -112,7 +112,7 @@ struct IntentToolTests {
         #expect(!result.isError)
         let response = try #require(envelope(result)["result"] as? [String: Any])
         #expect(response["guidance"] == nil)
-        let schedules = try #require(response["schedules"] as? [[String: String]])
+        let schedules = try #require(response["schedules"] as? [[String: Any]])
         #expect(schedules.isEmpty)
         let intents = try await service.activeIntents(
             agentID: agent.id, limit: 10, accessPolicy: policy
@@ -140,6 +140,84 @@ struct IntentToolTests {
         #expect(!errors.isEmpty)
     }
 
+    @Test(arguments: ["add_intent", "update_intent"])
+    @MainActor func weekdayNamesRoundTrip(name: String) async throws {
+        let (agent, service) = try makeFixture()
+        let id = try await service.create(
+            content: "Goal", agentID: agent.id, spaceID: nil, chatID: nil,
+            tasks: [], events: [], schedules: []
+        )
+        let call = makeCall(name: name, arguments: """
+        {"id":"\(id)","content":"Goal","schedules":[{"content":"Check in",
+        "frequency":"weekly","weekdays":["Sunday","MONDAY","tuesday","wednesday",
+        "thursday","friday","saturday"],"hour":8,"minute":30}]}
+        """)
+        let written = if name == "add_intent" {
+            await AddIntentTool(intentService: service).execute(call, agent: agent)
+        } else {
+            await UpdateIntentTool(intentService: service).execute(call, agent: agent)
+        }
+        #expect(!written.isError)
+        let response = try #require(envelope(written)["result"] as? [String: Any])
+        let schedules = try #require(response["schedules"] as? [[String: Any]])
+        let expected = [
+            "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+        ]
+        #expect(schedules.first?["weekdays"] as? [String] == expected)
+        #expect(schedules.first?["hour"] as? Int == 8)
+        let saved = try await service.activeIntents(
+            agentID: agent.id,
+            limit: 10,
+            accessPolicy: policy
+        )
+        let intent = try #require(saved.first { $0.id.uuidString == response["id"] as? String })
+        #expect(intent.schedules.first?.weekdays == [1, 2, 3, 4, 5, 6, 7])
+        let listed = await ListIntentsTool(intentService: service).execute(
+            makeCall(name: "list_intents", arguments: "{}"), agent: agent
+        )
+        let result = try #require(envelope(listed)["result"] as? [String: Any])
+        let intents = try #require(result["intents"] as? [[String: Any]])
+        let entry = try #require(intents.first { $0["id"] as? String == intent.id.uuidString })
+        let readSchedules = try #require(entry["schedules"] as? [[String: Any]])
+        #expect(readSchedules.first?["weekdays"] as? [String] == expected)
+    }
+
+    @Test(
+        arguments: ["add_intent", "update_intent"],
+        ["[2,4,6]", #"["monday",4]"#, #"["funday"]"#, "[]", "null", #""monday""#]
+    )
+    @MainActor func rejectsAmbiguousWeekdays(name: String, days: String) async throws {
+        let (agent, service) = try makeFixture()
+        let id = try await service.create(
+            content: "Goal", agentID: agent.id, spaceID: nil, chatID: nil,
+            tasks: [], events: [], schedules: []
+        )
+        let call = makeCall(name: name, arguments: """
+        {"id":"\(id)","content":"Goal","schedules":[{"content":"Check in",
+        "frequency":"weekly","weekdays":\(days)}]}
+        """)
+        let result = if name == "add_intent" {
+            await AddIntentTool(intentService: service).execute(call, agent: agent)
+        } else {
+            await UpdateIntentTool(intentService: service).execute(call, agent: agent)
+        }
+        #expect(result.isError)
+        #expect(result.content.contains("full English weekday names"))
+        let saved = try await service.activeIntents(
+            agentID: agent.id,
+            limit: 10,
+            accessPolicy: policy
+        )
+        #expect(saved.count == 1)
+        #expect(saved.first?.schedules.isEmpty == true)
+    }
+
     // MARK: - add_intent
 
     @Test @MainActor func addIntentCreatesWithSubObjects() async throws {
@@ -150,7 +228,7 @@ struct IntentToolTests {
           "content": "Help ship the alpha",
           "tasks": [{"content": "Finalize onboarding", "due": "2026-05-20", "priority": "high"}],
           "events": [{"content": "Launch", "at": "2026-05-25 09:00"}],
-          "schedules": [{"content": "Check in", "frequency": "weekly", "weekdays": [2], "hour": 9}]
+          "schedules": [{"content": "Check in", "frequency": "weekly", "weekdays": ["monday"], "hour": 9}]
         }
         """)
 

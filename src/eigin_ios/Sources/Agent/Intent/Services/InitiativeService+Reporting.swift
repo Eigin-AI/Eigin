@@ -9,7 +9,7 @@ extension InitiativeService {
         let context = ModelContext(modelContainer)
         let registrations = try context.fetch(FetchDescriptor<InitiativeRegistration>())
         return saved.map { agreement in
-            var result: [String: Any] = agreement
+            var result = WeekdayArguments.initiativeEntry(agreement)
             let installed = registrations.count(where: { registration in
                 guard pending.contains(registration.id),
                       let delivery = try? JSONDecoder().decode(
@@ -49,6 +49,7 @@ enum InitiativeFailureCode {
         if let failure = error as? InitiativeOperationFailure {
             return code(for: failure.underlying)
         }
+        if error is IntentArgumentError { return "invalid_arguments" }
         if let error = error as? InitiativeScheduleError {
             switch error {
             case .unsupportedMonthlySchedule: return "unsupported_recurrence"

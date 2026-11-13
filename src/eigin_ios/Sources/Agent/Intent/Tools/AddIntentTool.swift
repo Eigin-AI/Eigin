@@ -110,7 +110,7 @@ struct AddIntentTool: Tool {
             var result: [String: Any] = [
                 "id": newID.uuidString,
                 "action": "created",
-                "schedules": schedules.map { ["id": $0.id.uuidString, "content": $0.content] },
+                "schedules": schedules.map { WeekdayArguments.scheduleEntry($0) },
             ]
             if !schedules.isEmpty {
                 result["guidance"] = Prompt.Hints.initiative

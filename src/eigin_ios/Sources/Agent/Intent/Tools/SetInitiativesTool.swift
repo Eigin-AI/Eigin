@@ -42,11 +42,7 @@ struct SetInitiativesTool: InitiativeTool {
                             description: "Daily day selection.",
                             enum: InitiativeDailyPattern.allCases.map(\.rawValue)
                         ),
-                        "weekdays": .init(
-                            type: "array",
-                            description: "Weekly days: 1=Sunday through 7=Saturday.",
-                            items: .init(type: "integer")
-                        ),
+                        "weekdays": WeekdayArguments.schema,
                         "hour": .init(
                             type: "integer",
                             description: "Device-local hour 0–23; provide with minute to change time."
@@ -115,11 +111,10 @@ struct SetInitiativesTool: InitiativeTool {
         }
         if value["weekdays"] != nil {
             guard value["daily_pattern"] == nil,
-                  value["frequency"] == nil || value["frequency"] as? String == "weekly",
-                  let days = value["weekdays"] as? [Int]
+                  value["frequency"] == nil || value["frequency"] as? String == "weekly"
             else { throw InitiativeScheduleError.invalidWeekdays }
             schedule.frequency = .weekly
-            schedule.weekdays = days
+            schedule.weekdays = try WeekdayArguments.parse(value["weekdays"])
         }
         if value["hour"] != nil || value["minute"] != nil {
             guard let hour = value["hour"] as? Int,

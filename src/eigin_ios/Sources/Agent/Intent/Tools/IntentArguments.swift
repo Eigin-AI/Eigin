@@ -56,11 +56,11 @@ enum IntentArguments {
                     "Schedule \"\(content)\" needs a 'frequency' of daily, weekly, or monthly."
                 )
             }
-            return IntentSchedule(
+            return try IntentSchedule(
                 id: uuid(item["id"]),
                 content: content,
                 frequency: frequency,
-                weekdays: ints(item["weekdays"]),
+                weekdays: WeekdayArguments.parse(item["weekdays"]),
                 monthDays: ints(item["month_days"]),
                 hour: item["hour"] as? Int,
                 minute: item["minute"] as? Int

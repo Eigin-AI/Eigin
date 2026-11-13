@@ -95,6 +95,7 @@ struct ListIntentsTool: Tool {
                 ]
                 entry["initiatives"] = initiatives
                     .filter { $0["intent_id"] == intent.id.uuidString }
+                    .map { WeekdayArguments.initiativeEntry($0) }
                 if !intent.tasks.isEmpty {
                     entry["tasks"] = intent.tasks.map { Self.taskEntry($0) }
                     entry["open_task_count"] = intent.tasks.count { !$0.completed }
@@ -146,13 +147,7 @@ struct ListIntentsTool: Tool {
     }
 
     private static func scheduleEntry(_ schedule: IntentSchedule, now: Date) -> [String: Any] {
-        var entry: [String: Any] = [
-            "id": schedule.id.uuidString,
-            "content": schedule.content,
-            "frequency": schedule.frequency.rawValue,
-        ]
-        if let weekdays = schedule.weekdays { entry["weekdays"] = weekdays }
-        if let monthDays = schedule.monthDays { entry["month_days"] = monthDays }
+        var entry = WeekdayArguments.scheduleEntry(schedule)
         if let next = schedule.nextOccurrence(onOrAfter: now) {
             entry["next"] = LocalDateFormatter.string(from: next)
         }

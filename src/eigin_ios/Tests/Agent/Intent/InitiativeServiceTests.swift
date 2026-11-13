@@ -501,11 +501,25 @@ struct InitiativeServiceTests {
         let weekdays = await tool.execute(call("\"daily_pattern\":\"weekdays\""), agent: f.agent)
         #expect(!weekdays.isError)
         #expect(f.center.requests.count == 5)
-        let selected = await tool.execute(call("\"weekdays\":[1,7]"), agent: f.agent)
+        let selected = await tool.execute(
+            call(#""weekdays":["Sunday","SATURDAY"]"#),
+            agent: f.agent
+        )
         #expect(!selected.isError)
         #expect(f.center.requests.count == 2)
+        let response = try #require(JSONSerialization
+            .jsonObject(with: Data(selected.content.utf8)) as? [String: Any])
+        let result = try #require(response["result"] as? [String: Any])
+        let initiatives = try #require(result["initiatives"] as? [[String: Any]])
+        #expect(initiatives.first?["weekdays"] as? [String] == ["sunday", "saturday"])
+        for days in ["[1,7]", #"["sunday",7]"#, #"["funday"]"#, "[]"] {
+            let rejected = await tool.execute(call("\"weekdays\":\(days)"), agent: f.agent)
+            #expect(rejected.isError)
+            #expect(rejected.content.contains("full English weekday names"))
+            #expect(f.center.requests.count == 2)
+        }
         let invalid = await tool.execute(
-            call("\"frequency\":\"daily\",\"weekdays\":[2]"),
+            call(#""frequency":"daily","weekdays":["monday"]"#),
             agent: f.agent
         )
         #expect(invalid.isError)

@@ -61,7 +61,7 @@ struct InitiativeReviewTests {
         let tool = UpdateIntentTool(intentService: service)
         let result = await tool.execute(updateCall(f, schedules: """
         [{"id":"\(f.schedule
-            .id)","content":"News","frequency":"weekly","weekdays":[2],"hour":7,"minute":0}]
+            .id)","content":"News","frequency":"weekly","weekdays":["monday"],"hour":7,"minute":0}]
         """), agent: f.agent)
         #expect(result.isError)
         #expect(try ModelContext(f.container).fetch(FetchDescriptor<Intent>())
@@ -273,14 +273,15 @@ struct InitiativeReviewTests {
         #expect(!response.isError)
         let created = try result(response)
         let intentID = try #require(created["id"] as? String)
-        let returned = try #require(created["schedules"] as? [[String: String]])
-        let scheduleID = try #require(returned.last?["id"])
+        let returned = try #require(created["schedules"] as? [[String: Any]])
+        let scheduleID = try #require(returned.last?["id"] as? String)
         #expect(UUID(uuidString: scheduleID) != nil)
-        #expect(returned.last?["content"] == "AI news brief")
-        if updating { #expect(returned.first?["id"] == f.schedule.id.uuidString) }
+        #expect(returned.last?["content"] as? String == "AI news brief")
+        if updating { #expect(returned.first?["id"] as? String == f.schedule.id.uuidString) }
         let persisted = try #require(ModelContext(f.container).fetch(FetchDescriptor<Intent>())
             .first { $0.id.uuidString == intentID })
-        #expect(persisted.schedules.map { $0.id.uuidString } == returned.compactMap { $0["id"] })
+        #expect(persisted.schedules.map { $0.id.uuidString } == returned
+            .compactMap { $0["id"] as? String })
         let enabled = try await SetInitiativesTool(
             service: f.service,
             spaceID: nil,
