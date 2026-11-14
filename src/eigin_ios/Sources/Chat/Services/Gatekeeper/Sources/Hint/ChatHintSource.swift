@@ -21,7 +21,6 @@ final class ChatHintSource: SystemHintSource {
             bootstrapComplete: input.bootstrapComplete,
             messages: input.messages,
             hasSpaces: input.hasSpaces,
-            needsCompaction: input.needsCompaction,
             initiative: initiative
         )
     }

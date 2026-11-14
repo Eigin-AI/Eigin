@@ -93,6 +93,8 @@ struct ToolRegistryFilterTests {
             .definitions.map(\.function.name)
         #expect(chat.contains("follow_up"))
         #expect(small.contains("follow_up"))
+        #expect(small.contains("search_chat_transcript"))
+        #expect(small.contains("get_chat_transcript"))
         #expect(!chat.contains("background_notify"))
         #expect(!small.contains("background_notify"))
         #expect(!background.contains("follow_up"))

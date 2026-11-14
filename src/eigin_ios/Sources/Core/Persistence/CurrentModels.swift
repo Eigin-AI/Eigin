@@ -22,3 +22,5 @@ typealias Space = SchemaV1.Space
 
 typealias InitiativeCursor = SchemaV13.InitiativeCursor
 typealias WaitingInitiative = SchemaV13.WaitingInitiative
+
+typealias ContextPage = SchemaV16.ContextPage

@@ -16,7 +16,6 @@ struct GatekeeperTests {
         SystemHintInput(
             agentID: UUID(),
             bootstrapComplete: true,
-            needsCompaction: false,
             hasSpaces: false,
             messages: messages,
             space: nil,
@@ -120,7 +119,6 @@ struct GatekeeperTests {
         let inputWithLanguage = SystemHintInput(
             agentID: UUID(),
             bootstrapComplete: true,
-            needsCompaction: false,
             hasSpaces: false,
             messages: [],
             space: nil,

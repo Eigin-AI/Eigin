@@ -11,7 +11,7 @@ A persistent conversation between the user and the agent. Each chat has:
 - Created and updated timestamps
 - An optional [space](../conversation/spaces.md)
 
-Chats live on the device. Messages go off-device only as part of the inference request for the active turn, and only while still in the live context window. See [compaction](../conversation/compaction.md).
+Chats live on the device. Messages go off-device only as part of the inference request for the active turn, and when selected for live context or retrieved through transcript tools. See [context paging](../conversation/context-paging.md).
 
 ## Scoping
 

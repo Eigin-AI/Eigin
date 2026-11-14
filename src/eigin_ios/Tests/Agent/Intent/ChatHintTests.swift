@@ -17,7 +17,6 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: false,
-            needsCompaction: false,
             initiative: .balanced
         )
         #expect(result == nil)
@@ -31,7 +30,6 @@ struct ChatHintTests {
                 ChatMessage(role: "user", content: "Hi"),
             ],
             hasSpaces: false,
-            needsCompaction: false,
             initiative: .balanced
         )
         #expect(result == nil)
@@ -47,30 +45,12 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: true, // suppress the spaces hint
-            needsCompaction: true, // forces compaction warning which has no cooldown
             initiative: .balanced
         )
         #expect(result != nil)
         // The returned text should be a plain-markdown body, no XML wrapper.
         #expect(result?.contains("<chat_hint>") == false)
         #expect(result?.contains("</chat_hint>") == false)
-    }
-
-    @Test func evaluateCompactionWarningFiresWhenNeeded() {
-        let result = ChatHint.evaluate(
-            agentID: UUID(), // fresh agent ID — no cooldown history
-            bootstrapComplete: true,
-            messages: [
-                ChatMessage(role: "user", content: "Hi"),
-                ChatMessage(role: "assistant", content: "Hello!"),
-            ],
-            hasSpaces: true, // has spaces, so spaces hint won't fire
-            needsCompaction: true,
-            initiative: .balanced
-        )
-        // Compaction warning has highest priority and no cooldown
-        #expect(result != nil)
-        #expect(result?.contains("summarised soon") == true)
     }
 
     // MARK: - introduceInitiative
@@ -87,7 +67,6 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "I could keep an eye on that for you."),
             ],
             hasSpaces: true,
-            needsCompaction: false,
             initiative: .reactive
         )
         #expect(result?.contains("proactiv") == true)
@@ -107,7 +86,6 @@ struct ChatHintTests {
                 ChatMessage(role: "assistant", content: "Hello!"),
             ],
             hasSpaces: true,
-            needsCompaction: false,
             initiative: .reactive
         )
         #expect(result?.contains("proactiv") != true, "hint fires despite decision")
@@ -124,7 +102,6 @@ struct ChatHintTests {
                     ChatMessage(role: "assistant", content: "Hello!"),
                 ],
                 hasSpaces: true,
-                needsCompaction: false,
                 initiative: level
             )
             #expect(result?.contains("proactiv") != true, "hint fired at \(level)")
@@ -137,7 +114,6 @@ struct ChatHintTests {
         let initiative = HintCatalog.introduceInitiative
         #expect(initiative.priority > HintCatalog.revisitCoreDocs.priority)
         #expect(initiative.priority > HintCatalog.collectKnowledge.priority)
-        #expect(initiative.priority < HintCatalog.compactionWarning.priority)
     }
 
     /// Stays present on every eligible turn within its burst — the right
@@ -156,7 +132,6 @@ struct ChatHintTests {
                     ChatMessage(role: "assistant", content: "Hello!"),
                 ],
                 hasSpaces: true,
-                needsCompaction: false,
                 initiative: .reactive
             )
         }

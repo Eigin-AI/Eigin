@@ -147,6 +147,9 @@ final class AgenticChatLoop {
     }
 
     private var shouldStop = false
+    private var pagingSession: ContextPagingSession?
+    private var pagingHistory: Set<String> = []
+    private var pagingAgentID: UUID?
 
     /// Internal: shared with the loop's stream-opening and reporting extensions.
     @ObservationIgnored
@@ -209,6 +212,21 @@ final class AgenticChatLoop {
         currentMessageID = "msg-\(UUID().uuidString)"
         throttler.start()
 
+        let paging: ContextPagingSession
+        if conversationID == nil {
+            let historyIDs = Set(messages.filter { $0.role == "user" }.map(\.localID))
+            if pagingAgentID != agent.id || pagingHistory
+                .isDisjoint(with: historyIDs)
+            {
+                pagingSession = ContextPagingSession()
+            }
+            paging = pagingSession ?? ContextPagingSession()
+            pagingSession = paging
+            pagingHistory = historyIDs
+            pagingAgentID = agent.id
+        } else {
+            paging = try ContextPagingSession(agent: agent, chatID: conversationID)
+        }
         var allMessages = messages
         var recoveryUsed = false
         var nextInstruction = continuationInstruction
@@ -264,6 +282,14 @@ final class AgenticChatLoop {
             {
                 requestMessages = MessagePipeline.appendSystemHint(hint, to: requestMessages)
             }
+            requestMessages = try paging.prepare(
+                requestMessages, tools: currentTools, model: activeModel,
+                origin: ReasoningOrigin.destination(
+                    providerID: provider.id,
+                    baseURL: provider.baseURL,
+                    model: activeModel
+                )
+            )
             let turn = try await openStream(
                 chatService: chatService,
                 provider: provider,

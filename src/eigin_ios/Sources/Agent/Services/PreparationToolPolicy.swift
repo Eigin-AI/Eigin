@@ -14,7 +14,7 @@ enum PreparationToolPolicy {
         SearchKnowledgeTool.capability.key, GetKnowledgeTool.capability.key,
         SavePreparationTool.capability.key, SearchSkillsTool.capability.key,
         ActivateSkillTool.capability.key, ListChatsTool.capability.key,
-        GetChatTranscriptTool.capability.key,
+        GetChatTranscriptTool.capability.key, SearchChatTranscriptTool.capability.key,
     ]
 
     static func allows(_ name: String) -> Bool {

@@ -9,7 +9,6 @@ struct InteractionModeSourceTests {
         SystemHintInput(
             agentID: UUID(),
             bootstrapComplete: true,
-            needsCompaction: false,
             hasSpaces: false,
             messages: [],
             space: nil,

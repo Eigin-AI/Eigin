@@ -99,6 +99,10 @@ extension SchemaV12 {
                 toolCallsData: toolCallsData,
                 attachmentsData: attachmentsData
             )
+            // Streaming IDs carry a display prefix; persisted IDs keep their UUID identity.
+            let identity = chatMessage.localID.hasPrefix("msg-")
+                ? String(chatMessage.localID.dropFirst(4)) : chatMessage.localID
+            if let id = UUID(uuidString: identity) { message.id = id }
             message.reasoningHistoryData = chatMessage.reasoningHistory.flatMap {
                 try? JSONEncoder().encode($0)
             }

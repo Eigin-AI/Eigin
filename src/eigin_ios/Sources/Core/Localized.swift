@@ -309,6 +309,10 @@ enum Localized {
             Localized.get("chat.allChats")
         }
 
+        static var contextTooLarge: String {
+            Localized.get("chat.contextTooLarge")
+        }
+
         /// Banner shown after the conversation history has been compacted
         static var conversationSummarized: String {
             Localized.get("chat.conversationSummarized")
@@ -354,6 +358,10 @@ enum Localized {
         /// chats.
         static func titleFormat(_ p1: String, _ p2: String) -> String {
             String(format: Localized.get("chat.titleFormat"), p1, p2)
+        }
+
+        static var unavailable: String {
+            Localized.get("chat.unavailable")
         }
 
         enum Alert {
@@ -6388,6 +6396,10 @@ enum Localized {
                 Localized.get("tools.description.savePreparation")
             }
 
+            static var searchChatTranscript: String {
+                Localized.get("tools.description.searchChatTranscript")
+            }
+
             /// One-sentence description of the search_food tool, shown in the tool detail sheet
             static var searchFood: String {
                 Localized.get("tools.description.searchFood")
@@ -6789,6 +6801,12 @@ enum Localized {
             /// Display name for the search-memories tool
             static var memories: String {
                 Localized.get("tools.search.memories")
+            }
+
+            enum Chat {
+                static var transcript: String {
+                    Localized.get("tools.search.chat.transcript")
+                }
             }
         }
 

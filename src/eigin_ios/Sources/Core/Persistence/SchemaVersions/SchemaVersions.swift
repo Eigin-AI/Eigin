@@ -356,6 +356,14 @@ enum SchemaV15: VersionedSchema {
     }
 }
 
+/// Adds request-only context paging state without changing transcript models.
+enum SchemaV16: VersionedSchema {
+    static let versionIdentifier = Schema.Version(16, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        SchemaV15.models + [ContextPage.self]
+    }
+}
+
 /// Migration plan for the on-device store.
 ///
 /// V1 → V2 is a lightweight stage: adding the new `Intent` collections (each
@@ -399,6 +407,7 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
             SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self,
             SchemaV6.self, SchemaV7.self, SchemaV8.self, SchemaV9.self, SchemaV10.self,
             SchemaV11.self, SchemaV12.self, SchemaV13.self, SchemaV14.self, SchemaV15.self,
+            SchemaV16.self,
         ]
     }
 
@@ -406,9 +415,13 @@ enum EiginMigrationPlan: SchemaMigrationPlan {
         [
             migrateV1toV2, migrateV2toV3, migrateV3toV4, migrateV4toV5, migrateV5toV6,
             migrateV6toV7, migrateV7toV8, migrateV8toV9, migrateV9toV10, migrateV10toV11,
-            migrateV11toV12, migrateV12toV13, migrateV13toV14, migrateV14toV15,
+            migrateV11toV12, migrateV12toV13, migrateV13toV14, migrateV14toV15, migrateV15toV16,
         ]
     }
+
+    static let migrateV15toV16 = MigrationStage.lightweight(
+        fromVersion: SchemaV15.self, toVersion: SchemaV16.self
+    )
 
     static let migrateV1toV2 = MigrationStage.lightweight(
         fromVersion: SchemaV1.self,

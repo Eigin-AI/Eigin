@@ -6,6 +6,68 @@ private typealias Context = EiginSDK.Experimental.Context
 
 @Suite("Experimental context bindings")
 struct ContextTests {
+    @Test func pagingMasksOldResultsAndReplaysSelection() throws {
+        let messages: [Context.Message] = [
+            .init(role: "user", content: "Read the file"),
+            .init(role: "assistant", toolCalls: [.init(name: "read", arguments: "{}")]),
+            .init(role: "tool", content: String(repeating: "x", count: 1600)),
+            .init(role: "user", content: "Continue"),
+            .init(role: "assistant", content: "Done"),
+            .init(role: "user", content: "What next?"),
+        ]
+        let policy = Context.PagingPolicy(triggerTokens: 300, targetTokens: 150, maximumTokens: 400)
+        let result = try Context.page(messages: messages, policy: policy, fixedInputTokens: 20)
+        #expect(result.selection == Context.PageSelection(maskedResultIndices: [2]))
+        #expect(result.estimatedTokens <= 150)
+        #expect(result.changed)
+        let replay = try Context.page(
+            messages: messages,
+            previous: result.selection,
+            policy: policy,
+            fixedInputTokens: 20
+        )
+        #expect(replay.selection == result.selection)
+        #expect(!replay.changed)
+    }
+
+    @Test func pagingErrorsCrossBindings() {
+        let policy = Context.PagingPolicy(triggerTokens: 300, targetTokens: 150, maximumTokens: 400)
+        #expect(throws: Context.PagingError.self) {
+            try Context.page(
+                messages: [.init(role: "user", content: String(repeating: "x", count: 2000))],
+                policy: policy
+            )
+        }
+        #expect(throws: Context.PagingError.self) {
+            try Context.page(
+                messages: [.init(role: "user")],
+                previous: .init(retainedStart: -1),
+                policy: policy
+            )
+        }
+        #expect(throws: Context.PagingError.self) {
+            try Context.page(
+                messages: [.init(role: "user")],
+                policy: policy,
+                protectedRanges: [0 ..< 2]
+            )
+        }
+    }
+
+    @Test func defaultPolicyAndSerializedToolsCrossBindings() {
+        let policy = Context.defaultPagingPolicy(contextWindow: 1_000_000, maxOutput: 1_000_000)
+        #expect(policy.triggerTokens == 250_000)
+        #expect(policy.targetTokens == 125_000)
+        #expect(policy.maximumTokens == 746_928)
+        let messages = [Context.Message(role: "user", content: "Hello")]
+        let tools = "[{\"name\":\"test\",\"parameters\":{}}]"
+        #expect(Context.estimate(serializedTools: tools, toolCount: 0) == 0)
+        #expect(Context.estimate(serializedTools: tools, toolCount: UInt64.max) == Int.max)
+        #expect(Context.estimateRequest(messages: messages, serializedTools: tools, toolCount: UInt64.max) == Int.max)
+        #expect(Context.estimateRequest(messages: messages, serializedTools: tools, toolCount: 1) ==
+            Context.estimate(messages: messages) + Context.estimate(serializedTools: tools, toolCount: 1))
+    }
+
     @Test func unicodeEstimationMatchesSwiftCharacters() {
         for grapheme in ["x", "e\u{301}", "👨‍👩‍👧‍👦", "🇩🇰", "👍🏽", "\r\n", "क्‍ष"] {
             for count in [0, 3, 4, 12, 49, 50] {

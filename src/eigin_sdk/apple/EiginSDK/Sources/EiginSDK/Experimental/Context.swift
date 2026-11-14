@@ -52,7 +52,7 @@ public extension EiginSDK.Experimental.Context {
             self.hasReasoningHistory = hasReasoningHistory
         }
 
-        fileprivate var binding: ContextMessage {
+        var binding: ContextMessage {
             ContextMessage(
                 role: role,
                 content: content,
@@ -110,6 +110,21 @@ public extension EiginSDK.Experimental.Context {
         Int(EiginSDKBindings.estimateRequest(
             messages: messages.map(\.binding),
             toolCount: UInt64(toolCount)
+        ))
+    }
+
+    /// Estimates encoded tool definitions, including schemas and framing.
+    static func estimate(serializedTools: String, toolCount: UInt64) -> Int {
+        return Int(EiginSDKBindings.estimateSerializedTools(
+            serializedTools: serializedTools, toolCount: toolCount
+        ))
+    }
+
+    /// Estimates message facts and encoded tool definitions with overflow safety.
+    static func estimateRequest(messages: [Message], serializedTools: String, toolCount: UInt64) -> Int {
+        return Int(EiginSDKBindings.estimateRequestWithTools(
+            messages: messages.map(\.binding), serializedTools: serializedTools,
+            toolCount: toolCount
         ))
     }
 

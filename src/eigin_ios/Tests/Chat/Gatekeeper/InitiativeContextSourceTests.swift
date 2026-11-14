@@ -347,7 +347,7 @@ struct InitiativeContextSourceTests {
         followup: Bool = false
     ) -> SystemHintInput {
         SystemHintInput(
-            agentID: agentID, bootstrapComplete: true, needsCompaction: false, hasSpaces: false,
+            agentID: agentID, bootstrapComplete: true, hasSpaces: false,
             messages: followup ? [
                 ChatMessage(role: "assistant", content: "News"),
                 ChatMessage(role: "user", content: "Thanks"),

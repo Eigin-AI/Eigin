@@ -64,6 +64,18 @@ extension AgenticChatLoop {
         let dispatch: @Sendable (String) async throws -> AsyncThrowingStream<
             ChatStreamEvent, Error
         > = { model in
+            try await MainActor.run {
+                try ContextPagingSession.validate(
+                    messages,
+                    tools: tools,
+                    model: model,
+                    origin: ReasoningOrigin.destination(
+                        providerID: hostID,
+                        baseURL: host,
+                        model: model
+                    )
+                )
+            }
             let effort = await router.reasoningEffort(for: model, request: request)
             return try await chatService.chatCompletionEventStream(
                 baseURL: host,
@@ -269,6 +281,16 @@ extension AgenticChatLoop {
         model: String,
         dispatchedAt: ContinuousClock.Instant
     ) async throws -> TurnStream {
+        try ContextPagingSession.validate(
+            messages,
+            tools: tools,
+            model: model,
+            origin: ReasoningOrigin.destination(
+                providerID: provider.id,
+                baseURL: provider.baseURL,
+                model: model
+            )
+        )
         let stream = try await chatService.chatCompletionEventStream(
             baseURL: provider.baseURL,
             providerID: provider.id,
@@ -305,7 +327,19 @@ extension AgenticChatLoop {
             ceiling: DefaultModelRouter.firstTokenCeiling,
             raceWinner: raceWinner,
             openPrimary: { currentModel in
-                try await chatService.chatCompletionEventStream(
+                try await MainActor.run {
+                    try ContextPagingSession.validate(
+                        messages,
+                        tools: tools,
+                        model: currentModel,
+                        origin: ReasoningOrigin.destination(
+                            providerID: hostID,
+                            baseURL: host,
+                            model: currentModel
+                        )
+                    )
+                }
+                return try await chatService.chatCompletionEventStream(
                     baseURL: host,
                     providerID: hostID,
                     messages: messages,
