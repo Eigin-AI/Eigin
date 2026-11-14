@@ -174,7 +174,7 @@ struct ChatView: View {
             emoji: agent?.emoji,
             onBack: { dismiss() },
             onPhone: startLiveCall,
-            isPhoneDisabled: !canSend || viewModel.isStreaming || viewModel.isCompacting
+            isPhoneDisabled: !canSend || viewModel.isStreaming
         )
     }
 
@@ -198,8 +198,7 @@ struct ChatView: View {
                     chatPhase: viewModel.chatLoop.chatPhase,
                     messageText: $viewModel.messageText,
                     isInputDisabled: !canSend ||
-                        (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction) ||
-                        viewModel.isCompacting,
+                        (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction),
                     autoStartDictation: opening == .dictation,
                     autoShowCamera: opening == .camera,
                     onSend: { context in

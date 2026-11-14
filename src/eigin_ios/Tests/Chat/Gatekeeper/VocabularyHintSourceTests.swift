@@ -13,7 +13,6 @@ struct VocabularyHintSourceTests {
         var input = SystemHintInput(
             agentID: UUID(),
             bootstrapComplete: true,
-            needsCompaction: false,
             hasSpaces: false,
             messages: transcript.map { [ChatMessage(role: "user", content: $0)] } ?? [],
             space: nil,

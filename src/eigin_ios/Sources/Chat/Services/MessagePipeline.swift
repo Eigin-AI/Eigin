@@ -94,7 +94,6 @@ enum MessagePipeline {
         gatekeeper: Gatekeeper,
         mode: InteractionMode,
         hasSpaces: Bool,
-        needsCompaction: Bool,
         onBrowse: BrowseHandler? = nil,
         onPresentOptions: OptionsHandler? = nil,
         onConnectCapability: ConnectCapabilityHandler? = nil,
@@ -224,7 +223,6 @@ enum MessagePipeline {
         let hintInput = SystemHintInput(
             agentID: agent.id,
             bootstrapComplete: agent.bootstrapComplete,
-            needsCompaction: needsCompaction,
             hasSpaces: hasSpaces,
             messages: conversationMessages,
             space: space
@@ -384,9 +382,14 @@ enum MessagePipeline {
         if let summary = compactionSummary, !summary.isEmpty {
             apiMessages.append(ChatMessage(
                 role: "user",
-                content: "<conversation_summary>\n\(summary)\n</conversation_summary>"
+                content: "<conversation_summary>\n\(summary)\n</conversation_summary>",
+                localID: "context-summary"
             ))
-            apiMessages.append(ChatMessage(role: "assistant", content: compactionAck))
+            apiMessages.append(ChatMessage(
+                role: "assistant",
+                content: compactionAck,
+                localID: "context-summary-ack"
+            ))
         }
 
         apiMessages.append(contentsOf: repairedMessages)

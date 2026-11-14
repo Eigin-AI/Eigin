@@ -703,7 +703,6 @@ final class LiveCallService: @unchecked Sendable {
                 gatekeeper: gatekeeper,
                 mode: .liveCall,
                 hasSpaces: false,
-                needsCompaction: false,
                 onConnectCapability: connectHandler,
                 skillConnectionGate: skillConnectionGate,
                 userMessageID: userMessage.localID
@@ -712,22 +711,7 @@ final class LiveCallService: @unchecked Sendable {
                 return
             }
 
-            // Auto-compact if approaching context limits (silent, no progress UI)
-            let compactionResult = await MessagePipeline.compactIfNeeded(
-                apiMessages: turn.apiMessages,
-                historyMessageIDs: turn.historyMessageIDs,
-                estimatedTokens: turn.estimatedTokens,
-                contextWindow: turn.contextWindow,
-                baseURL: provider.baseURL, providerID: provider.id,
-                model: routedModel, chatService: Container.shared.chatService(),
-                tools: turn.registry.definitions,
-                cacheKey: chatID?.uuidString
-            )
-            let apiMessages = compactionResult.apiMessages
-            if let summary = compactionResult.summary {
-                messages.append(summary)
-                onPersist?([summary])
-            }
+            let apiMessages = turn.apiMessages
 
             // Rebuild tool registry mid-turn when skills are activated.
             chatLoop.onToolsChanged = { [weak self] in

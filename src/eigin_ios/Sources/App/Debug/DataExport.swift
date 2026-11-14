@@ -225,6 +225,7 @@ enum DataExportService {
         let package = try decoder.decode(DataExportPackage.self, from: data)
 
         // Delete existing data (chats first for cascade to messages)
+        try context.delete(model: ContextPage.self)
         try context.delete(model: Chat.self)
         try context.delete(model: Message.self)
         try context.delete(model: FirmSource.self)

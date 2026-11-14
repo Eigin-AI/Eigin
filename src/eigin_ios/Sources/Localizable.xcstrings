@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "errors.chat.invalidHistoryBody": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne chat kunne ikke repareres automatisk. Start en ny chat for at fortsætte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This chat couldn’t be repaired automatically. Start a new chat to continue."
+          }
+        }
+      }
+    },
     "errors.chat.invalidHistoryTitle": {
       "localizations": {
         "da": {
@@ -17,18 +33,66 @@
         }
       }
     },
-    "errors.chat.invalidHistoryBody": {
+    "chat.unavailable": {
       "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Denne chat kunne ikke repareres automatisk. Start en ny chat for at fortsætte."
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This chat couldn’t be repaired automatically. Start a new chat to continue."
+            "value": "This chat is no longer available."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne chat er ikke længere tilgængelig."
+          }
+        }
+      }
+    },
+    "tools.search.chat.transcript": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search chat transcript"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg i chatsamtale"
+          }
+        }
+      }
+    },
+    "tools.description.searchChatTranscript": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search earlier conversation text."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg i tidligere samtaletekst."
+          }
+        }
+      }
+    },
+    "chat.contextTooLarge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The current request is too large. Shorten it or start a new chat."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den aktuelle forespørgsel er for stor. Forkort den, eller start en ny chat."
           }
         }
       }

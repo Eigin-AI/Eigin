@@ -16,7 +16,6 @@ struct RelevantKnowledgeSourceTests {
         SystemHintInput(
             agentID: agentID,
             bootstrapComplete: true,
-            needsCompaction: false,
             hasSpaces: false,
             messages: messages,
             space: nil,

@@ -4,7 +4,7 @@ import EiginSDK
 enum ContextSDK {
     typealias Context = EiginSDK.Experimental.Context
 
-    static func messages(_ messages: [ChatMessage]) -> [Context.Message] {
+    static func messages(_ messages: [ChatMessage], model: String? = nil) -> [Context.Message] {
         messages.map { message in
             let reasoningTokens: Int = if let history = message.reasoningHistory,
                                           history.matches(message, origin: history.origin)
@@ -13,6 +13,16 @@ enum ContextSDK {
             } else {
                 0
             }
+            let inputTokens = (message.attachments ?? [])
+                .reduce(reasoningTokens) { total, attachment in
+                    let image = KnownModelCatalog.imageInputBudget(
+                        width: attachment.width,
+                        height: attachment.height,
+                        model: model
+                    )
+                    let (sum, overflow) = total.addingReportingOverflow(image)
+                    return overflow ? Int.max : sum
+                }
             return Context.Message(
                 role: message.role,
                 content: message.content,
@@ -20,7 +30,7 @@ enum ContextSDK {
                 toolCalls: (message.toolCalls ?? []).map {
                     Context.ToolCall(name: $0.function.name, arguments: $0.function.arguments)
                 },
-                additionalInputTokens: Int64(reasoningTokens),
+                additionalInputTokens: Int64(inputTokens),
                 hasReasoningHistory: message.reasoningHistory != nil
             )
         }

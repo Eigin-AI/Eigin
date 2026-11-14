@@ -39,8 +39,12 @@ fn text_cost(text: &str) -> i64 {
 }
 
 pub(super) fn message_cost(message: &ContextMessage) -> i64 {
+    message_cost_with_content(message, message.content.as_deref().unwrap_or(""))
+}
+
+pub(super) fn message_cost_with_content(message: &ContextMessage, content: &str) -> i64 {
     let mut cost = 4_i64
-        .saturating_add(text_cost(message.content.as_deref().unwrap_or("")))
+        .saturating_add(text_cost(content))
         .saturating_add(message.additional_input_tokens);
     for call in &message.tool_calls {
         cost = cost

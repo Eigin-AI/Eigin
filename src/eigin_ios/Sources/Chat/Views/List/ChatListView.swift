@@ -117,6 +117,7 @@ struct ChatListView: View {
                     if let chat = chatToDelete {
                         let attachments = chat.messages.flatMap { $0.attachments ?? [] }
                         attachmentStore.deleteAll(attachments)
+                        try? ContextPagingSession.remove(chatID: chat.id, context: modelContext)
                         modelContext.delete(chat)
                     }
                 }
@@ -285,6 +286,7 @@ struct ChatListView: View {
         let orphans = chats.filter { $0.messages.isEmpty && !claimedChats.contains($0.id) }
         guard !orphans.isEmpty else { return }
         for chat in orphans {
+            try? ContextPagingSession.remove(chatID: chat.id, context: modelContext)
             modelContext.delete(chat)
         }
         try? modelContext.save()

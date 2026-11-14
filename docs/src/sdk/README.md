@@ -9,11 +9,12 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 ## SDK capabilities
 
 - [Inference](inference.md): choose a provider, consume events and manage cancellation.
+- [Context paging](../conversation/context-paging.md#sdk): select retained history and tool-result masks.
 
 ## Agent concepts
 
 - [The Agent](../agents/README.md): identity, knowledge, skills, and intents.
-- [Conversation](../conversation/README.md): the agentic loop, context, and compaction.
+- [Conversation](../conversation/README.md): the agentic loop, context, and paging.
 - [Tools](../tools/README.md): actions, permissions, and MCP.
 - [Integrations](../integrations/README.md): connected services and platform capabilities.
 - [Voice](../voice/README.md): speech and live interaction.

@@ -17,7 +17,6 @@ struct HintType {
 struct HintContext {
     let messages: [ChatMessage]
     let hasSpaces: Bool
-    let needsCompaction: Bool
     let initiative: ProactivityLevel
 }
 
@@ -30,7 +29,6 @@ enum HintCatalog {
         revisitCoreDocs,
         collectKnowledge,
         selfConfigure,
-        compactionWarning,
         capabilitySpaces,
         introduceInitiative,
     ]
@@ -65,17 +63,6 @@ enum HintCatalog {
         priority: 3,
         condition: { _ in true },
         template: { _ in Prompt.Hints.Chat.selfConfigure }
-    )
-
-    /// Warn when the conversation is approaching auto-compaction.
-    /// Cooldown is 0, so it's eligible every turn while relevant — a burst
-    /// would have no effect here.
-    static let compactionWarning = HintType(
-        id: "compaction_warning",
-        cooldown: 0, // no cooldown — fires whenever relevant
-        priority: 10,
-        condition: { ctx in ctx.needsCompaction },
-        template: { _ in Prompt.Hints.Chat.compactionWarning }
     )
 
     /// Suggest spaces for users who don't have any yet.

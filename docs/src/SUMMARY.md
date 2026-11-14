@@ -46,7 +46,7 @@
 - [Overview](./conversation/README.md)
 - [The agentic loop](./conversation/agentic-loop.md)
 - [The gatekeeper](./conversation/context.md)
-- [Compaction](./conversation/compaction.md)
+- [Context paging](./conversation/context-paging.md)
 - [Spaces](./conversation/spaces.md)
 - [Attachments](./conversation/attachments.md)
 

@@ -70,7 +70,7 @@ struct MistralReasoningRoutingTests {
                 proactivity: .reactive,
                 knowledgeService: knowledge
             ),
-            mode: .text, hasSpaces: false, needsCompaction: false
+            mode: .text, hasSpaces: false
         )
         #expect(prepared.estimatedTokens == TokenEstimator.estimateRequest(
             messages: prepared.apiMessages.map { $0.reasoningScoped(to: nil) },

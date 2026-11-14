@@ -10,7 +10,6 @@ struct SystemHintInput {
 
     let agentID: UUID
     let bootstrapComplete: Bool
-    let needsCompaction: Bool
     let hasSpaces: Bool
 
     /// Persisted conversation history up to (but not including) the latest

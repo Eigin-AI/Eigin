@@ -39,13 +39,11 @@ final class ChatViewModel {
     var streamTask: Task<Void, Never>?
     private var activeTurnID: UUID?
     private(set) var chatError: ConnectionError?
-    var isCompacting = false
     /// True from the moment a turn is kicked off (user send or retry) until the
     /// stream task completes. Covers the gap before the throttler enters
     /// `.waiting`, during which `isStreaming` is still false — used to hide the
     /// retry footer and guard against duplicate retriggers.
     private(set) var isTurnInProgress = false
-    var compactionProgress = ChasingProgress()
     var gatekeeper: Gatekeeper?
     private var backgroundGuard: BackgroundTaskGuard?
 
@@ -71,17 +69,11 @@ final class ChatViewModel {
     }
 
     var chatItems: [ChatItem] {
-        var items = ChatItem.buildItems(
+        ChatItem.buildItems(
             from: window.messages + chatLoop.committedMessages,
             chatLoop: chatLoop,
             chatError: chatError
         )
-        if isCompacting, !compactionProgress.isFinished {
-            items.append(
-                .compaction(id: "compacting", progress: compactionProgress.value, summary: nil)
-            )
-        }
-        return items
     }
 
     /// Whether the agent still owes the chat its first word: the history ends on
@@ -326,7 +318,6 @@ final class ChatViewModel {
         chatError = nil
 
         let hasSpaces = spaces.contains(where: { $0.agentID == agent.id })
-        let needsCompaction = chat.needsCompaction
 
         let policy = loadPermissionPolicy(for: agent)
 
@@ -410,7 +401,6 @@ final class ChatViewModel {
                 gatekeeper: gatekeeper,
                 mode: context,
                 hasSpaces: hasSpaces,
-                needsCompaction: needsCompaction,
                 onBrowse: { [weak self] browsingRequest in
                     guard let self else { return .cancelled }
                     return await chatLoop.requestBrowsing(browsingRequest)
@@ -429,15 +419,11 @@ final class ChatViewModel {
             }
             guard activeTurnID == turnID, !Task.isCancelled else { return }
 
-            // Persist the user message before compaction: the summary row lands
-            // right after the latest user message, and the retained count equals
-            // the rows kept before it — payload and store stay aligned.
+            // Persist the current request before selecting durable context boundaries.
             guard existingChat() != nil else { return }
             if let userMessage { persistMessage(userMessage) }
 
-            let apiMessages = await applyCompactionIfNeeded(
-                turn: turn, provider: provider, model: routedModel, agent: agent
-            )
+            let apiMessages = turn.apiMessages
 
             guard activeTurnID == turnID, !Task.isCancelled,
                   existingChat() != nil else { return }
@@ -642,84 +628,6 @@ final class ChatViewModel {
     func endBackgroundGrace() {
         backgroundGuard?.end()
         backgroundGuard = nil
-    }
-
-    // MARK: - Compaction
-
-    /// `model` is the routed model, which on an offline turn is not `agent.model`. It
-    /// decides the output reservation, so a mismatch here silently starves the input
-    /// budget rather than failing.
-    private func applyCompactionIfNeeded(
-        turn: MessagePipeline.TurnInputs,
-        provider: Provider,
-        model: String,
-        agent: Agent
-    ) async -> [ChatMessage] {
-        let onProgress: @Sendable (CompactionPhase) -> Void = { [weak self] phase in
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    if !self.isCompacting {
-                        self.isCompacting = true
-                        self.compactionProgress.reset()
-                        self.existingChat()?.needsCompaction = true
-                    }
-                    switch phase {
-                    case .waiting:
-                        self.compactionProgress.setTarget(0.25)
-                    case .streaming(let p):
-                        self.compactionProgress.setTarget(0.25 + p * 0.50)
-                    case .finalizing:
-                        self.compactionProgress.setTarget(1.0)
-                    }
-                }
-            }
-        }
-
-        let result = await MessagePipeline.compactIfNeeded(
-            apiMessages: turn.apiMessages,
-            historyMessageIDs: turn.historyMessageIDs,
-            estimatedTokens: turn.estimatedTokens,
-            contextWindow: turn.contextWindow,
-            needsCompaction: existingChat()?.needsCompaction ?? false,
-            baseURL: provider.baseURL,
-            providerID: provider.id,
-            model: model,
-            chatService: Container.shared.chatService(),
-            tools: turn.registry.definitions,
-            cacheKey: chatID.uuidString,
-            onProgress: onProgress
-        )
-
-        guard let chat = existingChat() else {
-            compactionProgress.reset()
-            isCompacting = false
-            return result.apiMessages
-        }
-        chat.needsCompaction = result.needsCompaction
-
-        guard let summaryMessage = result.summary else {
-            if isCompacting {
-                compactionProgress.reset()
-                isCompacting = false
-            }
-            return result.apiMessages
-        }
-
-        persistMessage(summaryMessage)
-        refreshAllPersisted()
-        try? modelContext.save()
-
-        while !compactionProgress.isFinished {
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-
-        window.messages.append(summaryMessage)
-
-        compactionProgress.reset()
-        isCompacting = false
-
-        return result.apiMessages
     }
 
     private func existingChat() -> Chat? {

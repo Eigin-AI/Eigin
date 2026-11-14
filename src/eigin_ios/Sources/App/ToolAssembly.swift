@@ -143,6 +143,8 @@ extension ToolRegistry {
         webFetch.isSmallContext = true
         let tools: [any Tool] = [
             searchKnowledge,
+            GetChatTranscriptTool(spaceID: spaceID, currentChatID: chatID),
+            SearchChatTranscriptTool(spaceID: spaceID, currentChatID: chatID),
             webSearch,
             webFetch,
             FollowUpTool(

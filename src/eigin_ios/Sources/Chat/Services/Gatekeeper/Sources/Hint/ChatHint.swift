@@ -15,7 +15,6 @@ enum ChatHint {
         bootstrapComplete: Bool,
         messages: [ChatMessage],
         hasSpaces: Bool,
-        needsCompaction: Bool,
         initiative: ProactivityLevel
     ) -> String? {
         // Never hint during bootstrap or on the first exchange
@@ -25,7 +24,6 @@ enum ChatHint {
         let context = HintContext(
             messages: messages,
             hasSpaces: hasSpaces,
-            needsCompaction: needsCompaction,
             initiative: initiative
         )
 

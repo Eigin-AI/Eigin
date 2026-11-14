@@ -54,25 +54,8 @@ enum WatchTurnRunner {
             // Headless mode tells the model it is answering a wrist-sized,
             // voice-transcribed question: one or two plain sentences.
             mode: .headless,
-            hasSpaces: false,
-            needsCompaction: context.chat.needsCompaction
+            hasSpaces: false
         )
-
-        let compacted = await MessagePipeline.compactIfNeeded(
-            apiMessages: turn.apiMessages,
-            historyMessageIDs: turn.historyMessageIDs,
-            estimatedTokens: turn.estimatedTokens,
-            contextWindow: turn.contextWindow,
-            baseURL: context.provider.baseURL,
-            providerID: context.provider.id,
-            model: context.agent.model,
-            chatService: Container.shared.chatService(),
-            tools: turn.registry.definitions,
-            cacheKey: context.chat.id.uuidString
-        )
-        if let summary = compacted.summary {
-            context.persist([summary])
-        }
 
         // PassthroughThrottler: CADisplayLink stops in the background, so the
         // turn must not depend on display ticks to drain its stream.
@@ -80,13 +63,14 @@ enum WatchTurnRunner {
         let produced: [ChatMessage]
         do {
             produced = try await loop.run(
-                messages: compacted.apiMessages,
+                messages: turn.apiMessages,
                 tools: turn.registry.definitions,
                 agent: context.agent,
                 provider: context.provider,
                 chatService: Container.shared.chatService(),
                 toolExecutor: turn.registry,
-                cacheKey: context.chat.id.uuidString
+                cacheKey: context.chat.id.uuidString,
+                conversationID: context.chat.id
             )
         } catch {
             context.persist(loop.buildCheckpoint())
