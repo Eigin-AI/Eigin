@@ -716,7 +716,7 @@ final class AgenticChatLoop {
     /// Stops the stream and returns a checkpoint of safe messages.
     /// Returns only messages that were safely committed before the stop point.
     func stop() -> [ChatMessage] {
-        guard chatPhase != .idle, chatPhase != .done else { return [] }
+        guard chatPhase != .idle else { return [] }
         shouldStop = true
         throttler.abort()
         // Cancel any pending permission prompt
@@ -937,6 +937,9 @@ final class AgenticChatLoop {
 
     /// Captures completed work and partial prose for persistence after a failure.
     func buildCheckpoint() -> [ChatMessage] {
+        // Completed output remains owned by the loop until persistence preparation finishes.
+        if chatPhase == .done { return produced }
+
         // Preserve recorded work, including results from a partially executed batch.
         var result = Array(produced.prefix(safeProducedCount))
 

@@ -13,6 +13,11 @@ final class ChatViewModel {
     // MARK: - Dependencies
 
     private var modelContext: ModelContext!
+    @ObservationIgnored
+    var prepareMessages: @MainActor ([ChatMessage]) async -> [PreparedMessage] = {
+        await PreparedMessage.prepare($0)
+    }
+
     private var voiceService: any VoiceService {
         Container.shared.voiceService()
     }
@@ -231,6 +236,7 @@ final class ChatViewModel {
         mcpServers: [MCPServer],
         integrations: [Integration] = []
     ) {
+        guard !isTurnInProgress || chatLoop.isAwaitingUserInteraction else { return }
         let sentAt = ContinuousClock.now
         let text = messageText.trimmingCharacters(in: .whitespaces)
         let pendingAttachments = stagedAttachments
@@ -475,7 +481,7 @@ final class ChatViewModel {
             }
 
             do {
-                _ = try await chatLoop.run(
+                let produced = try await chatLoop.run(
                     messages: apiMessages,
                     tools: registry.definitions,
                     agent: agent,
@@ -494,10 +500,18 @@ final class ChatViewModel {
                     chatLoop.abort()
                     return
                 }
+                // Keep streaming state checkpointable while metadata is encoded off main.
+                let prepared = await prepareMessages(produced)
+                guard activeTurnID == turnID else { return }
+                try Task.checkCancellation()
+                guard existingChat() != nil else {
+                    chatLoop.abort()
+                    return
+                }
                 let completed = chatLoop.completeRound()
                 window.messages.append(contentsOf: completed)
                 window.trimIfNeeded()
-                persistMessages(completed)
+                persistPreparedMessages(prepared)
                 initiativeCompleted = completed
                     .contains { $0.role == "assistant" && !($0.content ?? "").isEmpty }
 
@@ -648,9 +662,14 @@ final class ChatViewModel {
     }
 
     func persistMessages(_ chatMessages: [ChatMessage]) {
-        guard let chat = existingChat(), !chatMessages.isEmpty else { return }
-        for cm in chatMessages {
-            let message = Message.from(cm)
+        guard existingChat() != nil else { return }
+        persistPreparedMessages(chatMessages.map(PreparedMessage.init))
+    }
+
+    private func persistPreparedMessages(_ messages: [PreparedMessage]) {
+        guard let chat = existingChat(), !messages.isEmpty else { return }
+        for prepared in messages {
+            let message = prepared.makeMessage()
             message.chat = chat
             modelContext.insert(message)
             InitiativeConversationService.recordOutput(
@@ -661,6 +680,14 @@ final class ChatViewModel {
             if window.isPreloaded { window.allPersisted.append(message) }
         }
         chat.updatedAt = .now
+    }
+
+    /// Returns committed conversation history when a live call can take over the chat.
+    func historyForLiveCall() -> [ChatMessage]? {
+        guard !isTurnInProgress, existingChat() != nil else { return nil }
+        return window.isPreloaded
+            ? window.allPersisted.map { $0.toChatMessage() }
+            : window.messages
     }
 
     func syncLiveCallMessages() {

@@ -80,35 +80,7 @@ extension SchemaV12 {
 
         /// Creates a persisted Message from a transient ChatMessage.
         static func from(_ chatMessage: ChatMessage) -> Message {
-            let toolCallsData: Data? = if let toolCalls = chatMessage.toolCalls {
-                try? JSONEncoder().encode(toolCalls)
-            } else {
-                nil
-            }
-
-            let attachmentsData: Data? = if let attachments = chatMessage.attachments {
-                try? JSONEncoder().encode(attachments)
-            } else {
-                nil
-            }
-
-            let message = Message(
-                role: chatMessage.role,
-                content: chatMessage.content ?? "",
-                toolCallID: chatMessage.toolCallID,
-                toolCallsData: toolCallsData,
-                attachmentsData: attachmentsData
-            )
-            // Streaming IDs carry a display prefix; persisted IDs keep their UUID identity.
-            let identity = chatMessage.localID.hasPrefix("msg-")
-                ? String(chatMessage.localID.dropFirst(4)) : chatMessage.localID
-            if let id = UUID(uuidString: identity) { message.id = id }
-            message.reasoningHistoryData = chatMessage.reasoningHistory.flatMap {
-                try? JSONEncoder().encode($0)
-            }
-            message.isCompactionSummary = chatMessage.isCompactionSummary
-            message.compactionRetainedMessageCount = chatMessage.compactionRetainedMessageCount
-            return message
+            PreparedMessage(chatMessage).makeMessage()
         }
     }
 }

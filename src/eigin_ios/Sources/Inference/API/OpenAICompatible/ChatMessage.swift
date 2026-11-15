@@ -3,7 +3,7 @@ import Foundation
 /// A single message in an OpenAI-compatible chat conversation, identified by its role (e.g. "user",
 /// "assistant",
 /// "system").
-struct ChatMessage: Codable {
+struct ChatMessage: Codable, Sendable {
     /// Local-only stable identifier for UI tracking. Not sent to the API.
     let localID: String
 
