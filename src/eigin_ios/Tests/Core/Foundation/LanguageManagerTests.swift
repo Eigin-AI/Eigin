@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("LanguageManager")
+@Suite("LanguageManager", .serialized)
 struct LanguageManagerTests {
     private let key = StorageKey.appLanguage
 
@@ -85,6 +85,27 @@ struct LanguageManagerTests {
         UserDefaults.standard.set("da", forKey: key)
         let manager = LanguageManager()
         #expect(manager.currentLanguage == .danish)
+    }
+
+    @Test func presetCopyFollowsLanguageChanges() {
+        let previousLanguage = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previousLanguage, forKey: key) }
+        let manager = LanguageManager()
+        manager.setLanguage(.english)
+        let presets = MCPPreset.all
+        let english = presets.map { ($0.description, $0.connectionDescription) }
+
+        manager.setLanguage(.danish)
+        for (preset, copy) in zip(presets, english) {
+            #expect(preset.description != copy.0)
+            #expect(preset.connectionDescription != copy.1)
+        }
+
+        manager.setLanguage(.english)
+        for (preset, copy) in zip(presets, english) {
+            #expect(preset.description == copy.0)
+            #expect(preset.connectionDescription == copy.1)
+        }
     }
 
     // MARK: - setLanguage

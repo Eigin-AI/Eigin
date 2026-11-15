@@ -6,4 +6,6 @@ Bundled connection details for services available through the integration picker
 |---|---|---|---|
 | [Dinero](https://mcp.dinero.dk) | `https://mcp.dinero.dk` | Visma Connect OAuth | Dinero Pro or Total subscription tier |
 
+| [Basecamp](https://basecamp.com/ai) | `https://mcp.basecamp.com/mcp` | Basecamp OAuth | Basecamp account; choose an account and read-only or full access during sign-in |
+
 Setup and permissions follow the shared [MCP connection flow](../tools/mcp.md). Connections added by address stay independent of presets.

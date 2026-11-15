@@ -42,7 +42,7 @@ enum MCPServerSkill {
             description: preset.description, instruction: instructions,
             smallInstruction: preset.instructions,
             requiredTools: connected?.requiredTools ?? [], alwaysActive: false,
-            customDescriptor: "Dinero Danish accounting: invoices, bookkeeping, purchases, payments, financial reports and account setup.",
+            customDescriptor: preset.searchDescriptor,
             connectionPresetID: server == nil ? preset.id : nil
         )
     }
