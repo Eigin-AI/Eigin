@@ -13,7 +13,7 @@ struct ChatListView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Injected(\.tabBarVisibility) private var tabBarVisibility
     @Injected(\.chatAttachmentStore) private var attachmentStore
-    @Query(sort: \Chat.updatedAt, order: .reverse) private var chats: [Chat]
+    @Query(ChatListQueries.populatedChats) private var chats: [Chat]
     @Query private var agents: [Agent]
     @Query(sort: \Space.name) private var spaces: [Space]
 
@@ -281,9 +281,12 @@ struct ChatListView: View {
     /// no view lifecycle to clean them up — the list's appearance is the one
     /// place that always sees them.
     private func sweepOrphanedEmptyChats() {
-        let claims = (try? modelContext.fetch(FetchDescriptor<InitiativeOccurrence>())) ?? []
+        guard let emptyChats = try? modelContext.fetch(ChatListQueries.emptyChats),
+              !emptyChats.isEmpty,
+              let claims = try? modelContext.fetch(FetchDescriptor<InitiativeOccurrence>())
+        else { return }
         let claimedChats = Set(claims.map(\.chatID))
-        let orphans = chats.filter { $0.messages.isEmpty && !claimedChats.contains($0.id) }
+        let orphans = emptyChats.filter { !claimedChats.contains($0.id) }
         guard !orphans.isEmpty else { return }
         for chat in orphans {
             try? ContextPagingSession.remove(chatID: chat.id, context: modelContext)
