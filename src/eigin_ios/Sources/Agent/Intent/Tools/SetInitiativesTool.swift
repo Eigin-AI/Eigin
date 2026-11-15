@@ -34,12 +34,12 @@ struct SetInitiativesTool: InitiativeTool {
                         ),
                         "frequency": .init(
                             type: "string",
-                            description: "Optional schedule change; otherwise retain current recurrence.",
+                            description: "Optional schedule change; otherwise retain current recurrence. Use daily with daily_pattern or weekly with weekdays; omit the other day-selection field.",
                             enum: ["daily", "weekly"]
                         ),
                         "daily_pattern": .init(
                             type: "string",
-                            description: "Daily day selection.",
+                            description: "Day-selection preset. Omit when providing weekdays. Frequency must be daily or omitted; the preset determines the resulting recurrence.",
                             enum: InitiativeDailyPattern.allCases.map(\.rawValue)
                         ),
                         "weekdays": WeekdayArguments.schema,
@@ -102,17 +102,30 @@ struct SetInitiativesTool: InitiativeTool {
         }
         if value["daily_pattern"] != nil {
             guard value["weekdays"] == nil,
-                  value["frequency"] == nil || value["frequency"] as? String == "daily",
-                  let text = value["daily_pattern"] as? String,
+                  value["frequency"] == nil || value["frequency"] as? String == "daily"
+            else {
+                throw IntentArgumentError(
+                    "'daily_pattern' cannot be combined with 'weekdays' or frequency 'weekly'. For selected weekdays, omit 'daily_pattern' and provide 'weekdays' as an array of full English weekday names, e.g. [\"monday\"]."
+                )
+            }
+            guard let text = value["daily_pattern"] as? String,
                   let pattern = InitiativeDailyPattern(rawValue: text)
-            else { throw InitiativeScheduleError.invalidWeekdays }
+            else {
+                throw IntentArgumentError(
+                    "'daily_pattern' must be 'every_day', 'weekdays', or 'weekends'."
+                )
+            }
             schedule.frequency = pattern == .everyDay ? .daily : .weekly
             schedule.weekdays = pattern == .everyDay ? nil : pattern.weekdays
         }
         if value["weekdays"] != nil {
             guard value["daily_pattern"] == nil,
                   value["frequency"] == nil || value["frequency"] as? String == "weekly"
-            else { throw InitiativeScheduleError.invalidWeekdays }
+            else {
+                throw IntentArgumentError(
+                    "'weekdays' requires frequency 'weekly' or omitted, and cannot be combined with 'daily_pattern'. For selected weekdays, omit 'daily_pattern' and use frequency 'weekly'."
+                )
+            }
             schedule.frequency = .weekly
             schedule.weekdays = try WeekdayArguments.parse(value["weekdays"])
         }

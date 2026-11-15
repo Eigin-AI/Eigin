@@ -92,6 +92,39 @@ fn requests_preserve_instructions_tools_images_and_omissions() {
 }
 
 #[test]
+fn tools_disable_strict_normalization_to_preserve_optional_fields() {
+    let (provider, transport) = provider("https://example.test/v1", 200, sse(&[completed()]));
+    let mut input = input();
+    let parameters = json!({
+        "type": "object",
+        "properties": {
+            "changes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "intent_id": {"type": "string"},
+                        "daily_pattern": {"type": "string"},
+                        "weekdays": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["intent_id"]
+                }
+            }
+        },
+        "required": ["changes"]
+    });
+    input.tools = Some(vec![InferenceToolDefinition {
+        name: "set_initiatives".into(),
+        description: "Set initiatives".into(),
+        parameters_json: parameters.to_string(),
+    }]);
+    assert!(collect(&provider, input).1.is_ok());
+    let body = request_body(&transport);
+    assert_eq!(body["tools"][0]["strict"], false);
+    assert_eq!(body["tools"][0]["parameters"], parameters);
+}
+
+#[test]
 fn empty_and_unloaded_content_preserves_fallback() {
     let (provider, transport) = provider("https://example.test", 200, sse(&[completed()]));
     let mut input = input();
