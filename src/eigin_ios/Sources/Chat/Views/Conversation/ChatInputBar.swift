@@ -30,7 +30,7 @@ struct ChatInputBar: View {
     @Injected(\.languageManager) private var languageManager
     @Injected(\.vocabularyStore) private var vocabularyStore
 
-    @State private var soundManager = SoundManager()
+    @StateObject private var soundManager = SoundManager()
     @State private var isDictating = false
     @State private var textBeforeDictation = ""
     @State private var dictationText = ""

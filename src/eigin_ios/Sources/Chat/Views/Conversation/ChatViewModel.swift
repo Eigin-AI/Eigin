@@ -350,11 +350,17 @@ final class ChatViewModel {
                 }
             }
             guard existingChat() != nil else { return }
-            let msgs =
-                self.window.isPreloaded
-                    ? self.window.allPersisted.map { $0.toChatMessage() } + [userMessage]
-                    .compactMap(\.self)
-                    : self.window.messages
+            let msgs: [ChatMessage]
+            do {
+                if self.window.isPreloaded {
+                    msgs = try await ChatHistorySnapshot.messages(from: self.window.allPersisted)
+                        + [userMessage].compactMap(\.self)
+                } else {
+                    msgs = self.window.messages
+                }
+            } catch { return }
+            guard activeTurnID == turnID, !Task.isCancelled,
+                  existingChat() != nil else { return }
             let initiativeExecution: Bool
             do {
                 initiativeExecution = try InitiativeConversationService.beginExecution(
