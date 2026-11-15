@@ -1071,3 +1071,157 @@ struct ChatViewModelTests {
         #expect(vm.stagedAttachments.count == ChatViewModel.maxStagedAttachments)
     }
 }
+
+extension ChatViewModelTests {
+    @Test(
+        "Prepared completion commits once or respects stop and deletion",
+        arguments: ["complete", "stop", "delete", "delete-saved"]
+    )
+    @MainActor
+    func suspendedCompletion(action: String) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        let history = ReasoningHistory(
+            origin: ReasoningOrigin(
+                providerID: provider.id,
+                endpoint: "https://fake.local",
+                model: "test-model"
+            ),
+            format: "test", payload: Data("private trace".utf8),
+            visibleText: "Prepared answer", additionalInputTokens: 10
+        )
+        let call = ToolCall(
+            id: "read-before-answer", type: "function",
+            function: .init(name: "read_core", arguments: "{\"core\":\"identity\"}")
+        )
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventStream([
+            .contentDelta("Prepared answer"),
+            .reasoningHistory(history),
+            .finished(.stop),
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.window.isPreloaded = true
+        let gate = MessagePreparationGate()
+        vm.prepareMessages = { await gate.prepare($0) }
+        defer { gate.release(); vm.handleStop() }
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        try await gate.waitUntilEntered()
+        #expect(vm.isTurnInProgress)
+        #expect(!vm.window.messages.contains { $0.role == "assistant" })
+        #expect(vm.window.allPersisted.map(\.role) == ["user"])
+        #expect(vm.historyForLiveCall() == nil)
+
+        if action == "complete" {
+            vm.messageText = "Another question"
+            vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+            #expect(vm.messageText == "Another question")
+            #expect(vm.window.messages.map(\.role) == ["user"])
+        }
+        if action == "stop" { vm.handleStop() }
+        if action.hasPrefix("delete") {
+            container.mainContext.delete(chat)
+            if action == "delete-saved" { try container.mainContext.save() }
+        }
+        gate.release()
+        await vm.streamTask?.value
+        try container.mainContext.save()
+        let messages = try container.mainContext.fetch(FetchDescriptor<Message>())
+        if action.hasPrefix("delete") {
+            #expect(messages.isEmpty)
+            #expect(!vm.window.messages.contains { $0.role == "assistant" })
+        } else {
+            #expect(messages
+                .count { $0.role == "assistant" && $0.content == "Prepared answer" } == 1)
+            #expect(messages.first { $0.content == "Prepared answer" }?.toChatMessage()
+                .reasoningHistory == history)
+            #expect(vm.window.messages.map(\.role) == ["user", "assistant", "tool", "assistant"])
+            #expect(vm.window.allPersisted.map(\.role) == [
+                "user",
+                "assistant",
+                "tool",
+                "assistant",
+            ])
+            #expect(messages.count { $0.toolCallID == call.id } == 1)
+            #expect(messages.count { $0.toolCalls?.first?.id == call.id } == 1)
+            let callHistory = try #require(vm.historyForLiveCall())
+            #expect(callHistory.map(\.role) == ["user", "assistant", "tool", "assistant"])
+            #expect(callHistory.last?.reasoningHistory == history)
+        }
+        if action.hasPrefix("delete") { #expect(vm.historyForLiveCall() == nil) }
+        #expect(!vm.isTurnInProgress)
+        #expect(vm.chatError == nil)
+    }
+
+    @Test("Stopped preparation cannot settle or persist over a replacement turn")
+    @MainActor
+    func replacementDuringPreparation() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStreams([
+            [.contentDelta("First answer"), .finished(.stop)],
+            [.contentDelta("Second answer"), .finished(.stop)],
+        ])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        vm.window.isPreloaded = true
+        let first = MessagePreparationGate()
+        let second = MessagePreparationGate()
+        defer { first.release(); second.release(); vm.handleStop() }
+        vm.prepareMessages = { await first.prepare($0) }
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        try await first.waitUntilEntered()
+        let predecessor = vm.streamTask
+        vm.handleStop()
+        vm.prepareMessages = { await second.prepare($0) }
+        vm.messageText = "Another question"
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        try await second.waitUntilEntered()
+        first.release()
+        await predecessor?.value
+        #expect(vm.isTurnInProgress)
+        #expect(vm.chatLoop.throttler.fullText == "Second answer")
+        second.release()
+        await vm.streamTask?.value
+        #expect(vm.window.messages.compactMap(\.content) == [
+            "Hello",
+            "First answer",
+            "Another question",
+            "Second answer",
+        ])
+        #expect(vm.window.allPersisted.map(\.content) == [
+            "Hello",
+            "First answer",
+            "Another question",
+            "Second answer",
+        ])
+        #expect(!vm.isTurnInProgress)
+        #expect(vm.chatError == nil)
+    }
+}
+
+@MainActor
+private final class MessagePreparationGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var entered = false
+
+    func prepare(_ messages: [ChatMessage]) async -> [PreparedMessage] {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            entered = true
+        }
+        return await PreparedMessage.prepare(messages)
+    }
+
+    func waitUntilEntered() async throws {
+        let deadline = ContinuousClock.now + .seconds(10)
+        while !entered, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(entered)
+    }
+
+    func release() {
+        continuation?.resume()
+        continuation = nil
+    }
+}

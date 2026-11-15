@@ -26,6 +26,7 @@ struct ChatView: View {
 
     @State private var viewModel: ChatViewModel
     @State private var showLiveCall = false
+    @State private var liveCallHistory: [ChatMessage] = []
     @State private var voiceDownloadItem: AssetItem?
     @State private var didPresentStartLiveCall = false
     @State private var showNonVisionStagedWarning = false
@@ -174,7 +175,7 @@ struct ChatView: View {
             emoji: agent?.emoji,
             onBack: { dismiss() },
             onPhone: startLiveCall,
-            isPhoneDisabled: !canSend || viewModel.isStreaming
+            isPhoneDisabled: !canSend || viewModel.isTurnInProgress
         )
     }
 
@@ -198,7 +199,8 @@ struct ChatView: View {
                     chatPhase: viewModel.chatLoop.chatPhase,
                     messageText: $viewModel.messageText,
                     isInputDisabled: !canSend ||
-                        (viewModel.isStreaming && !viewModel.chatLoop.isAwaitingUserInteraction),
+                        (viewModel.isTurnInProgress && !viewModel.chatLoop
+                            .isAwaitingUserInteraction),
                     autoStartDictation: opening == .dictation,
                     autoShowCamera: opening == .camera,
                     onSend: { context in
@@ -321,9 +323,7 @@ struct ChatView: View {
                 LiveCallView(
                     agent: agent,
                     provider: provider,
-                    initialMessages: viewModel.window.isPreloaded
-                        ? viewModel.window.allPersisted.map { $0.toChatMessage() }
-                        : viewModel.window.messages,
+                    initialMessages: liveCallHistory,
                     messages: $viewModel.window.messages,
                     isPresented: $showLiveCall,
                     permissionPolicy: viewModel.loadPermissionPolicy(for: agent),
@@ -365,11 +365,11 @@ struct ChatView: View {
                 asset: voiceDownloadItem!.asset,
                 onAccept: {
                     voiceDownloadItem = nil
-                    showLiveCall = true
+                    openLiveCall()
                 },
                 onDecline: {
                     voiceDownloadItem = nil
-                    showLiveCall = true
+                    openLiveCall()
                 }
             )
         }
@@ -459,17 +459,25 @@ struct ChatView: View {
 
     /// Reuses the phone button's voice-download gate before presenting the live call.
     private func startLiveCall() {
+        guard canSend, !viewModel.isTurnInProgress else { return }
         afterConsent(presentLiveCall)
     }
 
     private func presentLiveCall() {
+        guard canSend, !viewModel.isTurnInProgress else { return }
         if let asset = voiceService.upgradeAsset(for: languageManager.currentLanguage),
            !asset.state.isBusy
         {
             voiceDownloadItem = AssetItem(asset)
         } else {
-            showLiveCall = true
+            openLiveCall()
         }
+    }
+
+    private func openLiveCall() {
+        guard canSend, let history = viewModel.historyForLiveCall() else { return }
+        liveCallHistory = history
+        showLiveCall = true
     }
 
     // MARK: - Consent
