@@ -2006,6 +2006,16 @@ enum Localized {
             }
         }
 
+        enum Basecamp {
+            static var connectionDescription: String {
+                Localized.get("integrations.basecamp.connectionDescription")
+            }
+
+            static var description: String {
+                Localized.get("integrations.basecamp.description")
+            }
+        }
+
         enum Category {
             enum Email {
                 /// Display name for the Email integration category (browse grid)
@@ -2040,6 +2050,12 @@ enum Localized {
                 /// Calendar, Reminders, Location).
                 static var displayName: String {
                     Localized.get("integrations.category.platform.displayName")
+                }
+            }
+
+            enum Work {
+                static var displayName: String {
+                    Localized.get("integrations.category.work.displayName")
                 }
             }
         }

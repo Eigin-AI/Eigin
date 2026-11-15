@@ -12,6 +12,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
     case platform
     case music
     case finance
+    case work
 
     var id: String {
         rawValue
@@ -22,6 +23,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         case .email: Localized.Integrations.Category.Email.displayName
         case .familyAndSchool: Localized.Integrations.Category.FamilyAndSchool.displayName
         case .platform: Localized.Integrations.Category.Platform.displayName
+        case .work: Localized.Integrations.Category.Work.displayName
         case .finance: Localized.Integrations.Category.Finance.displayName
         case .music: Localized.Integrations.Category.Music.displayName
         }
@@ -36,6 +38,7 @@ enum IntegrationCategory: String, CaseIterable, Identifiable, Sendable {
         case .platform: "iphone"
         case .music: "music.note"
         case .finance: "eurosign.circle"
+        case .work: "briefcase"
         }
     }
 }

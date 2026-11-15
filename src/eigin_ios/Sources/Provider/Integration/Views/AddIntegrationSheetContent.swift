@@ -173,7 +173,7 @@ struct AddIntegrationSheetContent: View {
     private func categoryIcon(_ category: IntegrationCategory) -> Image? {
         switch category {
         case .email, .music: Iconography.Functional.mail
-        case .finance: Image(systemName: category.systemImage)
+        case .finance, .work: Image(systemName: category.systemImage)
         case .familyAndSchool: Iconography.Functional.school
         case .platform: Iconography.Functional.lock
         }

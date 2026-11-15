@@ -90,6 +90,8 @@ struct OAuthConfiguration {
     let clientSecret: String?
     let scopes: [String]?
 
+    var callback: MCPOAuthCallback = .app
+
     /// Whether the user needs to supply client credentials (no dynamic registration).
     var needsClientCredentials: Bool {
         clientID == nil
@@ -103,7 +105,8 @@ struct OAuthConfiguration {
             tokenEndpoint: tokenEndpoint,
             clientID: clientID,
             clientSecret: clientSecret,
-            scopes: scopes
+            scopes: scopes,
+            callback: callback
         )
     }
 }

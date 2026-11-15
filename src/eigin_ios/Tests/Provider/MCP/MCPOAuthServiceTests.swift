@@ -44,10 +44,97 @@ struct MCPOAuthServiceTests {
         // RFC 8252 §7.1: some servers (Comfy Cloud) reject custom schemes
         // without a dot. This is the root cause of #249. The callback scheme
         // the browser session waits on is derived from this URI's scheme.
-        let redirect = DefaultMCPOAuthService.redirectURI
+        let redirect = MCPOAuthCallback.app.redirectURI
         let scheme = URL(string: redirect)?.scheme ?? ""
         #expect(scheme.contains("."))
         #expect(redirect.hasSuffix("://oauth/callback"))
+    }
+
+    @Test(arguments: [
+        "https://mcp.basecamp.com/mcp", "https://MCP.BASECAMP.COM:443/mcp/",
+        "https://mcp.basecamp.com/mcp/extra", "https://mcp.basecamp.com/%6dcp",
+    ])
+    func basecampRegistersHTTPSCallback(endpoint: String) async throws {
+        stubOAuthChain(
+            registrationStatus: 201,
+            registrationBody: Data(#"{"client_id":"basecamp-client"}"#.utf8)
+        )
+        FakeURLProtocol.stubResponse(for: endpoint, data: Data(), statusCode: 401)
+        FakeURLProtocol.stubResponse(
+            for: "https://mcp.basecamp.com/.well-known/oauth-protected-resource",
+            data: Data(#"{"authorization_servers":["https://auth.example.com"]}"#.utf8),
+            statusCode: 200
+        )
+        let url = try #require(URL(string: endpoint))
+        // Discovery keeps the original origin when constructing metadata URLs.
+        var metadata = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        metadata.path = "/.well-known/oauth-protected-resource"
+        try FakeURLProtocol.stubResponse(
+            for: #require(metadata.url?.absoluteString),
+            data: Data(#"{"authorization_servers":["https://auth.example.com"]}"#
+                .utf8),
+            statusCode: 200
+        )
+        let config = try #require(try await makeService().discoverOAuth(for: url))
+        let body = try #require(FakeURLProtocol.lastRequestBody(for: registrationURL))
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(json["redirect_uris"] as? [String] == ["https://auth.eigin.ai/callback/"])
+        #expect(config.callback.redirectURI == "https://auth.eigin.ai/callback/")
+        #expect(config.callback.callbackScheme == "eigin")
+        let registeredRedirect = try #require((json["redirect_uris"] as? [String])?.first)
+        let tokenURL = config.tokenEndpoint.absoluteString
+        FakeURLProtocol.stubResponse(
+            for: tokenURL,
+            data: Data(#"{"access_token":"basecamp-token","token_type":"Bearer","expires_in":3600}"#
+                .utf8),
+            statusCode: 200
+        )
+        let service = DefaultMCPOAuthService(
+            keychainService: FakeKeychainService(), urlSession: FakeURLProtocol.fakeSession(),
+            presentAuthSession: { authorizationURL, scheme in
+                let items = try #require(URLComponents(
+                    url: authorizationURL,
+                    resolvingAgainstBaseURL: false
+                )?.queryItems)
+                #expect(items.first { $0.name == "redirect_uri" }?.value == registeredRedirect)
+                #expect(items.first { $0.name == "code_challenge_method" }?.value == "S256")
+                #expect(items.first { $0.name == "code_challenge" }?.value?.isEmpty == false)
+                #expect(scheme == "eigin")
+                let state = try #require(items.first { $0.name == "state" }?.value)
+                var callback = URLComponents(string: "eigin://oauth/callback")!
+                callback.queryItems = [
+                    URLQueryItem(name: "code", value: "test-code"),
+                    URLQueryItem(name: "state", value: state),
+                ]
+                return try #require(callback.url)
+            }
+        )
+        let serverID = UUID()
+        let token = try await service.authorize(config: config, serverID: serverID)
+        #expect(token == "basecamp-token")
+        #expect(try await service.validToken(for: serverID) == token)
+        let exchangeBody = try #require(FakeURLProtocol.lastRequestBody(for: tokenURL))
+        var exchange = URLComponents()
+        exchange.percentEncodedQuery = try #require(String(data: exchangeBody, encoding: .utf8))
+        #expect(exchange.queryItems?.first { $0.name == "redirect_uri" }?
+            .value == registeredRedirect)
+        #expect(exchange.queryItems?.first { $0.name == "code" }?.value == "test-code")
+        #expect(exchange.queryItems?.first { $0.name == "code_verifier" }?.value?.isEmpty == false)
+        #expect(config.withClientCredentials(clientID: "manual", clientSecret: nil).callback
+            .redirectURI == config.callback.redirectURI)
+    }
+
+    @Test(arguments: [
+        "https://mcp.dinero.dk", "https://mcp.example.com/mcp",
+        "https://mcp.basecamp.com.evil.example/mcp", "http://mcp.basecamp.com/mcp",
+        "https://mcp.basecamp.com:444/mcp", "https://user@mcp.basecamp.com/mcp",
+        "https://user:password@mcp.basecamp.com/mcp", "https://mcp.basecamp.com/mcp?x=1",
+        "https://mcp.basecamp.com/mcp#fragment",
+    ])
+    func unrelatedEndpointsKeepAppCallback(endpoint: String) throws {
+        let callback = try MCPOAuthCallback.forEndpoint(#require(URL(string: endpoint)))
+        #expect(callback.redirectURI == "ai.eigin://oauth/callback")
+        #expect(callback.callbackScheme == "ai.eigin")
     }
 
     @Test func openServerSkipsDiscovery() async throws {

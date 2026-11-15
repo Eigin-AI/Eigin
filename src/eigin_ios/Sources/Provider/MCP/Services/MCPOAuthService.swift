@@ -21,13 +21,16 @@ protocol MCPOAuthService: Sendable {
 final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
     private let keychainService: any KeychainService
     private let urlSession: URLSession
-    /// RFC 8252 §7.1 — authorization servers may require reverse-DNS-shaped
-    /// (dotted) custom schemes.
-    static let redirectURI = "ai.eigin://oauth/callback"
+    private let presentAuthSession: PKCEOAuthFlow.AuthSession
 
-    init(keychainService: any KeychainService, urlSession: URLSession = .shared) {
+    init(
+        keychainService: any KeychainService,
+        urlSession: URLSession = .shared,
+        presentAuthSession: @escaping PKCEOAuthFlow.AuthSession = PKCEUtilities.presentAuthSession
+    ) {
         self.keychainService = keychainService
         self.urlSession = urlSession
+        self.presentAuthSession = presentAuthSession
     }
 
     // MARK: - Discovery
@@ -128,6 +131,7 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         // Dynamic Client Registration if supported. Register with the same
         // scopes the authorization step will request, so the server can't
         // shrink them at registration time.
+        let callback = MCPOAuthCallback.forEndpoint(serverURL)
         var clientID: String?
         var clientSecret: String?
 
@@ -136,7 +140,8 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         {
             let registration = try await registerClient(
                 at: registrationURL,
-                scopes: authServerMeta.scopesSupported
+                scopes: authServerMeta.scopesSupported,
+                redirectURI: callback.redirectURI
             )
             clientID = registration.clientId
             clientSecret = registration.clientSecret
@@ -148,7 +153,8 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             tokenEndpoint: tokenEndpoint,
             clientID: clientID,
             clientSecret: clientSecret,
-            scopes: authServerMeta.scopesSupported
+            scopes: authServerMeta.scopesSupported,
+            callback: callback
         )
     }
 
@@ -159,16 +165,14 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
             throw MCPOAuthError.authorizationFailed("Client credentials are required")
         }
 
-        // Delegates the PKCE mechanics (browser, callback, code exchange) to the
-        // shared flow. The callback scheme is derived from the redirect URI so
-        // it can't drift; the `resource` indicator rides along as a flow param.
+        // HTTPS passthrough callbacks complete on their app scheme.
         let flowConfig = PKCEOAuthConfig(
             authorizationEndpoint: config.authorizationEndpoint,
             tokenEndpoint: config.tokenEndpoint,
             clientID: clientID,
             clientSecret: config.clientSecret,
             scopes: config.scopes ?? [],
-            redirectURI: Self.redirectURI,
+            redirectURI: config.callback.redirectURI,
             extraAuthorizationParams: ["resource": config.resourceURL.absoluteString],
             extraTokenParams: ["resource": config.resourceURL.absoluteString]
         )
@@ -177,7 +181,9 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
         do {
             tokenResponse = try await PKCEOAuthFlow.authorize(
                 config: flowConfig,
-                urlSession: urlSession
+                callbackScheme: config.callback.callbackScheme,
+                urlSession: urlSession,
+                presentAuthSession: presentAuthSession
             )
         } catch PKCEOAuthFlow.FlowError.userCancelled {
             throw MCPOAuthError.userCancelled
@@ -299,7 +305,8 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
 
     private func registerClient(
         at endpoint: URL,
-        scopes: [String]?
+        scopes: [String]?,
+        redirectURI: String
     ) async throws -> ClientRegistrationResponse {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
@@ -307,7 +314,7 @@ final class DefaultMCPOAuthService: MCPOAuthService, @unchecked Sendable {
 
         var body: [String: Any] = [
             "client_name": "Eigin",
-            "redirect_uris": [Self.redirectURI],
+            "redirect_uris": [redirectURI],
             "grant_types": ["authorization_code", "refresh_token"],
             "token_endpoint_auth_method": "none",
         ]

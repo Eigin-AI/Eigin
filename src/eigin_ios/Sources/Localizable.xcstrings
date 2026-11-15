@@ -1,6 +1,54 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "integrations.basecamp.description": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbejd med projekter, opgaver og diskussioner i Basecamp."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work with projects, to-dos, and discussions in Basecamp."
+          }
+        }
+      }
+    },
+    "integrations.basecamp.connectionDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind på Basecamp, vælg en konto, og giv læseadgang eller fuld adgang."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to Basecamp, choose an account, and allow read-only or full access."
+          }
+        }
+      }
+    },
+    "integrations.category.work.displayName": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbejde"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work"
+          }
+        }
+      }
+    },
     "errors.chat.invalidHistoryBody": {
       "localizations": {
         "da": {

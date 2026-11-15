@@ -9,25 +9,45 @@ struct MCPPreset: Identifiable, Sendable {
     let category: IntegrationCategory
     let brandImage: Image
     let instructions: String
+    let searchDescriptor: String
+    /// Preferred OAuth callback; nil uses the app callback.
+    let oauthCallback: MCPOAuthCallback?
 
     var skillID: String {
         "mcp_preset__\(id)"
     }
 
+    private let localizedDescription: @Sendable () -> String
+    private let localizedConnectionDescription: @Sendable () -> String
+
     var description: String {
-        Localized.Integrations.Dinero.description
+        localizedDescription()
     }
 
     var connectionDescription: String {
-        Localized.Integrations.Dinero.connectionDescription
+        localizedConnectionDescription()
     }
 
     static let dinero = MCPPreset(
         id: "dinero", displayName: "Dinero", endpoint: URL(string: "https://mcp.dinero.dk")!,
         category: .finance, brandImage: Iconography.Service.dinero,
-        instructions: Prompt.Skills.Dinero.instruction
+        instructions: Prompt.Skills.Dinero.instruction,
+        searchDescriptor: "Dinero Danish accounting: invoices, bookkeeping, purchases, payments, financial reports and account setup.",
+        oauthCallback: nil,
+        localizedDescription: { Localized.Integrations.Dinero.description },
+        localizedConnectionDescription: { Localized.Integrations.Dinero.connectionDescription }
     )
-    static let all = [dinero]
+    static let basecamp = MCPPreset(
+        id: "basecamp", displayName: "Basecamp",
+        endpoint: URL(string: "https://mcp.basecamp.com/mcp")!,
+        category: .work, brandImage: Iconography.Service.basecamp,
+        instructions: Prompt.Skills.Basecamp.instruction,
+        searchDescriptor: "Basecamp project management: projects, to-dos, tasks, message boards, discussions, schedules, documents and team collaboration.",
+        oauthCallback: .httpsRedirect,
+        localizedDescription: { Localized.Integrations.Basecamp.description },
+        localizedConnectionDescription: { Localized.Integrations.Basecamp.connectionDescription }
+    )
+    static let all = [dinero, basecamp]
 
     /// Looks up a bundled preset by its stable skill identifier.
     static func forSkillID(_ skillID: String) -> MCPPreset? {

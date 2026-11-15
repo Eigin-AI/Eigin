@@ -5,6 +5,19 @@ import Testing
 
 @Suite("MCP preset discovery")
 struct MCPPresetSkillTests {
+    @Test func discoversBasecampAndPreservesManualConnections() throws {
+        let preset = MCPPreset.basecamp
+        let manual = MCPServer(name: "Basecamp", url: preset.endpoint.absoluteString)
+        let skill = try #require(SkillCatalog.skill(forID: preset.skillID, mcpServers: [manual]))
+        #expect(skill.descriptor.contains("project management"))
+        #expect(!skill.descriptor.contains("accounting"))
+        #expect(SkillCatalog.connectionNeeded(for: skill, connected: []) == "Basecamp")
+        #expect(preset.server(in: [manual]) == nil)
+        manual.presetID = preset.id
+        #expect(preset.server(in: [manual])?.id == manual.id)
+        #expect(IntegrationCatalogEntry.matching("Basecamp", in: [.mcpPreset(preset)]).count == 1)
+    }
+
     @Test func discoversDineroWithoutAConnection() throws {
         let skill = try #require(SkillCatalog.skill(
             forID: MCPPreset.dinero.skillID,
@@ -22,6 +35,7 @@ struct MCPPresetSkillTests {
         server.serverInstructions = "Use the latest accounting workflow."
         server.cachedToolNames = ["report"]
         let skills = MCPServerSkill.project(servers: [server])
+            .filter { $0.id == MCPPreset.dinero.skillID }
         #expect(skills.count == 1)
         let skill = try #require(skills.first)
         #expect(skill.id == MCPPreset.dinero.skillID)
@@ -41,6 +55,7 @@ struct MCPPresetSkillTests {
         preset.cachedToolNames = ["report"]
         manual.cachedToolNames = ["report"]
         let skills = MCPServerSkill.project(servers: [preset, manual])
+            .filter { $0.id != MCPPreset.basecamp.skillID }
         #expect(skills.count == 2)
         #expect(Set(skills.map(\.id)).count == 2)
         #expect(Set(skills.flatMap { $0.requiredTools.map(\.key) }).count == 2)

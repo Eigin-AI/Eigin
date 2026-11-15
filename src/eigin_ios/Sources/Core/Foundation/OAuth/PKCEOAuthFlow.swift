@@ -8,6 +8,9 @@ import Foundation
 /// Discovery (MCP) and static configuration (integrations) stay with their
 /// callers — only the PKCE dance itself lives here.
 enum PKCEOAuthFlow {
+    /// Browser boundary returning the authorization callback.
+    typealias AuthSession = @MainActor @Sendable (URL, String) async throws -> URL
+
     /// HTTPS passthrough that redirects to `eigin://oauth/callback`. Used as the
     /// default redirect URI because some authorization servers (e.g. Google)
     /// don't accept arbitrary custom URL schemes directly.
@@ -22,7 +25,8 @@ enum PKCEOAuthFlow {
     static func authorize(
         config: PKCEOAuthConfig,
         callbackScheme: String? = nil,
-        urlSession: URLSession = .shared
+        urlSession: URLSession = .shared,
+        presentAuthSession: AuthSession = PKCEUtilities.presentAuthSession
     ) async throws -> TokenResponse {
         let codeVerifier = PKCEUtilities.generateCodeVerifier()
         let codeChallenge = PKCEUtilities.generateCodeChallenge(from: codeVerifier)
@@ -39,10 +43,7 @@ enum PKCEOAuthFlow {
 
         let callbackURL: URL
         do {
-            callbackURL = try await PKCEUtilities.presentAuthSession(
-                url: authURL,
-                callbackScheme: scheme
-            )
+            callbackURL = try await presentAuthSession(authURL, scheme)
         } catch PKCEUtilities.AuthSessionError.userCancelled {
             throw FlowError.userCancelled
         } catch let error as PKCEUtilities.AuthSessionError {

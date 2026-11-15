@@ -113,7 +113,8 @@ struct ActivateSkillToolConnectTests {
         #expect(result.content.contains("list_issues"))
         #expect(!result.content.contains("obsolete"))
         let servers = try container.mainContext.fetch(FetchDescriptor<MCPServer>())
-        #expect(MCPServerSkill.project(servers: servers).count == 1)
+        #expect(MCPServerSkill.project(servers: servers)
+            .count(where: { $0.id == MCPPreset.dinero.skillID }) == 1)
     }
 
     @Test func presetSetupRequiresLaterReplyAndVerifiesConnection() async throws {
