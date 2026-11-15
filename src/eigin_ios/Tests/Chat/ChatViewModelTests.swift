@@ -382,6 +382,98 @@ struct ChatViewModelTests {
         return vm
     }
 
+    @Test("Sending includes full persisted history, tool metadata, and the current request once")
+    @MainActor
+    func sendPreservesPersistedHistory() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        // Keep unrelated title generation from outliving this test's in-memory store.
+        chat.title = "History regression"
+        chat.titleOrigin = .edited
+        let context = container.mainContext
+        let texts = (0 ..< 1000).map { "History row \($0)" }
+        for (index, text) in texts.enumerated() {
+            let message = Message(
+                role: index.isMultiple(of: 2) ? "user" : "assistant",
+                content: text
+            )
+            message.timestamp = Date(timeIntervalSince1970: Double(index))
+            message.chat = chat
+            context.insert(message)
+        }
+        let call = ToolCall(
+            id: "history-call", type: "function",
+            function: .init(name: "search_knowledge", arguments: #"{"query":"garden"}"#)
+        )
+        let toolMessages = [
+            ChatMessage(role: "assistant", content: nil, toolCalls: [call]),
+            ChatMessage(role: "tool", content: "Garden inspection", toolCallID: call.id),
+        ]
+        for (index, value) in toolMessages.enumerated() {
+            let message = Message.from(value)
+            message.timestamp = Date(timeIntervalSince1970: Double(1000 + index))
+            message.chat = chat
+            context.insert(message)
+        }
+        try context.save()
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Done"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        await vm.preloadAllMessages().value
+        #expect(vm.window.messages.count < texts.count)
+        let request = "Current request: review the garden inspection"
+        vm.messageText = request
+
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        await vm.streamTask?.value
+
+        let sent = service.capturedEventMessages
+        #expect(sent.compactMap(\.content).filter { $0.hasPrefix("History row ") } == texts)
+        let callIndex = try #require(sent.firstIndex { $0.toolCalls?.first?.id == call.id })
+        #expect(sent[callIndex].content == nil)
+        #expect(sent[callIndex].toolCalls?.first?.function.arguments == call.function.arguments)
+        #expect(sent[callIndex + 1].toolCallID == call.id)
+        #expect(sent[callIndex + 1].content == "Garden inspection")
+        #expect(sent
+            .count(where: { $0.role == "user" && ($0.content ?? "").hasPrefix(request) }) == 1)
+        #expect(vm.chatError == nil)
+        #expect(!vm.isTurnInProgress)
+    }
+
+    @Test(
+        "Stopping a preloaded send before dispatch leaves no active turn",
+        arguments: [false, true]
+    )
+    @MainActor
+    func stopDuringSendPreparation(allowPreparationToRun: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let context = container.mainContext
+        for index in 0 ..< 1000 {
+            let message = Message(
+                role: index.isMultiple(of: 2) ? "user" : "assistant",
+                content: "History row \(index)"
+            )
+            message.timestamp = Date(timeIntervalSince1970: Double(index))
+            message.chat = chat
+            context.insert(message)
+        }
+        try context.save()
+        let service = FakeChatService()
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        await vm.preloadAllMessages().value
+
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        #expect(vm.isTurnInProgress)
+        if allowPreparationToRun { await Task.yield() }
+        vm.handleStop()
+        await vm.streamTask?.value
+
+        #expect(service.capturedEventMessages.isEmpty)
+        #expect(service.capturedMessages.isEmpty)
+        #expect(!vm.isTurnInProgress)
+        #expect(!vm.isStreaming)
+        #expect(vm.chatError == nil)
+    }
+
     @Test("A reply completing after deletion cannot recreate the chat", arguments: [false, true])
     @MainActor
     func replyCompletesAfterDeletion(saveDeletion: Bool) async throws {

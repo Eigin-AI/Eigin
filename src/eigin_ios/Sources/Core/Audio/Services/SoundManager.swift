@@ -1,11 +1,12 @@
 import AudioToolbox
 @preconcurrency import AVFoundation
+import Combine
 
 /// Plays one-shot sounds for phase transitions.
 ///
 /// Sounds are loaded from WAV files bundled in the app's Resources directory.
 @MainActor
-final class SoundManager {
+final class SoundManager: ObservableObject {
     enum Sound: CaseIterable {
         case dictationStarted
         case dictationStopped
