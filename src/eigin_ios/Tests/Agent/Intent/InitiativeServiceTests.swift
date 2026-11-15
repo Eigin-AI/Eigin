@@ -523,7 +523,38 @@ struct InitiativeServiceTests {
             agent: f.agent
         )
         #expect(invalid.isError)
+        #expect(invalid.content.contains("'weekdays' requires frequency 'weekly' or omitted"))
         #expect(f.center.requests.count == 2)
+        for selection in [
+            #""daily_pattern":"every_day","frequency":"weekly","weekdays":["monday"]"#,
+            #""daily_pattern":"every_day","frequency":"weekly","weekdays":"monday""#,
+            #""daily_pattern":"every_day","weekdays":["monday"]"#,
+            #""daily_pattern":"every_day","frequency":"weekly""#,
+        ] {
+            let conflict = await tool.execute(call(selection), agent: f.agent)
+            #expect(conflict.isError)
+            #expect(conflict.content.contains("'daily_pattern' cannot be combined"))
+            #expect(f.center.requests.count == 2)
+        }
+        let invalidPattern = await tool.execute(
+            call(#""daily_pattern":"every:day""#),
+            agent: f.agent
+        )
+        #expect(invalidPattern.isError)
+        #expect(invalidPattern.content
+            .contains("'daily_pattern' must be 'every_day', 'weekdays', or 'weekends'"))
+        #expect(f.center.requests.count == 2)
+        let monday = await tool.execute(
+            call(#""frequency":"weekly","weekdays":["monday"],"hour":9,"minute":0"#),
+            agent: f.agent
+        )
+        #expect(!monday.isError)
+        #expect(f.center.requests.count == 1)
+        let trigger = try #require(f.center.requests.first?
+            .trigger as? UNCalendarNotificationTrigger)
+        #expect(trigger.dateComponents.weekday == 2)
+        #expect(trigger.dateComponents.hour == 9)
+        #expect(trigger.dateComponents.minute == 0)
     }
 
     @Test @MainActor func capacityAllocatesWholeInitiativesAndKeepsInAppDiscovery() async throws {

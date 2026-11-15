@@ -55,8 +55,9 @@ pub(super) fn encode(input: &InferenceCompletionInput) -> Result<Vec<u8>, Infere
             tools
                 .iter()
                 .map(|tool| {
+                    // Responses may otherwise normalize optional parameters into required fields.
                     Ok(
-                        json!({"type":"function", "name":tool.name, "description":tool.description,
+                        json!({"type":"function", "name":tool.name, "description":tool.description, "strict":false,
                 "parameters":serde_json::from_str::<Value>(&tool.parameters_json)?}),
                     )
                 })
