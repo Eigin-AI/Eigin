@@ -18,6 +18,39 @@ struct MCPPresetSkillTests {
         #expect(IntegrationCatalogEntry.matching("Basecamp", in: [.mcpPreset(preset)]).count == 1)
     }
 
+    @Test func discoversNotionAndPreservesManualConnections() throws {
+        let preset = MCPPreset.notion
+        let manual = MCPServer(name: "Notion", url: preset.endpoint.absoluteString)
+        let skill = try #require(SkillCatalog.skill(
+            forID: "mcp_preset__notion",
+            mcpServers: [manual]
+        ))
+        #expect(skill.requiredTools.isEmpty)
+        #expect(skill.connectionPresetID == "notion")
+        #expect(SkillCatalog.connectionNeeded(for: skill, connected: []) == "Notion")
+        for task in ["notes", "pages", "databases", "knowledge"] {
+            #expect(skill.descriptor.contains(task))
+        }
+        #expect(IntegrationCatalogEntry.matching("Notion", in: [.mcpPreset(preset)]).count == 1)
+        #expect(preset.server(in: [manual]) == nil)
+
+        let server = MCPServer(name: "My workspace", url: preset.endpoint.absoluteString)
+        server.presetID = preset.id
+        server.serverInstructions = "Search before creating pages."
+        server.cachedToolNames = ["notion-search", "notion-fetch"]
+        let skills = MCPServerSkill.project(servers: [manual, server])
+        let connected = try #require(skills.first { $0.id == skill.id })
+        #expect(skills.count(where: { $0.id == skill.id }) == 1)
+        #expect(connected.connectionPresetID == nil)
+        #expect(connected.requiredTools.count == 2)
+        #expect(connected.instruction.contains(preset.instructions))
+        #expect(connected.instruction.contains("Search before creating pages."))
+        #expect(MCPServerSkill.server(forSkillID: skill.id, servers: [manual, server])?.id == server
+            .id)
+        #expect(MCPServerSkill.server(forSkillID: "mcp__notion", servers: [manual, server])?
+            .id == manual.id)
+    }
+
     @Test func discoversDineroWithoutAConnection() throws {
         let skill = try #require(SkillCatalog.skill(
             forID: MCPPreset.dinero.skillID,
@@ -55,7 +88,7 @@ struct MCPPresetSkillTests {
         preset.cachedToolNames = ["report"]
         manual.cachedToolNames = ["report"]
         let skills = MCPServerSkill.project(servers: [preset, manual])
-            .filter { $0.id != MCPPreset.basecamp.skillID }
+            .filter { $0.id == MCPPreset.dinero.skillID || $0.id == "mcp__dinero" }
         #expect(skills.count == 2)
         #expect(Set(skills.map(\.id)).count == 2)
         #expect(Set(skills.flatMap { $0.requiredTools.map(\.key) }).count == 2)

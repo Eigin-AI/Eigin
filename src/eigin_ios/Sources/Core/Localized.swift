@@ -2164,6 +2164,16 @@ enum Localized {
             }
         }
 
+        enum Notion {
+            static var connectionDescription: String {
+                Localized.get("integrations.notion.connectionDescription")
+            }
+
+            static var description: String {
+                Localized.get("integrations.notion.description")
+            }
+        }
+
         enum Platform {
             /// Under the name of a platform integration: it lives on the device rather than in an
             /// account.

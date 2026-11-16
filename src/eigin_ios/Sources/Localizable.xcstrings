@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "integrations.notion.description": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg, læs og opdater noter, sider og databaser i Notion."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search, read, and update notes, pages, and databases in Notion."
+          }
+        }
+      }
+    },
+    "integrations.notion.connectionDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind på Notion, og godkend adgang."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to Notion and approve access."
+          }
+        }
+      }
+    },
     "integrations.basecamp.description": {
       "localizations": {
         "da": {
