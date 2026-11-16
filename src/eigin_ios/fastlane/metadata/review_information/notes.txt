@@ -1,33 +1,31 @@
-Eigin is a personal AI assistant. There is no account and no sign-in. Our self-assessment against the App Store Review Guidelines is at https://docs.eigin.ai/compliance/app-store.html
+Eigin is a personal AI assistant. No Eigin account or sign-in is required.
 
-Eigin is conversational. Not all features have a dedicated screen. Some you simply ask for. The empty chat shows suggestion cards for the main areas.
+Walkthrough of this build: https://youtu.be/pkcS8sEKugg
 
-A short walkthrough video: https://youtu.be/21q-JgungI8
+GET STARTED
 
-GETTING STARTED
+1. Complete the name and preferences screens.
+2. Tap "Use Eigin".
+3. Read the AI data-sharing disclosure and tap "Allow".
+4. Buy "500 Credits" using Apple's sandbox purchase flow.
+5. Finish the onboarding conversation.
 
-1. Open the app. Onboarding asks for your name and what you want help with.
-2. On the connect step, tap "Use Eigin". A sheet discloses what is shared with third-party AI and who receives it. Tap Allow, then Buy on "500 Credits" (consumable in-app purchase). Sandbox purchases grant credits right away.
-3. Onboarding ends with a short conversation. Ask the assistant to wrap it up whenever you like.
+The app and credit purchases are available in EU App Store storefronts. Please use an EU storefront when testing purchases.
 
-Onboarding always uses cloud AI, so either credits or your own provider is required to finish it. An on-device model is available afterwards under Settings > Connections; it needs an iPhone 15 or newer.
+Credits can also be purchased under Settings > Connections > Eigin > Get more credits.
 
-THINGS TO TRY
+INTEGRATIONS
 
-- Live call: tap the call button in the chat toolbar. A hands-free voice conversation on the native iOS call screen. Put the phone away and it keeps going on headphones, backgrounded or with the screen locked.
-- Apple Health: use the "Health" suggestion group, or say "Log a banana and 200 g of skyr for breakfast", then "What have I eaten today?". Log something first. If there is no data in Apple Health, a read returns nothing.
-- Calendar, reminders, web search, and memory: just ask. Eigin confirms before it creates or changes anything.
+Open Settings > Connections > Add integration and choose a service. Follow the connection and permission prompts, then ask the assistant to use it in a conversation.
 
-CREDITS
+LIVE CALL
 
-Credits are consumable in-app purchases. "Recover credits" re-applies purchases made on this Apple Account, so a balance survives a reinstall.
+Open a chat and tap the call button. Allow microphone access and complete any voice download if prompted. Speak to the assistant, then return to the Home Screen to test background audio.
 
-SHARING WITH THIRD-PARTY AI
+AI PROVIDERS AND PRIVACY
 
-Before any personal data is shared with a third-party AI provider, Eigin clearly discloses what is shared and who receives it, and asks for explicit permission.
+Before sharing conversation data with an AI provider, Eigin identifies the recipient, explains what is shared, and requests permission.
 
-PERMISSIONS
+"Use Eigin" provides inference through credits purchased with Apple In-App Purchase. Optional provider connections let users authenticate to independently supplied AI services using their own credentials. Eigin does not sell those credentials.
 
-Calendar, reminders, location, health, microphone, speech recognition, camera, photos, and local network (for email) are all optional, and requested only when the related feature is first used.
-
-If anything blocks you, email us at support@eigin.ai.
+Support: support@eigin.ai
