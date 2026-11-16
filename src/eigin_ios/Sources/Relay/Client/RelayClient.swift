@@ -2,6 +2,8 @@ import Foundation
 
 /// Client for the Eigin Relay HTTP API,
 protocol RelayClient: Sendable {
+    /// Shared model observations; requires only the relay key.
+    func modelStatus() async throws -> RelayModelStatusResponse
     /// Proxied web search.
     /// - Parameters:
     ///   - region: ISO 3166-1 alpha-2 region code used to boost regionally relevant results.
@@ -54,6 +56,13 @@ struct DefaultRelayClient: RelayClient {
         request.httpMethod = "GET"
         let data = try await perform(request)
         return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    func modelStatus() async throws -> RelayModelStatusResponse {
+        var request = try makeRequest(path: "/v1/models/status")
+        request.httpMethod = "GET"
+        request.timeoutInterval = 5
+        return try await decode(request)
     }
 
     func products() async throws -> [CreditProduct] {

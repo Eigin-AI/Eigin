@@ -4,6 +4,7 @@ use serde_json::Value;
 
 #[derive(Deserialize)]
 pub(super) struct CompletionChunk {
+    #[serde(default)]
     pub(super) choices: Vec<CompletionChoice>,
 }
 

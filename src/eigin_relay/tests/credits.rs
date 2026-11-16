@@ -84,6 +84,7 @@ async fn make_state_with_ledger_and_upstream(
     provider_keys.insert("default".to_string(), "test-key".to_string());
 
     Arc::new(AppState {
+        model_status: Default::default(),
         search_client: Arc::new(NoopSearch),
         staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
@@ -340,6 +341,7 @@ async fn make_grant_state(
     provider_keys.insert("default".to_string(), "test-key".to_string());
 
     Arc::new(AppState {
+        model_status: Default::default(),
         search_client: Arc::new(NoopSearch),
         staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
@@ -1028,6 +1030,7 @@ async fn webhook_rate_limited_after_limit() {
 
     // Tight limit so the test can flood it deterministically.
     let state = Arc::new(AppState {
+        model_status: Default::default(),
         search_client: Arc::new(NoopSearch),
         staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
@@ -1268,6 +1271,7 @@ async fn make_sandbox_state(
     sandbox_budget_credits: u64,
 ) -> Arc<AppState> {
     Arc::new(AppState {
+        model_status: Default::default(),
         search_client: Arc::new(NoopSearch),
         staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],

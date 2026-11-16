@@ -167,3 +167,9 @@ variable "website_domains" {
   type        = list(string)
   default     = []
 }
+
+variable "model_health_interval_seconds" {
+  description = "Rolling observation lifetime and idle-probe slot interval."
+  type        = number
+  default     = 900
+}

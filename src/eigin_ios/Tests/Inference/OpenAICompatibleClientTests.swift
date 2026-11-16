@@ -61,6 +61,46 @@ struct OpenAICompatibleClientTests {
         }
     }
 
+    @Test("Tool-output timing is operational data and survives a late usage event")
+    func toolOutputPerformanceIsSeparateFromConversationMetadata() async throws {
+        let body = """
+        data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}
+
+        data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"lookup","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}
+
+        data: {"choices":[],"usage":{"completion_tokens":108,"completion_tokens_details":{"reasoning_tokens":100}}}
+
+        data: [DONE]
+
+        """
+        FakeURLProtocol.stubResponse(
+            for: "https://api.example.com/v1/chat/completions",
+            data: Data(body.utf8),
+            statusCode: 200
+        )
+        let client = OpenAICompatibleClient(
+            baseURL: "https://api.example.com/v1",
+            apiToken: "token",
+            session: FakeURLProtocol.fakeSession()
+        )
+        let stream = try await client.chatCompletionEventStream(messages: [], model: "test")
+        var performance: InferencePerformance?
+        var sawTool = false
+        for try await event in stream {
+            switch event {
+            case .performance(let value): performance = value
+            case .toolCall: sawTool = true
+            case .providerMetadata: Issue
+                .record("Operational measurements leaked into conversation metadata")
+            default: break
+            }
+        }
+        #expect(sawTool)
+        #expect(performance?.timeToFirstToken != nil)
+        // All output arrived in one transport chunk, so its duration is unmeasurable.
+        #expect(performance?.tokensPerSecond == nil)
+    }
+
     private func makeModelsJSON(ids: [String]) -> Data {
         let entries = ids.map { "{\"id\":\"\($0)\"}" }.joined(separator: ",")
         return Data("{\"data\":[\(entries)]}".utf8)

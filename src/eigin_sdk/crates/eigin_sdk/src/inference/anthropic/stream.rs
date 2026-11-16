@@ -9,9 +9,17 @@ pub(super) struct StreamParser {
     event: Option<String>,
     tools: HashMap<i64, InferenceToolCall>,
     finish: Option<InferenceFinishReason>,
+    performance: crate::inference::streaming::Performance,
 }
 
 impl EventParser for StreamParser {
+    fn start(&mut self) {
+        self.performance.start();
+    }
+    fn received_chunk(&mut self) {
+        self.performance.received_chunk();
+    }
+
     fn output(&self) -> &ParsedEvents {
         &self.output
     }
@@ -41,10 +49,21 @@ impl EventParser for StreamParser {
                 let Ok(start) = serde_json::from_slice::<BlockStart>(payload) else {
                     return;
                 };
+                if start.content_block.r#type == "text"
+                    && let Some(text) = start.content_block.text.filter(|text| !text.is_empty())
+                {
+                    self.performance.useful_output();
+                    self.output
+                        .events
+                        .push_back(InferenceEvent::ContentDelta { text });
+                }
                 if start.content_block.r#type == "tool_use"
                     && let (Some(id), Some(name)) =
                         (start.content_block.id, start.content_block.name)
                 {
+                    if !name.is_empty() {
+                        self.performance.useful_output();
+                    }
                     self.tools.insert(
                         start.index,
                         InferenceToolCall {
@@ -63,6 +82,9 @@ impl EventParser for StreamParser {
                 match delta.delta.r#type.as_str() {
                     "text_delta" => {
                         if let Some(text) = delta.delta.text {
+                            if !text.is_empty() {
+                                self.performance.useful_output();
+                            }
                             self.output
                                 .events
                                 .push_back(InferenceEvent::ContentDelta { text });
@@ -72,6 +94,9 @@ impl EventParser for StreamParser {
                         if let (Some(tool), Some(partial)) =
                             (self.tools.get_mut(&delta.index), delta.delta.partial_json)
                         {
+                            if !partial.is_empty() {
+                                self.performance.useful_output();
+                            }
                             tool.arguments.push_str(&partial);
                         }
                     }
@@ -94,6 +119,16 @@ impl EventParser for StreamParser {
                 let Ok(delta) = serde_json::from_slice::<MessageDelta>(payload) else {
                     return;
                 };
+                if let Some(usage) = delta.usage {
+                    self.performance.tokens(
+                        usage
+                            .get("output_tokens")
+                            .and_then(serde_json::Value::as_u64),
+                        usage
+                            .pointer("/output_tokens_details/thinking_tokens")
+                            .and_then(serde_json::Value::as_u64),
+                    );
+                }
                 if let Some(reason) = delta.delta.stop_reason {
                     match reason.as_str() {
                         "tool_use" => self.finish = Some(InferenceFinishReason::ToolCalls),
@@ -107,6 +142,7 @@ impl EventParser for StreamParser {
             }
             "message_stop" => {
                 if let Some(reason) = self.finish.clone().filter(|_| self.tools.is_empty()) {
+                    self.output.events.push_back(self.performance.event());
                     self.output
                         .events
                         .push_back(InferenceEvent::Finished { reason });

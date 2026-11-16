@@ -15,6 +15,11 @@ Inference is gated by credits, tied to a purchase or grant rather than an identi
 - Users buy non-expiring credit packs via IAP, or receive a direct grant. Either creates a wallet identified by a hash of the transaction, not the person.
 - A request is admitted when the wallet has balance. Credits are debited after completion, based on actual upstream token usage. Roughly 1 credit buys €0.01 of inference at upstream cost. Credit packs are priced at their credit value, plus the store's platform fee and our margin.
 
+## Model health
+
+The relay publishes recent, content-free model health observations at `GET /v1/models/status`.
+Apps can use these observations to choose responsive, available models. Routing decisions stay in the app.
+
 ## Model assets
 
 On-device models (the local LLM and the TTS voices) download from a mirror the

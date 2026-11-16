@@ -10,6 +10,7 @@ impl Adapter {
             .collect();
         let mut body = json!({"model": input.model, "messages": messages, "stream": true});
         if !input.text_only {
+            body["stream_options"] = json!({"include_usage": true});
             if let Some(effort) = &input.reasoning_effort {
                 body["reasoning_effort"] = json!(effort);
             }

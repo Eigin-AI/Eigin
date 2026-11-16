@@ -7,7 +7,9 @@ pub(crate) use parser::{EventParser, ParsedEvents};
 mod buffer;
 mod http_failure;
 mod parser;
+mod performance;
 use crate::http::*;
+pub(crate) use performance::Performance;
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -66,6 +68,7 @@ impl<P: EventParser> InferenceStream<P> {
         }
         self.diagnostics.start(Some(&self.model));
         let request = core.request.take().ok_or(InferenceError::Busy)?;
+        core.parser.start();
         let head = self.http.send(request).await?;
         self.diagnostics.headers(head.status);
         if !(200..300).contains(&head.status) {
@@ -157,6 +160,7 @@ impl<P: EventParser> InferenceStream<P> {
                 match self.http.read().await {
                     Ok(Some(chunk)) => {
                         self.diagnostics.chunk(chunk.len());
+                        core.parser.received_chunk();
                         core.buffer.push(chunk)?;
                     }
                     Ok(None) => {

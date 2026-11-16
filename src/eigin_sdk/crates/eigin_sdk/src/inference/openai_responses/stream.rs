@@ -5,6 +5,8 @@ use crate::inference::streaming::{EventParser, ParsedEvents};
 pub(super) struct StreamParser {
     output: ParsedEvents,
     has_tools: bool,
+    streamed_tools: std::collections::HashSet<Option<String>>,
+    performance: crate::inference::streaming::Performance,
 }
 
 impl StreamParser {
@@ -35,7 +37,24 @@ impl StreamParser {
             }
             "response.output_text.delta" => {
                 if let Some(text) = event.delta.as_deref().filter(|s| !s.is_empty()) {
+                    self.performance.useful_output();
                     self.text(text);
+                }
+            }
+            "response.output_item.added" => {
+                if let Some(item) = event
+                    .item
+                    .filter(|item| item.r#type.as_deref() == Some("function_call"))
+                    && item.name.as_ref().is_some_and(|name| !name.is_empty())
+                {
+                    self.streamed_tools.insert(item.id);
+                    self.performance.useful_output();
+                }
+            }
+            "response.function_call_arguments.delta" => {
+                if event.delta.as_ref().is_some_and(|delta| !delta.is_empty()) {
+                    self.streamed_tools.insert(event.item_id);
+                    self.performance.useful_output();
                 }
             }
             "response.output_item.done" => {
@@ -45,6 +64,14 @@ impl StreamParser {
                 else {
                     return;
                 };
+                if !self.streamed_tools.remove(&item.id)
+                    && [item.name.as_deref(), item.arguments.as_deref()]
+                        .into_iter()
+                        .flatten()
+                        .any(|value| !value.is_empty())
+                {
+                    self.performance.useful_output();
+                }
                 self.has_tools = true;
                 self.output.events.push_back(InferenceEvent::ToolCall {
                     call: InferenceToolCall {
@@ -61,6 +88,17 @@ impl StreamParser {
                 if self.output.refused {
                     self.output.error = Some(InferenceError::PolicyStop);
                 } else {
+                    if let Some(usage) = event.response.and_then(|response| response.usage) {
+                        self.performance.tokens(
+                            usage
+                                .get("output_tokens")
+                                .and_then(serde_json::Value::as_u64),
+                            usage
+                                .pointer("/output_tokens_details/reasoning_tokens")
+                                .and_then(serde_json::Value::as_u64),
+                        );
+                    }
+                    self.output.events.push_back(self.performance.event());
                     self.output.events.push_back(InferenceEvent::Finished {
                         reason: if self.has_tools {
                             InferenceFinishReason::ToolCalls
@@ -115,6 +153,13 @@ impl StreamParser {
 }
 
 impl EventParser for StreamParser {
+    fn start(&mut self) {
+        self.performance.start();
+    }
+    fn received_chunk(&mut self) {
+        self.performance.received_chunk();
+    }
+
     fn output(&self) -> &ParsedEvents {
         &self.output
     }

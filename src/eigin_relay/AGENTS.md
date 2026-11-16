@@ -105,6 +105,7 @@ The search pool is backed by the shared rolling-window quota in Postgres (see Cr
 | `PRODUCTS_CONFIG_PATH` | `config/products.toml` | Path to the IAP product credit tiers TOML. |
 | `TOKEN_RATE_LIMIT_REQUESTS` | `20` | Max inference completions per token per window. |
 | `TOKEN_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window for per-token limiting. |
+| `MODEL_HEALTH_INTERVAL_SECONDS` | `900` | Rolling observation lifetime and idle-probe slots; integer 60–3600. Aggregates refresh every minute. |
 
 Runtime-tunable values (`UPSTREAM_API_KEY`, `UPSTREAM_API_URL`, `APPLE_BUNDLE_ID`) are stored in Scaleway Secret Manager in production — update them there and restart the container. Model catalog and product tiers (`models.toml`, `products.toml`) are deploy-time config — update them in the repo and redeploy.
 

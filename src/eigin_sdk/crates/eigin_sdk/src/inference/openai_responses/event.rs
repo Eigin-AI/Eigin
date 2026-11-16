@@ -6,6 +6,7 @@ pub(super) struct Event {
     pub r#type: Option<String>,
     pub delta: Option<String>,
     pub item: Option<Item>,
+    pub item_id: Option<String>,
     pub response: Option<Response>,
     pub code: Option<String>,
     pub message: Option<String>,
@@ -13,6 +14,7 @@ pub(super) struct Event {
 
 #[derive(Deserialize)]
 pub(super) struct Item {
+    pub id: Option<String>,
     pub r#type: Option<String>,
     pub call_id: Option<String>,
     pub name: Option<String>,
@@ -23,8 +25,7 @@ pub(super) struct Item {
 pub(super) struct Response {
     pub error: Option<ApiError>,
     pub incomplete_details: Option<IncompleteDetails>,
-    #[serde(rename = "usage")]
-    pub _usage: Option<Usage>,
+    pub usage: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -37,10 +38,4 @@ pub(super) struct ApiError {
 #[derive(Deserialize)]
 pub(super) struct IncompleteDetails {
     pub reason: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub(super) struct Usage {
-    #[serde(rename = "totalTokens")]
-    pub _total_tokens: Option<i64>,
 }

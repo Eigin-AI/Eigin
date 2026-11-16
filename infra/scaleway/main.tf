@@ -3,7 +3,8 @@ resource "scaleway_account_project" "eigin" {
 }
 
 module "relay" {
-  source = "./modules/relay"
+  model_health_interval_seconds = var.model_health_interval_seconds
+  source                        = "./modules/relay"
 
   relay_src_dir     = "${path.root}/${var.relay_src_dir}"
   project_name      = var.project_name

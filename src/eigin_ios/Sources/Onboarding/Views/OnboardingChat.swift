@@ -262,6 +262,7 @@ struct OnboardingChat: View {
     /// background assessment, the hero text - so a model the router demoted
     /// stops being used everywhere, not just where it's visible.
     private func routedModel(for request: RouteRequest, fallback: String) async -> String {
+        await Container.shared.relayModelStatusCache().prepare(for: request)
         let route = await modelRouter.resolve(request)
         return route.staysOn(providerID: provider.id) ? route.model : fallback
     }

@@ -69,13 +69,19 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             Container.shared.initiativeService().setActive(phase == .active)
             if phase == .active {
+                refreshRemoteModelHealth()
                 ensureBackgroundSchedule()
                 ensureLocalProvider()
             }
         }
     }
 
+    private func refreshRemoteModelHealth() {
+        Task { await Container.shared.relayModelStatusCache().refreshIfNeeded() }
+    }
+
     private func prepareApp() {
+        refreshRemoteModelHealth()
         Container.shared.initiativeService().setActive(scenePhase == .active)
         ensureBackgroundSchedule()
         ensureEiginProvider()

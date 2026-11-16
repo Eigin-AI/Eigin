@@ -18,6 +18,10 @@ actor DefaultModelRouter: ModelRouter {
     static let assumedOutputReserve = 256
 
     var health = ModelHealthStore()
+    let remoteHealthSource: (any RemoteModelHealthSource)?
+    var remoteHealthByProvider: [UUID: [String: RemoteModelHealth]] = [:]
+    var localHealthRecency: [EvidenceKey: LocalHealthRecency] = [:]
+    var remoteDegradations: [EvidenceKey: SharedDegradation] = [:]
     /// The model each conversation last routed to, so stickiness anchors per
     /// conversation instead of globally on the agent. Cleared on a session reset:
     /// after a long idle the provider's prompt cache is cold, so restarting every
@@ -35,11 +39,13 @@ actor DefaultModelRouter: ModelRouter {
     init(
         reachability: any NetworkReachability,
         localModelReadiness: @escaping @Sendable () -> Bool,
-        now: @escaping @Sendable () -> Date = { Date() }
+        now: @escaping @Sendable () -> Date = { Date() },
+        remoteHealthSource: (any RemoteModelHealthSource)? = nil
     ) {
         self.reachability = reachability
         self.localModelReadiness = localModelReadiness
         self.now = now
+        self.remoteHealthSource = remoteHealthSource
     }
 
     // MARK: - Resolve
@@ -66,6 +72,7 @@ actor DefaultModelRouter: ModelRouter {
         guard request.isAuto, let provider = request.currentProvider else {
             return storingAnchor(sameRoute(for: request), for: request)
         }
+        remoteHealthByProvider[provider.id] = await remoteHealthSource?.health(for: provider) ?? [:]
         if let offline = offlineRoute(for: request, at: timestamp) {
             return storingAnchor(offline, for: request)
         }
@@ -76,6 +83,8 @@ actor DefaultModelRouter: ModelRouter {
             // so every conversation — locked or not — restarts on the fast tier.
             lastModelByConversation.removeAll()
             reasoningConversations.removeAll()
+            localHealthRecency.removeAll()
+            remoteDegradations.removeAll()
         }
         let conversationIsNew = neverRouted(request.conversationID)
         let anchor = conversationAnchor(for: request)
@@ -200,7 +209,7 @@ actor DefaultModelRouter: ModelRouter {
     ) -> ResolvedRoute {
         let steppedUp = needsReasoning
             && KnownModelCatalog.lookup(anchor)?.supportsReasoning == false
-            && health.isHealthy(anchor, now: now())
+            && isHealthy(anchor, provider: provider, at: now())
         let change: RouteChange = steppedUp
             ? .steppedUp(previous: anchor)
             : changeReason(leaving: anchor, provider: provider)
@@ -228,6 +237,7 @@ actor DefaultModelRouter: ModelRouter {
         let needsReasoning = reasoningDemand(for: request, model: request.currentModel)
 
         guard request.isAuto, let provider = request.currentProvider else { return nil }
+        remoteHealthByProvider[provider.id] = await remoteHealthSource?.health(for: provider) ?? [:]
         guard failure.blamesModel else {
             AppLogger.debug(
                 "Not retrying \(public: request.currentModel): failure is not the model's to answer for",
@@ -295,6 +305,7 @@ actor DefaultModelRouter: ModelRouter {
         guard request.isAuto else {
             return meets(request.currentModel, requirements: request.requirements)
         }
+        remoteHealthByProvider[provider.id] = await remoteHealthSource?.health(for: provider) ?? [:]
         return !rankedCandidates(
             for: request, provider: provider, at: now(),
             needsReasoning: false, relaxing: []
@@ -309,7 +320,10 @@ actor DefaultModelRouter: ModelRouter {
         if !provider.availableModels.contains(model) || health.isRetired(model) {
             return .modelRetired(previous: model)
         }
-        return .modelDegraded(previous: model, reason: .errors)
+        return .modelDegraded(
+            previous: model,
+            reason: remoteDegradation(model, provider: provider, at: now()) ?? .errors
+        )
     }
 
     // MARK: - Routes

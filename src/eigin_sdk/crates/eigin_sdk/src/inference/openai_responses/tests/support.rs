@@ -77,7 +77,7 @@ pub(super) fn input() -> InferenceCompletionInput {
 pub(super) fn sse(values: &[Value]) -> String {
     values.iter().map(|v| format!("data: {v}\n\n")).collect()
 }
-pub(super) fn collect(
+pub(super) fn collect_all(
     provider: &OpenAiResponsesProvider,
     input: InferenceCompletionInput,
 ) -> (Vec<InferenceEvent>, Result<(), InferenceError>) {
@@ -98,4 +98,19 @@ pub(super) fn collect(
 }
 pub(super) fn request_body(transport: &ScriptedHttpTransport) -> Value {
     serde_json::from_slice(&transport.requests.lock().unwrap().last().unwrap().body).unwrap()
+}
+
+/// Conversation assertions ignore the separately tested operational event.
+pub(super) fn collect(
+    provider: &OpenAiResponsesProvider,
+    input: InferenceCompletionInput,
+) -> (Vec<InferenceEvent>, Result<(), InferenceError>) {
+    let (events, result) = collect_all(provider, input);
+    (
+        events
+            .into_iter()
+            .filter(|event| !matches!(event, InferenceEvent::Performance { .. }))
+            .collect(),
+        result,
+    )
 }

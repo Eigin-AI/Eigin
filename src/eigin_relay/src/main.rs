@@ -88,7 +88,32 @@ async fn main() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(1);
 
+    let health_interval: u64 = env::var("MODEL_HEALTH_INTERVAL_SECONDS")
+        .unwrap_or_else(|_| "900".into())
+        .parse()
+        .expect("invalid MODEL_HEALTH_INTERVAL_SECONDS");
+    assert!(
+        (60..=3600).contains(&health_interval),
+        "health interval must be 60..3600 seconds"
+    );
+    let health_store: Arc<dyn eigin_relay::model_status::store::StatusStore> = match db_pool {
+        Some(pool) => Arc::new(eigin_relay::model_status::store::PostgresStatusStore(pool)),
+        None => Arc::new(eigin_relay::model_status::store::MemoryStatusStore::default()),
+    };
+    let (model_status, mut health_worker) =
+        eigin_relay::model_status::service::ModelStatusService::start(
+            health_store.clone(),
+            inference
+                .resolved_catalog
+                .canonical_models
+                .keys()
+                .cloned()
+                .collect(),
+            Duration::from_secs(health_interval),
+        );
+
     let state = Arc::new(AppState {
+        model_status,
         search_client: search.client,
         staan_api_key: search.staan_api_key,
         eigin_relay_keys,
@@ -117,18 +142,47 @@ async fn main() {
         presign_expiry: assets.presign_expiry,
     });
 
-    let app = build_router(state);
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    let probe_worker = tokio::spawn(eigin_relay::model_status::probes::run(
+        state.clone(),
+        health_store,
+        Duration::from_secs(health_interval),
+        shutdown_rx,
+    ));
+    let app = build_router(state.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!(%addr, "starting eigin-relay");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let signal_tx = shutdown_tx.clone();
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(async move {
+        #[cfg(unix)]
+        {
+            let mut term =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                    .expect("SIGTERM handler");
+            tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = term.recv() => {} }
+        }
+        #[cfg(not(unix))]
+        let _ = tokio::signal::ctrl_c().await;
+        let _ = signal_tx.send(true);
+    })
     .await
     .unwrap();
+    let _ = shutdown_tx.send(true);
+    let _ = probe_worker.await;
+    drop(state);
+    if tokio::time::timeout(Duration::from_secs(5), &mut health_worker)
+        .await
+        .is_err()
+    {
+        health_worker.abort();
+    }
 }
 
 // ── Configuration helpers ─────────────────────────────────────────────────────

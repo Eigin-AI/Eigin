@@ -12,6 +12,7 @@ pub mod docs;
 mod error;
 mod health;
 pub mod inference;
+pub mod model_status;
 pub mod quota;
 mod rate_limit;
 mod router;

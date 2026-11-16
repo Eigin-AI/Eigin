@@ -1,6 +1,7 @@
 use crate::inference::streaming::{EventParser, ParsedEvents};
 use serde_json::Value;
 mod finish;
+mod performance;
 mod tool_calls;
 mod wire;
 
@@ -17,6 +18,8 @@ pub(super) struct StreamParser {
     metadata: HashMap<String, String>,
     reasoning: Option<ReasoningCapture>,
     bytes_seen: usize,
+    performance: crate::inference::streaming::Performance,
+    finish_reason: Option<String>,
 }
 
 impl StreamParser {
@@ -36,6 +39,8 @@ impl StreamParser {
             metadata: HashMap::new(),
             reasoning,
             bytes_seen: 0,
+            performance: Default::default(),
+            finish_reason: None,
         }
     }
 
@@ -58,6 +63,7 @@ impl StreamParser {
             });
             return;
         }
+        self.observe_performance(payload);
         if let Err(error) = self.chunk(payload) {
             self.output.error = Some(if self.output.refused {
                 InferenceError::PolicyStop
@@ -69,8 +75,7 @@ impl StreamParser {
 
     fn chunk(&mut self, payload: &[u8]) -> Result<(), InferenceError> {
         let decoded = serde_json::from_slice::<CompletionChunk>(payload);
-        if (decoded.is_err() || self.text_only)
-            && let Ok(value) = serde_json::from_slice::<Value>(payload)
+        if let Ok(value) = serde_json::from_slice::<Value>(payload)
             && let (Some(message), Some(_)) = (
                 value["error"]["message"].as_str(),
                 value["error"]["type"].as_str(),
@@ -136,7 +141,7 @@ impl StreamParser {
             }
         }
         if let Some(reason) = &choice.finish_reason {
-            self.finish(reason)?;
+            self.finish_reason = Some(reason.clone());
         }
         Ok(())
     }
@@ -147,6 +152,10 @@ impl StreamParser {
         }
         if self.text_only {
             self.output.done = true;
+        } else if let Some(reason) = self.finish_reason.take() {
+            if let Err(error) = self.finish(&reason) {
+                self.output.error = Some(error);
+            }
         } else {
             self.output.error = Some(if self.output.refused {
                 InferenceError::PolicyStop
@@ -158,6 +167,12 @@ impl StreamParser {
 }
 
 impl EventParser for StreamParser {
+    fn start(&mut self) {
+        self.performance.start();
+    }
+    fn received_chunk(&mut self) {
+        self.performance.received_chunk();
+    }
     fn output(&self) -> &ParsedEvents {
         &self.output
     }

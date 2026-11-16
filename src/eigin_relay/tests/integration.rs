@@ -94,6 +94,7 @@ async fn test_state_with_keys(
     use eigin_relay::quota::InMemoryQuota;
 
     Arc::new(eigin_relay::AppState {
+        model_status: Default::default(),
         search_client: Arc::new(client),
         staan_api_key: "test-api-key".to_string(),
         eigin_relay_keys,
@@ -359,6 +360,7 @@ async fn test_state_with_ip_limit(
     use eigin_relay::quota::InMemoryQuota;
 
     Arc::new(eigin_relay::AppState {
+        model_status: Default::default(),
         search_client: Arc::new(client),
         staan_api_key: "test-api-key".to_string(),
         eigin_relay_keys: vec!["test-relay-key".to_string()],

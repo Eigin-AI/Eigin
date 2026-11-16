@@ -135,4 +135,18 @@ struct RelayClientTests {
             _ = try await makeClient().asset(id: "unknown")
         }
     }
+
+    @Test func modelStatusToleratesMissingAndInvalidMeasurements() async throws {
+        FakeURLProtocol.stubResponse(
+            for: "https://relay.test/v1/models/status",
+            data: Data(
+                #"{"generated_at":"2026-11-16T00:00:00Z","models":[{"id":"unknown"},{"id":"broken","traffic":{"sampled_at":"invalid"}},{"unexpected":true}]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        let status = try await makeClient().modelStatus()
+        #expect(status.models.map(\.id) == ["unknown", "broken"])
+        #expect(status.models.allSatisfy { $0.traffic == nil && $0.probes == nil })
+    }
 }

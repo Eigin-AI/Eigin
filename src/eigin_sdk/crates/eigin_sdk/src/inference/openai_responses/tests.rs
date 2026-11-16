@@ -1,6 +1,7 @@
 use super::super::types::*;
 use futures::executor::block_on;
 use serde_json::json;
+mod performance;
 mod support;
 use support::*;
 

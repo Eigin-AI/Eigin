@@ -27,6 +27,7 @@ enum AgentAutoRouting {
                   agent: agent, provider: provider, requirements: RouteRequirements()
               )
         else { return }
+        await Container.shared.relayModelStatusCache().prepare(for: request)
         let route = await Container.shared.modelRouter().resolve(request)
         // Persist only routes that stay on the user's provider; an offline detour is
         // transient and must not overwrite the chosen model, matching applyRoute.

@@ -155,3 +155,13 @@ variable "presign_expiry_seconds" {
   type        = number
   default     = 86400
 }
+
+variable "model_health_interval_seconds" {
+  description = "Rolling observation lifetime and idle-probe slot interval."
+  type        = number
+  default     = 900
+  validation {
+    condition     = var.model_health_interval_seconds >= 60 && var.model_health_interval_seconds <= 3600 && floor(var.model_health_interval_seconds) == var.model_health_interval_seconds
+    error_message = "Model health interval must be an integer from 60 through 3600."
+  }
+}

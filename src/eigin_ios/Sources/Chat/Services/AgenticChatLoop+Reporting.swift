@@ -41,34 +41,26 @@ extension AgenticChatLoop {
     }
 
     /// Reports one stream's outcome to the router, with the turn's timing.
-    ///
-    /// Throughput is estimated from the prose actually streamed, at the usual four
-    /// characters per token. Tool-call arguments are excluded, so a tool-heavy round
-    /// under-reports rather than inventing precision the stream cannot give us.
     func reportAttempt(
         provider: Provider,
         start: ContinuousClock.Instant,
         firstTokenAt: ContinuousClock.Instant?,
-        result: AttemptOutcome.Result
+        result: AttemptOutcome.Result,
+        performance: InferencePerformance? = nil
     ) async {
         logTurnTiming(
             prep: turnSentAt.map { $0.duration(to: start) },
-            modelTTFT: firstTokenAt.map { start.duration(to: $0) },
+            modelTTFT: performance?.timeToFirstToken ?? firstTokenAt.map { start.duration(to: $0) },
             result: result
         )
         let duration = start.duration(to: .now)
-        let tokensPerSecond: Double? = {
-            guard let firstTokenAt, contentBuffer.count >= 40 else { return nil }
-            let generating = firstTokenAt.duration(to: .now).seconds
-            guard generating > 0 else { return nil }
-            return (Double(contentBuffer.count) / 4) / generating
-        }()
         await modelRouter.record(
             AttemptOutcome(
                 providerID: provider.id,
                 model: activeModel,
-                timeToFirstToken: firstTokenAt.map { start.duration(to: $0) },
-                tokensPerSecond: tokensPerSecond,
+                timeToFirstToken: performance?.timeToFirstToken ?? firstTokenAt
+                    .map { start.duration(to: $0) },
+                tokensPerSecond: performance?.tokensPerSecond,
                 duration: duration,
                 result: result
             )

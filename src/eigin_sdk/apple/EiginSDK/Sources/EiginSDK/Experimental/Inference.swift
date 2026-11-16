@@ -16,6 +16,7 @@ public extension EiginSDK.Experimental {
         public typealias ModelFamily = InferenceModelFamily
         public typealias ReasoningOrigin = InferenceReasoningOrigin
         public typealias ReasoningHistory = InferenceReasoningHistory
+        public typealias Performance = InferencePerformance
         public typealias Event = InferenceEvent
         public typealias Failure = InferenceError
 
@@ -97,5 +98,13 @@ public extension EiginSDK.Experimental {
         public static func isModelNotFound(status: UInt16, body: String?) -> Bool {
             inferenceModelNotFound(status: status, body: body)
         }
+    }
+}
+
+/// Native duration access for the SDK's portable millisecond measurement.
+public extension InferencePerformance {
+    /// Time to first useful output as a native duration.
+    var timeToFirstToken: Duration? {
+        timeToFirstTokenMs.map { .milliseconds($0) }
     }
 }

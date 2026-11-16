@@ -162,11 +162,16 @@ extension Container {
         self { DefaultNetworkReachability() }.singleton
     }
 
+    var relayModelStatusCache: Factory<any RelayModelStatusSource> {
+        self { DefaultRelayModelStatusCache(client: self.relayClient()) }.singleton
+    }
+
     var modelRouter: Factory<any ModelRouter> {
         self {
             DefaultModelRouter(
                 reachability: self.networkReachability(),
-                localModelReadiness: { GemmaModelStore.isDownloaded }
+                localModelReadiness: { GemmaModelStore.isDownloaded },
+                remoteHealthSource: self.relayModelStatusCache()
             )
         }.singleton
     }

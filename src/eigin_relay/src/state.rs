@@ -68,6 +68,9 @@ pub struct AppState {
     /// Trailing window over which the sandbox issuance budget is measured.
     pub sandbox_budget_window: Duration,
 
+    /// Cached shared model observations and nonblocking recorder.
+    pub model_status: crate::model_status::service::ModelStatusService,
+
     // --- Inference ---
     /// Map of provider ID -> upstream client.
     pub provider_clients: HashMap<String, Arc<dyn UpstreamClient>>,

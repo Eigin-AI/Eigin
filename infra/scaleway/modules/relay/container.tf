@@ -21,6 +21,7 @@ resource "scaleway_container" "relay" {
   http_option = "redirected"
 
   environment_variables = {
+    MODEL_HEALTH_INTERVAL_SECONDS     = tostring(var.model_health_interval_seconds)
     SEARCH_API_URL                    = "https://api.staan.ai/v2"
     MONTHLY_POOL_SIZE                 = tostring(var.monthly_pool_size)
     APPLE_ENVIRONMENTS                = join(",", var.apple_environments)

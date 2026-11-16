@@ -41,3 +41,9 @@ test("diagnostic delivery follows filtering, replacement, and clear", async ({
     window.contracts.diagnostics.filteringReplacementAndClearControlDelivery(),
   );
 });
+
+test("performance events preserve optional measurements", async ({ page }) => {
+  await page.evaluate(() =>
+    window.contracts.performanceEventsPreserveOptionalMeasurements(),
+  );
+});

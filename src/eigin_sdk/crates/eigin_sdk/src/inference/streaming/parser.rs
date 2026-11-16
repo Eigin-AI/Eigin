@@ -10,6 +10,8 @@ pub(crate) struct ParsedEvents {
 }
 
 pub(crate) trait EventParser: Send {
+    fn start(&mut self) {}
+    fn received_chunk(&mut self) {}
     fn output(&self) -> &ParsedEvents;
     fn output_mut(&mut self) -> &mut ParsedEvents;
     fn line(&mut self, line: &[u8]);

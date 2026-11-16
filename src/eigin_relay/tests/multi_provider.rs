@@ -137,6 +137,7 @@ async fn make_state_with_providers() -> Arc<eigin_relay::AppState> {
     product_credits.insert("ai.eigin.credits.500".into(), 500_000i64);
 
     Arc::new(eigin_relay::AppState {
+        model_status: Default::default(),
         search_client: Arc::new(NoopSearch),
         staan_api_key: String::new(),
         eigin_relay_keys: vec!["relay-key".into()],
@@ -451,4 +452,248 @@ async fn native_thinking_sse_passes_through_unchanged() {
     assert_eq!(status, StatusCode::OK);
     assert!(body.starts_with("data: {\"choices\":[{\"delta\":{\"content\":[{\"type\":\"thinking\",\"thinking\":[{\"type\":\"text\",\"text\":\"private trace\"}]}]}}]}\n\n"));
     assert!(body.ends_with("data: [DONE]\n\n"));
+}
+
+#[tokio::test]
+async fn model_status_is_key_gated_without_wallet_authentication() {
+    let mut state = make_state_with_providers().await;
+    let store = Arc::new(eigin_relay::model_status::store::MemoryStatusStore::default());
+    let (service, worker) = eigin_relay::model_status::service::ModelStatusService::start(
+        store,
+        vec!["model-a".into()],
+        Duration::from_secs(900),
+    );
+    Arc::get_mut(&mut state).unwrap().model_status = service;
+    let app = router(state);
+    for (key, expected) in [
+        ("wrong", StatusCode::UNAUTHORIZED),
+        ("relay-key", StatusCode::OK),
+    ] {
+        let req = Request::builder()
+            .uri("/v1/models/status")
+            .header("x-eigin-key", key)
+            .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                [127, 0, 0, 1],
+                0,
+            ))))
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let response = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(response.status(), expected);
+        if expected == StatusCode::OK {
+            let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+            let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(json["models"][0]["id"], "model-a");
+            assert!(json["models"][0]["traffic"].is_null());
+        }
+    }
+    drop(app);
+    worker.await.unwrap();
+}
+
+#[tokio::test]
+async fn passive_observation_uses_canonical_model_without_buffered_timing() {
+    use eigin_relay::model_status::store::StatusStore;
+    let mut state = make_state_with_providers().await;
+    let store = Arc::new(eigin_relay::model_status::store::MemoryStatusStore::default());
+    let (service, worker) = eigin_relay::model_status::service::ModelStatusService::start(
+        store.clone(),
+        vec!["model-b".into()],
+        Duration::from_secs(900),
+    );
+    Arc::get_mut(&mut state).unwrap().model_status = service;
+    let app = router(state);
+    let token = redeem(&app).await;
+    assert_eq!(chat(&app, &token, "model-b-alias").await.0, StatusCode::OK);
+    drop(app);
+    worker.await.unwrap();
+    let observations = store.observations(0).await.unwrap();
+    assert_eq!(observations.len(), 1);
+    assert_eq!(observations[0].model_id, "model-b");
+    assert_eq!(
+        observations[0].outcome,
+        eigin_relay::model_status::Outcome::Success
+    );
+    assert!(observations[0].ttft_ms.is_none());
+    assert!(observations[0].tps.is_none());
+}
+
+struct ErroredStream;
+
+#[async_trait::async_trait]
+impl UpstreamClient for ErroredStream {
+    async fn chat_completions(&self, _: Bytes, _: &str) -> Result<UpstreamResponse, AppError> {
+        Ok(UpstreamResponse::Stream(Box::new(futures::stream::iter([
+            Err(AppError::Upstream("stream transport failed".into())),
+        ]))))
+    }
+}
+
+#[tokio::test]
+async fn consuming_an_upstream_stream_error_still_records_the_failure() {
+    use eigin_relay::model_status::store::StatusStore;
+    let mut state = make_state_with_providers().await;
+    let store = Arc::new(eigin_relay::model_status::store::MemoryStatusStore::default());
+    let (service, worker) = eigin_relay::model_status::service::ModelStatusService::start(
+        store.clone(),
+        vec!["model-a".into()],
+        Duration::from_secs(900),
+    );
+    let mutable = Arc::get_mut(&mut state).unwrap();
+    mutable.model_status = service;
+    mutable
+        .provider_clients
+        .insert("provider_a".into(), Arc::new(ErroredStream));
+    let app = router(state);
+    let token = redeem(&app).await;
+    let request = Request::builder().method("POST").uri("/v1/chat/completions")
+        .header("x-eigin-key", "relay-key").header("Authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from(([127,0,0,1],0))))
+        .body(axum::body::Body::from(serde_json::json!({"model":"model-a", "stream":true,"messages":[{"role":"user","content":"hi"}]}).to_string())).unwrap();
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert!(to_bytes(response.into_body(), 4096).await.is_err());
+    drop(app);
+    worker.await.unwrap();
+    let samples = store.observations(0).await.unwrap();
+    assert_eq!(samples.len(), 1);
+    assert_eq!(
+        samples[0].outcome,
+        eigin_relay::model_status::Outcome::UpstreamFailure
+    );
+}
+
+struct ProbeCheckingUpstream(std::sync::atomic::AtomicUsize);
+
+#[async_trait::async_trait]
+impl UpstreamClient for ProbeCheckingUpstream {
+    async fn chat_completions(&self, body: Bytes, _: &str) -> Result<UpstreamResponse, AppError> {
+        use std::sync::atomic::Ordering;
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert!((1..=1024).contains(&json["max_tokens"].as_u64().unwrap()));
+        assert_eq!(json["stream"], true);
+        assert_eq!(json["stream_options"]["include_usage"], true);
+        self.0.fetch_add(1, Ordering::SeqCst);
+        Ok(UpstreamResponse::Buffer(Bytes::from_static(
+            br#"{"choices":[{"message":{"content":"one two three four"}}]}"#,
+        )))
+    }
+}
+
+#[tokio::test]
+async fn replicas_share_probe_slots_without_wallet_billing() {
+    use eigin_relay::model_status::store::StatusStore;
+    let mut state = make_state_with_providers().await;
+    let store = Arc::new(eigin_relay::model_status::store::MemoryStatusStore::default());
+    let upstream = Arc::new(ProbeCheckingUpstream(std::sync::atomic::AtomicUsize::new(
+        0,
+    )));
+    let (service, writer) = eigin_relay::model_status::service::ModelStatusService::start(
+        store.clone(),
+        vec!["model-a".into()],
+        Duration::from_secs(900),
+    );
+    let mutable = Arc::get_mut(&mut state).unwrap();
+    mutable.model_status = service;
+    mutable.canonical_models.retain(|id, _| id == "model-a");
+    mutable
+        .provider_clients
+        .insert("provider_a".into(), upstream.clone());
+    let (stop, receiver) = tokio::sync::watch::channel(false);
+    let first = tokio::spawn(eigin_relay::model_status::probes::run(
+        state.clone(),
+        store.clone(),
+        Duration::from_secs(900),
+        receiver.clone(),
+    ));
+    let second = tokio::spawn(eigin_relay::model_status::probes::run(
+        state.clone(),
+        store.clone(),
+        Duration::from_secs(900),
+        receiver,
+    ));
+    tokio::time::timeout(Duration::from_secs(3), async {
+        loop {
+            if !store.observations(0).await.unwrap().is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    stop.send(true).unwrap();
+    first.await.unwrap();
+    second.await.unwrap();
+    drop(state);
+    writer.await.unwrap();
+    assert_eq!(upstream.0.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let samples = store.observations(0).await.unwrap();
+    assert_eq!(samples.len(), 1);
+    assert_eq!(samples[0].source, eigin_relay::model_status::Source::Probe);
+    assert_eq!(
+        samples[0].outcome,
+        eigin_relay::model_status::Outcome::Success
+    );
+    assert!(samples[0].ttft_ms.is_none());
+}
+
+struct RejectedUpstream(u16);
+
+#[async_trait::async_trait]
+impl UpstreamClient for RejectedUpstream {
+    async fn chat_completions(&self, _: Bytes, _: &str) -> Result<UpstreamResponse, AppError> {
+        Err(AppError::UpstreamStatus(self.0))
+    }
+}
+
+#[tokio::test]
+async fn shared_health_distinguishes_provider_availability_from_bad_requests() {
+    use eigin_relay::model_status::{
+        Outcome,
+        service::ModelStatusService,
+        store::{MemoryStatusStore, StatusStore},
+    };
+    for (code, expected) in [
+        (400, None),
+        (422, None),
+        (401, Some(Outcome::UpstreamFailure)),
+        (402, Some(Outcome::UpstreamFailure)),
+        (403, Some(Outcome::UpstreamFailure)),
+        (404, Some(Outcome::UpstreamFailure)),
+        (429, Some(Outcome::Overloaded)),
+        (503, Some(Outcome::UpstreamFailure)),
+    ] {
+        let mut state = make_state_with_providers().await;
+        let store = Arc::new(MemoryStatusStore::default());
+        let (service, writer) = ModelStatusService::start(
+            store.clone(),
+            vec!["model-a".into()],
+            Duration::from_secs(900),
+        );
+        let mutable = Arc::get_mut(&mut state).unwrap();
+        mutable.model_status = service;
+        mutable
+            .provider_clients
+            .insert("provider_a".into(), Arc::new(RejectedUpstream(code)));
+        let app = router(state);
+        let token = redeem(&app).await;
+        assert_eq!(
+            chat(&app, &token, "model-a").await.0,
+            StatusCode::BAD_GATEWAY
+        );
+        drop(app);
+        writer.await.unwrap();
+        let samples = store.observations(0).await.unwrap();
+        assert_eq!(
+            samples.first().map(|sample| sample.outcome),
+            expected,
+            "status {code}"
+        );
+        assert!(
+            samples
+                .iter()
+                .all(|sample| sample.ttft_ms.is_none() && sample.tps.is_none())
+        );
+    }
 }
