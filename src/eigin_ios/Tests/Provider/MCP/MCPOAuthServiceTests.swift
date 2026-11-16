@@ -124,6 +124,140 @@ struct MCPOAuthServiceTests {
             .redirectURI == config.callback.redirectURI)
     }
 
+    @Test(arguments: [true, false])
+    func notionCancellationAndDenialDoNotStoreTokens(cancelled: Bool) async throws {
+        let service = DefaultMCPOAuthService(
+            keychainService: FakeKeychainService(), urlSession: FakeURLProtocol.fakeSession(),
+            presentAuthSession: { authorizationURL, _ in
+                if cancelled { throw PKCEUtilities.AuthSessionError.userCancelled }
+                let items = try #require(URLComponents(
+                    url: authorizationURL,
+                    resolvingAgainstBaseURL: false
+                )?.queryItems)
+                let state = try #require(items.first { $0.name == "state" }?.value)
+                var callback = URLComponents(string: "ai.eigin://oauth/callback")!
+                callback.queryItems = [
+                    URLQueryItem(name: "error", value: "access_denied"),
+                    URLQueryItem(name: "state", value: state),
+                ]
+                return try #require(callback.url)
+            }
+        )
+        let config = try OAuthConfiguration(
+            resourceURL: MCPPreset.notion.endpoint,
+            authorizationEndpoint: #require(URL(string: "https://mcp.notion.com/authorize")),
+            tokenEndpoint: #require(URL(string: "https://mcp.notion.com/token")),
+            clientID: "notion-client", clientSecret: nil, scopes: ["default"]
+        )
+        let serverID = UUID()
+        do {
+            _ = try await service.authorize(config: config, serverID: serverID)
+            Issue.record("Expected authorization to fail")
+        } catch let error as MCPOAuthError {
+            switch error {
+            case .userCancelled: #expect(cancelled)
+            case .authorizationFailed(let reason):
+                #expect(!cancelled)
+                #expect(reason.contains("access_denied"))
+            default: Issue.record("Unexpected error: \(error)")
+            }
+        }
+        #expect(try await service.validToken(for: serverID) == nil)
+    }
+
+    @Test func notionAuthorizesAndRefreshesWithAppCallback() async throws {
+        let endpoint = MCPPreset.notion.endpoint.absoluteString
+        let metadataURL = "https://mcp.notion.com/.well-known/oauth-protected-resource/mcp"
+        let tokenURL = "https://mcp.notion.com/token"
+        let registerURL = "https://mcp.notion.com/register"
+        FakeURLProtocol.stubResponse(
+            for: endpoint, data: Data(), statusCode: 401,
+            headers: ["WWW-Authenticate": "Bearer resource_metadata=\"\(metadataURL)\""]
+        )
+        FakeURLProtocol.stubResponse(
+            for: metadataURL,
+            data: Data(
+                #"{"resource":"https://mcp.notion.com/mcp","authorization_servers":["https://mcp.notion.com"]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "https://mcp.notion.com/.well-known/oauth-authorization-server",
+            data: Data(
+                #"{"issuer":"https://mcp.notion.com","authorization_endpoint":"https://mcp.notion.com/authorize","token_endpoint":"https://mcp.notion.com/token","registration_endpoint":"https://mcp.notion.com/register","code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: registerURL, data: Data(#"{"client_id":"notion-client"}"#.utf8), statusCode: 201
+        )
+        FakeURLProtocol.stubResponse(
+            for: tokenURL,
+            data: Data(
+                #"{"access_token":"notion-token","refresh_token":"notion-refresh","token_type":"Bearer","expires_in":0}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        let service = DefaultMCPOAuthService(
+            keychainService: FakeKeychainService(), urlSession: FakeURLProtocol.fakeSession(),
+            presentAuthSession: { authorizationURL, scheme in
+                let items = try #require(URLComponents(
+                    url: authorizationURL,
+                    resolvingAgainstBaseURL: false
+                )?.queryItems)
+                #expect(scheme == "ai.eigin")
+                #expect(items.first { $0.name == "redirect_uri" }?
+                    .value == "ai.eigin://oauth/callback")
+                #expect(items.first { $0.name == "resource" }?
+                    .value == "https://mcp.notion.com/mcp")
+                #expect(items.first { $0.name == "code_challenge_method" }?.value == "S256")
+                #expect(items.first { $0.name == "code_challenge" }?.value?.isEmpty == false)
+                let state = try #require(items.first { $0.name == "state" }?.value)
+                var callback = URLComponents(string: "ai.eigin://oauth/callback")!
+                callback.queryItems = [
+                    URLQueryItem(name: "code", value: "notion-code"),
+                    URLQueryItem(name: "state", value: state),
+                ]
+                return try #require(callback.url)
+            }
+        )
+        let config = try #require(try await service.discoverOAuth(for: MCPPreset.notion.endpoint))
+        let registrationBody = try #require(FakeURLProtocol.lastRequestBody(for: registerURL))
+        let registration = try #require(try JSONSerialization
+            .jsonObject(with: registrationBody) as? [String: Any])
+        #expect(registration["redirect_uris"] as? [String] == ["ai.eigin://oauth/callback"])
+        #expect(registration["token_endpoint_auth_method"] as? String == "none")
+        #expect(config.clientSecret == nil)
+        let serverID = UUID()
+        #expect(try await service.authorize(config: config, serverID: serverID) == "notion-token")
+        let exchangeBody = try #require(FakeURLProtocol.lastRequestBody(for: tokenURL))
+        var exchange = URLComponents()
+        exchange.percentEncodedQuery = try #require(String(data: exchangeBody, encoding: .utf8))
+        #expect(exchange.queryItems?.first { $0.name == "redirect_uri" }?
+            .value == "ai.eigin://oauth/callback")
+        #expect(exchange.queryItems?.first { $0.name == "resource" }?.value == endpoint)
+        #expect(exchange.queryItems?.first { $0.name == "code_verifier" }?.value?.isEmpty == false)
+
+        FakeURLProtocol.stubResponse(
+            for: tokenURL,
+            data: Data(
+                #"{"access_token":"refreshed-notion-token","refresh_token":"rotated-notion-refresh","token_type":"Bearer","expires_in":3600}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        #expect(try await service.validToken(for: serverID) == "refreshed-notion-token")
+        let refreshBody = try #require(FakeURLProtocol.lastRequestBody(for: tokenURL))
+        var refresh = URLComponents()
+        refresh.percentEncodedQuery = try #require(String(data: refreshBody, encoding: .utf8))
+        #expect(refresh.queryItems?.first { $0.name == "resource" }?.value == endpoint)
+        #expect(refresh.queryItems?.first { $0.name == "grant_type" }?.value == "refresh_token")
+        #expect(refresh.queryItems?.first { $0.name == "refresh_token" }?.value == "notion-refresh")
+    }
+
     @Test(arguments: [
         "https://mcp.dinero.dk", "https://mcp.example.com/mcp",
         "https://mcp.basecamp.com.evil.example/mcp", "http://mcp.basecamp.com/mcp",

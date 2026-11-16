@@ -47,7 +47,17 @@ struct MCPPreset: Identifiable, Sendable {
         localizedDescription: { Localized.Integrations.Basecamp.description },
         localizedConnectionDescription: { Localized.Integrations.Basecamp.connectionDescription }
     )
-    static let all = [dinero, basecamp]
+    static let notion = MCPPreset(
+        id: "notion", displayName: "Notion",
+        endpoint: URL(string: "https://mcp.notion.com/mcp")!,
+        category: .work, brandImage: Iconography.Service.notion,
+        instructions: Prompt.Skills.Notion.instruction,
+        searchDescriptor: "Notion workspace knowledge: search, read, create and update notes, pages, documents, databases and wikis.",
+        oauthCallback: .app,
+        localizedDescription: { Localized.Integrations.Notion.description },
+        localizedConnectionDescription: { Localized.Integrations.Notion.connectionDescription }
+    )
+    static let all = [dinero, basecamp, notion]
 
     /// Looks up a bundled preset by its stable skill identifier.
     static func forSkillID(_ skillID: String) -> MCPPreset? {
