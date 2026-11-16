@@ -245,7 +245,10 @@ extension AnthropicClientTests {
         for try await event in stream {
             events.append(event)
         }
-        #expect(events == [.finished(.stop)])
+        #expect(events == [
+            .performance(.init(timeToFirstToken: nil, tokensPerSecond: nil)),
+            .finished(.stop),
+        ])
         let data = try #require(FakeURLProtocol.lastRequestBody(for: url))
         let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(body["cache_control"] as? [String: String] == ["type": "ephemeral"])
@@ -295,6 +298,12 @@ extension AnthropicClientTests {
         for try await event in stream {
             events.append(event)
         }
+        guard case .performance(let measurement)? = events.dropLast().last else {
+            Issue.record("Missing typed performance event")
+            return
+        }
+        #expect(measurement.timeToFirstToken != nil)
+        #expect(measurement.tokensPerSecond == nil)
         #expect(events == [
             .contentDelta("hello"),
             .toolCall(.init(
@@ -302,6 +311,7 @@ extension AnthropicClientTests {
                 type: "function",
                 function: .init(name: "weather", arguments: "{}")
             )),
+            .performance(measurement),
             .finished(.toolCalls),
         ])
     }

@@ -40,6 +40,7 @@ impl StreamParser {
                 }
             }
         }
+        self.output.events.push_back(self.performance.event());
         self.output
             .events
             .push_back(InferenceEvent::Finished { reason: finish });

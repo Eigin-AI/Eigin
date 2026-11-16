@@ -90,7 +90,7 @@ fn interleaved_and_indexless_tools_are_assembled_and_sorted() {
             matches!(&events[2], InferenceEvent::ToolCall { call } if call.id == "call_2" && call.arguments == r#"{"emoji":"🧠"}"#)
         );
         assert_eq!(
-            events[3],
+            *events.last().unwrap(),
             InferenceEvent::Finished {
                 reason: InferenceFinishReason::ToolCalls
             }
@@ -189,11 +189,16 @@ fn standard_stop_does_not_emit_pending_tools_and_operations_do_not_share_state()
         input.model_family = Some(InferenceModelFamily::Anthropic);
         let (events, result) = collect(&provider, input);
         result.unwrap();
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, InferenceEvent::ToolCall { .. }))
+        );
         assert_eq!(
-            events,
-            vec![InferenceEvent::Finished {
+            events.last(),
+            Some(&InferenceEvent::Finished {
                 reason: InferenceFinishReason::Stop
-            }]
+            })
         );
     }
 }
@@ -220,4 +225,93 @@ fn http_failures_remain_failed_across_open_and_next() {
             ));
         });
     }
+}
+
+#[test]
+fn performance_uses_useful_output_and_late_reasoning_split_usage() {
+    for delta in [
+        json!({"content":[{"type":"text","text":"answer"}]}),
+        json!({"tool_calls":[{"index":0,"id":"call_1","function":{"name":"lookup","arguments":"{}"}}]}),
+    ] {
+        let body = sse(&[
+            chunk(
+                json!({"content":[{"type":"thinking","thinking":[{"type":"text","text":"private"}]}]}),
+                None,
+            ),
+            chunk(delta.clone(), None),
+            chunk(delta, Some("stop")),
+            json!({"usage":{"completion_tokens":108,"completion_tokens_details":{"reasoning_tokens":100}}}),
+        ]) + "data: [DONE]\n\n";
+        let (provider, transport) = provider("https://api.mistral.ai/v1", 200, body);
+        let (events, result) = collect(&provider, input());
+        result.unwrap();
+        assert_eq!(
+            request_body(&transport)["stream_options"]["include_usage"],
+            true
+        );
+        let metrics = events
+            .iter()
+            .find_map(|event| match event {
+                InferenceEvent::Performance { measurement } => Some(measurement),
+                _ => None,
+            })
+            .unwrap();
+        assert!(metrics.time_to_first_token_ms.unwrap() > 0.0);
+        assert!(metrics.tokens_per_second.unwrap() > 0.0);
+        assert!(!format!("{metrics:?}").contains("private"));
+        assert!(matches!(
+            events.last(),
+            Some(InferenceEvent::Finished { .. })
+        ));
+    }
+}
+
+#[test]
+fn reasoning_only_and_missing_usage_do_not_invent_performance() {
+    for delta in [
+        json!({"reasoning_content":"thinking"}),
+        json!({"content":"answer"}),
+    ] {
+        let reasoning_only = delta.get("reasoning_content").is_some();
+        let (provider, _) = provider(
+            "https://example.test/v1",
+            200,
+            sse(&[chunk(delta, Some("stop"))]),
+        );
+        let (events, result) = collect(&provider, input());
+        result.unwrap();
+        let metrics = events
+            .iter()
+            .find_map(|event| match event {
+                InferenceEvent::Performance { measurement } => Some(measurement),
+                _ => None,
+            })
+            .unwrap();
+        assert!(metrics.tokens_per_second.is_none());
+        assert_eq!(metrics.time_to_first_token_ms.is_some(), !reasoning_only);
+    }
+}
+
+#[test]
+fn coalesced_output_omits_throughput_even_with_reliable_token_counts() {
+    let body = sse(&[
+        chunk(json!({"content":"hello"}), None),
+        chunk(json!({"content":" world"}), Some("stop")),
+        json!({"usage":{"completion_tokens":108,"completion_tokens_details":{"reasoning_tokens":100}}}),
+    ]) + "data: [DONE]\n\n";
+    let (provider, transport) = provider("https://example.test/v1", 200, &body);
+    transport
+        .chunk_size
+        .store(body.len(), std::sync::atomic::Ordering::Relaxed);
+    let (events, result) = collect(&provider, input());
+    result.unwrap();
+    let measurement = events
+        .iter()
+        .find_map(|event| match event {
+            InferenceEvent::Performance { measurement } => Some(measurement),
+            _ => None,
+        })
+        .unwrap();
+    assert!(measurement.time_to_first_token_ms.is_some());
+    assert!(measurement.tokens_per_second.is_none());
 }

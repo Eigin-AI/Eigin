@@ -3,3 +3,4 @@
 mod diagnostics;
 mod initialization;
 mod pending_operation;
+mod performance;

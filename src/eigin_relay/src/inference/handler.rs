@@ -14,7 +14,11 @@
 //! 6. After the stream completes, settle by applying `actual − reserved` (charge the
 //!    overrun, refund the surplus). A failed forward refunds the reservation in full.
 
+use crate::model_status::{
+    Observation, Outcome, Source, measurement::StreamMeasurement, store::now_ms,
+};
 use std::sync::Arc;
+use std::time::Instant;
 
 use axum::body::Body;
 use axum::extract::State;
@@ -72,9 +76,30 @@ pub async fn handle(
 
     // Forward to upstream. A failure here sends nothing to the client, so the
     // reservation is refunded in full — we never charge for an unserved request.
+    let started = Instant::now();
     let upstream_response = match client.chat_completions(forwarded_body, api_key).await {
         Ok(resp) => resp,
         Err(e) => {
+            let outcome = match &e {
+                AppError::UpstreamStatus(429) => Some(Outcome::Overloaded),
+                AppError::UpstreamStatus(status)
+                    if *status >= 500 || matches!(*status, 401..=404) =>
+                {
+                    Some(Outcome::UpstreamFailure)
+                }
+                AppError::Upstream(_) => Some(Outcome::UpstreamFailure),
+                _ => None,
+            };
+            if let Some(outcome) = outcome {
+                state.model_status.record(Observation {
+                    model_id: model_config.id.clone(),
+                    source: Source::Traffic,
+                    observed_at_ms: now_ms(),
+                    outcome,
+                    ttft_ms: None,
+                    tps: None,
+                });
+            }
             refund_reservation(&state.ledger, wallet.id, reserved_millicredits).await;
             return Err(e);
         }
@@ -83,6 +108,7 @@ pub async fn handle(
     match upstream_response {
         UpstreamResponse::Stream(stream) => relay_stream(
             stream,
+            started,
             &state,
             wallet,
             model_config,
@@ -206,6 +232,7 @@ fn prepare_body(
 /// upstream read stops with the client.
 fn relay_stream(
     mut stream: BoxStream,
+    started: Instant,
     state: &AppState,
     wallet: Wallet,
     model_config: ModelConfig,
@@ -214,10 +241,15 @@ fn relay_stream(
 ) -> Result<Response, AppError> {
     let wallet_id = wallet.id;
     let ledger = Arc::clone(&state.ledger);
+    let status = state.model_status.clone();
 
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<Bytes, AppError>>(STREAM_CHANNEL_BUFFER);
 
     tokio::spawn(async move {
+        let mut measurement = StreamMeasurement::default();
+        let mut cancelled = false;
+        let mut upstream_failed = false;
+        let mut downstream_backpressured = false;
         let mut found_usage: Option<UsageBlock> = None;
         // Whether any output token was shipped — the refund rule's input.
         let mut output_shipped = false;
@@ -252,11 +284,20 @@ fn relay_stream(
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(bytes) => {
+                    measurement.observe(&bytes, started.elapsed());
+                    if tx.capacity() == 0 {
+                        measurement.mark_backpressure();
+                        if !downstream_backpressured {
+                            tracing::debug!(model = %model_config.id, "downstream backpressure; upstream rate sample omitted");
+                            downstream_backpressured = true;
+                        }
+                    }
                     // Send the clone; scan after the send succeeded, so only
                     // chunks that actually reached the client count as served.
                     // Never log content.
                     let shipped = tx.send(Ok(bytes.clone())).await.is_ok();
                     if !shipped {
+                        cancelled = true;
                         // The client left — e.g. it cancelled a hedged request
                         // that lost the first-token race, or stopped the turn.
                         // Stop reading upstream: nothing will ever consume the
@@ -272,6 +313,11 @@ fn relay_stream(
                     );
                 }
                 Err(e) => {
+                    measurement.mark_failure();
+                    // Receiver closure after forwarding an upstream error is not
+                    // evidence that the client cancelled the request.
+                    cancelled = tx.is_closed();
+                    upstream_failed = true;
                     let _ = tx.send(Err(e)).await;
                     break;
                 }
@@ -288,6 +334,15 @@ fn relay_stream(
                 &mut output_shipped,
                 &mut found_usage,
             );
+        }
+
+        if !cancelled && (upstream_failed || !tx.is_closed()) {
+            status.record(measurement.finish(
+                model_config.id.clone(),
+                Source::Traffic,
+                now_ms(),
+                started.elapsed(),
+            ));
         }
 
         // Reconcile the reservation against actual usage after the stream ends.
@@ -330,6 +385,14 @@ async fn relay_buffer(
     reserved_millicredits: i64,
 ) -> Result<Response, AppError> {
     let found_usage = usage::extract_from_response_body(&bytes);
+    state.model_status.record(Observation {
+        model_id: model_config.id.clone(),
+        source: Source::Traffic,
+        observed_at_ms: now_ms(),
+        outcome: crate::model_status::measurement::buffered_outcome(&bytes),
+        ttft_ms: None,
+        tps: None,
+    });
     // The full body was relayed — the response was served, whatever the models
     // made of it. When usage extraction finds nothing, the estimate stands in
     // for the charge rather than refunding. (A stream is different: no usage

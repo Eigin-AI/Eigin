@@ -562,6 +562,7 @@ final class ChatViewModel {
         else {
             return (provider, agent.model)
         }
+        await Container.shared.relayModelStatusCache().prepare(for: request)
         let route = await Container.shared.modelRouter().resolve(request)
 
         guard !route.staysOn(providerID: provider.id) else {

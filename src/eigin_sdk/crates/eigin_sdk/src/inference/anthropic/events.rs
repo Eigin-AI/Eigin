@@ -11,7 +11,6 @@ pub(super) struct Block {
     pub(super) r#type: String,
     pub(super) id: Option<String>,
     pub(super) name: Option<String>,
-    #[allow(dead_code)]
     pub(super) text: Option<String>,
 }
 
@@ -36,6 +35,7 @@ pub(super) struct BlockStop {
 #[derive(Deserialize)]
 pub(super) struct MessageDelta {
     pub(super) delta: StopReason,
+    pub(super) usage: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]

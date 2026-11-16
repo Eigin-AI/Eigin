@@ -91,7 +91,7 @@ fn stream_excerpts_follow_opt_in_and_are_bounded() {
             .iter()
             .find(|event| event.message == "request finished")
             .unwrap();
-        assert_eq!(field(finished, "events_delivered"), "2");
+        assert_eq!(field(finished, "events_delivered"), "3");
         assert_eq!(field(finished, "status"), "200");
         assert!(field(finished, "bytes_received").parse::<u64>().unwrap() > 0);
         assert!(field(finished, "elapsed_ms").parse::<u128>().is_ok());

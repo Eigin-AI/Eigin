@@ -82,6 +82,8 @@ pub enum AppError {
     ServiceUnavailable(String),
     /// Upstream search service error (502).
     Upstream(String),
+    /// Upstream HTTP rejection, retaining status without response content.
+    UpstreamStatus(u16),
     /// Internal server error (500).
     Internal(String),
 }
@@ -98,6 +100,7 @@ impl std::fmt::Display for AppError {
             Self::AssetNotFound => write!(f, "asset not found"),
             Self::SandboxBudgetExhausted => write!(f, "sandbox budget exhausted"),
             Self::ServiceUnavailable(msg) => write!(f, "service unavailable: {msg}"),
+            Self::UpstreamStatus(status) => write!(f, "upstream status: {status}"),
             Self::Upstream(msg) => write!(f, "upstream error: {msg}"),
             Self::Internal(msg) => write!(f, "internal error: {msg}"),
         }
@@ -197,6 +200,15 @@ impl IntoResponse for AppError {
                     severity: Severity::Error,
                     error_type: "service_unavailable",
                     detail,
+                },
+            ),
+            Self::UpstreamStatus(status) => (
+                StatusCode::BAD_GATEWAY,
+                "upstream service error".to_string(),
+                ErrorLog {
+                    severity: Severity::Warn,
+                    error_type: "upstream_error",
+                    detail: format!("upstream status: {status}"),
                 },
             ),
             Self::Upstream(detail) => (

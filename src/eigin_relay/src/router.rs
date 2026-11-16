@@ -47,6 +47,10 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         )
         // The model catalog is static and free to read, so it needs no wallet — only the relay key.
         .route("/v1/models", get(crate::inference::catalog::handle_list))
+        .route(
+            "/v1/models/status",
+            get(crate::model_status::service::handle),
+        )
         // The asset mirror is likewise key-gated only: manifests + presigned URLs.
         .route("/v1/assets", get(crate::assets::handler::handle_list))
         .route("/v1/assets/{id}", get(crate::assets::handler::handle_get))

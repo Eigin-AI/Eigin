@@ -11,6 +11,8 @@ enum ChatStreamEvent: Equatable {
     case providerMetadata([String: String])
     /// Completed private continuation state, emitted only after a successful finish reason.
     case reasoningHistory(ReasoningHistory)
+    /// Client-observed useful-output measurements from the inference transport.
+    case performance(InferencePerformance)
     /// The stream has finished.
     case finished(FinishReason)
 
@@ -18,4 +20,10 @@ enum ChatStreamEvent: Equatable {
         case stop
         case toolCalls = "tool_calls"
     }
+}
+
+/// Uses the same useful-output boundaries and token accounting as relay observations.
+struct InferencePerformance: Equatable {
+    let timeToFirstToken: Duration?
+    let tokensPerSecond: Double?
 }

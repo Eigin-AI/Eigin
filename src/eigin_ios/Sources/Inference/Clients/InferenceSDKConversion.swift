@@ -111,6 +111,11 @@ enum InferenceSDKConversion {
                 function: .init(name: call.name, arguments: call.arguments)
             ))
         case .providerMetadata(let values): return .providerMetadata(values)
+        case .performance(let measurement):
+            return .performance(InferencePerformance(
+                timeToFirstToken: measurement.timeToFirstToken,
+                tokensPerSecond: measurement.tokensPerSecond
+            ))
         case .reasoningHistory(let history):
             guard let providerID = UUID(uuidString: history.origin.providerId)
             else { throw OpenAICompatibleClientError.invalidResponse }

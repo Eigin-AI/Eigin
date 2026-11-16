@@ -3,6 +3,14 @@ import Foundation
 
 /// Programmable `RelayClient` for tests. Each handler defaults to throwing `.notConfigured`.
 final class FakeRelayClient: RelayClient, @unchecked Sendable {
+    var modelStatusHandler: @Sendable () async throws -> RelayModelStatusResponse = {
+        throw RelayClientError.notConfigured
+    }
+
+    func modelStatus() async throws -> RelayModelStatusResponse {
+        try await modelStatusHandler()
+    }
+
     var searchHandler: @Sendable (String, String?, String?) async throws -> String = { _, _, _ in
         throw RelayClientError.notConfigured
     }

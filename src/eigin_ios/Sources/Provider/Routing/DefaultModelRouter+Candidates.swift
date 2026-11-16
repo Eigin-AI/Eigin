@@ -58,7 +58,7 @@ extension DefaultModelRouter {
 
         for (step, relaxed) in ladder.enumerated() {
             let matches = ranked.filter {
-                meets($0, requirements: relaxed) && health.isHealthy($0, now: timestamp)
+                meets($0, requirements: relaxed) && isHealthy($0, provider: provider, at: timestamp)
             }
             guard !matches.isEmpty else { continue }
             if step > 0 {

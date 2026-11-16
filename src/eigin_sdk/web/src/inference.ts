@@ -29,6 +29,7 @@ export type {
   InferenceImage,
   InferenceToolCall,
   InferenceToolDefinition,
+  InferencePerformance,
   InferenceReasoningHistory,
   InferenceReasoningOrigin,
   HttpTransport,

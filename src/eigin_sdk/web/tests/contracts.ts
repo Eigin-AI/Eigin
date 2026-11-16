@@ -1,6 +1,8 @@
 import { diagnostics } from "./diagnostics";
 import {
   BindingTestError,
+  InferenceEvent,
+  performanceEventsFixture,
   InitializationError,
   PendingOperation,
   failInitializationFixture,
@@ -21,6 +23,32 @@ async function rejection(operation: Promise<unknown>): Promise<unknown> {
 }
 
 export const contracts = {
+  async performanceEventsPreserveOptionalMeasurements() {
+    const events = performanceEventsFixture();
+    assert(events.length === 3, "Expected three operational events");
+    const values = events.map((event) => {
+      assert(
+        InferenceEvent.Performance.instanceOf(event),
+        "Expected typed performance event",
+      );
+      return event.inner.measurement;
+    });
+    assert(
+      values[0].timeToFirstTokenMs === 125.5,
+      "TTFT precision or units changed",
+    );
+    assert(values[0].tokensPerSecond === 8.25, "Throughput changed");
+    assert(
+      values[1].timeToFirstTokenMs === undefined &&
+        values[1].tokensPerSecond === undefined,
+      "Missing measurements became values",
+    );
+    assert(
+      values[2].timeToFirstTokenMs === 0 &&
+        values[2].tokensPerSecond === undefined,
+      "Zero TTFT became missing",
+    );
+  },
   diagnostics,
   async initializationErrorPreservesReason() {
     const error = await rejection(failInitializationFixture());

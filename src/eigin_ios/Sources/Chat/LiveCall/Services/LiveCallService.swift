@@ -599,6 +599,7 @@ final class LiveCallService: @unchecked Sendable {
         else {
             return agent.model
         }
+        await Container.shared.relayModelStatusCache().prepare(for: request)
         let route = await modelRouter.resolve(request)
         guard route.staysOn(providerID: provider.id) else { return agent.model }
         return route.model

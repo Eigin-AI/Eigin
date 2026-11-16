@@ -27,6 +27,17 @@ Browser endpoints must allow CORS. Deployed relay browser access remains unverif
 
 [^anthropic-browser]: Direct Anthropic browser requests require `anthropic-dangerous-direct-browser-access: true` in `extraHeaders`. This exposes the supplied key to page code; keep application secrets on a backend. Authenticated browser streaming remains unverified.
 
+## Performance observations
+
+All structured SDK providers emit a typed `Performance` event before `Finished`, including relay, OpenAI-compatible, Responses, and Anthropic streams.
+
+- `time_to_first_token_ms`: HTTP dispatch to first nonempty text or tool output, excluding thinking traces.
+- `tokens_per_second`: non-reasoning output tokens divided by first-to-last useful-output time.
+
+Both values are optional. Throughput requires provider-reported reasoning/thinking counts, at least four useful tokens, and a measurable interval. Missing accounting stays absent. Swift exposes TTFT as a native `Duration` through `Performance.timeToFirstToken`.
+
+Measurements are operational events, separate from conversation metadata. The app and relay use these definitions on their respective network paths.
+
 ## Try it
 
 Use the experimental CLI with credentials from explicitly named environment variables:

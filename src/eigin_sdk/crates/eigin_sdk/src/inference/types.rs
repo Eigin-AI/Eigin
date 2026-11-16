@@ -98,12 +98,22 @@ pub enum InferenceFinishReason {
     ToolCalls,
 }
 
+/// Client-observed useful-output timing and provider-accounted non-reasoning throughput.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct InferencePerformance {
+    /// Milliseconds from HTTP dispatch to first nonempty text or tool output.
+    pub time_to_first_token_ms: Option<f64>,
+    /// Non-reasoning output tokens per second; absent without reliable usage or timing.
+    pub tokens_per_second: Option<f64>,
+}
+
 /// Ordered provider events consumed by an agent loop.
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
+#[derive(Clone, Debug, PartialEq, uniffi::Enum)]
 pub enum InferenceEvent {
     ContentDelta { text: String },
     ToolCall { call: InferenceToolCall },
     ProviderMetadata { values: HashMap<String, String> },
+    Performance { measurement: InferencePerformance },
     ReasoningHistory { history: InferenceReasoningHistory },
     Finished { reason: InferenceFinishReason },
 }

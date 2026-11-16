@@ -321,6 +321,7 @@ final class AgenticChatLoop {
 
             // Measured from request dispatch: the first-token wait is spent inside openStream.
             var firstTokenAt: ContinuousClock.Instant?
+            var performance: InferencePerformance?
 
             do {
                 // `shouldStop` exits inside this loop return without a drain:
@@ -336,7 +337,7 @@ final class AgenticChatLoop {
 
                     switch event {
                     case .contentDelta(let delta):
-                        if firstTokenAt == nil { firstTokenAt = .now }
+                        if firstTokenAt == nil, !delta.isEmpty { firstTokenAt = .now }
                         contentBuffer += delta
                         chatPhase = .streamingProse
                         throttler.feed(delta)
@@ -352,6 +353,9 @@ final class AgenticChatLoop {
 
                     case .reasoningHistory(let history):
                         reasoningHistory = history
+
+                    case .performance(let measured):
+                        performance = measured
 
                     case .providerMetadata(let meta):
                         AppLogger.debug(
@@ -440,7 +444,7 @@ final class AgenticChatLoop {
 
             await reportAttempt(
                 provider: provider, start: streamStart,
-                firstTokenAt: firstTokenAt, result: .succeeded
+                firstTokenAt: firstTokenAt, result: .succeeded, performance: performance
             )
 
             AppLogger.debug(

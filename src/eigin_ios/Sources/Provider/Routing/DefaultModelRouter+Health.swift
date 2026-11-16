@@ -3,6 +3,12 @@ import Foundation
 // MARK: - Model health recording
 
 extension DefaultModelRouter {
+    /// Combines local quarantine and applicable remote observations.
+    func isHealthy(_ model: String, provider: RoutingProvider, at timestamp: Date) -> Bool {
+        health.isHealthy(model, now: timestamp)
+            && remoteDegradation(model, provider: provider, at: timestamp) == nil
+    }
+
     func record(_ attempt: AttemptOutcome) async {
         let timestamp = now()
         switch attempt.result {
@@ -30,6 +36,14 @@ extension DefaultModelRouter {
     /// A working stream still demotes a model that is consistently unpleasant to wait
     /// for, but only after a pattern. One slow turn is noise.
     private func recordSuccess(_ attempt: AttemptOutcome, at timestamp: Date) {
+        let key = EvidenceKey(providerID: attempt.providerID, model: attempt.model)
+        let previous = localHealthRecency[key]
+        localHealthRecency[key] = LocalHealthRecency(
+            observedAt: timestamp,
+            ttftObservedAt: attempt.timeToFirstToken.map { _ in timestamp } ?? previous?
+                .ttftObservedAt,
+            tpsObservedAt: attempt.tokensPerSecond.map { _ in timestamp } ?? previous?.tpsObservedAt
+        )
         sawOfflineFailure = false
         let slowFirstToken = (attempt.timeToFirstToken ?? .zero) > Self.slowFirstTokenThreshold
         let slowThroughput = attempt.tokensPerSecond.map { $0 < Self.slowThroughputThreshold }

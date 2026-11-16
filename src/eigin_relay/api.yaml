@@ -465,6 +465,64 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /v1/models/status:
+    get:
+      tags: [Inference]
+      summary: Model status
+      description: |
+        Recent model availability and performance observations to help your app choose responsive models.
+        Requires a relay key; no wallet or balance is needed.
+      security:
+        - EiginKey: []
+      responses:
+        "200":
+          description: Model status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [generated_at, models]
+                properties:
+                  generated_at:
+                    type: string
+                    format: date-time
+                    example: "2026-11-16T18:55:54.462Z"
+                  models:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, traffic, probes]
+                      properties:
+                        id:
+                          type: string
+                          example: mistral/mistral-large-4-0
+                        traffic:
+                          type: [object, "null"]
+                          example:
+                            sampled_at: "2026-11-16T18:54:30.000Z"
+                            expires_at: "2026-11-16T19:02:00.000Z"
+                            success_count: 9
+                            failure_count: 1
+                            ttft_sample_count: 9
+                            throughput_sample_count: 7
+                            ttft_sampled_at: "2026-11-16T18:54:20.000Z"
+                            tps_sampled_at: "2026-11-16T18:54:20.000Z"
+                            ttft_p50_ms: 4200.0
+                            tps_p50: 52.0
+                        probes:
+                          type: [object, "null"]
+                          example:
+                            sampled_at: "2026-11-16T18:45:49.940Z"
+                            expires_at: "2026-11-16T19:00:49.940Z"
+                            success_count: 1
+                            failure_count: 0
+                            ttft_sample_count: 1
+                            throughput_sample_count: 1
+                            ttft_sampled_at: "2026-11-16T18:45:49.940Z"
+                            tps_sampled_at: "2026-11-16T18:45:49.940Z"
+                            ttft_p50_ms: 1345.65
+                            tps_p50: 156.28
+
   /v1/models:
     get:
       operationId: listModels

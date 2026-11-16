@@ -133,10 +133,7 @@ impl UpstreamClient for ReqwestUpstreamClient {
             // (moderation / validation errors), which would leak the user's prompt.
             // Retain provider + status as safe triage metadata instead.
             tracing::warn!(provider = %self.provider_id, %status, "upstream returned an error status");
-            let provider = &self.provider_id;
-            return Err(AppError::Upstream(format!(
-                "provider {provider} returned {status}"
-            )));
+            return Err(AppError::UpstreamStatus(status.as_u16()));
         }
 
         // Determine from Content-Type whether this is a stream.

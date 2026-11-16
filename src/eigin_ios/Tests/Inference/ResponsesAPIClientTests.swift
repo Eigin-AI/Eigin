@@ -306,7 +306,18 @@ struct ResponsesAPIClientTests {
             ], model: "gpt-6.1-sol")
         )
 
-        #expect(events == [.contentDelta("Hel"), .contentDelta("lo"), .finished(.stop)])
+        guard case .performance(let measurement)? = events.dropLast().last else {
+            Issue.record("Missing typed performance event")
+            return
+        }
+        #expect(measurement.timeToFirstToken != nil)
+        #expect(measurement.tokensPerSecond == nil)
+        #expect(events == [
+            .contentDelta("Hel"),
+            .contentDelta("lo"),
+            .performance(measurement),
+            .finished(.stop),
+        ])
     }
 
     @Test func streamEmitsToolCallsWithToolCallsFinish() async throws {
@@ -324,13 +335,19 @@ struct ResponsesAPIClientTests {
             ], model: "gpt-6.1-sol")
         )
 
-        #expect(events.count == 2)
+        guard case .performance(let measurement)? = events.dropLast().last else {
+            Issue.record("Missing typed performance event")
+            return
+        }
+        #expect(measurement.timeToFirstToken != nil)
+        #expect(measurement.tokensPerSecond == nil)
+        #expect(events.count == 3)
         #expect(events[0] == .toolCall(ToolCall(
             id: "call_9",
             type: "function",
             function: .init(name: "get_weather", arguments: #"{"city":"Oslo"}"#)
         )))
-        #expect(events[1] == .finished(.toolCalls))
+        #expect(events.last == .finished(.toolCalls))
     }
 
     @Test func streamFailedThrowsMappedError() async throws {
