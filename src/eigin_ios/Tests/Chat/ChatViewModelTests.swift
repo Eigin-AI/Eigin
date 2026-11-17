@@ -1,6 +1,7 @@
 @testable import Eigin
 import Factory
 import Foundation
+import os
 import SwiftData
 import Testing
 import UIKit
@@ -380,6 +381,45 @@ struct ChatViewModelTests {
         )
         vm.messageText = "Hello"
         return vm
+    }
+
+    @Test("New-chat policy reaches dispatch before injected prompts", arguments: [false, true])
+    @MainActor
+    func newChatEffortReachesDispatch(agentStarted: Bool) async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        provider.baseURL = "https://api.mistral.ai/v1"
+        provider.availableModels = ["mistral-large-4-0"]
+        agent.model = "mistral-large-4-0"
+        agent.autoModel = true
+        chat.title = "Routing test"
+        chat.titleOrigin = .edited
+        let service = ObservedChatService { _, _, _ in }
+        let efforts = OSAllocatedUnfairLock(initialState: [ReasoningEffort?]())
+        service.observeEffort = { _, effort in efforts.withLock { $0.append(effort) } }
+        service.scripted.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+        await vm.preloadAllMessages().value
+        if agentStarted {
+            vm.continueTurn(
+                agent: agent,
+                provider: provider,
+                space: nil,
+                spaces: [],
+                mcpServers: []
+            )
+        } else {
+            vm.messageText = "Analyze and compare trade-offs step by step. Explain why."
+            vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+        }
+        await vm.streamTask?.value
+        #expect(vm.chatError == nil)
+        #expect(efforts.withLock { $0 } == [.low])
     }
 
     @Test("Sending includes full persisted history, tool metadata, and the current request once")

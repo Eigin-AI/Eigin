@@ -34,8 +34,11 @@ struct AgenticChatLoopTests {
         ).definitions
     }
 
-    @Test(arguments: ["same-model", "retry", "hedge"])
-    @MainActor func dispatchesSessionEffortAcrossTurnsAndFallbacks(mode: String) async throws {
+    @Test(arguments: ["same-model", "retry", "hedge"], [false, true])
+    @MainActor func dispatchesSessionEffortAcrossTurnsAndFallbacks(
+        mode: String,
+        early: Bool
+    ) async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
         provider.baseURL = "https://api.mistral.ai/v1"
@@ -61,7 +64,8 @@ struct AgenticChatLoopTests {
             let request = RouteRequest(
                 currentProviderID: provider.id, currentModel: agent.model, isAuto: true,
                 requirements: RouteRequirements(), providers: [routingProvider],
-                conversationID: conversation, lastUserMessage: text
+                conversationID: conversation, lastUserMessage: text,
+                turnContext: early ? RoutingTurnContext(responseTurnCount: 0) : nil
             )
             let route = await router.resolve(request)
             agent.model = route.model
@@ -90,7 +94,10 @@ struct AgenticChatLoopTests {
         let dispatched = calls.withLock { $0 }
         #expect(dispatched[0].1 == .low)
         #expect(dispatched[1].0 == firstModel)
-        #expect(dispatched.dropFirst().allSatisfy { $0.1 == .high })
+        #expect(dispatched.dropFirst().allSatisfy {
+            $0.1 == ($0.0 == "mistral-large-4-0"
+                ? (early ? .low : .medium) : (early ? ReasoningEffort.none : .high))
+        })
         if mode == "same-model" {
             #expect(dispatched.count == 3)
             #expect(dispatched.allSatisfy { $0.0 == firstModel })

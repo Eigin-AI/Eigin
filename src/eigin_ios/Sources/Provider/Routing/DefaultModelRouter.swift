@@ -65,9 +65,7 @@ actor DefaultModelRouter: ModelRouter {
     func resolve(_ request: RouteRequest) async -> ResolvedRoute {
         let timestamp = now()
         noteReachability()
-        let messageNeedsReasoning = QueryComplexity.needsReasoning(
-            text: request.lastUserMessage ?? ""
-        )
+        let messageNeedsReasoning = request.messageNeedsReasoning
 
         guard request.isAuto, let provider = request.currentProvider else {
             return storingAnchor(sameRoute(for: request), for: request)
@@ -238,7 +236,7 @@ actor DefaultModelRouter: ModelRouter {
 
         guard request.isAuto, let provider = request.currentProvider else { return nil }
         remoteHealthByProvider[provider.id] = await remoteHealthSource?.health(for: provider) ?? [:]
-        guard failure.blamesModel else {
+        guard failure.blamesModel || failure == .preAnswerBufferLimit else {
             AppLogger.debug(
                 "Not retrying \(public: request.currentModel): failure is not the model's to answer for",
                 category: .routing
@@ -279,7 +277,7 @@ actor DefaultModelRouter: ModelRouter {
 
     /// Session demand is independent of whether an adjustable model can reason.
     func reasoningDemand(for request: RouteRequest, model: String) -> Bool {
-        QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
+        request.messageNeedsReasoning
             || reasoningConversations.contains(request.conversationID ?? request.currentProviderID)
             || (KnownModelCatalog.reasoningControl(
                 for: model, baseURL: request.currentProvider?.baseURL ?? ""
@@ -293,7 +291,7 @@ actor DefaultModelRouter: ModelRouter {
                   baseURL: provider.baseURL
               )
         else { return nil }
-        let escalated = QueryComplexity.needsReasoning(text: request.lastUserMessage ?? "")
+        let escalated = request.messageNeedsReasoning
             || reasoningConversations.contains(request.conversationID ?? request.currentProviderID)
         return escalated ? control.escalatedEffort : control.fastEffort
     }

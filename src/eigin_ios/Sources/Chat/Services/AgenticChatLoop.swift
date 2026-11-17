@@ -439,6 +439,18 @@ final class AgenticChatLoop {
                     chatPhase = .streamingProse
                     continue
                 }
+                if let completion = error as? TurnCompletionError, case .missingReply = completion {
+                    if Task.isCancelled || shouldStop || shouldTerminate?() == true { return [] }
+                    guard !recoveryUsed, round + 1 < maxRounds else { throw completion }
+                    recoveryUsed = true
+                    throttler.resetKeepingPhase(.waiting)
+                    contentBuffer = ""
+                    pendingToolCalls = []
+                    currentMessageID = "msg-\(UUID().uuidString)"
+                    nextInstruction = Prompt.Hints.Continuation.missingReply
+                    chatPhase = .streamingProse
+                    continue
+                }
                 throw error
             }
 

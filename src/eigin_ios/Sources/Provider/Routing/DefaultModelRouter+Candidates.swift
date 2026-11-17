@@ -1,3 +1,4 @@
+import EiginSDK
 import Foundation
 
 // MARK: - Candidate selection
@@ -113,8 +114,11 @@ extension DefaultModelRouter {
         if requirements.needsToolCalling, !entry.supportsToolCall { return false }
         if requirements.needsVision, !entry.supportsVision { return false }
         if let promptTokens = requirements.promptTokens {
-            let reserve = entry.maxOutput ?? Self.assumedOutputReserve
-            if entry.contextWindow < promptTokens + reserve { return false }
+            let policy = EiginSDK.Experimental.Context.defaultPagingPolicy(
+                contextWindow: entry.contextWindow,
+                maxOutput: entry.maxOutput ?? Self.assumedOutputReserve
+            )
+            if promptTokens > policy.maximumTokens { return false }
         }
         return true
     }

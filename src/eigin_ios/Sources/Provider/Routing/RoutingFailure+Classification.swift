@@ -6,6 +6,10 @@ extension RoutingFailure {
     /// ``notTheModelsFault`` is the distinction that matters: switching models on a bad
     /// key or an empty wallet just spends more of the user's money failing the same way.
     init(from error: Error) {
+        if error is PreWinnerBufferOverflow {
+            self = .preAnswerBufferLimit
+            return
+        }
         if error is FirstEventTimeout {
             self = .timedOut
             return
@@ -68,7 +72,7 @@ extension RoutingFailure {
     var blamesModel: Bool {
         switch self {
         case .modelNotFound, .providerOverloaded, .timedOut: true
-        case .offline, .notTheModelsFault: false
+        case .offline, .notTheModelsFault, .preAnswerBufferLimit: false
         }
     }
 }

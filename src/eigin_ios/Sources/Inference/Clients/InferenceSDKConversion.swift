@@ -31,7 +31,9 @@ enum InferenceSDKConversion {
         )
         return try .init(
             model: model, messages: messages.map { message($0, store: store) },
-            tools: tools?.map(tool), reasoningEffort: reasoningEffort?.rawValue,
+            tools: tools?.map(tool), reasoningEffort: KnownModelCatalog.boundedReasoningEffort(
+                reasoningEffort, model: model, baseURL: baseURL
+            )?.rawValue,
             promptCacheKey: cacheKey, modelFamily: family(KnownModelCatalog.lookup(model)?.family),
             isRelay: isRelay, reasoningOrigin: destination.map(origin), textOnly: textOnly
         )

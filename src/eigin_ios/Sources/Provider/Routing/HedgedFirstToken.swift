@@ -6,6 +6,12 @@ import os
 /// nobody — replacement or runner-up — spoke in time.
 struct FirstEventTimeout: Error {}
 
+/// A stream ended before producing an eligible race-winning event.
+struct StreamEndedWithoutUsefulOutput: Error {}
+
+/// A candidate exceeded its in-memory buffer for events preceding its answer.
+struct PreWinnerBufferOverflow: Error {}
+
 /// The race's winning model — whichever side spoke first. The racing stream
 /// reports it here; the consuming loop reads it once to adopt the turn's model.
 final class RaceWinner: @unchecked Sendable {
@@ -44,11 +50,18 @@ struct HedgePlan: Sendable {
 /// either side within `ceiling` expires the clock once: the timeout goes to
 /// `primaryFailed` for one chase, then a second silent ceiling fails with
 /// ``FirstEventTimeout``.
+/// Pre-answer events are held per candidate, up to 1 MiB by default, for replay if it wins.
 func withHedgedFirstToken<T: Sendable>(
     primaryModel: String,
     plan: HedgePlan?,
     ceiling: Duration,
     raceWinner: RaceWinner,
+    isWinningEvent: @escaping @Sendable (T) -> Bool = { _ in true },
+    bufferedEventBytes: @escaping @Sendable (T) -> Int = { _ in 1 },
+    maxBufferedBytes: Int = 1_048_576,
+    emptyStreamError: @escaping @Sendable ([T]) -> Error = { _ in
+        StreamEndedWithoutUsefulOutput()
+    },
     openPrimary: @escaping @Sendable (String) async throws -> AsyncThrowingStream<T, Error>,
     openFallback: @escaping @Sendable () async -> AsyncThrowingStream<T, Error>?,
     primaryFailed: @escaping @Sendable (String, Error) async -> (
@@ -65,6 +78,10 @@ func withHedgedFirstToken<T: Sendable>(
             plan: plan,
             ceiling: ceiling,
             raceWinner: raceWinner,
+            isWinningEvent: isWinningEvent,
+            bufferedEventBytes: bufferedEventBytes,
+            maxBufferedBytes: maxBufferedBytes,
+            emptyStreamError: emptyStreamError,
             openPrimary: openPrimary,
             openFallback: openFallback,
             primaryFailed: primaryFailed,
@@ -90,7 +107,7 @@ private enum RaceSide: Sendable, CustomStringConvertible {
 }
 
 /// Coordinates the lazily-opened primary stream, the runner-up once opened, and
-/// the ceiling watchdog. The first event from either side wins; a side that
+/// the ceiling watchdog. The first eligible event from either side wins; a side that
 /// loses is cancelled and its late events dropped. All clocks tick from
 /// `start()`, covering the primary's dispatch.
 private final class HedgeRace<T: Sendable>: @unchecked Sendable {
@@ -99,6 +116,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         var finished = false
         /// The model the primary side currently carries — updated when the
         /// failure hook hands back a replacement under a different model.
+        var primaryGeneration = 0
         var currentPrimaryModel: String
         /// The runner-up once its stream is attached. Dispatch, or a stream
         /// still awaiting headers, is not attached.
@@ -107,6 +125,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         /// whichever error surfaced, instead of the ceiling's timeout.
         var primaryDeath = Death()
         var fallbackDeath = Death()
+        var primaryChases: [Task<Void, Never>] = []
         var primaryForwarding: Task<Void, Never>?
         var fallbackForwarding: Task<Void, Never>?
         var hedgeTimer: Task<Void, Never>?
@@ -130,7 +149,8 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         var chaseInFlight = false
 
         var tasks: [Task<Void, Never>] {
-            [primaryForwarding, fallbackForwarding, hedgeTimer, watchdog].compactMap { $0 }
+            [primaryForwarding, fallbackForwarding, hedgeTimer, watchdog]
+                .compactMap { $0 } + primaryChases
         }
     }
 
@@ -146,6 +166,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
     private let primaryModel: String
     private let plan: HedgePlan?
     private let ceiling: Duration
+    private let isWinningEvent: @Sendable (T) -> Bool
+    private let bufferedEventBytes: @Sendable (T) -> Int
+    private let emptyStreamError: @Sendable ([T]) -> Error
+    private let maxBufferedBytes: Int
     private let raceWinner: RaceWinner
     private let openPrimary: @Sendable (String) async throws -> AsyncThrowingStream<T, Error>
     private let openFallback: @Sendable () async -> AsyncThrowingStream<T, Error>?
@@ -164,6 +188,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         plan: HedgePlan?,
         ceiling: Duration,
         raceWinner: RaceWinner,
+        isWinningEvent: @escaping @Sendable (T) -> Bool,
+        bufferedEventBytes: @escaping @Sendable (T) -> Int,
+        maxBufferedBytes: Int,
+        emptyStreamError: @escaping @Sendable ([T]) -> Error,
         openPrimary: @escaping @Sendable (String) async throws -> AsyncThrowingStream<T, Error>,
         openFallback: @escaping @Sendable () async -> AsyncThrowingStream<T, Error>?,
         primaryFailed: @escaping @Sendable (String, Error) async -> (
@@ -178,6 +206,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         self.plan = plan
         self.ceiling = ceiling
         self.raceWinner = raceWinner
+        self.isWinningEvent = isWinningEvent
+        self.bufferedEventBytes = bufferedEventBytes
+        self.maxBufferedBytes = maxBufferedBytes
+        self.emptyStreamError = emptyStreamError
         self.openPrimary = openPrimary
         self.openFallback = openFallback
         self.primaryFailed = primaryFailed
@@ -246,9 +278,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         case .chase:
             // The consumed watchdog is done; drop it so nothing expired lingers.
             lock.withLock { $0.watchdog = nil }
-            let model = lock.withLock { $0.currentPrimaryModel }
-            Task { [self] in
-                await handlePrimaryFailure(model, FirstEventTimeout())
+            let (model, generation) = lock
+                .withLock { ($0.currentPrimaryModel, $0.primaryGeneration) }
+            let chase = Task { [self] in
+                await handlePrimaryFailure(model, FirstEventTimeout(), generation: generation)
                 // The runner-up may have attached while the hook ran. If the
                 // chase was then abandoned (the hook can't answer for a live
                 // side, or the race closed meanwhile), the live runner-up
@@ -260,6 +293,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
                 }
                 if needsClock { startWatchdog() }
             }
+            trackPrimaryChase(chase)
         }
     }
 
@@ -312,10 +346,10 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             let model = lock.withLock { $0.currentPrimaryModel }
             do {
                 let stream = try await openPrimary(model)
-                await forward(.primary, stream)
+                await forward(.primary, stream, generation: 0)
                 return
             } catch {
-                let recovered = await handlePrimaryFailure(model, error)
+                let recovered = await handlePrimaryFailure(model, error, generation: 0)
                 guard recovered else {
                     return
                 }
@@ -328,23 +362,40 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
     /// settled loser (swallow) or already covered by the fallback stream. One
     /// chase runs at a time: concurrent initiators would otherwise record the
     /// failure twice and race two replacements.
-    private func handlePrimaryFailure(_ failedModel: String, _ error: Error) async -> Bool {
+    private func handlePrimaryFailure(
+        _ failedModel: String,
+        _ error: Error,
+        generation: Int
+    ) async -> Bool {
         let claimed = lock.withLock { state -> Bool in
-            !state.finished && state.winner == nil
-                && (!state.fallback.opened || state.fallbackDeath.dead)
-                && !state.chaseInFlight
+            guard !state.finished, state.winner == nil,
+                  state.primaryGeneration == generation,
+                  !state.fallback.opened || state.fallbackDeath.dead,
+                  !state.chaseInFlight else { return false }
+            state.chaseInFlight = true
+            state.primaryGeneration += 1
+            return true
         }
         guard claimed else { return false }
-        defer { lock.withLock { $0.chaseInFlight = false } }
+        let replacementGeneration = generation + 1
+        defer {
+            lock.withLock { state in
+                if state.primaryGeneration == replacementGeneration {
+                    state.chaseInFlight = false
+                }
+            }
+        }
 
         guard let replacement = await primaryFailed(failedModel, error) else {
             // Nothing to switch to — surface the error to the consumer.
-            finish(throwing: error)
+            finish(throwing: error, generation: replacementGeneration)
             return false
         }
 
         let decided = lock.withLock { state -> Bool in
-            guard !state.finished, state.winner == nil else { return false }
+            guard !state.finished, state.winner == nil,
+                  state.primaryGeneration == replacementGeneration else { return false }
+            state.chaseInFlight = false
             state.currentPrimaryModel = replacement.model
             // A replacement gets a fresh ceiling: the old window was the
             // original primary's.
@@ -362,7 +413,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
             "Primary \(public: failedModel) failed (\(public: String(describing: error))); racing on \(public: replacement.model)",
             category: .routing
         )
-        await forward(.primary, replacement.stream)
+        await forward(.primary, replacement.stream, generation: replacementGeneration)
         return false
     }
 
@@ -370,26 +421,53 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
 
     private func forward(
         _ side: RaceSide,
-        _ stream: AsyncThrowingStream<T, Error>
+        _ stream: AsyncThrowingStream<T, Error>,
+        generation: Int = 0
     ) async {
+        var pending: [T] = []
+        var pendingBytes = 0
+        var hasWon = false
         do {
             for try await element in stream {
-                guard claim(side) else { return }
+                let active = lock.withLock { state in
+                    !state.finished && (state.winner == nil || state.winner == side)
+                        && (side != .primary || state.primaryGeneration == generation)
+                }
+                guard active else { return }
+                let alreadyWon = lock.withLock { $0.winner == side }
+                if !alreadyWon, !isWinningEvent(element) {
+                    let bytes = max(1, bufferedEventBytes(element))
+                    guard bytes <= maxBufferedBytes - pendingBytes else {
+                        throw PreWinnerBufferOverflow()
+                    }
+                    pendingBytes += bytes
+                    pending.append(element)
+                    continue
+                }
+                guard claim(side, generation: generation) else { return }
+                hasWon = true
+                for event in pending {
+                    continuation.yield(event)
+                }
+                pending.removeAll(keepingCapacity: false)
+                pendingBytes = 0
                 continuation.yield(element)
             }
-            ended(side, nil)
+            ended(side, hasWon ? nil : emptyStreamError(pending), generation: generation)
         } catch {
-            ended(side, error)
+            ended(side, error, generation: generation)
         }
     }
 
-    /// Whether `side` may forward an element. The first event anywhere makes its
+    /// Whether `side` may forward an element. The first eligible event anywhere makes its
     /// side the winner: the model is attributed to the turn, and the other side —
     /// if it had actually opened — is cancelled and reported as having gone
     /// silent. Returns false for a settled loser.
-    private func claim(_ side: RaceSide) -> Bool {
+    private func claim(_ side: RaceSide, generation: Int) -> Bool {
         let decision = lock.withLock { state -> Decision in
-            guard !state.finished else { return Decision() }
+            guard !state.finished,
+                  side != .primary || state.primaryGeneration == generation
+            else { return Decision() }
             if let winner = state.winner {
                 return Decision(accepted: winner == side)
             }
@@ -412,6 +490,8 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
                 )
             }
             let task = state.primaryForwarding
+            state.primaryChases.forEach { $0.cancel() }
+            state.primaryChases.removeAll()
             state.primaryForwarding = nil
             return Decision(
                 accepted: true,
@@ -436,7 +516,7 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         return true
     }
 
-    private func ended(_ side: RaceSide, _ error: Error?) {
+    private func ended(_ side: RaceSide, _ error: Error?, generation: Int) {
         let terminalError = error ?? {
             if case .fallback = side { return PrimaryStreamEnded() }
             return nil
@@ -449,19 +529,26 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         if case .primary = side {
             let chase = lock.withLock { state -> Bool in
                 !state.finished && state.winner == nil
+                    && state.primaryGeneration == generation
                     && (!state.fallback.opened || state.fallbackDeath.dead)
             }
             if chase {
                 let model = lock.withLock { $0.currentPrimaryModel }
-                Task { [self] in
-                    await handlePrimaryFailure(model, error ?? PrimaryStreamEnded())
+                let task = Task { [self] in
+                    _ = await handlePrimaryFailure(
+                        model,
+                        error ?? PrimaryStreamEnded(),
+                        generation: generation
+                    )
                 }
+                trackPrimaryChase(task)
                 return
             }
         }
 
         let finish: Bool = lock.withLock { state -> Bool in
-            guard !state.finished else { return false }
+            guard !state.finished,
+                  side != .primary || state.primaryGeneration == generation else { return false }
             if let winner = state.winner {
                 // A settled loser ends into its own cancellation; nothing to do.
                 guard winner == side else { return false }
@@ -522,10 +609,21 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         }
     }
 
+    private func trackPrimaryChase(_ task: Task<Void, Never>) {
+        lock.withLock { state in
+            if state.finished || state.winner == .fallback {
+                task.cancel()
+            } else {
+                state.primaryChases.append(task)
+            }
+        }
+    }
+
     private func cancelTasks() {
         let tasks = lock.withLock { state -> [Task<Void, Never>] in
             let tasks = state.tasks
             state.primaryForwarding = nil
+            state.primaryChases.removeAll()
             state.fallbackForwarding = nil
             state.hedgeTimer = nil
             state.watchdog = nil
@@ -534,11 +632,14 @@ private final class HedgeRace<T: Sendable>: @unchecked Sendable {
         tasks.forEach { $0.cancel() }
     }
 
-    private func finish(throwing error: Error) {
-        lock.withLock {
-            guard !$0.finished else { return }
-            $0.finished = true
+    private func finish(throwing error: Error, generation: Int) {
+        let accepted = lock.withLock { state in
+            guard !state.finished, state.winner == nil,
+                  state.primaryGeneration == generation else { return false }
+            state.finished = true
+            return true
         }
+        guard accepted else { return }
         cancelTasks()
         continuation.finish(throwing: error)
     }

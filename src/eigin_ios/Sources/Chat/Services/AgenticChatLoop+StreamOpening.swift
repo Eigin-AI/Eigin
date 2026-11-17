@@ -33,18 +33,17 @@ extension AgenticChatLoop {
             )
         }
 
-        // Flattened once onto Sendable values: the retry hook runs off the main
-        // actor and cannot read SwiftData. Onboarding surfaces pass their
-        // routing in pre-built; with neither source, the turn runs unhedged.
-        let request = routing
-            ?? RouteRequest(
-                agent: agent,
-                provider: provider,
-                model: activeModel,
-                requirements: retryRequirements(messages: messages, tools: tools),
-                conversationID: conversationID,
+        let requirements = retryRequirements(messages: messages, tools: tools)
+        let request: RouteRequest? = if let routing {
+            routing.forPreparedTurn(model: activeModel, requirements: requirements)
+        } else {
+            // The store-backed initializer can fail when provider context is unavailable.
+            RouteRequest(
+                agent: agent, provider: provider, model: activeModel,
+                requirements: requirements, conversationID: conversationID,
                 lastUserMessage: messages.last(where: { $0.role == "user" })?.content
             )
+        }
         guard let request else {
             return primaryOnlyStream(
                 chatService: chatService, provider: provider,
@@ -208,7 +207,8 @@ extension AgenticChatLoop {
                     requirements: request.requirements,
                     providers: retryProviders.withLock { $0 },
                     conversationID: request.conversationID,
-                    lastUserMessage: request.lastUserMessage
+                    lastUserMessage: request.lastUserMessage,
+                    turnContext: request.turnContext
                 )
                 guard
                     let next = await router.retry(after: error, request: request),
@@ -235,6 +235,9 @@ extension AgenticChatLoop {
             plan: plan,
             ceiling: DefaultModelRouter.firstTokenCeiling,
             raceWinner: raceWinner,
+            isWinningEvent: { $0.isUsefulOutput },
+            bufferedEventBytes: { $0.bufferedByteCount },
+            emptyStreamError: { Self.unusableStreamError($0) },
             openPrimary: dispatch,
             openFallback: openFallback,
             primaryFailed: primaryFailed,
@@ -249,6 +252,17 @@ extension AgenticChatLoop {
             switchCandidate: switchCandidate,
             failureReported: failureReported
         )
+    }
+
+    /// Retains chat recovery semantics without letting empty completions win a race.
+    private nonisolated static func unusableStreamError(_ events: [ChatStreamEvent]) -> Error {
+        if events.contains(.finished(.toolCalls)),
+           events.contains(where: { if case .toolCall = $0 { return true }; return false })
+        {
+            return StreamCompletionError.invalidToolCall
+        }
+        if events.contains(.finished(.stop)) { return TurnCompletionError.missingReply }
+        return StreamCompletionError.interrupted
     }
 
     /// The hedge plan for a turn: the next ranked same-provider candidate, with
@@ -326,6 +340,9 @@ extension AgenticChatLoop {
             plan: nil,
             ceiling: DefaultModelRouter.firstTokenCeiling,
             raceWinner: raceWinner,
+            isWinningEvent: { $0.isUsefulOutput },
+            bufferedEventBytes: { $0.bufferedByteCount },
+            emptyStreamError: { Self.unusableStreamError($0) },
             openPrimary: { currentModel in
                 try await MainActor.run {
                     try ContextPagingSession.validate(
@@ -379,7 +396,7 @@ extension AgenticChatLoop {
     ///
     /// The prompt's measured size, not the outgoing model's window: a million-token model
     /// could otherwise never be replaced by anything, however short the conversation
-    /// actually is. The router adds each candidate's own output reservation on top.
+    /// actually is. Candidates use the SDK's input budget and output reservation.
     func retryRequirements(
         messages: [ChatMessage], tools: [ToolDefinition]?
     ) -> RouteRequirements {

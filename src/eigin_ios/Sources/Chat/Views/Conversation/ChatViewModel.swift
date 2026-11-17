@@ -356,7 +356,14 @@ final class ChatViewModel {
                     msgs = try await ChatHistorySnapshot.messages(from: self.window.allPersisted)
                         + [userMessage].compactMap(\.self)
                 } else {
-                    msgs = self.window.messages
+                    let descriptor = FetchDescriptor<Message>(
+                        predicate: #Predicate<Message> { $0.chat?.id == chatID },
+                        sortBy: [SortDescriptor(\.timestamp)]
+                    )
+                    let persisted = try modelContext.fetch(descriptor)
+                    msgs = persisted.isEmpty ? self.window.messages
+                        : try await ChatHistorySnapshot.messages(from: persisted)
+                        + [userMessage].compactMap(\.self)
                 }
             } catch { return }
             guard activeTurnID == turnID, !Task.isCancelled,
@@ -384,7 +391,7 @@ final class ChatViewModel {
             }
             // Route before the turn is built: the prompt budget and tool registry are
             // sized from the model that ends up running.
-            let (provider, routedModel) = await self.applyRoute(
+            let (provider, routedModel, routing) = await self.applyRoute(
                 agent: agent, provider: provider, messages: msgs, conversationID: chatID
             )
 
@@ -497,6 +504,7 @@ final class ChatViewModel {
                     cacheKey: chatID.uuidString,
                     model: routedModel,
                     sentAt: sentAt,
+                    routing: routing,
                     conversationID: chatID,
                     continuationInstruction: continuationInstruction
                 )
@@ -551,7 +559,7 @@ final class ChatViewModel {
     /// the next online turn returns there on its own.
     private func applyRoute(
         agent: Agent, provider: Provider, messages: [ChatMessage], conversationID: UUID
-    ) async -> (provider: Provider, model: String) {
+    ) async -> (provider: Provider, model: String, routing: RouteRequest?) {
         guard let request = RouteRequest(
             agent: agent,
             provider: provider,
@@ -560,14 +568,14 @@ final class ChatViewModel {
             lastUserMessage: messages.last(where: { $0.role == "user" })?.content
         )
         else {
-            return (provider, agent.model)
+            return (provider, agent.model, nil)
         }
         await Container.shared.relayModelStatusCache().prepare(for: request)
         let route = await Container.shared.modelRouter().resolve(request)
 
         guard !route.staysOn(providerID: provider.id) else {
             agent.model = route.model
-            return (provider, route.model)
+            return (provider, route.model, request)
         }
         let routedID = route.providerID
         guard let context = agent.modelContext,
@@ -575,9 +583,9 @@ final class ChatViewModel {
                   FetchDescriptor<Provider>(predicate: #Predicate { $0.id == routedID })
               ).first
         else {
-            return (provider, agent.model)
+            return (provider, agent.model, nil)
         }
-        return (routed, route.model)
+        return (routed, route.model, nil)
     }
 
     func handleStop() {

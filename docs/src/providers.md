@@ -62,8 +62,10 @@ Routing has a second axis: how much reasoning the message needs. The score picks
 reasoning) or careful (reasoning).
 
 For models with verified reasoning controls, Auto raises effort from the lowest
-supported setting to `high`, keeping the model when eligible. Pinned models use
-provider defaults.
+supported setting to a model-specific level, keeping the model when eligible.
+Mistral Large 4 uses `low` or `medium`, never `high`. On verified Mistral and relay
+endpoints, omitted Large 4 effort defaults to `medium`, including pinned and
+background requests. Other pinned models use provider defaults.
 
 Thinking replay is supported for selected models, starting with Mistral directly
 and through Eigin relay. Mistral strongly recommends preserving reasoning history
@@ -72,7 +74,10 @@ provider configuration, endpoint, and model.
 
 ### Step-up rules
 
-- Two or more reasoning markers ("step by step", "tænk igennem") always step up, regardless of score. A stepped-up conversation stays there: a reasoning model answers simple follow-ups without collapsing back, which keeps the prompt cache warm.
+- **New chats start conservatively.** Subtract a depth penalty from complexity: 0.35 initially, then 0.2625, 0.175, 0.0875, and zero after four visible response exchanges. Marker-based demand receives the same adjustment. A clearly difficult first request can still step up.
+- **Depth follows visible exchanges.** Agent-started chats without a user request start fast. Tool calls and injected briefings do not advance depth; recovery fragments count once. Saved partial replies count because history does not store completion status.
+- **Established chats use the ordinary threshold.** A score of 0.35 or two reasoning markers ("step by step", "tænk igennem") steps up. A stepped-up conversation stays there until idle reset, preserving model continuity.
+- **Hedges wait for useful output.** Answer content or an actionable tool call wins the race. Metadata, reasoning history, and completion signals alone do not cancel the alternative.
 - **Per conversation.** Stickiness anchors on the model *this conversation* last used, so a step-up in one chat never leaks into another. An unknown conversation ID is a fresh start, and an idle session reset restarts a locked conversation on the fast tier — the prompt cache is cold by then anyway.
 - **Failover is the safety net.** A complex turn that fails prefers another reasoning model, but cascades to a fast one rather than answer nothing. Model health stays global — a model quarantined in one conversation is quarantined everywhere.
 
