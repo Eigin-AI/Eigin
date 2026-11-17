@@ -2,11 +2,10 @@ import Factory
 import Foundation
 import SwiftData
 
-/// Shared turn-preparation and post-turn logic used by both chat and live calls.
+/// Host turn orchestration shared by chat, live calls, and watch turns.
 ///
-/// Consolidates MCP tool discovery, tool registry construction, system prompt
-/// building, ``Gatekeeper`` hydration, API message assembly, token estimation,
-/// and compaction into a single pipeline so chat and live calls stay in sync.
+/// Gathers prompts, hints, and tools, delegates message preparation to the SDK,
+/// and coordinates token estimation and compaction.
 enum MessagePipeline {
     /// Compaction tuning for capable models (the summarisation path).
     enum Compaction {
@@ -58,10 +57,6 @@ enum MessagePipeline {
         /// the real limit to leave the engine headroom.
         static let inputSafetyFactor: Double = 0.75
     }
-
-    /// Synthetic assistant acknowledgement inserted after a compaction summary
-    /// so the outgoing conversation starts with a valid user→assistant turn.
-    private static let compactionAck = "Understood — continuing from there."
 
     struct TurnInputs {
         let apiMessages: [ChatMessage]
@@ -212,12 +207,12 @@ enum MessagePipeline {
 
         let registry = builtRegistry
 
-        // 7. Extract the compaction summary (if any) and the conversation slice
-        //    around it — see ``splitAtLatestSummary``. The summary is rendered as
-        //    a synthetic user+assistant pair inside ``buildAPIMessages``; the hint
-        //    block is appended to the last *real* user message, not the synthetic
-        //    one.
-        let (compactionSummary, conversationMessages) = splitAtLatestSummary(messages)
+        // Select history before gathering hints from the active conversation.
+        let selected = try MessagePreparationSDKConversion.select(messages)
+        let conversationMessages = MessagePreparationSDKConversion.conversation(
+            selected,
+            history: messages
+        )
 
         // 8. Ask the Gatekeeper for the per-turn hint block
         let hintInput = SystemHintInput(
@@ -254,34 +249,17 @@ enum MessagePipeline {
         let preprocessing = await gatekeeper.beforeTurn(hintInput)
         let systemHint = preprocessing.hint
 
-        // 9. Build API messages
-        // Apply image stripping before assembly: keep only the most recent
-        // `maxLiveImageTurns` image-bearing user turns; strip all images
-        // unconditionally when the model does not support vision.
+        // Prepare request-only messages without resolving attachment bytes.
         let supportsVision = KnownModelCatalog.lookup(turnModel)?.supportsVision ?? false
         let reasoningOrigin = ReasoningOrigin.destination(
             providerID: agent.providerID, baseURL: provider.baseURL, model: turnModel
         )
-        let strippedConversation = applyImageStripping(
-            conversationMessages,
-            supportsVision: supportsVision
+        let systemPrompt = isSmallContext ? SystemPrompt.buildSmall(for: agent) : SystemPrompt
+            .build(for: agent)
+        let apiMessages = MessagePreparationSDKConversion.prepare(
+            selected, history: messages, systemPrompt: systemPrompt,
+            systemHint: systemHint, supportsVision: supportsVision
         )
-
-        let apiMessages: [ChatMessage] = if isSmallContext {
-            buildSmallAPIMessages(
-                agent: agent,
-                conversationMessages: strippedConversation,
-                compactionSummary: compactionSummary,
-                systemHint: systemHint
-            )
-        } else {
-            buildAPIMessages(
-                agent: agent,
-                conversationMessages: strippedConversation,
-                compactionSummary: compactionSummary,
-                systemHint: systemHint
-            )
-        }
 
         // 10. Token estimation
         let estimatedTokens = TokenEstimator.estimateRequest(
@@ -303,231 +281,6 @@ enum MessagePipeline {
             contextWindow: contextWindow,
             isSmallContext: isSmallContext
         )
-    }
-
-    // MARK: - API Message Assembly
-
-    /// Splits persisted messages at the latest compaction summary into the
-    /// summary's content and the conversation slice to send to the model.
-    ///
-    /// The slice is everything after the summary plus the
-    /// ``ChatMessage/compactionRetainedMessageCount`` messages immediately before
-    /// it — those were kept verbatim when the summary was made. Returns the
-    /// input unchanged (as the conversation) when there is no summary.
-    static func splitAtLatestSummary(
-        _ messages: [ChatMessage]
-    ) -> (summary: String?, conversation: [ChatMessage]) {
-        guard let summaryIndex = messages.lastIndex(where: { $0.isCompactionSummary }) else {
-            return (nil, messages)
-        }
-        let retainedCount = messages[summaryIndex].compactionRetainedMessageCount ?? 0
-        let retainedStart = messages.index(
-            summaryIndex, offsetBy: -retainedCount, limitedBy: messages.startIndex
-        ) ?? messages.startIndex
-        let conversation = Array(messages[retainedStart ..< summaryIndex])
-            + Array(messages[(summaryIndex + 1)...])
-        return (messages[summaryIndex].content, conversation.filter { !$0.isCompactionSummary })
-    }
-
-    /// Builds API messages for normal-context chat turns.
-    ///
-    /// Assembles `[static system] → [synthetic summary pair]? → [repaired
-    /// conversation]` and then appends the ``Gatekeeper``'s `<system_hint>`
-    /// block (if any) to the last real user message. Input messages are
-    /// never mutated — the helper creates a new ``ChatMessage`` for the
-    /// modified entry.
-    static func buildAPIMessages(
-        agent: Agent,
-        conversationMessages: [ChatMessage],
-        compactionSummary: String? = nil,
-        systemHint: String? = nil
-    ) -> [ChatMessage] {
-        let systemContent = SystemPrompt.build(for: agent)
-        return assembleAPIMessages(
-            systemContent: systemContent,
-            conversationMessages: conversationMessages,
-            compactionSummary: compactionSummary,
-            systemHint: systemHint
-        )
-    }
-
-    /// Builds API messages for small-context models using a minimal system prompt.
-    static func buildSmallAPIMessages(
-        agent: Agent,
-        conversationMessages: [ChatMessage],
-        compactionSummary: String? = nil,
-        systemHint: String? = nil
-    ) -> [ChatMessage] {
-        let systemContent = SystemPrompt.buildSmall(for: agent)
-        return assembleAPIMessages(
-            systemContent: systemContent,
-            conversationMessages: conversationMessages,
-            compactionSummary: compactionSummary,
-            systemHint: systemHint
-        )
-    }
-
-    /// Shared assembly used by both full and compact paths.
-    private static func assembleAPIMessages(
-        systemContent: String,
-        conversationMessages: [ChatMessage],
-        compactionSummary: String?,
-        systemHint: String?
-    ) -> [ChatMessage] {
-        let repairedMessages = repairSequence(conversationMessages)
-
-        var apiMessages: [ChatMessage] = []
-        apiMessages.append(ChatMessage(role: "system", content: systemContent))
-
-        if let summary = compactionSummary, !summary.isEmpty {
-            apiMessages.append(ChatMessage(
-                role: "user",
-                content: "<conversation_summary>\n\(summary)\n</conversation_summary>",
-                localID: "context-summary"
-            ))
-            apiMessages.append(ChatMessage(
-                role: "assistant",
-                content: compactionAck,
-                localID: "context-summary-ack"
-            ))
-        }
-
-        apiMessages.append(contentsOf: repairedMessages)
-
-        if let hint = systemHint, !hint.isEmpty {
-            apiMessages = appendSystemHint(hint, to: apiMessages)
-        }
-
-        return apiMessages
-    }
-
-    /// Appends the given `<system_hint>` block to the latest real user message
-    /// in the outgoing array, separated by a blank line.
-    ///
-    /// Walks back from the end of the array to find the most recent
-    /// `role == "user"` message that is not the synthetic compaction-summary
-    /// carrier — if no real user message exists post-compaction, falls back
-    /// to the synthetic one. Mutates only the `content` of a copy of the
-    /// array (value semantics keep the caller's input untouched), preserving
-    /// every other field on the matched message, including attachments.
-    static func appendSystemHint(
-        _ hint: String,
-        to messages: [ChatMessage]
-    ) -> [ChatMessage] {
-        guard let idx = messages.lastIndex(where: { $0.role == "user" }) else {
-            AppLogger.warning(
-                "Gatekeeper: no user message to append system_hint to",
-                category: .chat
-            )
-            var extended = messages
-            extended.append(ChatMessage(role: "user", content: hint))
-            return extended
-        }
-        var copy = messages
-        let existing = copy[idx].content ?? ""
-        let merged = existing.isEmpty ? hint : existing + "\n\n" + hint
-        copy[idx].content = merged
-        return copy
-    }
-
-    // MARK: - Image Stripping
-
-    /// Maximum number of image-bearing user turns whose image content is kept live
-    /// in the outgoing request. Older image turns are reduced to a text placeholder.
-    static let maxLiveImageTurns = 2
-
-    /// Stands in for an image the current model has no way to look at.
-    static let visionUnsupportedPlaceholder =
-        "[an image was attached here, but this model cannot view images]"
-
-    /// Applies image stripping to `messages` before they are sent to an inference provider.
-    ///
-    /// - When `supportsVision` is `false`, **all** image attachments are stripped to a
-    ///   placeholder so the request works with text-only models (e.g. after a model switch).
-    /// - When `supportsVision` is `true`, only the most recent ``maxLiveImageTurns``
-    ///   image-bearing user messages keep their attachments; older ones are stripped.
-    ///
-    /// Stripping replaces the `attachments` array with `nil` and appends a short
-    /// placeholder string to the message text so the model can see that an image was
-    /// present. Bytes on disk are never touched — this only affects the outgoing request.
-    static func applyImageStripping(
-        _ messages: [ChatMessage],
-        supportsVision: Bool
-    ) -> [ChatMessage] {
-        guard messages.contains(where: { $0.attachments?.isEmpty == false }) else {
-            return messages
-        }
-
-        if !supportsVision {
-            // Say why, not just that: a model told it cannot see can tell the user so,
-            // instead of ignoring the image they just sent.
-            return messages.map { msg in
-                msg.attachments?.isEmpty == false
-                    ? msg.withStrippedAttachments(placeholder: visionUnsupportedPlaceholder) : msg
-            }
-        }
-
-        // Keep only the most recent `maxLiveImageTurns` image-bearing turns.
-        // Walk from newest to oldest, tracking how many image turns we've kept.
-        var result = messages
-        var liveImageTurnsRemaining = maxLiveImageTurns
-
-        for i in stride(from: result.count - 1, through: 0, by: -1) {
-            guard result[i].attachments?.isEmpty == false else { continue }
-            if liveImageTurnsRemaining > 0 {
-                liveImageTurnsRemaining -= 1
-            } else {
-                result[i] = result[i].withStrippedAttachments()
-            }
-        }
-
-        return result
-    }
-
-    // MARK: - Sequence Repair
-
-    /// Removes broken tool-call groups and stray tool results from a message sequence.
-    ///
-    /// A valid tool-call round is an assistant message with `toolCalls` followed by
-    /// one `role: "tool"` message for each call ID. A group is dropped when:
-    /// - Any tool results are missing (orphaned / partial round).
-    /// - The group follows a `system` message (e.g. a compaction summary). Providers
-    ///   like Gemini require function calls after a user or tool-response turn.
-    ///
-    /// Stray `role: "tool"` messages without a preceding assistant are also dropped.
-    /// Recoverable duplicate results are collapsed; conflicting results remain for dispatch
-    /// validation.
-    static func repairSequence(_ messages: [ChatMessage]) -> [ChatMessage] {
-        var result: [ChatMessage] = []
-        var i = 0
-        while i < messages.count {
-            let msg = messages[i]
-            if msg.role == "assistant", let toolCalls = msg.toolCalls, !toolCalls.isEmpty {
-                let expectedIDs = Set(toolCalls.map(\.id))
-                var foundIDs: Set<String> = []
-                var j = i + 1
-                while j < messages.count, messages[j].role == "tool" {
-                    if let id = messages[j].toolCallID { foundIDs.insert(id) }
-                    j += 1
-                }
-                let afterSystem = result.last?.role == "system"
-                if foundIDs == expectedIDs, !afterSystem {
-                    result.append(msg)
-                    result.append(contentsOf: ToolResultRepair.repair(
-                        messages[(i + 1) ..< j],
-                        calls: toolCalls
-                    ))
-                }
-                i = j
-            } else if msg.role == "tool" {
-                // Stray tool result without a preceding assistant — drop it.
-                i += 1
-            } else {
-                result.append(msg)
-                i += 1
-            }
-        }
-        return result
     }
 
     // MARK: - Compaction

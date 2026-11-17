@@ -3,279 +3,6 @@ import Foundation
 import SwiftData
 import Testing
 
-@Suite("MessagePipeline.repairSequence")
-struct MessagePipelineTests {
-    // MARK: - Helpers
-
-    private func toolCall(id: String, name: String = "test") -> ToolCall {
-        ToolCall(id: id, type: "function", function: .init(name: name, arguments: "{}"))
-    }
-
-    private func assistant(_ content: String = "") -> ChatMessage {
-        ChatMessage(role: "assistant", content: content)
-    }
-
-    private func assistantWithTools(_ content: String? = nil, ids: [String]) -> ChatMessage {
-        ChatMessage(
-            role: "assistant",
-            content: content,
-            toolCalls: ids.map { toolCall(id: $0) }
-        )
-    }
-
-    private func toolResult(id: String) -> ChatMessage {
-        ChatMessage(role: "tool", content: "result", toolCallID: id)
-    }
-
-    private func user(_ content: String = "hi") -> ChatMessage {
-        ChatMessage(role: "user", content: content)
-    }
-
-    // MARK: - Tests
-
-    @Test func cleanConversationUnchanged() {
-        let input = [user(), assistant("hello"), user("more"), assistant("sure")]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 4)
-        #expect(result.map(\.role) == ["user", "assistant", "user", "assistant"])
-    }
-
-    @Test func completeRoundKept() {
-        let input = [assistantWithTools(ids: ["A"]), toolResult(id: "A")]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result[0].toolCalls?.first?.id == "A")
-        #expect(result[1].toolCallID == "A")
-    }
-
-    @Test func completeMultiToolRoundKept() {
-        let input = [
-            assistantWithTools(ids: ["A", "B"]),
-            toolResult(id: "A"),
-            toolResult(id: "B"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 3)
-    }
-
-    @Test(arguments: [false, true])
-    func interruptedAndRealResultsRecoverInEitherOrder(realFirst: Bool) {
-        let placeholder = ChatMessage(
-            role: "tool",
-            content: "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.",
-            toolCallID: "A"
-        )
-        let real = toolResult(id: "A")
-        let duplicates = realFirst ? [real, placeholder] : [placeholder, real]
-        let input = [user(), assistantWithTools(ids: ["A", "B"])]
-            + duplicates + [toolResult(id: "B"), user("continue")]
-        let repaired = MessagePipeline.repairSequence(input)
-        #expect(repaired.filter { $0.toolCallID == "A" }.map(\.content) == ["result"])
-        #expect(repaired.count == 5)
-        #expect(repaired.first?.localID == input.first?.localID)
-        #expect(repaired.last?.localID == input.last?.localID)
-        #expect(MessagePipeline.repairSequence(repaired).map(\.localID) == repaired.map(\.localID))
-    }
-
-    @Test func identicalResultsCollapseWithoutChangingOtherCalls() {
-        let input = [
-            user(),
-            assistantWithTools(ids: ["A", "B"]),
-            toolResult(id: "A"),
-            toolResult(id: "B"),
-            toolResult(id: "A"),
-        ]
-        let repaired = MessagePipeline.repairSequence(input)
-        #expect(repaired.map(\.localID) == Array(input.prefix(4)).map(\.localID))
-    }
-
-    @Test func repeatedInterruptedPlaceholdersCollapse() {
-        let results = (0 ..< 3).map { _ in
-            ChatMessage(role: "tool", content: ToolResult.interruptedContent, toolCallID: "A")
-        }
-        let repaired = MessagePipeline.repairSequence([assistantWithTools(ids: ["A"])] + results)
-        #expect(repaired.count == 2)
-        #expect(repaired.last?.localID == results.first?.localID)
-    }
-
-    @Test(arguments: ["metadata", "attachment", "name", "similarText"])
-    func ambiguousPlaceholdersKeepTheirPayload(payload: String) {
-        var placeholder = ChatMessage(
-            role: "tool",
-            content: ToolResult.interruptedContent,
-            toolCallID: "A"
-        )
-        switch payload {
-        case "metadata": placeholder.providerMetadata = ["signature": "private-state"]
-        case "attachment":
-            placeholder.attachments = [MessageAttachment(
-                id: UUID(),
-                kind: .image,
-                mimeType: "image/png",
-                byteCount: 1
-            )]
-        case "name": placeholder.name = "different_tool"
-        default: placeholder.content = ToolResult.interruptedContent + " Additional output."
-        }
-        let input = [assistantWithTools(ids: ["A"]), placeholder, toolResult(id: "A")]
-        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
-    }
-
-    @Test func differentRealResultsRemainUnresolved() {
-        let results = [
-            toolResult(id: "A"),
-            ChatMessage(role: "tool", content: "Different", toolCallID: "A"),
-        ]
-        let input = [assistantWithTools(ids: ["A"])] + results
-        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
-    }
-
-    @Test func matchingResultsAcrossRoundsAreNotMerged() {
-        let input = [
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-        ]
-        #expect(MessagePipeline.repairSequence(input).map(\.localID) == input.map(\.localID))
-    }
-
-    @Test func orphanedAssistantDropped() {
-        let input = [user(), assistantWithTools(ids: ["A"]), user()]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result.map(\.role) == ["user", "user"])
-    }
-
-    @Test func partialResultsDropped() {
-        let input = [assistantWithTools(ids: ["A", "B"]), toolResult(id: "A")]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.isEmpty)
-    }
-
-    @Test func orphanedAtEndDropped() {
-        let input = [user(), assistant("plain"), assistantWithTools(ids: ["A"])]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result.map(\.role) == ["user", "assistant"])
-    }
-
-    @Test func mixedGoodAndBad() {
-        let input = [
-            user(),
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistantWithTools(ids: ["B"]),
-            user(),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 4)
-        #expect(result.map(\.role) == ["user", "assistant", "tool", "user"])
-    }
-
-    @Test func multipleCompleteRounds() {
-        let input = [
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistantWithTools(ids: ["B"]),
-            toolResult(id: "B"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 4)
-    }
-
-    @Test func emptyInput() {
-        let result = MessagePipeline.repairSequence([])
-        #expect(result.isEmpty)
-    }
-
-    @Test func assistantWithContentAndToolCalls_complete() {
-        let input = [
-            assistantWithTools("thinking", ids: ["A"]),
-            toolResult(id: "A"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result[0].content == "thinking")
-        #expect(result[0].toolCalls?.first?.id == "A")
-    }
-
-    @Test func assistantWithContentAndToolCalls_orphaned() {
-        let input = [assistantWithTools("thinking", ids: ["A"])]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.isEmpty)
-    }
-
-    // MARK: - Stray tool results (e.g. after compaction ate the assistant)
-
-    @Test func strayToolResultsAtStartDropped() {
-        let input = [toolResult(id: "A"), toolResult(id: "B"), user(), assistant("hi")]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result.map(\.role) == ["user", "assistant"])
-    }
-
-    @Test func strayToolResultAfterCompactionSummary() {
-        var summary = ChatMessage(role: "system", content: "Summary of earlier conversation")
-        summary.isCompactionSummary = true
-        let input = [summary, toolResult(id: "A"), user("hello")]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result[0].role == "system")
-        #expect(result[1].role == "user")
-    }
-
-    @Test func strayToolResultBetweenValidRounds() {
-        // The stray tool(Z) is consumed by the scanner as part of the first group's
-        // tool messages, making foundIDs={A,Z} != expectedIDs={A}, so the first
-        // round is dropped. The second round is valid and kept.
-        let input = [
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            toolResult(id: "Z"), // stray — no assistant owns Z
-            assistantWithTools(ids: ["B"]),
-            toolResult(id: "B"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 2)
-        #expect(result.map(\.role) == ["assistant", "tool"])
-        #expect(result[0].toolCalls?.first?.id == "B")
-    }
-
-    // MARK: - Tool-call rounds after system messages (compaction boundary)
-
-    @Test func completeRoundAfterCompactionSummaryDropped() {
-        // Gemini rejects function calls that don't follow a user or tool-response turn.
-        // After compaction, a tool-call round may sit right after the summary — drop it.
-        var summary = ChatMessage(role: "system", content: "Summary")
-        summary.isCompactionSummary = true
-        let input = [
-            summary,
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistant("Here's the result"),
-            user("Thanks"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 3)
-        #expect(result.map(\.role) == ["system", "assistant", "user"])
-        #expect(result[1].content == "Here's the result")
-    }
-
-    @Test func completeRoundAfterUserKept() {
-        // Same round but preceded by a user message — should be kept.
-        let input = [
-            user("do something"),
-            assistantWithTools(ids: ["A"]),
-            toolResult(id: "A"),
-            assistant("Done"),
-        ]
-        let result = MessagePipeline.repairSequence(input)
-        #expect(result.count == 4)
-        #expect(result.map(\.role) == ["user", "assistant", "tool", "assistant"])
-    }
-}
-
 @Suite("MessagePipeline.slidingWindowCompaction")
 struct SlidingWindowCompactionTests {
     @Test func slidingWindowSkipsWhenUnderBudget() async {
@@ -453,9 +180,9 @@ struct RetentionCompactionTests {
         try store.mainContext.save()
         let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
         let loaded = try ModelContext(store).fetch(descriptor).map { $0.toChatMessage() }
-        let conversation = MessagePipeline.splitAtLatestSummary(loaded).conversation
+        let conversation = MessagePreparationTestSupport.splitAtLatestSummary(loaded).conversation
         let apiMessages = [ChatMessage(role: "system", content: "System")]
-            + MessagePipeline.repairSequence(conversation)
+            + MessagePreparationTestSupport.preparedHistory(conversation)
         let service = FakeChatService()
         service.enqueueEventStream([
             .contentDelta(
@@ -477,8 +204,9 @@ struct RetentionCompactionTests {
         store.mainContext.insert(summaryRow)
         try store.mainContext.save()
         let reloaded = try ModelContext(store).fetch(descriptor).map { $0.toChatMessage() }
-        let restored = MessagePipeline
-            .repairSequence(MessagePipeline.splitAtLatestSummary(reloaded).conversation)
+        let restored = MessagePreparationTestSupport
+            .preparedHistory(MessagePreparationTestSupport.splitAtLatestSummary(reloaded)
+                .conversation)
         #expect(restored.map(\.localID) == retained.map(\.localID))
         #expect(restored.filter { $0.toolCallID == "options" }.map(\.content) == ["Dismissed"])
         #expect(reloaded.count == loaded.count + 1)
@@ -495,7 +223,8 @@ struct RetentionCompactionTests {
         messages.append(summary)
         messages.append(user("new"))
 
-        let (splitSummary, conversation) = MessagePipeline.splitAtLatestSummary(messages)
+        let (splitSummary, conversation) = MessagePreparationTestSupport
+            .splitAtLatestSummary(messages)
 
         #expect(splitSummary == summary.content)
         // The two messages before the summary plus everything after it.
@@ -516,7 +245,8 @@ struct RetentionCompactionTests {
         messages.append(summary)
         messages.append(user("new"))
 
-        let (splitSummary, conversation) = MessagePipeline.splitAtLatestSummary(messages)
+        let (splitSummary, conversation) = MessagePreparationTestSupport
+            .splitAtLatestSummary(messages)
 
         #expect(splitSummary == summary.content)
         #expect(conversation.map(\.localID) == [messages[3].localID])
@@ -617,7 +347,7 @@ struct RetentionCompactionTests {
         let future = [user("after compaction"), assistant("and the reply")]
         let store = covered + retained + [summary] + future
 
-        let (splitSummary, conversation) = MessagePipeline.splitAtLatestSummary(store)
+        let (splitSummary, conversation) = MessagePreparationTestSupport.splitAtLatestSummary(store)
 
         #expect(splitSummary == summary.content)
         #expect(conversation.map(\.localID) == retained.map(\.localID) + future.map(\.localID))
@@ -625,7 +355,8 @@ struct RetentionCompactionTests {
 
     @Test func splitAtLatestSummaryReturnsInputWhenNoSummary() {
         let messages = [user("a"), assistant("b")]
-        let (splitSummary, conversation) = MessagePipeline.splitAtLatestSummary(messages)
+        let (splitSummary, conversation) = MessagePreparationTestSupport
+            .splitAtLatestSummary(messages)
         #expect(splitSummary == nil)
         #expect(conversation.map(\.localID) == messages.map(\.localID))
     }

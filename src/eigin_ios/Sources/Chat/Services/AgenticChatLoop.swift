@@ -283,7 +283,10 @@ final class AgenticChatLoop {
             if let instruction = nextInstruction,
                let hint = SystemHintBuilder.build(sections: [instruction])
             {
-                requestMessages = MessagePipeline.appendSystemHint(hint, to: requestMessages)
+                requestMessages = MessagePreparationSDKConversion.appendHint(
+                    hint,
+                    to: requestMessages
+                )
             }
             requestMessages = try paging.prepare(
                 requestMessages, tools: currentTools, model: activeModel,

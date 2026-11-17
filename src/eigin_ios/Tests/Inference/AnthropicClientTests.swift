@@ -74,7 +74,7 @@ struct AnthropicClientTests {
         )
         do {
             let stream = try await client.chatCompletionEventStream(
-                messages: MessagePipeline.repairSequence(messages),
+                messages: MessagePreparationTestSupport.preparedHistory(messages),
                 model: "test",
                 tools: nil
             )
@@ -126,7 +126,7 @@ struct AnthropicClientTests {
         let context = ModelContext(store)
         let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
         let loaded = try context.fetch(descriptor).map { $0.toChatMessage() }
-        let repaired = MessagePipeline.repairSequence(loaded)
+        let repaired = MessagePreparationTestSupport.preparedHistory(loaded)
         let base = "https://repaired-\(UUID().uuidString).test/v1"
         let url = "\(base)/messages"
         FakeURLProtocol.stubResponse(

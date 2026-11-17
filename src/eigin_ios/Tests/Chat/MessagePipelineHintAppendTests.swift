@@ -27,7 +27,7 @@ struct MessagePipelineHintAppendTests {
             ChatMessage(role: "assistant", content: "reply"),
             ChatMessage(role: "user", content: "second"),
         ]
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: messages,
             systemHint: "<system_hint>\n## Test\n\nbody\n</system_hint>"
@@ -46,7 +46,7 @@ struct MessagePipelineHintAppendTests {
             ChatMessage(role: "user", content: "real"),
             ChatMessage(role: "assistant", content: "ok"),
         ]
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: messages,
             systemHint: "HINT"
@@ -73,7 +73,7 @@ struct MessagePipelineHintAppendTests {
         let messages = [
             ChatMessage(role: "user", content: "look at this", attachments: [attachment]),
         ]
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: messages,
             systemHint: "HINT"
@@ -85,7 +85,7 @@ struct MessagePipelineHintAppendTests {
     @Test func nilHintProducesPlainConversation() {
         let agent = agent()
         let messages = [ChatMessage(role: "user", content: "hello")]
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: messages,
             systemHint: nil
@@ -98,7 +98,7 @@ struct MessagePipelineHintAppendTests {
         let agent = agent()
         let originalUser = ChatMessage(role: "user", content: "hi")
         let messages = [originalUser]
-        _ = MessagePipeline.buildAPIMessages(
+        _ = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: messages,
             systemHint: "HINT"
@@ -113,12 +113,12 @@ struct MessagePipelineHintAppendTests {
 
     @Test func systemPromptByteStableAcrossTurns() {
         let agent = agent(identity: "I am a helpful agent.", userCore: "User likes Rust.")
-        let firstTurn = MessagePipeline.buildAPIMessages(
+        let firstTurn = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: [ChatMessage(role: "user", content: "one")],
             systemHint: "<system_hint>\n## A\n\none\n</system_hint>"
         )
-        let secondTurn = MessagePipeline.buildAPIMessages(
+        let secondTurn = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: [
                 ChatMessage(role: "user", content: "one"),
@@ -136,7 +136,7 @@ struct MessagePipelineHintAppendTests {
 
     @Test func compactionSummaryEmitsSyntheticUserAssistantPair() {
         let agent = agent()
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: [ChatMessage(role: "user", content: "ongoing")],
             compactionSummary: "Earlier the user asked about Rust.",
@@ -157,7 +157,7 @@ struct MessagePipelineHintAppendTests {
 
     @Test func compactionSummaryAbsentFromSystemPrompt() {
         let agent = agent()
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: [ChatMessage(role: "user", content: "ongoing")],
             compactionSummary: "SECRET_SUMMARY_TOKEN",
@@ -168,7 +168,7 @@ struct MessagePipelineHintAppendTests {
 
     @Test func noCompactionSummaryNoSynthetic() {
         let agent = agent()
-        let output = MessagePipeline.buildAPIMessages(
+        let output = MessagePreparationTestSupport.buildAPIMessages(
             agent: agent,
             conversationMessages: [ChatMessage(role: "user", content: "hi")],
             compactionSummary: nil,
