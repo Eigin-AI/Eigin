@@ -1,0 +1,25 @@
+---
+title: 'Her er Eigin'
+description: 'Eigin er i åben beta på iPhone. Hjælp os med at skabe en fremtid, hvor personlig AI tilhører dem, der bruger den.'
+date: '2026-11-17'
+---
+
+Personlige AI-agenter vinder frem og ændrer måden, vi bruger computere på. Jo tættere de er forbundet med os, vores liv og de systemer, vi bruger, jo mere nyttige bliver de. Og jo mere nyttige de bliver, jo mere deler vi med dem.
+
+Så personlig en teknologi bør tilhøre dem, der bruger den.
+
+Derfor bygger vi Eigin. Det er en personlig agent, der hjælper dig med at huske det, der betyder noget, og få hverdagens opgaver gjort. Dine samtaler og minder gemmes på din enhed. Du vælger, hvilken AI den bruger, og bestemmer, hvad den må gøre.
+
+**Eigin er i åben beta på iPhone.** Du kan prøve den nu.
+
+Vi er et lille hold med store ambitioner. Vi vil give folk reel kontrol over AI i deres liv. Vi bruger Eigin hver dag, men der er stadig meget at arbejde på.
+
+Vi håber, du vil være med til at præge det arbejde.
+
+Eigin er åben teknologi. Alle kan se koden, bidrage eller bygge videre på den. Åben teknologi giver os som enkeltpersoner kontrol over vores digitale liv. For Europa giver det os mulighed for at bygge i fællesskab og drive teknologi på vores egne vilkår.
+
+Vi ønsker en fremtid, hvor personlig AI tilhører os.
+
+Hvis du også ønsker det, vil vi gerne samarbejde med dig.
+
+[Prøv betaen](/da/#get), [læs koden](https://code.eigin.ai/dev/eigin), eller [kontakt os](mailto:hello@eigin.ai).

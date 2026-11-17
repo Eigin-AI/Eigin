@@ -1,0 +1,25 @@
+---
+title: 'Introducing Eigin'
+description: 'Eigin is in open beta on iPhone. Help us build a future where personal AI belongs to the people who use it.'
+date: '2026-11-17'
+---
+
+Personal AI agents are on the rise, and they’re changing how we use computers. The more connected they are to us, our lives, and the systems we use, the more useful they become. And the more useful they become, the more we share.
+
+Technology this personal should belong to the people who use it.
+
+That’s why we’re building Eigin. It’s a personal agent that helps you remember what matters and get everyday tasks done. Your conversations and memories are stored on your device. You choose the AI it uses, and you control what it can do.
+
+**Eigin is in open beta on iPhone.** You can try it now.
+
+We’re a small team with big ambitions. We want to give people real control over the AI in their lives. We use Eigin every day, but there’s plenty more work to do.
+
+We hope you’ll help us shape it.
+
+Eigin is open technology. Anyone can inspect the code, contribute, or build on it. Open technology gives us control over our digital lives as individuals. For Europe, it gives us a way to build together and run technology on our own terms.
+
+We want a future where personal AI belongs to us.
+
+If you care about that too, we’d love to work with you.
+
+[Try the beta](/en/#get), [read the code](https://code.eigin.ai/dev/eigin), or [get in touch](mailto:hello@eigin.ai).
