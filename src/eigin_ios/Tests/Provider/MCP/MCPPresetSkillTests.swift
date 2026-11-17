@@ -51,6 +51,32 @@ struct MCPPresetSkillTests {
             .id == manual.id)
     }
 
+    @Test func discoversPleoAndPreservesManualConnections() throws {
+        let preset = MCPPreset.pleo
+        let manual = MCPServer(name: "Pleo", url: "https://mcp.pleo.io/mcp")
+        let skill = try #require(SkillCatalog.skill(
+            forID: "mcp_preset__pleo",
+            mcpServers: [manual]
+        ))
+        #expect(skill.requiredTools.isEmpty)
+        #expect(skill.connectionPresetID == "pleo")
+        #expect(SkillCatalog.connectionNeeded(for: skill, connected: []) == "Pleo")
+        #expect(skill.descriptor.contains("expenses"))
+        #expect(IntegrationCatalogEntry.matching("Pleo", in: [.mcpPreset(preset)]).count == 1)
+        #expect(preset.server(in: [manual]) == nil)
+
+        let server = MCPServer(name: "Company spending", url: preset.endpoint.absoluteString)
+        server.presetID = preset.id
+        server.cachedToolNames = ["expenses"]
+        server.serverInstructions = "Choose the entity before reading expenses."
+        let connected = try #require(MCPServerSkill.project(servers: [manual, server])
+            .first { $0.id == skill.id })
+        #expect(connected.connectionPresetID == nil)
+        #expect(connected.requiredTools.count == 1)
+        #expect(connected.instruction.contains(preset.instructions))
+        #expect(connected.instruction.contains("Choose the entity"))
+    }
+
     @Test func discoversDineroWithoutAConnection() throws {
         let skill = try #require(SkillCatalog.skill(
             forID: MCPPreset.dinero.skillID,

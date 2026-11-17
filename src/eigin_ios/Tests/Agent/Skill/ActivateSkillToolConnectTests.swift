@@ -117,7 +117,8 @@ struct ActivateSkillToolConnectTests {
             .count(where: { $0.id == MCPPreset.dinero.skillID }) == 1)
     }
 
-    @Test func presetSetupRequiresLaterReplyAndVerifiesConnection() async throws {
+    @Test(arguments: [MCPPreset.dinero, MCPPreset.pleo])
+    func presetSetupRequiresLaterReplyAndVerifiesConnection(preset: MCPPreset) async throws {
         let (agent, chat, container) = try makeFixture()
         defer { _ = container }
         let asks = Asks()
@@ -126,27 +127,27 @@ struct ActivateSkillToolConnectTests {
             return .connected
         }
         let first = await activate(
-            MCPPreset.dinero.skillID,
+            preset.skillID,
             chat: chat,
             agent: agent,
             handler: handler
         )
         #expect(first.content.contains("confirmation_required"))
         #expect(asks.requests.isEmpty)
-        _ = await activate(MCPPreset.dinero.skillID, chat: chat, agent: agent, handler: handler)
+        _ = await activate(preset.skillID, chat: chat, agent: agent, handler: handler)
         #expect(asks.requests.isEmpty)
         connectionGate.beginUserTurn(chatID: chat.id, messageID: UUID().uuidString)
         let incomplete = await activate(
-            MCPPreset.dinero.skillID,
+            preset.skillID,
             chat: chat,
             agent: agent,
             handler: handler
         )
         #expect(asks.requests.count == 1)
-        #expect(asks.requests.first?.presetID == "dinero")
+        #expect(asks.requests.first?.presetID == preset.id)
         #expect(asks.requests.first?.capabilities.isEmpty == true)
-        #expect(incomplete.content.contains("Dinero"))
-        #expect(!chat.isSkillActive(MCPPreset.dinero.skillID))
+        #expect(incomplete.content.contains(preset.displayName))
+        #expect(!chat.isSkillActive(preset.skillID))
     }
 
     @Test(arguments: [false, true])

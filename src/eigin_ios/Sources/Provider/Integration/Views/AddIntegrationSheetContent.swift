@@ -113,21 +113,11 @@ struct AddIntegrationSheetContent: View {
 
     // MARK: - Catalogue
 
-    /// The catalogue narrowed by search or category. At the top level that
-    /// is the Recommended list — the things we would suggest first — minus
-    /// anything already connected, because the sheet connects one account
-    /// per type and offering it again would be offering a thing you cannot do.
+    /// Unconnected services selected for the current browse mode.
     private var listedEntries: [IntegrationCatalogEntry] {
-        let types = selectedCategory == nil && searchText.isEmpty
-            ? BundledIntegrationType.recommended : BundledIntegrationType.all
-        var entries = types.filter { !isConnected($0) }.map(IntegrationCatalogEntry.integration)
-        entries += MCPPreset.all.filter { preset in
-            preset.server(in: servers)?.isEnabled != true
-        }.map(IntegrationCatalogEntry.mcpPreset)
-        if let selectedCategory { entries = entries.filter { $0.category == selectedCategory } }
-        return searchText.isEmpty ? entries : IntegrationCatalogEntry.matching(
-            searchText,
-            in: entries
+        IntegrationCatalogEntry.listed(
+            integrations: integrations, servers: servers,
+            category: selectedCategory, search: searchText
         )
     }
 
@@ -177,10 +167,6 @@ struct AddIntegrationSheetContent: View {
         case .familyAndSchool: Iconography.Functional.school
         case .platform: Iconography.Functional.lock
         }
-    }
-
-    private func isConnected(_ type: IntegrationType) -> Bool {
-        integrations.contains { $0.isEnabled && $0.typeID == type.id }
     }
 }
 
