@@ -40,8 +40,7 @@ struct ToolPermissions: View {
                         if index > 0 { RowHairline() }
                         AppDisclosure(
                             category.displayName,
-                            variant: .open,
-                            initiallyExpanded: category == .knowledge
+                            variant: .open
                         ) {
                             PermissionRows(items: ToolRegistry
                                 .capabilities(for: category))
