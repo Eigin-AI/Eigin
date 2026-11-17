@@ -8,12 +8,14 @@
     locale,
     path = "",
     root = false,
+    metadata = { type: "website" },
   }: {
     title: string;
     description: string;
     locale: Locale;
     path?: string;
     root?: boolean;
+    metadata?: { type: "website" } | { type: "article"; publishedAt: string };
   } = $props();
   const canonical = $derived(`${social.origin}${root ? "/" : `/${locale}/${path}`}`);
   const image = $derived(`${social.origin}/social/${locale}.png`);
@@ -31,7 +33,10 @@
     hreflang="x-default"
     href={`${social.origin}/${path ? `en/${path}` : ""}`}
   />
-  <meta property="og:type" content="website" />
+  <meta property="og:type" content={metadata.type} />
+  {#if metadata.type === "article"}
+    <meta property="article:published_time" content={`${metadata.publishedAt}T00:00:00Z`} />
+  {/if}
   <meta property="og:site_name" content="Eigin" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />

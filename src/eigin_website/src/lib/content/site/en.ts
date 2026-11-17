@@ -48,16 +48,16 @@ const content: SiteContent = {
         title: "Learn",
         links: [
           {
+            label: "News",
+            href: "/en/news/",
+          },
+          {
             label: "Trust",
             href: "/en/trust/",
           },
           {
             label: "Roadmap",
             href: "/en/roadmap/",
-          },
-          {
-            label: "Questions",
-            href: "#faq",
           },
           {
             label: "Source code",

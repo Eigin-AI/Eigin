@@ -48,16 +48,16 @@ const content: SiteContent = {
         title: "Læs mere",
         links: [
           {
+            label: "Nyheder",
+            href: "/da/news/",
+          },
+          {
             label: "Tillid",
             href: "/da/trust/",
           },
           {
             label: "Roadmap",
             href: "/da/roadmap/",
-          },
-          {
-            label: "Spørgsmål",
-            href: "#faq",
           },
           {
             label: "Kildekode",

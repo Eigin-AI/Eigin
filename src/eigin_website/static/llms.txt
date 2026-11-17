@@ -1,0 +1,24 @@
+# Eigin
+
+> Eigin is a personal AI agent built to be private, safe, and under your control.
+
+The website is available in English and Danish. The trust page describes data handling and model choices. The roadmap distinguishes available features from planned work.
+
+## Product
+
+- [Eigin](https://eigin.ai/en/): Product overview and iPhone beta access.
+- [Trust](https://eigin.ai/en/trust/): Storage, cloud requests, permissions, and privacy.
+- [Roadmap](https://eigin.ai/en/roadmap/): Current development and planned features.
+- [News](https://eigin.ai/en/news/): Published announcements and updates.
+- [Support](https://eigin.ai/en/support/): Help with the app.
+
+## Project
+
+- [Source code](https://code.eigin.ai/dev/eigin): Open-source repository, issues, and contributions.
+- [Contact](https://eigin.ai/en/contact/): Company and press contact.
+
+## Optional
+
+- [Dansk](https://eigin.ai/da/): Danish-language website.
+- [Privacy](https://eigin.ai/en/privacy/): Privacy policy.
+- [Terms](https://eigin.ai/en/terms/): Terms of service.

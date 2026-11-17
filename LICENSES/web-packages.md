@@ -20,6 +20,7 @@ Resolved versions and transitive dependency licenses are recorded in the root lo
 | [fflate](https://github.com/101arrowz/fflate) | MIT |
 | [highlight.js](https://github.com/highlightjs/highlight.js) | BSD-3-Clause |
 | [katex](https://github.com/KaTeX/KaTeX) | MIT |
+| [mdsvex](https://github.com/pngwn/MDsveX) | MIT |
 | [marked](https://github.com/markedjs/marked) | MIT |
 | [prettier](https://github.com/prettier/prettier) | MIT |
 | [prettier-plugin-svelte](https://github.com/sveltejs/prettier-plugin-svelte) | MIT |

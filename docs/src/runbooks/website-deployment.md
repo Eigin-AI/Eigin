@@ -33,3 +33,10 @@ WEBSITE_URL=https://www.eigin.ai cargo run --manifest-path tools/Cargo.toml -- w
 
 In the website project's Edge Services pipeline, open **Metrics / Cockpit → Edge Services Overview**.
 Counts include assets and bots; they do not represent visits or unique visitors. No browser trackers are used.
+
+## News and discovery
+
+- Add approved English/Danish posts under `src/eigin_website/src/lib/content/news/posts/`. See the [authoring guide](../../../src/eigin_website/src/lib/content/news/README.md).
+- Run `just test website` before release. It checks types, builds the site, and runs browser tests.
+- Published posts automatically update News navigation, localized RSS feeds, language-free entry pages, and `/sitemap.xml`.
+- `/robots.txt` advertises the sitemap. Keep the curated `/llms.txt` product links current when public pages change.
