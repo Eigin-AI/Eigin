@@ -97,14 +97,10 @@ struct PermissionRequestSheetContent: View {
             }
             .padding(.horizontal, contentPx)
         }
-        .onDisappear {
-            if !didRespond {
-                onResponse(.deny)
-            }
-        }
     }
 
     private func respond(_ response: PermissionResponse) {
+        guard !didRespond else { return }
         didRespond = true
         onResponse(response)
         dismiss()

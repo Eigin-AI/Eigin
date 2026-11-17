@@ -107,7 +107,10 @@ final class AgenticChatLoop {
     var onChatGrant: (([ToolCapability]) -> Void)?
     private(set) var throttler: any StreamThrottling
     var permissionPolicy: ToolPermissionPolicy
-    private var permissionContinuation: CheckedContinuation<PermissionResponse, Never>?
+    private var permissionWaits: [(
+        request: PermissionRequest,
+        continuation: CheckedContinuation<PermissionResponse, Never>
+    )] = []
     private var browsingContinuation: CheckedContinuation<BrowsingResult, Never>?
     private var optionsContinuation: CheckedContinuation<OptionSelection, Never>?
     private var connectionContinuation: CheckedContinuation<CapabilityConnectResult, Never>?
@@ -666,11 +669,21 @@ final class AgenticChatLoop {
         didRefreshCatalog = false
     }
 
-    /// Resolves a pending permission request from the UI.
-    func resolvePermission(_ response: PermissionResponse) {
-        permissionContinuation?.resume(returning: response)
-        permissionContinuation = nil
-        pendingPermission = nil
+    /// Resolves only the displayed request; late and duplicate responses are ignored.
+    func resolvePermission(_ response: PermissionResponse, requestID: String) {
+        guard let first = permissionWaits.first, first.request.id == requestID else { return }
+        permissionWaits.removeFirst()
+        pendingPermission = permissionWaits.first?.request
+        first.continuation.resume(returning: response)
+    }
+
+    /// Queues a permission request until its own response arrives.
+    func requestPermission(_ request: PermissionRequest) async -> PermissionResponse {
+        guard !shouldStop else { return .deny }
+        return await withCheckedContinuation { continuation in
+            permissionWaits.append((request, continuation))
+            pendingPermission = permissionWaits.first?.request
+        }
     }
 
     /// Presents a browsing request and suspends until the UI resolves it.
@@ -736,9 +749,12 @@ final class AgenticChatLoop {
         shouldStop = true
         throttler.abort()
         // Cancel any pending permission prompt
-        permissionContinuation?.resume(returning: .deny)
-        permissionContinuation = nil
+        let waits = permissionWaits
+        permissionWaits.removeAll()
         pendingPermission = nil
+        for wait in waits {
+            wait.continuation.resume(returning: .deny)
+        }
         // Cancel any pending browsing request
         browsingContinuation?.resume(returning: .cancelled)
         browsingContinuation = nil
@@ -848,7 +864,7 @@ final class AgenticChatLoop {
                 updateToolEvent(id: eventID, status: .denied)
             } else {
                 let capabilities = ToolRegistry.capabilities(for: toolName)
-                pendingPermission = PermissionRequest(
+                let request = PermissionRequest(
                     id: call.id,
                     toolName: toolName,
                     toolDisplayName: ToolRegistry.displayName(for: toolName),
@@ -856,11 +872,7 @@ final class AgenticChatLoop {
                 )
                 updateToolEvent(id: eventID, status: .awaitingPermission)
 
-                let response = await withCheckedContinuation {
-                    (continuation: CheckedContinuation<PermissionResponse, Never>) in
-                    self.permissionContinuation = continuation
-                }
-                pendingPermission = nil
+                let response = await requestPermission(request)
 
                 switch response {
                 case .allowOnce:

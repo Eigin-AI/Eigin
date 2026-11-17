@@ -90,7 +90,10 @@ struct FollowUpApprovalTests {
         #expect(center.requests.isEmpty)
         #expect(try container.mainContext
             .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 0)
-        loop.resolvePermission(approve ? .allowOnce : .deny)
+        try loop.resolvePermission(
+            approve ? .allowOnce : .deny,
+            requestID: #require(loop.pendingPermission).id
+        )
         if approve {
             try await waitUntil { center.isWaitingForAcceptance }
             #expect(await authorization.requestCount == 1)
