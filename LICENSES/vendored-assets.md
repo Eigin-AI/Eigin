@@ -11,6 +11,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 | Simple Icons | https://github.com/simple-icons/simple-icons | 15.x; footer marks 11.15.0 | CC0-1.0 | `design/assets/icons/service/*.svg`, brand marks for connectable services |
 | Basecamp brand mark | https://basecamp.com/assets/images/general/mask-icon.svg | — | Rights retained by Basecamp | `design/assets/icons/service/basecamp.svg`, generated connection icons |
 | Dinero brand mark | https://mcp.dinero.dk/dinero-logo-primary-500.svg | — | Rights retained by Dinero | `design/assets/icons/service/dinero.svg`, generated connection icons |
+| Pleo brand mark | [Official Pleo press kit](https://www.pleo.io/en/press) | — | Rights retained by Pleo; no explicit reuse licence supplied | `design/assets/icons/service/pleo.svg`, generated connection icons |
 | Fira Code Regular | https://github.com/tonsky/FiraCode/tree/5.2 | 5.002 (font metadata) | [SIL OFL 1.1](FiraCode-LICENSE.txt) | Bundled docs code font; notice published at `fonts/FiraCode-LICENSE.txt` |
 | Provider brand marks | Sourced from each provider's own brand assets | — | Trademarks of their owners | `design/assets/icons/provider/*.svg`, marks for the AI providers Eigin can connect to |
 
@@ -30,6 +31,8 @@ Microsoft's trademark.
 `service/dinero.svg` is the symbol extracted from [Dinero's official logo](https://mcp.dinero.dk/dinero-logo-primary-500.svg), adjusted for monochrome display. Dinero retains rights to the artwork and trademark; this asset is outside the Simple Icons CC0 set.
 
 `service/basecamp.svg` is Basecamp's official website mask icon. Basecamp retains rights to the artwork and trademark; this asset is outside the Simple Icons CC0 set.
+
+`service/pleo.svg` is the pure-black wordmark from [Pleo’s official press kit](https://drive.google.com/drive/folders/1tIp90ksxmC9P8GL3ddXdxsyflVx1XAmk), file `Pleo_Logo_Pure Black.svg` ([source](https://drive.google.com/file/d/1xneRNzYyMaLobJzefZzV0F2x47GYBJY6/view)). Pleo retains rights to the artwork and trademark. No explicit reuse licence was supplied; this asset is outside the Simple Icons CC0 set.
 
 Either way the marks themselves stay the trademarks of their owners. Eigin
 shows them only to identify which service a connection points at, which is

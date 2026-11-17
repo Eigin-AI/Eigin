@@ -57,7 +57,16 @@ struct MCPPreset: Identifiable, Sendable {
         localizedDescription: { Localized.Integrations.Notion.description },
         localizedConnectionDescription: { Localized.Integrations.Notion.connectionDescription }
     )
-    static let all = [dinero, basecamp, notion]
+    static let pleo = MCPPreset(
+        id: "pleo", displayName: "Pleo", endpoint: URL(string: "https://mcp.pleo.io/mcp")!,
+        category: .finance, brandImage: Iconography.Service.pleo,
+        instructions: Prompt.Skills.Pleo.instruction,
+        searchDescriptor: "Pleo Danish spend management: expenses, receipts, spending insights and company spending.",
+        oauthCallback: nil,
+        localizedDescription: { Localized.Integrations.Pleo.description },
+        localizedConnectionDescription: { Localized.Integrations.Pleo.connectionDescription }
+    )
+    static let all = [dinero, basecamp, notion, pleo]
 
     /// Looks up a bundled preset by its stable skill identifier.
     static func forSkillID(_ skillID: String) -> MCPPreset? {

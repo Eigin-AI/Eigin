@@ -2406,6 +2406,16 @@ enum Localized {
             }
         }
 
+        enum Pleo {
+            static var connectionDescription: String {
+                Localized.get("integrations.pleo.connectionDescription")
+            }
+
+            static var description: String {
+                Localized.get("integrations.pleo.description")
+            }
+        }
+
         enum Search {
             /// Empty state shown when a search in Add Integration matches nothing
             static var noResults: String {

@@ -193,6 +193,38 @@
         }
       }
     },
+    "integrations.pleo.description": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbejd med udgifter, kvitteringer og indsigt i forbrug i Pleo."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work with expenses, receipts, and spending insights in Pleo."
+          }
+        }
+      }
+    },
+    "integrations.pleo.connectionDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind på Pleo. Kræver et understøttet abonnement og MCP-adgang aktiveret af en administrator."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to Pleo. Requires an eligible plan and admin-enabled MCP access."
+          }
+        }
+      }
+    },
     "integrations.dinero.description": {
       "localizations": {
         "da": {
