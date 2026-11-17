@@ -40,6 +40,96 @@ struct ConfigurableReasoningTests {
         return await (route.model, router.reasoningEffort(for: route.model, request: request))
     }
 
+    @Test(arguments: [0, 1, 2, 3, 4])
+    func earlyTurnsRequireStrongComplexity(depth: Int) async {
+        let provider = provider()
+        let request = RouteRequest(
+            currentProviderID: provider.id, currentModel: large, isAuto: true,
+            requirements: RouteRequirements(), providers: [provider], conversationID: UUID(),
+            lastUserMessage: "Analyze and compare trade-offs step by step. Explain why.",
+            turnContext: RoutingTurnContext(responseTurnCount: depth)
+        )
+        let result = await resolve(router(), request)
+        #expect(result.model == large)
+        #expect(result.reasoningEffort == (depth < 4 ? .low : .medium))
+    }
+
+    @Test(arguments: [0, 1, 2, 3, 4])
+    func technicalRequestsGainReasoningGradually(depth: Int) async {
+        let provider = provider()
+        let request = RouteRequest(
+            currentProviderID: provider.id, currentModel: large, isAuto: true,
+            requirements: RouteRequirements(), providers: [provider], conversationID: UUID(),
+            lastUserMessage: "```swift func solve() {} ``` Explain the algorithm and database.",
+            turnContext: RoutingTurnContext(responseTurnCount: depth)
+        )
+        let result = await resolve(router(), request)
+        #expect(result.reasoningEffort == (depth < 2 ? .low : .medium))
+    }
+
+    @Test func clearlyDifficultFirstRequestCanEscalate() async {
+        let provider = provider()
+        let text = "Analyze this algorithm and compare the database trade-offs step by step. Explain why. ```swift func solve() {} ```"
+        #expect(QueryComplexity.score(text: text) >= 0.70)
+        let request = RouteRequest(
+            currentProviderID: provider.id, currentModel: large, isAuto: true,
+            requirements: RouteRequirements(), providers: [provider], conversationID: UUID(),
+            lastUserMessage: text, turnContext: RoutingTurnContext(responseTurnCount: 0)
+        )
+        let result = await resolve(router(), request)
+        #expect(result.reasoningEffort == .medium)
+    }
+
+    @Test func agentStartedChatUsesFastDemand() async {
+        let provider = provider()
+        let request = RouteRequest(
+            currentProviderID: provider.id, currentModel: large, isAuto: true,
+            requirements: RouteRequirements(), providers: [provider], conversationID: UUID(),
+            turnContext: RoutingTurnContext(responseTurnCount: 0)
+        )
+        let router = router()
+        let result = await resolve(router, request)
+        #expect(result.reasoningEffort == .low)
+        #expect(await router.reasoningEffort(for: large, request: request) == .low)
+    }
+
+    @Test func depthExcludesToolsAndSummaries() {
+        let tool = ToolCall(
+            id: "call",
+            type: "function",
+            function: .init(name: "search", arguments: "{}")
+        )
+        var summary = ChatMessage(role: "assistant", content: "Summary")
+        summary.isCompactionSummary = true
+        let history = [
+            ChatMessage(role: "user", content: "Question"),
+            ChatMessage(role: "assistant", content: "Searching", toolCalls: [tool]),
+            ChatMessage(role: "tool", content: "Result"),
+            ChatMessage(role: "assistant", content: "Answer"),
+            ChatMessage(role: "assistant", content: ""), summary,
+        ]
+        #expect(RoutingTurnContext(messages: history).responseTurnCount == 1)
+    }
+
+    @Test(arguments: [false, true])
+    func recoveryFragmentsKeepNextExchangeConservative(recovered: Bool) async {
+        let provider = provider()
+        var history = [
+            ChatMessage(role: "user", content: "First"),
+            ChatMessage(role: "assistant", content: "Partial"),
+        ]
+        if recovered { history.append(ChatMessage(role: "assistant", content: "Completed answer")) }
+        let text = "Analyze and compare trade-offs step by step. Explain why."
+        history.append(ChatMessage(role: "user", content: text))
+        let request = RouteRequest(
+            currentProviderID: provider.id, currentModel: large, isAuto: true,
+            requirements: RouteRequirements(), providers: [provider], conversationID: UUID(),
+            lastUserMessage: text, turnContext: RoutingTurnContext(messages: history)
+        )
+        let result = await resolve(router(), request)
+        #expect(result.reasoningEffort == .low)
+    }
+
     @Test func preferredModelStartsLowAndEscalatesWithoutSwitching() async {
         let router = router()
         let provider = provider()
@@ -52,9 +142,9 @@ struct ConfigurableReasoningTests {
             text: "Analyze the trade-offs and compare alternatives step by step. Explain why."
         ))
         #expect(complex.model == large)
-        #expect(complex.reasoningEffort == .high)
+        #expect(complex.reasoningEffort == .medium)
         let followup = await resolve(router, request(provider, conversation: conversation))
-        #expect(followup.reasoningEffort == .high)
+        #expect(followup.reasoningEffort == .medium)
         let separate = await resolve(router, request(provider, conversation: UUID()))
         #expect(separate.reasoningEffort == .low)
     }
@@ -71,7 +161,7 @@ struct ConfigurableReasoningTests {
             text: "Analyze and compare trade-offs step by step. Explain why.", model: first.model
         ))
         #expect(next.model == large)
-        #expect(next.reasoningEffort == .high)
+        #expect(next.reasoningEffort == .medium)
     }
 
     @Test func idleResetReturnsToLowestEffort() async {
@@ -82,24 +172,24 @@ struct ConfigurableReasoningTests {
         )
         let provider = provider()
         let conversation = UUID()
-        let high = await resolve(router, request(
+        let escalated = await resolve(router, request(
             provider, conversation: conversation,
             text: "Analyze and compare trade-offs step by step. Explain why."
         ))
-        #expect(high.reasoningEffort == .high)
+        #expect(escalated.reasoningEffort == .medium)
         clock.withLock { $0 = $0.addingTimeInterval(3601) }
         let reset = await resolve(router, request(provider, conversation: conversation))
         #expect(reset.reasoningEffort == .low)
     }
 
-    @Test func complexFirstTurnStartsHigh() async {
+    @Test func complexRequestWithoutDepthUsesMedium() async {
         let provider = provider()
         let route = await resolve(router(), request(
             provider, conversation: UUID(),
             text: "Analyze and compare trade-offs step by step. Explain why."
         ))
         #expect(route.model == large)
-        #expect(route.reasoningEffort == .high)
+        #expect(route.reasoningEffort == .medium)
     }
 
     @Test func pinnedModelsOmitEffort() async {
@@ -145,7 +235,7 @@ struct ConfigurableReasoningTests {
     }
 
     @Test(arguments: ["mistral/mistral-large-4-0", "mistral-large-4-0", "mistral-large-4"])
-    func relayPrefersLargeAtLowThenHigh(model: String) async {
+    func relayPrefersLargeAtLowThenMedium(model: String) async {
         let provider = RoutingProvider(
             id: UUID(), name: "Relay", baseURL: ProviderPreset.relayBaseURL,
             availableModels: ["corti/corti-s1-instant", "corti/corti-s1", model]
@@ -162,7 +252,7 @@ struct ConfigurableReasoningTests {
             text: "Analyze and compare trade-offs step by step. Explain why.", model: first.model
         ))
         #expect(next.model == model)
-        #expect(next.reasoningEffort == .high)
+        #expect(next.reasoningEffort == .medium)
     }
 
     @Test func relayMediumUsesNoneInsteadOfLow() async {

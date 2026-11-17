@@ -2,11 +2,20 @@ import Foundation
 
 extension KnownModelCatalog {
     static let mistralLargeReasoning = ReasoningControl(
-        supportedEfforts: [.low, .medium, .high], fastEffort: .low, escalatedEffort: .high
+        supportedEfforts: [.low, .medium, .high], fastEffort: .low, escalatedEffort: .medium,
+        defaultEffort: .medium
     )
     static let mistralMediumReasoning = ReasoningControl(
         supportedEfforts: [.none, .high], fastEffort: .none, escalatedEffort: .high
     )
+
+    /// Applies catalog effort policy where the endpoint contract is verified.
+    static func boundedReasoningEffort(
+        _ effort: ReasoningEffort?, model: String, baseURL: String
+    ) -> ReasoningEffort? {
+        guard let control = reasoningControl(for: model, baseURL: baseURL) else { return effort }
+        return control.requestEffort(effort)
+    }
 
     /// Controls are enabled only for verified model/endpoint contracts.
     static func reasoningControl(for model: String, baseURL: String) -> ReasoningControl? {

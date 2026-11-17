@@ -105,6 +105,7 @@ struct RouteRequest: Sendable {
     let providers: [RoutingProvider]
     let conversationID: UUID?
     let lastUserMessage: String?
+    let turnContext: RoutingTurnContext?
 
     init(
         currentProviderID: UUID,
@@ -113,7 +114,8 @@ struct RouteRequest: Sendable {
         requirements: RouteRequirements,
         providers: [RoutingProvider],
         conversationID: UUID? = nil,
-        lastUserMessage: String? = nil
+        lastUserMessage: String? = nil,
+        turnContext: RoutingTurnContext? = nil
     ) {
         self.currentProviderID = currentProviderID
         self.currentModel = currentModel
@@ -122,6 +124,16 @@ struct RouteRequest: Sendable {
         self.providers = providers
         self.conversationID = conversationID
         self.lastUserMessage = lastUserMessage
+        self.turnContext = turnContext
+    }
+
+    /// Refreshes dispatch constraints while preserving the user's turn context.
+    func forPreparedTurn(model: String, requirements: RouteRequirements) -> RouteRequest {
+        RouteRequest(
+            currentProviderID: currentProviderID, currentModel: model, isAuto: isAuto,
+            requirements: requirements, providers: providers, conversationID: conversationID,
+            lastUserMessage: lastUserMessage, turnContext: turnContext
+        )
     }
 
     var currentProvider: RoutingProvider? {
@@ -137,10 +149,8 @@ struct RouteRequirements: Sendable, Equatable {
     /// Soft: preferred when the turn carries images. A text-only model still works, since
     /// ``MessagePipeline`` strips the images and tells the model why.
     var needsVision: Bool = false
-    /// Size of the prompt already built, set on the retry path where compaction cannot
-    /// run again. A candidate must fit this *plus its own output reservation*, so the
-    /// bar moves with the model rather than a flat figure that no small model could
-    /// ever clear.
+    /// Size of the prepared prompt. Replacements must fit the same SDK input budget
+    /// used by dispatch validation, including generation and estimator headroom.
     var promptTokens: Int?
 
     init(needsToolCalling: Bool = true, needsVision: Bool = false, promptTokens: Int? = nil) {
@@ -221,4 +231,6 @@ enum RoutingFailure: Sendable, Equatable {
     case notTheModelsFault
     /// No first token within the hard ceiling, indistinguishable from a hang.
     case timedOut
+    /// Buffered pre-answer events exceeded the client memory limit.
+    case preAnswerBufferLimit
 }

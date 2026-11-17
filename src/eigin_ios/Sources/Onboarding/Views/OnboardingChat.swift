@@ -254,7 +254,9 @@ struct OnboardingChat: View {
                     availableModels: provider.availableModels,
                     enabledModels: provider.enabledModels
                 ),
-            ]
+            ],
+            lastUserMessage: displayedMessages.last(where: { $0.role == "user" })?.content,
+            turnContext: RoutingTurnContext(messages: displayedMessages)
         )
     }
 

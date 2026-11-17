@@ -3,8 +3,8 @@ import Foundation
 /// Scores a user message for how likely it is to need a reasoning model.
 ///
 /// Zero API calls, sub-millisecond, deterministic: weighted keyword and structure
-/// signals, plus a "two or more reasoning markers always step up" override that is
-/// more language-robust than any single weighted score.
+/// signals. Two reasoning markers provide baseline reasoning demand; conversation
+/// depth can raise the evidence required for an early response.
 ///
 /// Keyword tables are per language, and every language's tables are matched against
 /// every message — dictation language does not follow the app-language setting, so we
@@ -28,7 +28,7 @@ enum QueryComplexity {
         .simpleIndicators: -0.05,
     ]
 
-    /// Reasoning markers needed to step up regardless of the weighted score.
+    /// Markers needed to establish baseline demand before the depth adjustment.
     private static let markersForOverride = 2
 
     private enum Signal: CaseIterable {
@@ -42,8 +42,10 @@ enum QueryComplexity {
     }
 
     /// Whether the message warrants stepping up to a reasoning model.
-    static func needsReasoning(text: String) -> Bool {
-        score(text: text) >= threshold || markerCount(in: text) >= markersForOverride
+    static func needsReasoning(text: String, conversationPenalty: Double = 0) -> Bool {
+        let markerScore = markerCount(in: text) >= markersForOverride ? threshold : 0
+        let evidence = max(score(text: text), markerScore)
+        return max(0, evidence - conversationPenalty) >= threshold
     }
 
     /// The raw weighted score, exposed for tests and tuning.

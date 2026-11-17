@@ -85,7 +85,7 @@ extension DefaultModelRouter {
                 "Quarantining \(public: model) until \(public: format(until)): \(public: String(describing: failure))",
                 category: .routing
             )
-        case .offline, .notTheModelsFault:
+        case .offline, .notTheModelsFault, .preAnswerBufferLimit:
             break
         }
     }

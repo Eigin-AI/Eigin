@@ -30,6 +30,35 @@ struct ReasoningWireTests {
         }
     }
 
+    @Test func verifiedLargeCapsHighAndDefaultsToMedium() async throws {
+        let url = "https://api.mistral.ai/v1/chat/completions"
+        let client: any LLMClient = OpenAICompatibleClient(
+            baseURL: "https://api.mistral.ai/v1", apiToken: "test",
+            session: FakeURLProtocol.fakeSession()
+        )
+        for effort: ReasoningEffort? in [nil, .low, .medium, .high] {
+            FakeURLProtocol.stubResponse(
+                for: url,
+                data: Data(
+                    "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+                        .utf8
+                ),
+                statusCode: 200
+            )
+            let stream = try await client.chatCompletionEventStream(
+                messages: [ChatMessage(role: "user", content: "Hello")],
+                model: "mistral-large-4-0", tools: nil, cacheKey: nil, reasoningEffort: effort
+            )
+            for try await _ in stream {}
+            let data = try #require(FakeURLProtocol.lastRequestBody(for: url))
+            let body = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            #expect(body["reasoning_effort"] as? String == (effort == .low ? "low" : "medium"))
+        }
+        #expect(KnownModelCatalog.boundedReasoningEffort(
+            .high, model: "mistral-medium-3-5", baseURL: "https://api.mistral.ai/v1"
+        ) == .high)
+    }
+
     @Test func mixedMistralStreamPreservesAnswerAndTools() async throws {
         let url = "https://reasoning-stream.test/v1/chat/completions"
         let sse = [

@@ -62,7 +62,8 @@ extension RouteRequest {
             ),
             providers: providers.map(RoutingProvider.init),
             conversationID: conversationID,
-            lastUserMessage: lastUserMessage
+            lastUserMessage: lastUserMessage,
+            turnContext: RoutingTurnContext(messages: messages)
         )
     }
 }
