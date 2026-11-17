@@ -1,26 +1,34 @@
 import Foundation
 import SwiftData
 
-/// Resolves the single long-lived chat that watch-triggered questions continue.
+/// Resolves one watch chat per local calendar day.
 ///
-/// Context carries across wrist taps: every question joins the same
-/// conversation, so a follow-up knows what the last one was about. The chat is
-/// visible in the phone's chat list — ask on the wrist, continue on the phone.
+/// Same-day questions share context. Previous chats remain available in the
+/// phone's chat list.
 ///
 /// The chat's identity lives in `UserDefaults` rather than in the SwiftData
 /// schema, which keeps the watch out of a versioned, migration-bearing model.
 /// Deleting the chat on the phone simply resets it.
 enum WatchChat {
-    /// The watch chat, creating and persisting it on first use.
+    /// Today's watch chat, creating it on the first request of the day.
     @MainActor
-    static func resolve(in context: ModelContext, agentID: UUID) -> Chat {
-        if let existing = stored(in: context) { return existing }
+    static func resolve(
+        in context: ModelContext, agentID: UUID,
+        now: Date = .now, calendar: Calendar = .current
+    ) -> Chat {
+        if let existing = stored(in: context),
+           calendar.isDate(existing.createdAt, inSameDayAs: now)
+        {
+            return existing
+        }
 
         // Titled up front, so title generation has nothing to guess at and
         // the chat is easy to find in the phone's list.
         let chat = Chat(
             agentID: agentID, spaceID: nil, title: Localized.Watch.chatTitle
         )
+        chat.createdAt = now
+        chat.updatedAt = now
         context.insert(chat)
         UserDefaults.standard.set(chat.id.uuidString, forKey: StorageKey.watchChat)
         return chat
