@@ -102,6 +102,7 @@ struct ChatFeed: View {
     /// Scroll view container height; feeds the viewport computation.
     @State private var containerHeight: CGFloat = 0
     @State private var didArmAutoCamera = false
+    @State private var didRequestSend = false
     /// Show gate, appearance clock and stall clock for the thinking indicator.
     @State private var thinkingIndicatorState = ThinkingIndicatorState()
     @FocusState private var isInputFocused: Bool
@@ -226,6 +227,7 @@ struct ChatFeed: View {
     /// and nothing streaming.
     private var showsIcebreakers: Bool {
         allowsIcebreakers
+            && !didRequestSend
             && isLoaded
             && items.isEmpty
             && !isInputDisabled
@@ -597,6 +599,8 @@ struct ChatFeed: View {
     private func sendMessage(mode: InteractionMode = .text) {
         let text = messageText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty || !context.stagedAttachments.isEmpty else { return }
+        // Hide starters before the composer binding clears and parent inputs update.
+        didRequestSend = true
         isInputFocused = false
         scroll.declareSending()
         onSend(mode)

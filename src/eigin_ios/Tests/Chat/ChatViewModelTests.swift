@@ -100,6 +100,34 @@ struct ChatViewModelTests {
         await vm.streamTask?.value
     }
 
+    @Test(
+        "Sending the first message clears the draft with a user item and turn guard already available"
+    )
+    @MainActor
+    func firstSendIcebreakerEligibility() async throws {
+        let (chat, agent, provider, container) = try makeContext()
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Hello"), .finished(.stop)])
+        let vm = makeViewModel(chat: chat, agent: agent, container: container, chatService: service)
+        await vm.preloadAllMessages().value
+        #expect(vm.allowsIcebreakers)
+        #expect(vm.chatItems.isEmpty)
+
+        vm.messageText = "Hi"
+        vm.send(agent: agent, provider: provider, space: nil, spaces: [], mcpServers: [])
+
+        #expect(vm.messageText.isEmpty)
+        #expect(vm.chatItems.contains {
+            if case .message(_, "user", _, _) = $0 { return true }
+            return false
+        })
+        #expect(vm.isTurnInProgress)
+        #expect(!vm.isStreaming)
+        #expect(!vm.allowsIcebreakers)
+        vm.handleStop()
+        await vm.streamTask?.value
+    }
+
     // MARK: - cleanTitle
 
     @Test("cleanTitle strips wrapping quotes")
