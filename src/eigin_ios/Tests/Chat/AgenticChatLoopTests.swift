@@ -969,6 +969,111 @@ struct AgenticChatLoopTests {
         }
     }
 
+    @Test(arguments: ["approve", "deny", "stop"])
+    @MainActor func multiplePermissionsIgnoreLateResponses(action: String) async throws {
+        let approveSecond = action == "approve"
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let calls = ["permission-a", "permission-b"].map {
+            ToolCall(id: $0, type: "function", function: .init(name: "read_core", arguments: "{}"))
+        }
+        service.enqueueEventStream(calls.map { .toolCall($0) } + [.finished(.toolCalls)])
+        service.enqueueEventStream([.contentDelta("Done"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false, permissionPolicy: AgentPermissionPolicy(
+            builtInGrants: ["read_core": .ask], discoveredGrants: [:],
+            chatGrants: [], canPromptUser: true
+        ))
+        let task = Task { @MainActor in
+            try await loop.run(
+                messages: [ChatMessage(role: "user", content: "Read twice")],
+                tools: toolDefinitions, agent: agent, provider: provider,
+                chatService: service, toolExecutor: executor
+            )
+        }
+        defer { _ = loop.stop(); task.cancel() }
+        try await waitForPermission("permission-a", in: loop)
+        loop.resolvePermission(.allowOnce, requestID: "permission-a")
+        try await waitForPermission("permission-b", in: loop)
+        loop.resolvePermission(.deny, requestID: "permission-a")
+        loop.resolvePermission(.allowOnce, requestID: "unknown")
+        #expect(loop.pendingPermission?.id == "permission-b")
+        #expect(executor.calls.map(\.id) == ["permission-a"])
+        if action == "stop" {
+            var queuedStarted = false
+            let queued = Task {
+                queuedStarted = true
+                return await loop.requestPermission(PermissionRequest(
+                    id: "permission-c", toolName: "read_core", toolDisplayName: "Read",
+                    disclosure: nil
+                ))
+            }
+            try await waitForPermissionCondition { queuedStarted }
+            _ = loop.stop()
+            loop.resolvePermission(.allowOnce, requestID: "permission-b")
+            #expect(await queued.value == .deny)
+            _ = try await task.value
+            #expect(loop.pendingPermission == nil)
+            #expect(executor.calls.map(\.id) == ["permission-a"])
+            return
+        }
+        loop.resolvePermission(approveSecond ? .allowOnce : .deny, requestID: "permission-b")
+        let produced = try await task.value
+        #expect(executor.calls
+            .map(\.id) == (approveSecond ? ["permission-a", "permission-b"] : ["permission-a"]))
+        let secondResult = try #require(produced.first { $0.toolCallID == "permission-b" })
+        #expect((secondResult.content?.contains("User denied this action.") == true) ==
+            !approveSecond)
+    }
+
+    @MainActor
+    private func waitForPermission(_ id: String, in loop: AgenticChatLoop) async throws {
+        try await waitForPermissionCondition { loop.pendingPermission?.id == id }
+    }
+
+    @MainActor
+    private func waitForPermissionCondition(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !condition(), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(condition())
+    }
+
+    @Test @MainActor func overlappingPermissionWaitsKeepTheirOwnResponses() async throws {
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let a = PermissionRequest(
+            id: "a",
+            toolName: "read_core",
+            toolDisplayName: "Read",
+            disclosure: nil
+        )
+        let b = PermissionRequest(
+            id: "b",
+            toolName: "read_core",
+            toolDisplayName: "Read",
+            disclosure: nil
+        )
+        let first = Task { await loop.requestPermission(a) }
+        try await waitForPermission("a", in: loop)
+        var secondStarted = false
+        let second = Task {
+            secondStarted = true
+            return await loop.requestPermission(b)
+        }
+        try await waitForPermissionCondition { secondStarted }
+        #expect(loop.pendingPermission?.id == "a")
+        loop.resolvePermission(.allowOnce, requestID: "a")
+        try await waitForPermission("b", in: loop)
+        loop.resolvePermission(.deny, requestID: "a")
+        #expect(loop.pendingPermission?.id == "b")
+        loop.resolvePermission(.deny, requestID: "b")
+        #expect(await first.value == .allowOnce)
+        #expect(await second.value == .deny)
+        #expect(loop.pendingPermission == nil)
+    }
+
     @Test @MainActor func grantingPermissionResumesExecutingStatus() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container
@@ -1007,7 +1112,7 @@ struct AgenticChatLoopTests {
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
-            loop.resolvePermission(.allowOnce)
+            loop.resolvePermission(.allowOnce, requestID: "call_1")
         }
 
         let produced = try await loop.run(

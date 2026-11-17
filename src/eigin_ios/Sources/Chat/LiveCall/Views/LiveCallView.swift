@@ -32,10 +32,6 @@ struct LiveCallView: View {
     /// phase change so the wobble eases in and out over `Animations.slow`.
     @State private var blobIntensity = MorphIntensity.none
 
-    /// Mirrors the loop's pending permission so the sheet stays alive through
-    /// its dismissal animation, matching the chat permission flow.
-    @State private var presentedPermission: PermissionRequest?
-
     var body: some View {
         ZStack {
             colors.surface.standard.base
@@ -90,8 +86,8 @@ struct LiveCallView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             service.isForegrounded = newPhase == .active
-            if newPhase == .background, service.chatLoop.pendingPermission != nil {
-                service.chatLoop.resolvePermission(.deny)
+            if newPhase == .background, let request = service.chatLoop.pendingPermission {
+                service.chatLoop.resolvePermission(.deny, requestID: request.id)
             }
             // Leaving the call isn't an answer to a connect request.
             if newPhase == .background, service.chatLoop.pendingConnection != nil {
@@ -99,12 +95,7 @@ struct LiveCallView: View {
             }
         }
         .onChange(of: service.chatLoop.pendingPermission) { _, request in
-            if let request {
-                presentedPermission = request
-                service.playPermissionSound()
-            } else {
-                presentedPermission = nil
-            }
+            if request != nil { service.playPermissionSound() }
         }
         .sheet(item: Binding(
             get: { service.chatLoop.pendingConnection },
@@ -115,35 +106,13 @@ struct LiveCallView: View {
             }
             .interactiveDismissDisabled()
         }
-        .appSheet(
-            isPresented: Binding(
-                get: { presentedPermission != nil },
-                set: { if !$0 { presentedPermission = nil } }
-            ),
-            title: Localized.Permission.sheetTitle,
-            descriptionContent: presentedPermission.map { request in
-                AnyView(PermissionDisclosureText(
-                    agentName: agent.name,
-                    toolDisplayName: request.toolDisplayName,
-                    disclosure: request.disclosure
-                ))
-            },
-            fitsContent: true
-        ) {
-            if let request = presentedPermission {
-                PermissionRequestSheetContent(
-                    agentName: agent.name,
-                    toolDisplayName: request.toolDisplayName,
-                    disclosure: request.disclosure,
-                    allowOnceLabel: Localized.Permission.allowOnce,
-                    allowForChatLabel: Localized.Permission.allowForChat,
-                    denyLabel: Localized.Permission.deny,
-                    onResponse: { response in
-                        service.chatLoop.resolvePermission(response)
-                    }
-                )
+        .modifier(PermissionSheet(
+            request: service.chatLoop.pendingPermission,
+            agentName: agent.name,
+            onResponse: { response, requestID in
+                service.chatLoop.resolvePermission(response, requestID: requestID)
             }
-        }
+        ))
     }
 
     private func endCall() {

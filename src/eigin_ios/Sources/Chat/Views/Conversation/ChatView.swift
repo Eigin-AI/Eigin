@@ -231,8 +231,8 @@ struct ChatView: View {
                     ),
                     interactions: FeedInteractions(
                         permissionRequest: viewModel.chatLoop.pendingPermission,
-                        onPermissionResponse: { response in
-                            viewModel.chatLoop.resolvePermission(response)
+                        onPermissionResponse: { response, requestID in
+                            viewModel.chatLoop.resolvePermission(response, requestID: requestID)
                         },
                         browsingRequest: viewModel.chatLoop.pendingBrowsing,
                         onBrowsingComplete: { result in

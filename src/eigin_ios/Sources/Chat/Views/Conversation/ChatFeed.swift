@@ -31,7 +31,7 @@ struct FeedContext {
 /// Pending interaction requests passed through to ``ChatInputBar``.
 struct FeedInteractions {
     var permissionRequest: PermissionRequest?
-    var onPermissionResponse: ((PermissionResponse) -> Void)?
+    var onPermissionResponse: ((PermissionResponse, String) -> Void)?
     var browsingRequest: BrowsingRequest?
     var onBrowsingComplete: ((BrowsingResult) -> Void)?
     var onOptionSelected: ((String) -> Void)?

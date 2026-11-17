@@ -7,7 +7,6 @@ import UIKit
 @Observable @MainActor
 final class ChatFeedSheetState {
     var selectedError: ConnectionError?
-    var permissionRequest: PermissionRequest?
     var browsingRequest: BrowsingRequest?
     var browsingPageReady = false
     var showActionSheet = false
@@ -28,9 +27,6 @@ struct ChatFeedSheets: ViewModifier {
     func body(content: Content) -> some View {
         content
             // Mirror incoming interaction requests into local presentation state.
-            .onChange(of: interactions.permissionRequest) { _, new in
-                if let new { state.permissionRequest = new }
-            }
             .onChange(of: interactions.browsingRequest) { _, new in
                 if let new {
                     state.browsingRequest = new
@@ -50,35 +46,13 @@ struct ChatFeedSheets: ViewModifier {
                     ErrorDetailSheet(error: error)
                 }
             }
-            .appSheet(
-                isPresented: Binding(
-                    get: { state.permissionRequest != nil },
-                    set: { if !$0 { state.permissionRequest = nil } }
-                ),
-                title: Localized.Permission.sheetTitle,
-                descriptionContent: state.permissionRequest.map { request in
-                    AnyView(PermissionDisclosureText(
-                        agentName: context.agentName,
-                        toolDisplayName: request.toolDisplayName,
-                        disclosure: request.disclosure
-                    ))
-                },
-                fitsContent: true
-            ) {
-                if let request = state.permissionRequest {
-                    PermissionRequestSheetContent(
-                        agentName: context.agentName,
-                        toolDisplayName: request.toolDisplayName,
-                        disclosure: request.disclosure,
-                        allowOnceLabel: Localized.Permission.allowOnce,
-                        allowForChatLabel: Localized.Permission.allowForChat,
-                        denyLabel: Localized.Permission.deny,
-                        onResponse: { response in
-                            interactions.onPermissionResponse?(response)
-                        }
-                    )
+            .modifier(PermissionSheet(
+                request: interactions.permissionRequest,
+                agentName: context.agentName,
+                onResponse: { response, requestID in
+                    interactions.onPermissionResponse?(response, requestID)
                 }
-            }
+            ))
             // Only its own buttons answer it: a swipe can't tell Not now from
             // closing a sheet that just connected.
             .sheet(item: Binding(

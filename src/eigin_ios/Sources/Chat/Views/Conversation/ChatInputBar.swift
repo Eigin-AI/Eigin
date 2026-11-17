@@ -17,7 +17,7 @@ struct ChatInputBar: View {
     var onMoveToSpace: ((UUID?) -> Void)?
     var agentName: String = ""
     var permissionRequest: PermissionRequest?
-    var onPermissionResponse: ((PermissionResponse) -> Void)?
+    var onPermissionResponse: ((PermissionResponse, String) -> Void)?
     var onActionTap: (() -> Void)?
     var hasStagedAttachments = false
     /// Arms dictation as soon as the bar appears (widget/shortcut launched chat).
