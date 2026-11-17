@@ -218,7 +218,7 @@ final class ContextPagingSession {
         return messages.map { message in
             guard message.role == "user",
                   userIDs.contains(identity(message)) else { return message }
-            return MessagePipeline.appendSystemHint(hint, to: [message])[0]
+            return MessagePreparationSDKConversion.appendHint(hint, to: [message])[0]
         }
     }
 

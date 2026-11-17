@@ -23,6 +23,7 @@ struct ImageWireConversionTests {
     private final class StubStore: ChatAttachmentStoring, @unchecked Sendable {
         let fixedData: Data
         nonisolated(unsafe) var deletedIDs: [UUID] = []
+        nonisolated(unsafe) var loadedIDs: [UUID] = []
         /// IDs for which `load`/`loadThumbnail` should simulate a missing file.
         nonisolated(unsafe) var missingIDs: Set<UUID> = []
 
@@ -40,7 +41,8 @@ struct ImageWireConversionTests {
         }
 
         func load(id: UUID) -> Data? {
-            missingIDs.contains(id) ? nil : fixedData
+            loadedIDs.append(id)
+            return missingIDs.contains(id) ? nil : fixedData
         }
 
         func loadThumbnail(id: UUID) -> Data? {
@@ -153,6 +155,34 @@ struct ImageWireConversionTests {
         #expect(json["content"] == nil)
     }
 
+    @Test(arguments: [true, false])
+    func preparationResolvesOnlyRetainedImagesAtDispatch(supportsVision: Bool) async throws {
+        let store = StubStore()
+        let attachments = (0 ..< 3).map { _ in attachment() }
+        let history = attachments.map { ChatMessage(
+            role: "user",
+            content: "image",
+            attachments: [$0]
+        ) }
+        let prepared = try MessagePreparationSDKConversion.prepare(
+            MessagePreparationSDKConversion.select(history), history: history,
+            systemPrompt: "system", systemHint: nil, supportsVision: supportsVision
+        )
+        #expect(store.loadedIDs.isEmpty)
+        for message in prepared.dropFirst() {
+            let json = try await wireJSON(message, store: store)
+            if message.attachments == nil {
+                #expect(json["content"] is String)
+            } else {
+                let parts = try #require(json["content"] as? [[String: Any]])
+                #expect(parts.contains { $0["type"] as? String == "image_url" })
+            }
+        }
+        #expect(store.loadedIDs == (supportsVision ? attachments.suffix(2).map(\.id) : []))
+        #expect(store.deletedIDs.isEmpty)
+        #expect(history.flatMap { $0.attachments ?? [] } == attachments)
+    }
+
     // MARK: - MessageAttachment encoding (not sent on wire by default)
 
     @Test func chatMessageEncodingDoesNotIncludeAttachments() throws {
@@ -169,31 +199,6 @@ struct ImageWireConversionTests {
         #expect(dict?["attachments"] == nil)
         #expect(dict?["content"] as? String == "hello")
         #expect(dict?["role"] as? String == "user")
-    }
-
-    // MARK: - ChatMessage.withStrippedAttachments
-
-    @Test func withStrippedAttachmentsRemovesAttachmentsAndAppendsPlaceholder() {
-        let msg = ChatMessage(role: "user", content: "See this:", attachments: [attachment()])
-        let stripped = msg.withStrippedAttachments()
-
-        #expect(stripped.attachments == nil)
-        #expect(stripped.content?.contains("[image omitted]") == true)
-        #expect(stripped.content?.hasPrefix("See this:") == true)
-    }
-
-    @Test func withStrippedAttachmentsNoOpWhenNoAttachments() {
-        let msg = ChatMessage(role: "user", content: "plain")
-        let result = msg.withStrippedAttachments()
-        #expect(result.content == "plain")
-        #expect(result.attachments == nil)
-    }
-
-    @Test func withStrippedAttachmentsPlaceholderOnlyWhenNoText() {
-        var msg = ChatMessage(role: "user", content: nil)
-        msg.attachments = [attachment()]
-        let stripped = msg.withStrippedAttachments()
-        #expect(stripped.content == "[image omitted]")
     }
 
     // MARK: - MessageAttachment Codable round-trip

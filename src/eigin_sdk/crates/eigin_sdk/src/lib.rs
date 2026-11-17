@@ -7,6 +7,8 @@ uniffi::setup_scaffolding!();
 
 /// Context estimation, selection, and summary parsing.
 pub mod context;
+/// Request-local conversation preparation.
+pub mod conversation;
 mod diagnostics;
 /// Platform HTTP byte transport and cancellation.
 pub mod http;

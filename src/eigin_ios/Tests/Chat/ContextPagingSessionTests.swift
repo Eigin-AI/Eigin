@@ -357,7 +357,7 @@ struct ContextPagingSessionTests {
         second.isCompactionSummary = true
         second.compactionRetainedMessageCount = 3
         let recent = ChatMessage(role: "user", content: "Recent")
-        let split = MessagePipeline.splitAtLatestSummary([
+        let split = MessagePreparationTestSupport.splitAtLatestSummary([
             first,
             recent,
             ChatMessage(role: "assistant", content: "OK"),

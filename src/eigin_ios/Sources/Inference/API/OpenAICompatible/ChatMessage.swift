@@ -72,18 +72,6 @@ struct ChatMessage: Codable, Sendable {
         self.attachments = attachments
     }
 
-    /// Returns a copy of this message with all attachment references replaced by the given
-    /// placeholder text appended to the existing content.
-    func withStrippedAttachments(placeholder: String = "[image omitted]") -> ChatMessage {
-        guard attachments != nil else { return self }
-        var copy = self
-        copy.attachments = nil
-        // Append placeholder so the model knows an image was present.
-        let base = copy.content ?? ""
-        copy.content = base.isEmpty ? placeholder : base + "\n\n" + placeholder
-        return copy
-    }
-
     /// Custom encoding that omits nil optional fields instead of writing null.
     /// Gemini and other providers reject unexpected null fields.
     /// Provider-specific details (e.g. thought_signature) are injected by the
