@@ -33,6 +33,9 @@ struct ThinkingIndicator: View {
     /// assistant text edge.
     private static let slotSize = CGSize(width: 40, height: 40)
 
+    /// A nonbreaking space preserves the silent line box so outgoing copy fades in place.
+    private static let silentLabel = "\u{00A0}"
+
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 0.5 : nil)) { context in
             indicatorAndCopy(at: context.date)
@@ -53,10 +56,10 @@ struct ThinkingIndicator: View {
             )
             .frame(width: Self.slotSize.width, height: Self.slotSize.height)
 
-            // Animate copy locally so tool insertion cannot animate the blob's placement.
-            Text(label)
+            Text(label.isEmpty ? Self.silentLabel : label)
                 .typography(Typography.chatMessage)
                 .foregroundStyle(colors.text.standard.muted.opacity(0.6))
+                .accessibilityLabel(label)
                 .contentTransition(.interpolate)
                 .animation(.easeInOut(duration: 0.4), value: label)
         }
