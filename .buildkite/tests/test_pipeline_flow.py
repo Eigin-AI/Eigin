@@ -47,7 +47,7 @@ class PipelineFlowTests(unittest.TestCase):
         self.assertEqual(ready(steps, checks | {"docs-publish", "main-test-approval"}),
                          {"linux-select", "ios-select"})
 
-    def test_mr_runs_ios_automatically_after_checks(self):
+    def test_mr_selects_ios_automatically_after_checks(self):
         steps = selected_steps("feature/tests", "webhook", mr=12)
         self.assertEqual(ready(steps, set()), {"versions", "ci-tests", "linux-select", "cla"})
         self.assertFalse(any("input" in step or "block" in step for step in steps.values()))

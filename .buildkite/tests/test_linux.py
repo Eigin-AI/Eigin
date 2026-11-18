@@ -23,6 +23,8 @@ def load(name, filename):
     return module
 
 
+import mr_diff
+
 selection = load("selection", "select-linux-tests.py")
 checks = load("checks", "check-linux.py")
 
@@ -60,8 +62,8 @@ class SelectionTests(unittest.TestCase):
 
     def test_main_and_invalid_or_missing_history_run_all(self):
         for context in [{}, {"BUILDKITE_PULL_REQUEST": "false"},
-                        {"BUILDKITE_PULL_REQUEST": "1", "LINUX_DIFF_TARGET": "--bad"},
-                        {"BUILDKITE_PULL_REQUEST": "1", "LINUX_DIFF_TARGET": "a" * 40,
+                        {"BUILDKITE_PULL_REQUEST": "1", "MR_DIFF_TARGET": "--bad"},
+                        {"BUILDKITE_PULL_REQUEST": "1", "MR_DIFF_TARGET": "a" * 40,
                          "BUILDKITE_COMMIT": "b" * 40}]:
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertIsNone(selection.changed_paths(context))
@@ -86,10 +88,10 @@ class SelectionTests(unittest.TestCase):
             git("mv", "old", "renamed")
             git("commit", "-m", "rename")
             commit = git("rev-parse", "HEAD")
-            with patch.object(selection, "git", side_effect=lambda *args: subprocess.check_output(
+            with patch.object(mr_diff, "git", side_effect=lambda *args: subprocess.check_output(
                     ["git", "-C", directory, *args])), contextlib.redirect_stderr(io.StringIO()):
                 paths = selection.changed_paths({"BUILDKITE_PULL_REQUEST": "1",
-                                                 "LINUX_DIFF_TARGET": base, "BUILDKITE_COMMIT": commit})
+                                                 "MR_DIFF_TARGET": base, "BUILDKITE_COMMIT": commit})
             self.assertEqual(paths, {"old", "renamed", "src/eigin_relay/space\nname.rs"})
             self.assertEqual(selection.select_components(paths), {"relay", "postgres"})
 

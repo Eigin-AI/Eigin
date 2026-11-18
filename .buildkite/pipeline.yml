@@ -98,7 +98,7 @@ steps:
       - ci-tests
     prompt: "Run Linux and certificate-free iOS tests for this main commit?"
 
-  - label: ":apple: iOS simulator tests"
+  - label: ":pipeline: Select iOS tests"
     key: ios-select
     if: build.branch == "main" || (build.pull_request.id != null && build.pull_request.repository == pipeline.repository)
     depends_on:
@@ -109,9 +109,4 @@ steps:
     agents:
       queue: linux-small
     timeout_in_minutes: 5
-    command: |
-      set -euo pipefail
-      docker run --rm --volume "$$PWD:/work:ro" --workdir /work \
-        --env BUILDKITE_BRANCH rust:1-bookworm \
-        python3 .buildkite/scripts/select-ios-tests.py > /tmp/ios-pipeline.json
-      buildkite-agent pipeline upload /tmp/ios-pipeline.json
+    command: bash .buildkite/scripts/upload-ios-tests.sh

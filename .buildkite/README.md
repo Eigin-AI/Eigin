@@ -174,7 +174,19 @@ For publishing operations, see [Docs releases](../docs/src/runbooks/docs-deploym
 
 ## iOS checks and main approval
 
-Same-repository MRs run iOS tests automatically after Versions, CI tests, and CLA.
+Same-repository MRs select iOS tests after automatic Versions, CI tests, and CLA.
+The selector compares the full MR diff against the target branch's merge base.
+Changes to `src/eigin_ios/`, `src/eigin_sdk/`, `design/`, `config/`, `tools/`,
+`.cargo/`, `.buildkite/`, or root build/toolchain inputs require iOS tests.
+Missing or failed comparisons also require tests. Unrelated changes record an
+**iOS tests not required** result on Linux without scheduling macOS.
+
+For relevant MRs, open the current commit's Buildkite build and unblock **Run iOS
+tests** when ready. Pipeline users with write access can unblock it. Waiting uses
+no macOS agent. The block sets `blocked_state: running`; the simulator job depends
+explicitly on approval and must pass. Every new MR head gets its own selection,
+approval, and result, including docs-only follow-up commits on an iOS MR.
+
 On main, **Run application tests** starts Linux and iOS tests for that commit.
 Docs publish independently; the overall build stays pending until approval.
 
@@ -206,8 +218,34 @@ partially unlocked.
 - Separate main/MR 30 GB caches, keyed by Xcode build, Rust and layout version.
 - Cache Cargo outputs/downloads and Swift package checkouts/artifacts.
 - Stable source paths and timestamps let Cargo reuse unchanged builds.
-- Xcode DerivedData stays temporary; cold builds remain supported.
+- Xcode DerivedData persists alongside the stable checkout in the cache volume.
+  Xcode tracks changed source/project/package inputs; toolchain changes must update
+  the cache name. Result bundles and simulator devices remain job-local.
+- Cache volumes are best-effort; cold builds remain supported. Confirm reuse with
+  cold/warm runner logs and timings before claiming a build-time improvement.
 - Keep MR caches out of credential-bearing jobs.
+
+### Required merge-gate verification
+
+Before relying on this gate, verify these cases on a GitLab test MR. Local
+regression tests cover selection and dependencies; provider status mapping and
+GitLab merge enforcement require live verification.
+
+- Enable Buildkite's GitLab **Update commit statuses** and GitLab's **Pipelines
+  must succeed** merge check. Confirm the required pipeline includes the external
+  Buildkite status for the current MR head.
+- With an iOS change awaiting approval, confirm GitLab reports a pending/running
+  status and refuses merge. `blocked_state: running` must not produce success.
+  If it does, add a dedicated required status before enabling this workflow.
+- Approve the block. Confirm failure or cancellation leaves merging blocked,
+  and successful tests allow merge once all remaining checks pass.
+- Push a new head before and after a successful run. Confirm it requires fresh
+  approval and tests. A late old-head result must not allow the new head to merge.
+- Confirm **Cancel Intermediate Builds** and **Skip Intermediate Builds** are
+  enabled for `!main`, and inspect superseded-build cancellation in practice.
+- Verify a docs-only MR succeeds without approval or a macOS job. Verify a docs
+  follow-up on an iOS-changing MR still requires tests.
+- Confirm fork MRs cannot schedule application tests or access test caches.
 
 After merge, verify docs publish while main waits for approval, then approve
 application tests and confirm newer main builds preserve older approvals.

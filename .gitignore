@@ -158,3 +158,7 @@ infra/scaleway/website-releases/
 # Docs consume the shared design tokens at build time.
 docs/theme/tokens.css
 docs/src/fonts/
+
+# Python bytecode
+__pycache__/
+*.py[cod]

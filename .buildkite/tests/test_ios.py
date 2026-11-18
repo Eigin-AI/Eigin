@@ -128,6 +128,8 @@ class RunnerTests(unittest.TestCase):
                         self.assertEqual(command.call_args.args[0], ["just", "test", "ios", "--verbose"])
                         self.assertEqual(os.environ["IOS_TEST_AD_HOC_SIGNING"], "true")
                         self.assertIn("id=device-id", os.environ["IOS_TEST_DESTINATION"])
+                        self.assertEqual(os.environ["IOS_TEST_DERIVED_DATA"], str(Path(temp) / "cache/DerivedData"))
+                        self.assertFalse(Path(os.environ["IOS_TEST_RESULT_BUNDLE"]).is_relative_to(Path(temp) / "cache"))
                         reports.assert_called_once()
                         cleanup.assert_called_once_with(["xcrun", "simctl", "delete", "device-id"], check=False)
                         self.assertEqual(Path("logs/ios-ci/test.log").read_text(), "test output\n")
@@ -147,7 +149,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_main_and_mr_cache_isolation(self):
         main = selector.pipeline("main")["steps"][0]
-        mr = selector.pipeline("feature/tests")["steps"][0]
+        mr = selector.pipeline("feature/tests")["steps"][-1]
         self.assertNotEqual(main["cache"]["name"], mr["cache"]["name"])
         for job in (main, mr):
             self.assertEqual(job["agents"], {"queue": "macos-medium"})
