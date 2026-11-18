@@ -42,6 +42,14 @@ struct BlockSplitter {
 
         while i < lines.count {
             let line = lines[i]
+            // A partial reserved opener must not flash as prose during streaming.
+            if isStreaming, i == lines.count - 1, !code.inFence,
+               !math.inBlock, "```eigin".hasPrefix(line.trimmingCharacters(in: .whitespaces)),
+               !line.trimmingCharacters(in: .whitespaces).isEmpty
+            {
+                flushParagraph()
+                break
+            }
 
             if code.inFence {
                 if code.closes(with: line) {
@@ -255,7 +263,8 @@ struct BlockSplitter {
     /// release it as prose.
     private mutating func flushAtEnd() {
         if code.inFence {
-            flushCode()
+            if isStreaming, code.language == "eigin" { return }
+            flushCode(closed: false)
         } else if math.inBlock {
             flushMath()
         } else if table.inTable {

@@ -119,34 +119,27 @@ struct AboutView: View {
             sectionLabel(Localized.Settings.About.licenseListTitle)
 
             AppCardSurface(padding: 0) {
-                NavigationLink {
-                    LicensesView()
-                        .hidesTabBar()
-                } label: {
-                    HStack(spacing: Spacing.n16) {
-                        VStack(alignment: .leading, spacing: Spacing.n4) {
-                            Text(Localized.Settings.About.licenseListTitle)
-                                .typography(Typography.titleXS)
-                                .foregroundStyle(colors.text.standard.base)
-                            Text(
-                                Localized.Settings.About.licenseCountFormat(
-                                    String(LicenseEntry.all.count + 1)
-                                )
-                            )
-                            .typography(Typography.tag)
-                            .foregroundStyle(colors.text.standard.muted)
-                            .multilineTextAlignment(.leading)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .typography(Typography.miniLabel)
-                            .foregroundStyle(colors.text.standard.muted)
+                VStack(spacing: 0) {
+                    NavigationLink {
+                        LicensesView().hidesTabBar()
+                    } label: {
+                        AppRow(AppRowSpec(
+                            title: Localized.Settings.About.openSource,
+                            description: Localized.Settings.About.thirdPartyPackages
+                        ))
                     }
-                    .padding(.horizontal, Spacing.n24)
-                    .padding(.vertical, Spacing.n16)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    Divider().padding(.leading, Spacing.n24)
+                    NavigationLink {
+                        DataSourcesView().hidesTabBar()
+                    } label: {
+                        AppRow(AppRowSpec(
+                            title: Localized.Settings.About.dataSources,
+                            description: Localized.Settings.About.dataSourcesDescription
+                        ))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }

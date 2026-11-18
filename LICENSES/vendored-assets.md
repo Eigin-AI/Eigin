@@ -13,6 +13,7 @@ Third-party assets whose source we embed directly (not pulled from a package reg
 | Dinero brand mark | https://mcp.dinero.dk/dinero-logo-primary-500.svg | — | Rights retained by Dinero | `design/assets/icons/service/dinero.svg`, generated connection icons |
 | Pleo brand mark | [Official Pleo press kit](https://www.pleo.io/en/press) | — | Rights retained by Pleo; no explicit reuse licence supplied | `design/assets/icons/service/pleo.svg`, generated connection icons |
 | Fira Code Regular | https://github.com/tonsky/FiraCode/tree/5.2 | 5.002 (font metadata) | [SIL OFL 1.1](FiraCode-LICENSE.txt) | Bundled docs code font; notice published at `fonts/FiraCode-LICENSE.txt` |
+| Apple Weather marks | [Apple WeatherKit attribution](https://weatherkit.apple.com/attribution/en) | 090122 · 3× | Rights retained by Apple | `design/assets/icons/service/apple-weather-*.png`, gallery attribution |
 | Provider brand marks | Sourced from each provider's own brand assets | — | Trademarks of their owners | `design/assets/icons/provider/*.svg`, marks for the AI providers Eigin can connect to |
 
 ## Brand marks
@@ -35,13 +36,22 @@ Microsoft's trademark.
 `service/pleo.svg` is the pure-black wordmark from [Pleo’s official press kit](https://drive.google.com/drive/folders/1tIp90ksxmC9P8GL3ddXdxsyflVx1XAmk), file `Pleo_Logo_Pure Black.svg` ([source](https://drive.google.com/file/d/1xneRNzYyMaLobJzefZzV0F2x47GYBJY6/view)). Pleo retains rights to the artwork and trademark. No explicit reuse licence was supplied; this asset is outside the Simple Icons CC0 set.
 
 Either way the marks themselves stay the trademarks of their owners. Eigin
-shows them only to identify which service a connection points at, which is
+shows them to identify connected services and data providers, which is
 nominative use and not a claim of endorsement or affiliation.
 
 The footer marks `service/linkedin.svg`, `service/matrix.svg`, `service/gitlab.svg`
 and `service/github.svg` come from [Simple Icons 11.15.0](https://github.com/simple-icons/simple-icons/tree/11.15.0/icons),
 under [CC0-1.0](simple-icons-cc0.md). Their colour and view boxes are adjusted for
 monochrome display and optical sizing. Brand trademarks remain with their owners.
+
+## Apple Weather marks
+
+`design/assets/icons/service/apple-weather-black.png` and `apple-weather-white.png` are official, unmodified PNGs from Apple's [WeatherKit attribution endpoint](https://weatherkit.apple.com/attribution/en):
+
+- [Black mark](https://weatherkit.apple.com/assets/branding/en/Apple_Weather_blk_en_3X_090122.png)
+- [White mark](https://weatherkit.apple.com/assets/branding/en/Apple_Weather_wht_en_3X_090122.png)
+
+Apple retains rights to the artwork and trademarks. These assets are outside the repository's open-source license and the Simple Icons CC0 set. The gallery imports the PNGs directly for WeatherKit attribution; the native app retrieves marks and the legal link through WeatherKit.
 
 ## TestFlight icon
 

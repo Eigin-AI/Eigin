@@ -23,6 +23,8 @@ struct ContentBlockView: View, Equatable {
 
     var body: some View {
         switch block.kind {
+        case .eigin(.attribution(source: .appleWeather)):
+            WeatherAttributionView()
         case .heading(let level):
             MarkdownHeadingView(level: level, text: block.text)
         case .divider:

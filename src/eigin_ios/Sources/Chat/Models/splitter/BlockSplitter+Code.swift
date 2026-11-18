@@ -10,20 +10,23 @@ struct CodeFenceState {
     var content = ""
     var language: String?
     var indent = 0
+    var fenceLength = 3
 
     mutating func open(_ line: String, trimmed: String) {
         inFence = true
         content = ""
         indent = line.prefix(while: { $0 == " " }).count
-        let lang = trimmed.dropFirst(3).trimmingCharacters(in: .whitespaces)
+        fenceLength = trimmed.prefix(while: { $0 == "`" }).count
+        let lang = trimmed.dropFirst(fenceLength).trimmingCharacters(in: .whitespaces)
         language = lang.isEmpty ? nil : lang
     }
 
     /// True when the line is the closing fence.
     func closes(with line: String) -> Bool {
         let fence = line.trimmingCharacters(in: .whitespaces)
-        return fence.hasPrefix("```")
-            && fence.dropFirst(3).trimmingCharacters(in: .whitespaces).isEmpty
+        let length = fence.prefix(while: { $0 == "`" }).count
+        return length >= fenceLength
+            && fence.dropFirst(length).trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     /// Adds a content line, de-indented.
@@ -63,7 +66,21 @@ extension BlockSplitter {
     }
 
     /// Resolves the fence: an ID is minted here, where the block index lives.
-    mutating func flushCode() {
+    mutating func flushCode(closed: Bool = true) {
+        let isEigin = code.language == "eigin"
+        let payload = code.content
+        if isEigin, closed, let component = EiginBlock.parse(payload) {
+            _ = code.flush()
+            if !blocks.contains(where: { $0.kind == .eigin(component) }) {
+                append(.eigin(component), text: payload)
+            }
+            return
+        }
+        if isEigin, payload.isEmpty {
+            _ = code.flush()
+            append(.code, text: "```eigin" + (closed ? "\n```" : ""), language: nil)
+            return
+        }
         guard let block = code.flush() else { return }
         append(block)
     }

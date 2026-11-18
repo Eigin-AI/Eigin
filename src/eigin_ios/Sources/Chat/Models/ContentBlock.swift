@@ -16,13 +16,14 @@ enum BlockKind: Equatable {
     case divider
     case heading(level: Int)
     case image(src: String, alt: String?, href: String?)
+    case eigin(EiginBlock)
 
     /// Whether the shared markdown renderer draws this kind. Code, tables, dividers,
     /// headings, math and images have their own Eigin views.
     var usesMarkdownRenderer: Bool {
         switch self {
         case .paragraph, .list: true
-        case .code, .table, .divider, .heading, .math, .image: false
+        case .code, .table, .divider, .heading, .math, .image, .eigin: false
         }
     }
 }

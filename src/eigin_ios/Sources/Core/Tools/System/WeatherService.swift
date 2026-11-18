@@ -25,6 +25,8 @@ struct WeatherSnapshot {
     let restOfToday: [HourWeather]
     /// Daily entries for the days after today; empty when no forecast asked for.
     let daily: [DayWeather]
+    /// Provider attribution required when displaying this snapshot.
+    var attributionSource: AttributionSource?
 }
 
 /// Conditions right now.

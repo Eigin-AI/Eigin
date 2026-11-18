@@ -92,7 +92,7 @@ struct LicensesView: View {
             .padding(.bottom, Spacing.n32)
         } header: {
             AppNavigationHeader(
-                title: Localized.Settings.About.licenseListTitle,
+                title: Localized.Settings.About.openSource,
                 leading: {
                     AppActionButton(
                         icon: Iconography.Functional.Arrow.left,

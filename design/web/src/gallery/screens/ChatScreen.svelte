@@ -1,5 +1,10 @@
 <script lang="ts">
   import SoftEdgeScroll from "@lib/internal/SoftEdgeScroll.svelte";
+  import OptionSelector from "@gallery/catalog/OptionSelector.svelte";
+  import { useStageControls } from "./stageControls.svelte";
+  let attributionState = $state("loaded");
+  useStageControls(() => (weatherConversation ? attributionControls : undefined));
+  import WeatherAttribution from "./WeatherAttribution.svelte";
   import {
     ActionButton,
     BrandAvatar,
@@ -42,6 +47,9 @@
     },
   ];
 
+  const weatherReply =
+    "I'd go tomorrow. This afternoon is around **12°C**, with rain likely and a brisk wind along the water.\n\nTomorrow looks drier, with lighter winds. Late morning would be a good time for a walk.";
+
   const reply = `Three of your notes mention it, and they agree on the shape:
 
 - **Mornings are yours.** Nothing lands before ten.
@@ -52,7 +60,12 @@ Want me to hold Friday mornings open for the next month?`;
 
   /* `#/screens/chat?long` repeats the conversation so the feed overflows. */
   let longConversation = $derived(window.location.hash.includes("long"));
+  let weatherConversation = $derived(window.location.hash.includes("weather"));
 </script>
+
+{#snippet attributionControls()}
+  <OptionSelector options={["loaded", "loading", "unavailable"]} bind:value={attributionState} />
+{/snippet}
 
 <!--
   A conversation mid-flow: a question, tools used to answer it, and a reply.
@@ -83,27 +96,50 @@ Want me to hold Friday mornings open for the next month?`;
       />
     {/snippet}
     <ChatFeed>
-      {#each Array.from({ length: longConversation ? 4 : 1 }, (_, i) => i) as i (i)}
-        <ChatUserMessage text="What do my notes say about how I like to work in the mornings?" />
-
-        <ToolGroup tools={lookups} />
-
+      {#if weatherConversation}
+        <ChatUserMessage
+          text="Can I walk along the harbour this afternoon, or should I wait until tomorrow?"
+        />
+        <ToolGroup
+          tools={[
+            {
+              id: "weather",
+              name: "Get weather",
+              status: "completed",
+              result: "Copenhagen · Current conditions and forecast",
+            },
+          ]}
+        />
         <ChatBrandMessage>
-          <Markdown text={reply} />
-        </ChatBrandMessage>
-
-        {#if !optionsAnswered}
-          <OptionsGroup options={fridayOptions} onSelect={() => (optionsAnswered = true)} />
-        {/if}
-
-        <ChatUserMessage text="Alternate weeks, but leave the first Friday alone." />
-
-        <ChatBrandMessage>
-          <Markdown
-            text="Done. Every other Friday morning held, the first of each month untouched."
+          <Markdown text={weatherReply} />
+          <WeatherAttribution
+            state={attributionState}
+            onRetry={() => (attributionState = "loaded")}
           />
         </ChatBrandMessage>
-      {/each}
+      {:else}
+        {#each Array.from({ length: longConversation ? 4 : 1 }, (_, i) => i) as i (i)}
+          <ChatUserMessage text="What do my notes say about how I like to work in the mornings?" />
+
+          <ToolGroup tools={lookups} />
+
+          <ChatBrandMessage>
+            <Markdown text={reply} />
+          </ChatBrandMessage>
+
+          {#if !optionsAnswered}
+            <OptionsGroup options={fridayOptions} onSelect={() => (optionsAnswered = true)} />
+          {/if}
+
+          <ChatUserMessage text="Alternate weeks, but leave the first Friday alone." />
+
+          <ChatBrandMessage>
+            <Markdown
+              text="Done. Every other Friday morning held, the first of each month untouched."
+            />
+          </ChatBrandMessage>
+        {/each}
+      {/if}
     </ChatFeed>
   </SoftEdgeScroll>
 </div>

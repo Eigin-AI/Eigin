@@ -57,6 +57,30 @@ struct WeatherToolTests {
         }
     }
 
+    @Test @MainActor func appleWeatherResultsRequireAttribution() async throws {
+        let (agent, container) = try makeAgent()
+        _ = container
+        let weather = FakeWeatherService()
+        var snapshot = FakeWeatherService.sampleSnapshot()
+        snapshot.attributionSource = .appleWeather
+        weather.snapshot = snapshot
+        let tool = GetWeatherTool(weather: weather, resolveLocation: Self.fixedLocation())
+        let call = makeCall(name: "get_weather", arguments: "{}")
+        let result = await tool.execute(call, agent: agent)
+        #expect(result.content.contains("apple-weather"))
+        #expect(result.content.contains("```eigin"))
+        #expect(result.content.contains("once per message"))
+
+        snapshot.attributionSource = nil
+        weather.snapshot = snapshot
+        let unbranded = await tool.execute(call, agent: agent)
+        #expect(!unbranded.content.contains("```eigin"))
+
+        weather.error = .unavailable
+        let unavailable = await tool.execute(call, agent: agent)
+        #expect(!unavailable.content.contains("```eigin"))
+    }
+
     // MARK: - Current + Forecast
 
     @Test @MainActor func returnsCurrentAndForecast() async throws {

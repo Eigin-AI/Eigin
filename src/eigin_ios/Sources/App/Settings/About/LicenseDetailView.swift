@@ -12,7 +12,7 @@ struct LicenseDetailView: View {
     var body: some View {
         SoftEdgeScrollView {
             VStack(alignment: .leading, spacing: Sizing.PageLayout.HeaderGrouping.gap) {
-                VStack(alignment: .leading, spacing: Spacing.n4) {
+                VStack(alignment: .leading, spacing: Spacing.n8) {
                     if !entry.copyright.isEmpty {
                         Text(entry.copyright)
                             .typography(Typography.titleXS)
@@ -23,6 +23,7 @@ struct LicenseDetailView: View {
                         .foregroundStyle(colors.text.standard.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.n24)
 
                 VStack(spacing: Sizing.PageLayout.ContentGrouping.gap) {
                     if let notice = entry.notice {

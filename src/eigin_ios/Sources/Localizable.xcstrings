@@ -23716,6 +23716,230 @@
           }
         }
       }
+    },
+    "settings.about.openSource": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open source"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open source"
+          }
+        }
+      }
+    },
+    "settings.about.thirdPartyPackages": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tredjepartspakker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Third-party packages"
+          }
+        }
+      }
+    },
+    "settings.about.dataSources": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datakilder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data sources"
+          }
+        }
+      }
+    },
+    "settings.about.dataSourcesDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tjenester brugt af din agent"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Services used by your agent"
+          }
+        }
+      }
+    },
+    "weather.attribution.provider": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather"
+          }
+        }
+      }
+    },
+    "weather.attribution.summary": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vejrforhold og vejrudsigter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather conditions and forecasts"
+          }
+        }
+      }
+    },
+    "weather.attribution.provenance": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leveret af Apple · WeatherKit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provided by Apple · WeatherKit"
+          }
+        }
+      }
+    },
+    "weather.attribution.disclosure": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din agent bruger Apple Weather til aktuelle vejrforhold samt time- og dagsprognoser."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your agent uses Apple Weather for current conditions, hourly forecasts and daily forecasts."
+          }
+        }
+      }
+    },
+    "weather.attribution.sourcesDisclosure": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather indeholder data fra andre udbydere. Deres kildeangivelser og ophavsretsoplysninger findes på Apples juridiske kildeside."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather includes data from other providers. Their attribution and copyright information are available on Apple's legal source page."
+          }
+        }
+      }
+    },
+    "weather.attribution.legalLink": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vejrdatakilder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather data sources"
+          }
+        }
+      }
+    },
+    "weather.attribution.legalDescription": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kildeangivelser og ophavsret"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attribution and copyright information"
+          }
+        }
+      }
+    },
+    "weather.attribution.loading": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henter Apple Weather-kildeangivelse…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading Apple Weather attribution…"
+          }
+        }
+      }
+    },
+    "weather.attribution.unavailable": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather-kildeangivelsen er ikke tilgængelig."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Weather attribution is unavailable."
+          }
+        }
+      }
+    },
+    "weather.attribution.retry": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøv igen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

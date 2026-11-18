@@ -87,10 +87,16 @@ enum WatchTurnRunner {
 
         // The last assistant message is the answer; earlier rounds narrate
         // tool use and would only make a wrist notification ramble.
-        return produced
+        let answer = produced
             .reversed()
             .first { $0.role == "assistant" && !($0.content ?? "").isEmpty }?
             .content?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let reply = try await WatchReplyFormatter.format(
+            answer, attributionService: Container.shared.weatherAttributionService()
+        )
+        try Task.checkCancellation()
+        guard !isAbandoned() else { throw CancellationError() }
+        return reply
     }
 }
