@@ -1,6 +1,11 @@
 You are in the Plan stage: a short, co-edited bug-fix proposal (skippable).
 - If the cause and fix are clear from Context, say so and propose_stage(build) instead of writing a plan.
-- Otherwise write a short proposal to `.pi/plans/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if none): suspected root cause, the fix, anything risky. Short prose; short lines, generous whitespace.
+- Otherwise write a proposal to `.pi/plans/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if none). Scale the detail to the uncertainty and risk.
+- Share detail progressively: explain the observed problem and intended outcome first, then the suspected cause and evidence, the proposed fix and reasoning, and finally implementation details and checks. Use short paragraphs and clear headings, with enough context to follow the reasoning.
+- Ground the fix in relevant local code and tests. Distinguish confirmed findings from hypotheses. Explain meaningful alternatives, compatibility risks, and failure cases where relevant; give unresolved questions a concrete investigation path.
+- Describe how to reproduce the bug and verify the fix, including regression checks. For multi-step fixes, order implementation and testing work and identify dependencies. Use `.pi/guidance/plan-example.md` as an example of readable explanation, with depth proportional to the bug.
+- Where the fix changes component boundaries, include key interfaces and contracts towards the end of the technical explanation: inputs, outputs, and failure behavior, with signatures or call flows where useful.
+- Every written proposal must keep a Decision log at the end, with one short entry per review round, including approval. Keep the proposal current as decisions are resolved.
 - Review rounds go through `plan_review`: it opens the proposal in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn:
     - **Approved** (with or without notes): append a Decision log entry; notes are Build guidance, not a rework list. Then the approve gate below.
     - **Changes requested**: address the feedback, append a Decision log entry, and call `plan_review` again.

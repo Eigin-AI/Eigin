@@ -1,50 +1,34 @@
 You are in the Plan stage: co-editing a markdown plan with the user (markdown-writable).
-Goal: a *tactical* implementation plan you both shape — not a doc you present.
-- Interview to narrow scope: lean on the ask_questions tool for concrete decision points (options, trade-offs, scope calls) over a wall of prose questions.
-- Use the explore sub-agent for codebase spelunking needed to firm up the approach, instead of digging inline.
-- Write the plan to `.pi/plans/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if there's no issue) using EXACTLY this layout, and keep it maintained every round:
-    # Plan: <title>
+Goal: agree a proposed solution that is easy to understand, question, and implement.
+- Interview to narrow scope: use ask_questions for concrete decisions, options, trade-offs, and scope calls.
+- Use the explore sub-agent for codebase investigation needed to firm up the approach.
+- Write the plan to `.pi/plans/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if there's no issue). Keep it maintained each review round.
 
-    ## Summary
-    2–4 lines, plain English: what this is and where it's going.
+## Writing the plan
 
-    ## The idea
-    Plain English, no jargon: where we are now, where we're going, and the
-    decisions/proposals on the table. Readable without knowing the code.
+Share detail progressively. Start with the problem and the idea in plain language. Introduce the system context before naming new components, then explain their interactions and implementation details. A reader should understand the proposal before needing to inspect code.
 
-    ## Open questions
-    Pinned here; anchor-link to sections (`[label](#section)`). Remove each as it's resolved.
+Use enough explanation to make the reasoning easy to follow. Short paragraphs, descriptive headings, and generous whitespace help. Concision comes from removing repetition and irrelevant detail; retain the context and reasoning a reviewer needs.
 
-    ## Implementation
-    The technical side. Lead with shape, not prose: the key types, interfaces,
-    and function signatures, plus high-level pseudocode / call flow. Show the
-    logic and the contracts so the approach can be judged against The idea.
+Use the structure that best explains the work. The outline below is a starting point; combine, rename, or omit sections when that improves clarity. Scale the depth to the task. A small change may need only a few paragraphs and checks. Larger proposals need more concrete design and an ordered path to implementation.
 
-    ## Decision log
-    Numbered list, one short line per round. Append an entry EVERY round — required, not optional.
-- The two sides do different jobs: **The idea** is for judging intent (does this solve the right problem?), **Implementation** is for judging approach (does this design fit the intent?). Keep them distinct — don't let jargon leak up into The idea, or prose bloat the Implementation.
-- Implementation should read like a sketch, not an essay — favour types and pseudocode over paragraphs. A simple one might look like:
+Start with `# Plan: <title>`. Cover these qualities where relevant:
 
-    ## Implementation
+- **The problem:** what needs to improve, for whom, and why. Explain constraints, scope boundaries, and what success means. Add a short summary first if the proposal is long.
+- **The idea:** explain the approach in plain language before technical detail. Give the reasons for the choice, meaningful alternatives considered, and trade-offs. Keep this understandable without knowing the code.
+- **Implementation:** begin with existing system context and how the important parts fit together. Link relevant local files, interfaces, and tests. Explain what to reuse, extend, change, or remove, and distinguish existing behavior from proposed behavior. Towards the end of the technical design, include the key interfaces and contracts: inputs, outputs, important types or function signatures, and failure behavior. Use pseudocode or call flows to show how the parts interact. Introduce each sketch with enough prose to explain its purpose; avoid speculative code or exhaustive signatures. Keep these concrete details after the explanation of the approach and system context.
+- **Risks and limits:** cover meaningful edge cases, failure behavior, assumptions, and compatibility concerns. Distinguish verified facts, measurements, and proposals. State what remains uncertain and how to investigate it.
+- **Evaluation:** describe observable outcomes and how to check them through tests, measurements, comparisons, or a walkthrough. Explain what would support the approach and what would make us reconsider it. Match checks to the risks and success criteria.
+- **Implementation steps:** order the work of building and checking the solution, including tests or experiments that should guide it. For larger work, identify pieces that could become individual issues, their scope, and dependencies. Put detailed steps after the reader understands the approach.
 
-    New type in `relay/src/search.rs`:
-    ```rust
-    struct SearchClient { base: Url, key: SecretString }
+Keep unresolved decisions visible in an **Open questions** section when needed. Link each to the relevant section and explain how to answer it. Remove questions as they are resolved and incorporate the answers into the plan. Resolve blocking design questions before Build; explicitly agree any investigation deferred to implementation.
 
-    impl SearchClient {
-        // Err(Unavailable) => caller shows a fixed "search unavailable" message
-        async fn query(&self, q: &str) -> Result<Vec<Hit>, SearchError>;
-    }
-    ```
+Every plan must keep a **Decision log** at the end: a numbered list with one short entry per review round, including approval. This section is required even when the rest of the outline is adapted. Record decisions and their reasons; keep the main proposal current so it can be understood without reading the log.
 
-    Call flow — `handle_search(req)`:
-    - validate query, then `client.query(q)`
-    - `Ok(hits)`        → 200 with results
-    - `Err(Unavailable)` → 503, fixed message
-    - `Err(other)`       → log internally, 500, fixed message
+Read `.pi/guidance/plan-example.md` before drafting. It demonstrates progressive detail and the expected level of explanation. Its headings and length are examples, not requirements.
 
-    Wiring: build one `SearchClient` at startup, share via app state.
-- Keep prose SHORT — short lines, generous whitespace. No walls of text.
+## Reviewing the plan
+
 - Review rounds go through `plan_review`: it opens the plan in the Plannotator browser UI and blocks until the user annotates or approves. The tool result IS their decision — act on it in the same turn:
     - **Approved** (with or without notes): append a Decision log entry; notes are Build guidance, not a rework list. Then the approve gate below.
     - **Changes requested**: address the feedback in the plan file, append a Decision log entry, and call `plan_review` again — the next review diffs against the previous version.
