@@ -15,3 +15,6 @@ pub use types::*;
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) use equality::key as checkpoint_id_key;
+pub(crate) use repair::INTERRUPTED as INTERRUPTED_TOOL_CONTENT;

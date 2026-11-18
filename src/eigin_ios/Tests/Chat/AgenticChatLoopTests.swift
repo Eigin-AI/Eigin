@@ -567,6 +567,57 @@ struct AgenticChatLoopTests {
         #expect(completed.count { $0.toolCallID == "new" } == 1)
     }
 
+    @Test @MainActor func stopDuringStreamingPreservesPartialProseIdentity() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let service = FakeChatService()
+        service.enqueueEventStream([
+            .contentDelta("Partial"),
+            .contentDelta(" discarded"),
+            .finished(.stop),
+        ])
+        var checkpoint: [ChatMessage] = []
+        loop.onContentDelta = { _ in checkpoint = loop.stop() }
+        let produced = try await loop.run(
+            messages: [], tools: nil, agent: agent, provider: provider,
+            chatService: service, toolExecutor: FakeToolExecutor()
+        )
+        #expect(produced.isEmpty)
+        #expect(checkpoint.map(\.content) == ["Partial"])
+        #expect(checkpoint.first?.toolCalls == nil)
+        #expect(loop.buildCheckpoint().map(\.localID) == checkpoint.map(\.localID))
+        loop.settle()
+        #expect(loop.buildCheckpoint().isEmpty)
+    }
+
+    @Test @MainActor func checkpointBeforeExecutionClosesBatchWithoutDuplicatingProse(
+    ) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let executor = FakeToolExecutor()
+        let service = FakeChatService()
+        let calls = ["a", "b"].map {
+            ToolCall(id: $0, type: "function", function: .init(name: "read_core", arguments: "{}"))
+        }
+        service.enqueueEventStream([.contentDelta("Working")] + calls.map { .toolCall($0) }
+            + [.finished(.toolCalls)])
+        var checkpoint: [ChatMessage] = []
+        loop.beforeToolCall = { _ in checkpoint = loop.stop() }
+        _ = try await loop.run(
+            messages: [], tools: nil, agent: agent, provider: provider,
+            chatService: service, toolExecutor: executor
+        )
+        #expect(executor.calls.isEmpty)
+        #expect(checkpoint.map(\.role) == ["assistant", "tool", "tool"])
+        #expect(checkpoint.first?.content == "Working")
+        #expect(checkpoint.first?.toolCalls?.map(\.id) == ["a", "b"])
+        #expect(checkpoint.dropFirst().map(\.content)
+            == [ToolResult.interruptedContent, ToolResult.interruptedContent])
+        #expect(loop.buildCheckpoint().first?.localID == checkpoint.first?.localID)
+    }
+
     @Test @MainActor func stoppedBatchPersistsPairedResultsAndContinuesWithoutReplay() async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
@@ -580,7 +631,13 @@ struct AgenticChatLoopTests {
         service.enqueueEventStream(calls.map { .toolCall($0) } + [.finished(.toolCalls)])
         var checkpoint: [ChatMessage] = []
         loop.beforeToolCall = { name in
-            if name == "second" { checkpoint = loop.stop() }
+            if name == "second" {
+                checkpoint = loop.stop()
+                let repeated = loop.buildCheckpoint()
+                #expect(repeated.map(\.content) == checkpoint.map(\.content))
+                #expect(repeated.map(\.toolCallID) == checkpoint.map(\.toolCallID))
+                #expect(repeated.prefix(2).map(\.localID) == checkpoint.prefix(2).map(\.localID))
+            }
         }
         _ = try await loop.run(
             messages: [],
@@ -1012,7 +1069,10 @@ struct AgenticChatLoopTests {
                 ))
             }
             try await waitForPermissionCondition { queuedStarted }
-            _ = loop.stop()
+            let checkpoint = loop.stop()
+            #expect(checkpoint.count { $0.toolCallID == "permission-a" } == 1)
+            #expect(checkpoint.filter { $0.toolCallID == "permission-b" }.map(\.content)
+                == [ToolResult.interruptedContent])
             loop.resolvePermission(.allowOnce, requestID: "permission-b")
             #expect(await queued.value == .deny)
             _ = try await task.value
@@ -1483,6 +1543,10 @@ struct AgenticChatLoopTests {
         #expect(produced[1].toolCallID == "inline_1")
         #expect(produced[2].role == "assistant")
         #expect(produced[2].content == "Here is what I found.")
+        let checkpoint = loop.buildCheckpoint()
+        #expect(checkpoint.map(\.localID) == produced.map(\.localID))
+        #expect(checkpoint.map(\.content) == produced.map(\.content))
+        #expect(checkpoint.count { $0.toolCallID == "inline_1" } == 1)
     }
 
     @Test @MainActor func chunkedReplyMatchesDrainedPresentation() async throws {

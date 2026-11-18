@@ -19,7 +19,18 @@ Repeated silence shows a tappable continuation card. The credits-ready card offe
 
 ## Safe checkpoints
 
-Failures and stops preserve completed tool results and partial prose. Interrupted tool batches get paired results marking outstanding actions as uncertain, so continuation can check their state before repeating them.
+The SDK builds checkpoint snapshots from recorded output and host progress facts. Completed tool results and eligible partial prose are retained. Outstanding cloud tool calls receive uncertainty results, so continuation can check their state before repeating them. Completed local inline exchanges are retained as recorded.
+
+### SDK usage
+
+1. Collect message values from `Experimental.Agent.Round` and track the safe-to-retain prefix after each assistant batch, tool result, or inline exchange.
+2. Call `Experimental.Agent.checkpoint(_:progress:)` with that snapshot, completion and execution state, partial prose, and the current prose message's position if already recorded.
+3. Restore app identities from output provenance: `.produced(index:)` retains the source identity, `.partialProse` uses the streaming identity, and `.interruptedTool` receives a new identity.
+4. Save the chosen snapshot once, then settle host turn state. Reopen it as ordinary conversation history.
+
+Rust consumers use `agent::agent_build_checkpoint`. Repeated calls return equivalent snapshots; the host owns timing, storage, identities, execution, permissions, and cancellation. Tool IDs should be unique across the retained output because result matching spans the whole snapshot.
+
+Explicit chat stop captures a checkpoint before settling. Background cancellation returns no output.
 
 ## Permission gating
 
