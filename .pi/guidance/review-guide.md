@@ -67,8 +67,11 @@ The key is to make each doc feel immediately scannable by mixing media and using
 
 ### Docs should state requirements concretely: which version, via which tool.
 
-### Docs should reflect the change.
-Affected `docs/src/` pages update on the same branch; a new concept may need its own page.
+### Docs should explain the product and codebase from the outside in.
+Flag implementation inventories, low-level walkthroughs better expressed in code, and additions whose length outweighs their value to a newcomer; start with what readers need to understand or use.
+
+### Docs should reflect meaningful changes for readers.
+Update affected `docs/src/` pages on the same branch when understanding or usage changes; judge new sections and pages by reader need, with space proportional to their importance.
 
 ### Required recurring steps should fit existing workflows.
 Flag avoidable manual steps and stale pi guidance when commands or release procedures change.
