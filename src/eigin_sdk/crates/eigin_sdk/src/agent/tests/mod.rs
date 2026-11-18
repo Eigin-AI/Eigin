@@ -1,1 +1,2 @@
+mod checkpoints;
 mod rounds;

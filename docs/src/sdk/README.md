@@ -8,6 +8,8 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 
 ## SDK capabilities
 
+- [Agent checkpoints](../conversation/agentic-loop.md#safe-checkpoints): retain interrupted output before host persistence.
+
 - [Outgoing conversation preparation](conversation-preparation.md): select history and assemble request-only messages.
 - [Inference](inference.md): choose a provider, consume events and manage cancellation.
 - [Context paging](../conversation/context-paging.md#sdk): select retained history and tool-result masks.

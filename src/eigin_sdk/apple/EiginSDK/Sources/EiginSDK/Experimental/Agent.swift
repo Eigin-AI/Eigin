@@ -9,3 +9,16 @@ public extension EiginSDK.Experimental {
         public typealias Failure = RoundError
     }
 }
+
+public extension EiginSDK.Experimental.Agent {
+    typealias Progress = CheckpointProgress
+    typealias CheckpointEntry = CheckpointMessage
+    typealias Origin = CheckpointOrigin
+
+    /// Builds a transcript snapshot; the host owns saving and app message identities.
+    static func checkpoint(
+        _ produced: [EiginSDK.Experimental.Conversation.Message], progress: Progress
+    ) -> [CheckpointEntry] {
+        agentBuildCheckpoint(produced: produced, progress: progress)
+    }
+}

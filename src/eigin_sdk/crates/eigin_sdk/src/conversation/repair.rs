@@ -5,7 +5,7 @@ use super::{
 use crate::inference::InferenceToolCall;
 use std::collections::HashSet;
 
-pub(super) const INTERRUPTED: &str = "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.";
+pub(crate) const INTERRUPTED: &str = "Tool execution was interrupted. Completion is unknown; do not repeat the action without checking its state.";
 
 pub(super) fn repair(messages: Vec<ConversationMessage>) -> Vec<ConversationMessage> {
     let mut result: Vec<ConversationMessage> = Vec::new();

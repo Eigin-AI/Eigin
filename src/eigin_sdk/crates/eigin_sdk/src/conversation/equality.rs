@@ -3,7 +3,7 @@ use icu_normalizer::ComposingNormalizer;
 use std::{borrow::Cow, collections::HashMap};
 
 /// Swift compares canonically equivalent strings; normalize comparison keys only.
-pub(super) fn key(value: &str) -> Cow<'_, str> {
+pub(crate) fn key(value: &str) -> Cow<'_, str> {
     ComposingNormalizer::new_nfc().normalize(value)
 }
 

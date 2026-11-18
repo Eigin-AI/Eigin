@@ -143,8 +143,8 @@ final class AgenticChatLoop {
     }
 
     private var produced: [ChatMessage] = []
-    /// Index in `produced` after the last complete round (all tool results present).
-    /// Used by `buildCheckpoint()` to avoid returning orphaned tool calls.
+    /// Safe-to-retain prefix, including the assistant batch and each recorded result.
+    /// The SDK checkpoint closes outstanding calls with uncertainty results.
     private var safeProducedCount = 0
 
     /// Messages from completed rounds that the UI can display while the loop
@@ -917,37 +917,10 @@ final class AgenticChatLoop {
 
     /// Captures completed work and partial prose for persistence after a failure.
     func buildCheckpoint() -> [ChatMessage] {
-        // Completed output remains owned by the loop until persistence preparation finishes.
-        if chatPhase == .done { return produced }
-
-        // Preserve recorded work, including results from a partially executed batch.
-        var result = Array(produced.prefix(safeProducedCount))
-
-        // Close a stopped tool batch without losing actions that already completed.
-        if let assistant = result.last(where: { !($0.toolCalls ?? []).isEmpty }),
-           let calls = assistant.toolCalls
-        {
-            let completedIDs = Set(result.compactMap(\.toolCallID))
-            for call in calls where !completedIDs.contains(call.id) {
-                result.append(ChatMessage(
-                    role: "tool",
-                    content: ToolResult.interruptedContent,
-                    toolCallID: call.id, name: call.function.name
-                ))
-            }
-        }
-
-        // Keep uncommitted prose without retaining unexecuted tool calls.
-        if !contentBuffer.isEmpty, chatPhase != .executingTools,
-           !result.contains(where: { $0.localID == currentMessageID })
-        {
-            result.append(ChatMessage(
-                role: "assistant",
-                content: contentBuffer,
-                localID: currentMessageID
-            ))
-        }
-
-        return result
+        CheckpointSDKConversion.build(
+            produced: produced, retainedCount: safeProducedCount, isDone: chatPhase == .done,
+            isExecutingTools: chatPhase == .executingTools,
+            partialContent: contentBuffer, currentMessageID: currentMessageID
+        )
     }
 }
