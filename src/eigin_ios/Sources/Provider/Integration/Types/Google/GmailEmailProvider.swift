@@ -1,4 +1,6 @@
+import CoreFoundation
 import Foundation
+import SwiftMail
 
 /// An ``EmailProvider`` backend for Gmail, using its REST API.
 ///
@@ -188,7 +190,7 @@ struct GmailEmailProvider: EmailProvider {
             id: meta.id,
             threadID: meta.threadId,
             from: meta.header("From") ?? "",
-            subject: meta.header("Subject") ?? "",
+            subject: meta.header("Subject")?.decodeMIMEHeader() ?? "",
             snippet: meta.snippet ?? "",
             date: meta.header("Date") ?? ""
         )
@@ -252,7 +254,7 @@ struct GmailEmailProvider: EmailProvider {
         }
     }
 
-    /// Builds a minimal plain-text RFC 822 message, base64url-encoded for the `raw` field.
+    /// Builds a UTF-8 plain-text MIME message for Gmail’s raw transport.
     private static func buildRFC822(
         to: [String],
         cc: [String],
@@ -267,15 +269,44 @@ struct GmailEmailProvider: EmailProvider {
         if !cc.isEmpty {
             lines.append("Cc: \(cc.joined(separator: ", "))")
         }
-        lines.append("Subject: \(subject)")
+        lines.append("Subject: \(encodedSubject(subject))")
+        lines.append("MIME-Version: 1.0")
         lines.append("Content-Type: text/plain; charset=UTF-8")
+        lines.append("Content-Transfer-Encoding: base64")
         if let inReplyTo {
             lines.append("In-Reply-To: <\(inReplyTo)>")
             lines.append("References: <\(inReplyTo)>")
         }
         lines.append("")
-        lines.append(body)
+        lines.append(Data(body.utf8).base64EncodedString(options: [
+            .lineLength76Characters,
+            .endLineWithCarriageReturn,
+            .endLineWithLineFeed,
+        ]))
         return lines.joined(separator: "\r\n")
+    }
+
+    private static func encodedSubject(_ subject: String) -> String {
+        let subject = subject.replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+        if subject.utf8.allSatisfy({ $0 < 128 }), subject.utf8.count <= 69 {
+            return subject
+        }
+        // Each encoded-word fits a 78-column header and contains complete UTF-8 scalars.
+        var words: [String] = []
+        var chunk = Data()
+        for scalar in subject.unicodeScalars {
+            let bytes = Data(String(scalar).utf8)
+            if chunk.count + bytes.count > 42 {
+                words.append("=?UTF-8?B?\(chunk.base64EncodedString())?=")
+                chunk.removeAll(keepingCapacity: true)
+            }
+            chunk.append(bytes)
+        }
+        if !chunk.isEmpty {
+            words.append("=?UTF-8?B?\(chunk.base64EncodedString())?=")
+        }
+        return words.joined(separator: "\r\n ")
     }
 }
 
@@ -329,7 +360,7 @@ private struct GmailMessage: Decodable {
 
     private static func findPlainText(in payload: GmailPayload) -> String? {
         if payload.mimeType == "text/plain", let data = payload.body?.data {
-            return decodeBase64URL(data)
+            return decodeBase64URL(data, headers: payload.headers ?? [])
         }
         for part in payload.parts ?? [] {
             if let found = findPlainText(in: part) {
@@ -339,14 +370,30 @@ private struct GmailMessage: Decodable {
         return nil
     }
 
-    private static func decodeBase64URL(_ value: String) -> String? {
+    private static func decodeBase64URL(_ value: String, headers: [GmailHeader]) -> String? {
         var base64 = value.replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
         while base64.count % 4 != 0 {
             base64 += "="
         }
         guard let data = Data(base64Encoded: base64) else { return nil }
-        return String(data: data, encoding: .utf8)
+        let contentType = headers
+            .first { $0.name.caseInsensitiveCompare("Content-Type") == .orderedSame }?.value ?? ""
+        let charset = contentType.components(separatedBy: ";").dropFirst()
+            .compactMap { parameter -> String? in
+                let pair = parameter.split(separator: "=", maxSplits: 1).map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                guard pair.count == 2, pair[0].lowercased() == "charset" else { return nil }
+                return pair[1].trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            }.first
+        guard let charset else { return String(data: data, encoding: .utf8) }
+        let encoding = CFStringConvertIANACharSetNameToEncoding(charset as CFString)
+        guard encoding != kCFStringEncodingInvalidId else { return nil }
+        return String(
+            data: data,
+            encoding: String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(encoding))
+        )
     }
 
     func toEmailMessage() -> EmailMessage {
@@ -356,7 +403,7 @@ private struct GmailMessage: Decodable {
             from: header("From") ?? "",
             to: (header("To") ?? "").split(separator: ",")
                 .map { $0.trimmingCharacters(in: .whitespaces) },
-            subject: header("Subject") ?? "",
+            subject: header("Subject")?.decodeMIMEHeader() ?? "",
             body: plainTextBody() ?? snippet ?? "",
             date: header("Date") ?? ""
         )

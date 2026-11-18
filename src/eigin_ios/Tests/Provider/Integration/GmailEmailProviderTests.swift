@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import SwiftMail
 import Testing
 
 /// Verifies ``GmailEmailProvider`` request shape and response mapping against
@@ -109,7 +110,7 @@ struct GmailEmailProviderTests {
               "snippet": "hello there",
               "payload": {
                 "headers": [
-                  {"name": "Subject", "value": "Hi"},
+                  {"name": "Subject", "value": "=?UTF-8?B?VGVzdCDigJQgw6bDuMOl?="},
                   {"name": "From", "value": "alice@example.com"},
                   {"name": "Date", "value": "2026-01-01"}
                 ]
@@ -125,7 +126,7 @@ struct GmailEmailProviderTests {
         #expect(page.messages.count == 1)
         #expect(page.messages[0].id == "m1")
         #expect(page.messages[0].from == "alice@example.com")
-        #expect(page.messages[0].subject == "Hi")
+        #expect(page.messages[0].subject == "Test — æøå")
         #expect(page.messages[0].snippet == "hello there")
         #expect(page.nextPageToken == nil)
     }
@@ -171,7 +172,7 @@ struct GmailEmailProviderTests {
 
     @Test func readEmailDecodesPlainTextBody() async throws {
         let session = FakeURLProtocol.fakeSession()
-        let encodedBody = Data("Hello from Gmail".utf8).base64URLEncodedString()
+        let encodedBody = Data("Hello from Gmail — æøå ‘quotes’".utf8).base64URLEncodedString()
         FakeURLProtocol.stubResponse(
             for: "\(Self.base)/messages/m1?format=full",
             data: Data("""
@@ -200,10 +201,16 @@ struct GmailEmailProviderTests {
         #expect(message.subject == "Hi")
         #expect(message.from == "alice@example.com")
         #expect(message.to == ["me@example.com"])
-        #expect(message.body == "Hello from Gmail")
+        #expect(message.body == "Hello from Gmail — æøå ‘quotes’")
     }
 
-    @Test func sendEmailPostsBase64EncodedRFC822Message() async throws {
+    @Test(arguments: [
+        "Hi",
+        "Test — æøå “quotes”",
+        String(repeating: "🐈—æøå ", count: 30),
+        String(repeating: "Long ASCII ", count: 20),
+    ])
+    func sendEmailPostsBase64EncodedRFC822Message(subject: String) async throws {
         let session = FakeURLProtocol.fakeSession()
         FakeURLProtocol.stubResponse(
             for: "\(Self.base)/messages/send",
@@ -217,8 +224,9 @@ struct GmailEmailProviderTests {
         )
 
         let provider = makeProvider(session: session)
+        let bodyText = String(repeating: "Body — æøå ‘quotes’ 🐈\r\n", count: 10)
         let sent = try await provider.sendEmail(
-            to: ["bob@example.com"], cc: [], subject: "Hi", body: "Body text"
+            to: ["bob@example.com"], cc: [], subject: subject, body: bodyText
         )
 
         #expect(sent.id == "sent-1")
@@ -227,6 +235,7 @@ struct GmailEmailProviderTests {
         let raw = try #require(json?["raw"] as? String)
         #expect(!raw.contains("+"))
         #expect(!raw.contains("/"))
+        try assertMIME(raw: raw, subject: subject, body: bodyText)
     }
 
     @Test func replyEmailReadsOriginalThenSendsWithReferences() async throws {
@@ -240,7 +249,7 @@ struct GmailEmailProviderTests {
               "snippet": "hi",
               "payload": {
                 "headers": [
-                  {"name": "Subject", "value": "Original"},
+                  {"name": "Subject", "value": "Original — æøå"},
                   {"name": "From", "value": "alice@example.com"}
                 ]
               }
@@ -260,12 +269,96 @@ struct GmailEmailProviderTests {
         )
 
         let provider = makeProvider(session: session)
-        let sent = try await provider.replyEmail(messageID: "m1", body: "Thanks!")
+        let sent = try await provider.replyEmail(messageID: "m1", body: "Thanks — æøå!")
 
         #expect(sent.id == "reply-1")
         let body = try #require(FakeURLProtocol.lastRequestBody(for: "\(Self.base)/messages/send"))
         let json = try JSONSerialization.jsonObject(with: body) as? [String: Any]
         #expect(json?["threadId"] as? String == "t1")
+        let raw = try #require(json?["raw"] as? String)
+        try assertMIME(raw: raw, subject: "Re: Original — æøå", body: "Thanks — æøå!")
+    }
+
+    @Test(arguments: ["UTF-8", "windows-1252", "ISO-8859-1"])
+    func readEmailUsesPlainTextPartCharset(charset: String) async throws {
+        let text = "Received — æøå ‘quotes’"
+        let encoding: String.Encoding = charset == "UTF-8" ? .utf8 :
+            (charset == "windows-1252" ? .windowsCP1252 : .isoLatin1)
+        let expected = charset == "ISO-8859-1" ? "Received æøå" : text
+        let bytes = try #require(expected.data(using: encoding))
+        let session = FakeURLProtocol.fakeSession()
+        let fixture: [String: Any] = [
+            "id": "m1", "threadId": "t1", "snippet": "Fallback",
+            "payload": [
+                "mimeType": "multipart/alternative",
+                "headers": [[
+                    "name": "Subject",
+                    "value": "=?UTF-8?B?\(Data(text.utf8).base64EncodedString())?=",
+                ]],
+                "parts": [[
+                    "mimeType": "text/plain",
+                    "headers": [[
+                        "name": "Content-Type",
+                        "value": "text/plain; charset=\"\(charset)\"",
+                    ]],
+                    "body": ["data": bytes.base64URLEncodedString()],
+                ]],
+            ],
+        ]
+        try FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/m1?format=full",
+            data: JSONSerialization.data(withJSONObject: fixture),
+            statusCode: 200
+        )
+        let message = try await makeProvider(session: session).readEmail(id: "m1")
+        #expect(message.subject == text)
+        #expect(message.body == expected)
+    }
+
+    private func assertMIME(raw: String, subject: String, body: String) throws {
+        var base64 = raw.replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while base64.count % 4 != 0 {
+            base64 += "="
+        }
+        let data = try #require(Data(base64Encoded: base64))
+        let message = try #require(String(data: data, encoding: .utf8))
+        #expect(message.utf8.allSatisfy { $0 < 128 })
+        let sections = message.components(separatedBy: "\r\n\r\n")
+        let headers = try #require(sections.first)
+        #expect(headers.components(separatedBy: "\r\n").allSatisfy { $0.utf8.count <= 78 })
+        if subject.hasPrefix("Re:") {
+            #expect(headers.contains("In-Reply-To: <m1>"))
+            #expect(headers.contains("References: <m1>"))
+        }
+        #expect(headers.contains("MIME-Version: 1.0"))
+        #expect(headers.contains("Content-Type: text/plain; charset=UTF-8"))
+        #expect(headers.contains("Content-Transfer-Encoding: base64"))
+        let unfolded = headers.replacingOccurrences(of: "\r\n ", with: " ")
+        let subjectLine = try #require(unfolded.components(separatedBy: "\r\n")
+            .first { $0.hasPrefix("Subject: ") })
+        let subjectValue = String(subjectLine.dropFirst("Subject: ".count))
+        #expect(subjectValue.decodeMIMEHeader() == subject)
+        if !subjectValue.hasPrefix("=?") {
+            #expect(subjectValue == subject)
+        }
+        let words = subjectValue.hasPrefix("=?") ? subjectValue.components(separatedBy: " ") : []
+        var decoded = ""
+        for word in words {
+            #expect(word.hasPrefix("=?UTF-8?B?"))
+            #expect(word.hasSuffix("?="))
+            #expect(word.count <= 75)
+            let bytes = try #require(Data(base64Encoded: String(word.dropFirst(10).dropLast(2))))
+            decoded += try #require(String(data: bytes, encoding: .utf8))
+        }
+        if !words.isEmpty { #expect(decoded == subject) }
+        let encodedBody = try #require(sections.dropFirst().first)
+        #expect(encodedBody.components(separatedBy: "\r\n").allSatisfy { $0.count <= 76 })
+        let bodyData = try #require(Data(base64Encoded: encodedBody.replacingOccurrences(
+            of: "\r\n",
+            with: ""
+        )))
+        #expect(String(data: bodyData, encoding: .utf8) == body)
     }
 
     @Test func missingTokenFlagsTheIntegrationForReconnect() async throws {

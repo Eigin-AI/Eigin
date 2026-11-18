@@ -137,7 +137,7 @@ struct MicrosoftEmailProviderTests {
                 {
                   "id": "m1",
                   "conversationId": "t1",
-                  "subject": "Hi",
+                  "subject": "Hi — æøå “quotes”",
                   "bodyPreview": "hello there",
                   "from": {"emailAddress": {"address": "alice@outlook.com"}},
                   "receivedDateTime": "2026-01-01T00:00:00Z"
@@ -155,7 +155,7 @@ struct MicrosoftEmailProviderTests {
         #expect(page.messages[0].id == "m1")
         #expect(page.messages[0].threadID == "t1")
         #expect(page.messages[0].from == "alice@outlook.com")
-        #expect(page.messages[0].subject == "Hi")
+        #expect(page.messages[0].subject == "Hi — æøå “quotes”")
         #expect(page.messages[0].snippet == "hello there")
         #expect(page.nextPageToken == nil)
     }
@@ -207,11 +207,11 @@ struct MicrosoftEmailProviderTests {
             {
               "id": "m1",
               "conversationId": "t1",
-              "subject": "Hi",
+              "subject": "Hi — æøå “quotes”",
               "from": {"emailAddress": {"address": "alice@outlook.com"}},
               "toRecipients": [{"emailAddress": {"address": "me@outlook.com"}}],
               "receivedDateTime": "2026-01-01T00:00:00Z",
-              "body": {"contentType": "text", "content": "Hello from Graph"}
+              "body": {"contentType": "text", "content": "Hello from Graph — æøå ‘quotes’"}
             }
             """.utf8),
             statusCode: 200
@@ -220,10 +220,10 @@ struct MicrosoftEmailProviderTests {
         let provider = makeProvider(session: session)
         let message = try await provider.readEmail(id: "m1")
 
-        #expect(message.subject == "Hi")
+        #expect(message.subject == "Hi — æøå “quotes”")
         #expect(message.from == "alice@outlook.com")
         #expect(message.to == ["me@outlook.com"])
-        #expect(message.body == "Hello from Graph")
+        #expect(message.body == "Hello from Graph — æøå ‘quotes’")
         #expect(message.threadID == "t1")
     }
 
@@ -237,7 +237,8 @@ struct MicrosoftEmailProviderTests {
 
         let provider = makeProvider(session: session, accountAddress: "me@outlook.com")
         let sent = try await provider.sendEmail(
-            to: ["bob@example.com"], cc: [], subject: "Hi", body: "Body text"
+            to: ["bob@example.com"], cc: [], subject: "Hi — æøå “quotes”",
+            body: "Body — æøå ‘quotes’"
         )
 
         // No real id: sendMail is fire-and-forget, so this is synthesized from
@@ -245,14 +246,16 @@ struct MicrosoftEmailProviderTests {
         #expect(sent.id.isEmpty)
         #expect(sent.from == "me@outlook.com")
         #expect(sent.to == ["bob@example.com"])
-        #expect(sent.subject == "Hi")
-        #expect(sent.body == "Body text")
+        #expect(sent.subject == "Hi — æøå “quotes”")
+        #expect(sent.body == "Body — æøå ‘quotes’")
 
         let requestBody = try #require(FakeURLProtocol
             .lastRequestBody(for: "\(Self.base)/sendMail"))
         let json = try JSONSerialization.jsonObject(with: requestBody) as? [String: Any]
         let message = try #require(json?["message"] as? [String: Any])
-        #expect(message["subject"] as? String == "Hi")
+        #expect(message["subject"] as? String == "Hi — æøå “quotes”")
+        let body = try #require(message["body"] as? [String: Any])
+        #expect(body["content"] as? String == "Body — æøå ‘quotes’")
         let to = try #require(message["toRecipients"] as? [[String: Any]])
         let toAddress = (to.first?["emailAddress"] as? [String: Any])?["address"] as? String
         #expect(toAddress == "bob@example.com")
@@ -266,7 +269,7 @@ struct MicrosoftEmailProviderTests {
             {
               "id": "m1",
               "conversationId": "t1",
-              "subject": "Original",
+              "subject": "Original — æøå",
               "from": {"emailAddress": {"address": "alice@outlook.com"}},
               "receivedDateTime": "2026-01-01T00:00:00Z",
               "body": {"contentType": "text", "content": "hi"}
@@ -281,7 +284,7 @@ struct MicrosoftEmailProviderTests {
         )
 
         let provider = makeProvider(session: session, accountAddress: "me@outlook.com")
-        let sent = try await provider.replyEmail(messageID: "m1", body: "Thanks!")
+        let sent = try await provider.replyEmail(messageID: "m1", body: "Thanks — æøå!")
 
         // No real id, same reason as sendEmail — the reply action doesn't
         // return one either. threadID/from/to come from the original message
@@ -290,14 +293,14 @@ struct MicrosoftEmailProviderTests {
         #expect(sent.threadID == "t1")
         #expect(sent.from == "me@outlook.com")
         #expect(sent.to == ["alice@outlook.com"])
-        #expect(sent.subject == "Re: Original")
-        #expect(sent.body == "Thanks!")
+        #expect(sent.subject == "Re: Original — æøå")
+        #expect(sent.body == "Thanks — æøå!")
 
         let requestBody = try #require(
             FakeURLProtocol.lastRequestBody(for: "\(Self.base)/messages/m1/reply")
         )
         let json = try JSONSerialization.jsonObject(with: requestBody) as? [String: Any]
-        #expect(json?["comment"] as? String == "Thanks!")
+        #expect(json?["comment"] as? String == "Thanks — æøå!")
     }
 
     @Test func missingTokenFlagsTheIntegrationForReconnect() async throws {
