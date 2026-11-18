@@ -1,5 +1,5 @@
 use super::{
-    PreparedConversationMessage, PreparedConversationOrigin,
+    PreparedConversationMessage, PreparedConversationOrigin, USER_ROLE,
     types::{append_text, synthetic},
 };
 
@@ -11,12 +11,16 @@ pub fn conversation_append_hint(
     mut messages: Vec<PreparedConversationMessage>,
     hint: String,
 ) -> Vec<PreparedConversationMessage> {
-    if let Some(entry) = messages.iter_mut().rev().find(|m| m.message.role == "user") {
+    if let Some(entry) = messages
+        .iter_mut()
+        .rev()
+        .find(|m| m.message.role == USER_ROLE)
+    {
         append_text(&mut entry.message, &hint);
     } else {
         messages.push(synthetic(
             PreparedConversationOrigin::HintFallback,
-            "user",
+            USER_ROLE,
             hint,
         ));
     }

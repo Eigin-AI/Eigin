@@ -1,4 +1,5 @@
 use super::{adapters::Adapter, types::*};
+use crate::conversation::ASSISTANT_ROLE;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 
@@ -58,7 +59,7 @@ impl Adapter {
             && let Some(history) = &message.reasoning_history
             && history.format == super::reasoning::MISTRAL_REASONING_FORMAT
             && Some(&history.origin) == origin
-            && message.role == "assistant"
+            && message.role == ASSISTANT_ROLE
             && history.visible_text == message.content.as_deref().unwrap_or("")
             && let Ok(parts) = serde_json::from_slice::<Vec<super::reasoning::MistralReasoningPart>>(
                 &history.payload,

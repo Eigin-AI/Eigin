@@ -1,6 +1,17 @@
 use crate::inference::{InferenceReasoningHistory, InferenceToolCall};
 use std::collections::HashMap;
 
+/// Conversation role identifying model-authored messages.
+pub const ASSISTANT_ROLE: &str = "assistant";
+/// Conversation role identifying user-authored messages.
+pub const USER_ROLE: &str = "user";
+/// Conversation role identifying tool execution results.
+pub const TOOL_ROLE: &str = "tool";
+/// Conversation role identifying system instructions.
+pub const SYSTEM_ROLE: &str = "system";
+/// Conversation role identifying application-developer instructions.
+pub const DEVELOPER_ROLE: &str = "developer";
+
 /// Unresolved attachment reference; storage and byte loading belong to the host.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct ConversationAttachmentReference {

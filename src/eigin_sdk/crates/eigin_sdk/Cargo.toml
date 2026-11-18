@@ -18,7 +18,7 @@ thiserror = "2"
 unicode-segmentation = "1.12"
 icu_normalizer = { version = "2", default-features = false, features = ["compiled_data"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["unbounded_depth"] }
 base64 = "0.22"
 uuid = { version = "1", features = ["v4", "js"] }
 url = "2"

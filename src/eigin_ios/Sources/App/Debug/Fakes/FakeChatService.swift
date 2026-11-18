@@ -150,11 +150,15 @@ final class FakeChatService: ChatService, @unchecked Sendable {
 
     /// Scripted inline tool calls to execute using the captured runner before yielding prose.
     private var _inlineToolCalls: [ToolCall] = []
+    private var _inlinePrelude: [ChatStreamEvent] = []
 
     /// Queue scripted inline tool calls. The fake will invoke the runner for each
     /// and emit only prose + .finished(.stop) to simulate a local model.
-    func enqueueInlineToolCalls(_ calls: [ToolCall]) {
-        lock.withLock { _inlineToolCalls = calls }
+    func enqueueInlineToolCalls(_ calls: [ToolCall], after events: [ChatStreamEvent] = []) {
+        lock.withLock {
+            _inlineToolCalls = calls
+            _inlinePrelude = events
+        }
     }
 
     /// The model of the most recent request, for asserting which one the loop used.
@@ -216,10 +220,13 @@ final class FakeChatService: ChatService, @unchecked Sendable {
         // Inline tool calls: invoke the runner mid-stream (before prose), then
         // yield prose-only events. This simulates a local model executing tools
         // internally before producing its final response.
-        let inlineCalls = lock.withLock { _inlineToolCalls }
+        let (inlineCalls, prelude) = lock.withLock { (_inlineToolCalls, _inlinePrelude) }
 
         return AsyncThrowingStream { continuation in
             Task { @MainActor in
+                for event in prelude {
+                    continuation.yield(event)
+                }
                 // Execute inline tool calls through the runner, like a local model would.
                 for call in inlineCalls {
                     if let runner = inlineToolRunner {

@@ -1,7 +1,7 @@
 use super::{
-    ConversationPreparationOptions, PreparedConversationMessage, PreparedConversationOrigin,
-    SelectedConversation, attachments::strip_attachments, hints::conversation_append_hint, repair,
-    types::synthetic,
+    ASSISTANT_ROLE, ConversationPreparationOptions, PreparedConversationMessage,
+    PreparedConversationOrigin, SYSTEM_ROLE, SelectedConversation, USER_ROLE,
+    attachments::strip_attachments, hints::conversation_append_hint, repair, types::synthetic,
 };
 
 const ACKNOWLEDGEMENT: &str = "Understood — continuing from there.";
@@ -14,18 +14,18 @@ pub fn conversation_prepare(
 ) -> Vec<PreparedConversationMessage> {
     let mut messages = vec![synthetic(
         PreparedConversationOrigin::System,
-        "system",
+        SYSTEM_ROLE,
         options.system_prompt,
     )];
     if let Some(summary) = selected.summary.filter(|s| !s.is_empty()) {
         messages.push(synthetic(
             PreparedConversationOrigin::Summary,
-            "user",
+            USER_ROLE,
             format!("<conversation_summary>\n{summary}\n</conversation_summary>"),
         ));
         messages.push(synthetic(
             PreparedConversationOrigin::SummaryAcknowledgement,
-            "assistant",
+            ASSISTANT_ROLE,
             ACKNOWLEDGEMENT.into(),
         ));
     }

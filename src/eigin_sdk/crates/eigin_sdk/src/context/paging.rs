@@ -1,5 +1,6 @@
 use super::ContextMessage;
 use super::estimate::{message_cost, message_cost_with_content};
+use crate::conversation::{ASSISTANT_ROLE, TOOL_ROLE, USER_ROLE};
 use std::collections::BTreeSet;
 
 /// Replacement for an omitted tool-result body.
@@ -89,7 +90,7 @@ pub fn page_context(input: ContextPagingInput) -> Result<ContextPagingResult, Co
     let turns: Vec<usize> = messages
         .iter()
         .enumerate()
-        .filter_map(|(i, m)| (i >= start && m.role == "user").then_some(i))
+        .filter_map(|(i, m)| (i >= start && m.role == USER_ROLE).then_some(i))
         .collect();
     let newest = turns.last().copied().unwrap_or(messages.len());
     let protected = |i: usize| {
@@ -137,7 +138,7 @@ pub fn page_context(input: ContextPagingInput) -> Result<ContextPagingResult, Co
                 if tokens <= goal {
                     break;
                 }
-                if message.role != "tool"
+                if message.role != TOOL_ROLE
                     || protected(i)
                     || message.has_reasoning_history
                     || masks.contains(&(i as u64))
@@ -199,12 +200,13 @@ fn validate(input: &ContextPagingInput) -> Result<(), ContextPagingError> {
     let start = usize::try_from(input.previous.retained_start)
         .map_err(|_| ContextPagingError::InvalidInput)?;
     if start > messages.len()
-        || (!messages.is_empty() && (start == messages.len() || messages[start].role != "user"))
+        || (!messages.is_empty() && (start == messages.len() || messages[start].role != USER_ROLE))
     {
         return Err(invalid);
     }
     if messages.iter().any(|m| {
-        !matches!(m.role.as_str(), "user" | "assistant" | "tool") || m.additional_input_tokens < 0
+        !matches!(m.role.as_str(), USER_ROLE | ASSISTANT_ROLE | TOOL_ROLE)
+            || m.additional_input_tokens < 0
     }) {
         return Err(invalid);
     }
@@ -215,7 +217,7 @@ fn validate(input: &ContextPagingInput) -> Result<(), ContextPagingError> {
     }
     let newest = messages
         .iter()
-        .rposition(|m| m.role == "user")
+        .rposition(|m| m.role == USER_ROLE)
         .unwrap_or(messages.len());
     let mut last = None;
     for &i in &input.previous.masked_result_indices {
@@ -223,7 +225,7 @@ fn validate(input: &ContextPagingInput) -> Result<(), ContextPagingError> {
             return Err(invalid);
         }
         let m = &messages[i as usize];
-        if m.role != "tool"
+        if m.role != TOOL_ROLE
             || m.has_reasoning_history
             || i >= newest as u64
             || input

@@ -1,3 +1,4 @@
+import EiginSDK
 import Factory
 import Foundation
 import os
@@ -136,8 +137,11 @@ final class AgenticChatLoop {
     private(set) var roundsExecuted: Int = 0
 
     var chatPhase: ChatPhase = .idle
-    var contentBuffer = ""
-    var pendingToolCalls: [ToolCall] = []
+    private var activeRound: EiginSDK.Experimental.Agent.Round?
+    var contentBuffer: String {
+        activeRound?.partialContent() ?? ""
+    }
+
     private var produced: [ChatMessage] = []
     /// Index in `produced` after the last complete round (all tool results present).
     /// Used by `buildCheckpoint()` to avoid returning orphaned tool calls.
@@ -236,41 +240,6 @@ final class AgenticChatLoop {
         var currentTools = tools
         var currentExecutor: ToolExecutor = toolExecutor
 
-        // Build an inline runner for local models. The runner executes each tool
-        // call mid-stream (inside LiteRT's loop), records the round into
-        // `produced` so history is persisted, and returns the result to LiteRT
-        // so it can continue generating. For cloud providers the runner is never
-        // invoked — the stream surfaces .toolCall events and the loop below
-        // drives execution after each round.
-        let inlineRunner = InlineToolRunner { [weak self] call in
-            guard let self else {
-                return ToolResult(toolCallID: call.id, content: "{}", isError: true)
-            }
-            let result = await executeToolCall(call, agent: agent, executor: currentExecutor)
-            // Record the assistant turn (with tool calls) and the tool result so
-            // history matches the cloud path and the turn persists on completion.
-            //
-            // Known fidelity tradeoff: the recorded assistant message has
-            // content: nil, while any prose the model emitted *before* this tool
-            // call is accumulated by the throttler into the turn's final
-            // assistant message. So pre-call prose lands after the tool result in
-            // replayed history. This is valid and replayable; we accept it rather
-            // than splitting the throttled prose stream at tool-call boundaries
-            // we can't cleanly observe from inside LiteRT's loop.
-            let assistantMsg = ChatMessage(role: "assistant", content: nil, toolCalls: [call])
-            let toolMsg = ChatMessage(
-                role: "tool",
-                content: result.content,
-                toolCallID: result.toolCallID,
-                name: call.function.name
-            )
-            produced.append(assistantMsg)
-            produced.append(toolMsg)
-            safeProducedCount = produced.count
-            allMessages.append(contentsOf: [assistantMsg, toolMsg])
-            return result
-        }
-
         for round in 0 ..< maxRounds {
             roundsExecuted = round + 1
             if shouldStop { return [] }
@@ -296,6 +265,27 @@ final class AgenticChatLoop {
                     model: activeModel
                 )
             )
+            let sdkRound = EiginSDK.Experimental.Agent.Round()
+            activeRound = sdkRound
+            let inlineRunner = InlineToolRunner { [weak self] call in
+                guard let self else {
+                    return ToolResult(toolCallID: call.id, content: "{}", isError: true)
+                }
+                let result = await executeToolCall(call, agent: agent, executor: currentExecutor)
+                do {
+                    let values = try sdkRound.recordInlineExchange(
+                        call: RoundSDKConversion.call(call),
+                        result: RoundSDKConversion.result(result)
+                    )
+                    let messages = values.map { RoundSDKConversion.message($0) }
+                    produced.append(contentsOf: messages)
+                    safeProducedCount = produced.count
+                    allMessages.append(contentsOf: messages)
+                } catch {
+                    AppLogger.error("Inline result arrived after round completion", category: .chat)
+                }
+                return result
+            }
             let turn = try await openStream(
                 chatService: chatService,
                 provider: provider,
@@ -309,11 +299,6 @@ final class AgenticChatLoop {
             )
 
             nextInstruction = nil
-            contentBuffer = ""
-            pendingToolCalls = []
-            var finishReason: ChatStreamEvent.FinishReason?
-            var capturedProviderMetadata: [String: String]?
-            var reasoningHistory: ReasoningHistory?
 
             let stream = turn.stream
             let streamStart = turn.dispatchedAt
@@ -341,10 +326,10 @@ final class AgenticChatLoop {
                         adoptTurnModel(turn, providerID: provider.id, agent: agent)
                     }
 
+                    try sdkRound.acceptEvent(event: RoundSDKConversion.event(event))
                     switch event {
                     case .contentDelta(let delta):
                         if firstTokenAt == nil, !delta.isEmpty { firstTokenAt = .now }
-                        contentBuffer += delta
                         chatPhase = .streamingProse
                         throttler.feed(delta)
                         onContentDelta?(delta)
@@ -355,10 +340,9 @@ final class AgenticChatLoop {
                             category: .chat
                         )
                         chatPhase = .streamingTools
-                        pendingToolCalls.append(call)
 
-                    case .reasoningHistory(let history):
-                        reasoningHistory = history
+                    case .reasoningHistory:
+                        break
 
                     case .performance(let measured):
                         performance = measured
@@ -368,22 +352,20 @@ final class AgenticChatLoop {
                             "Captured provider metadata: \(public: meta.keys.joined(separator: ", "))",
                             category: .chat
                         )
-                        capturedProviderMetadata = meta
 
                     case .finished(let reason):
                         AppLogger.debug(
                             "Finished with reason: \(public: String(describing: reason))",
                             category: .chat
                         )
-                        finishReason = reason
-                        if reason == .toolCalls, !pendingToolCalls.isEmpty {
+                        if reason == .toolCalls, sdkRound.hasToolCalls() {
                             chatPhase = .readyToExecute
                         } else {
                             chatPhase = .streamingProse
                         }
                     }
                 }
-                if finishReason == nil { throw StreamCompletionError.interrupted }
+                if !sdkRound.hasFinished() { throw StreamCompletionError.interrupted }
             } catch is CancellationError {
                 // Either handleStop already committed partial prose via its
                 // checkpoint, or the whole turn is being torn down — nothing
@@ -423,7 +405,6 @@ final class AgenticChatLoop {
                    !ProviderPreset.isLocal(provider.baseURL), isStreamInterruption(error)
                 {
                     recoveryUsed = true
-                    pendingToolCalls = []
                     if !contentBuffer.isEmpty {
                         throttler.finish()
                         await waitForThrottlerDrain()
@@ -438,7 +419,7 @@ final class AgenticChatLoop {
                         allMessages.append(partial)
                         safeProducedCount = produced.count
                     }
-                    contentBuffer = ""
+                    activeRound = nil
                     throttler.resetKeepingPhase(.waiting)
                     currentMessageID = "msg-\(UUID().uuidString)"
                     nextInstruction = Prompt.Hints.Continuation.interrupted
@@ -450,8 +431,7 @@ final class AgenticChatLoop {
                     guard !recoveryUsed, round + 1 < maxRounds else { throw completion }
                     recoveryUsed = true
                     throttler.resetKeepingPhase(.waiting)
-                    contentBuffer = ""
-                    pendingToolCalls = []
+                    activeRound = nil
                     currentMessageID = "msg-\(UUID().uuidString)"
                     nextInstruction = Prompt.Hints.Continuation.missingReply
                     chatPhase = .streamingProse
@@ -465,18 +445,11 @@ final class AgenticChatLoop {
                 firstTokenAt: firstTokenAt, result: .succeeded, performance: performance
             )
 
-            AppLogger.debug(
-                "Stream ended. Content length: \(public: contentBuffer.count), tool calls: \(public: pendingToolCalls.count), reason: \(public: String(describing: finishReason))",
-                category: .chat
-            )
-
-            if finishReason == .toolCalls, !pendingToolCalls.isEmpty {
+            if shouldStop { return [] }
+            let outcome = try RoundSDKConversion.finish(sdkRound)
+            if case .tools(let assistant, let calls) = outcome {
                 if shouldStop { return [] }
-
-                guard pendingToolCalls.allSatisfy({ call in
-                    !call.id.isEmpty && !call.function.name.isEmpty
-                        && ToolHelpers.parseArguments(call.function.arguments) != nil
-                }) else { throw StreamCompletionError.invalidToolCall }
+                let pendingToolCalls = calls.map(RoundSDKConversion.call)
                 chatPhase = .executingTools
 
                 if contentBuffer.isEmpty {
@@ -494,13 +467,8 @@ final class AgenticChatLoop {
                 // Build the assistant message with tool calls (include provider metadata
                 // if present). Reuse currentMessageID as the localID when there's prose, so
                 // the committed row keeps the live streaming row's feed identity.
-                let assistantMessage = ChatMessage(
-                    role: "assistant",
-                    content: contentBuffer.isEmpty ? nil : contentBuffer,
-                    toolCalls: pendingToolCalls,
-                    providerMetadata: capturedProviderMetadata,
-                    reasoningHistory: reasoningHistory,
-                    localID: contentBuffer.isEmpty ? UUID().uuidString : currentMessageID
+                let assistantMessage = RoundSDKConversion.message(
+                    assistant, localID: contentBuffer.isEmpty ? nil : currentMessageID
                 )
                 allMessages.append(assistantMessage)
                 produced.append(assistantMessage)
@@ -538,11 +506,8 @@ final class AgenticChatLoop {
                     if shouldStop { return [] }
                     afterToolCall?()
 
-                    let toolMessage = ChatMessage(
-                        role: "tool",
-                        content: result.content,
-                        toolCallID: result.toolCallID,
-                        name: call.function.name
+                    let toolMessage = try RoundSDKConversion.message(
+                        sdkRound.recordResult(result: RoundSDKConversion.result(result))
                     )
                     allMessages.append(toolMessage)
                     produced.append(toolMessage)
@@ -570,8 +535,7 @@ final class AgenticChatLoop {
                 // Prepare for the next round (already in .waiting from resetKeepingPhase).
                 // Regenerate the message id so the next prose segment gets its own feed identity.
                 chatPhase = .streamingProse
-                contentBuffer = ""
-                pendingToolCalls = []
+                activeRound = nil
                 currentMessageID = "msg-\(UUID().uuidString)"
                 continue
             }
@@ -585,8 +549,7 @@ final class AgenticChatLoop {
                 }
                 recoveryUsed = true
                 throttler.resetKeepingPhase(.waiting)
-                contentBuffer = ""
-                pendingToolCalls = []
+                activeRound = nil
                 currentMessageID = "msg-\(UUID().uuidString)"
                 nextInstruction = Prompt.Hints.Continuation.missingReply
                 chatPhase = .streamingProse
@@ -600,21 +563,9 @@ final class AgenticChatLoop {
             try Task.checkCancellation()
             chatPhase = .done
 
-            let finalContent = throttler.fullText
-
-            AppLogger.debug("Final content length: \(public: finalContent.count)", category: .chat)
-
-            if !finalContent.isEmpty || reasoningHistory != nil {
-                let finalMessage = ChatMessage(
-                    role: "assistant",
-                    content: finalContent,
-                    reasoningHistory: reasoningHistory,
-                    localID: currentMessageID
-                )
-                produced.append(finalMessage)
-                // Don't update safeProducedCount here — the final message
-                // is still visible via the streaming view. Including it in
-                // committedMessages would show a duplicate until settle().
+            if case .reply(let message) = outcome {
+                produced.append(RoundSDKConversion.message(message, localID: currentMessageID))
+                // The streaming row remains visible until settle(); keep it out of the safe prefix.
             }
 
             // Don't reset the throttler here — the caller should append
@@ -642,8 +593,7 @@ final class AgenticChatLoop {
     /// batches both changes (committed messages appear + streaming item disappears).
     func settle() {
         throttler.reset()
-        contentBuffer = ""
-        pendingToolCalls = []
+        activeRound = nil
         toolEvents = []
         produced = []
         safeProducedCount = 0
@@ -659,8 +609,7 @@ final class AgenticChatLoop {
         throttler.reset()
         toolEvents = []
         chatPhase = .idle
-        contentBuffer = ""
-        pendingToolCalls = []
+        activeRound = nil
         produced = []
         safeProducedCount = 0
         shouldStop = false

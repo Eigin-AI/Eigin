@@ -1,5 +1,6 @@
 use super::ContextMessage;
 use super::estimate::{message_cost, messages_cost};
+use crate::conversation::USER_ROLE;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A contiguous suffix, optionally replacing its first message's content.
@@ -32,7 +33,7 @@ pub fn retained_tail(
     let mut scan = messages.len();
     while let Some(turn_start) = messages[..scan]
         .iter()
-        .rposition(|message| message.role == "user")
+        .rposition(|message| message.role == USER_ROLE)
     {
         if messages[turn_start]
             .content
