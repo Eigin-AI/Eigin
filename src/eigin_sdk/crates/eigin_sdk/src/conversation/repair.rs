@@ -1,5 +1,5 @@
 use super::{
-    ConversationMessage,
+    ASSISTANT_ROLE, ConversationMessage, SYSTEM_ROLE, TOOL_ROLE,
     equality::{key, same_payload},
 };
 use crate::inference::InferenceToolCall;
@@ -15,24 +15,24 @@ pub(super) fn repair(messages: Vec<ConversationMessage>) -> Vec<ConversationMess
         if let Some(calls) = message
             .tool_calls
             .as_ref()
-            .filter(|calls| message.role == "assistant" && !calls.is_empty())
+            .filter(|calls| message.role == ASSISTANT_ROLE && !calls.is_empty())
         {
             let expected: HashSet<_> = calls.iter().map(|call| key(&call.id)).collect();
             let mut j = i + 1;
-            while j < messages.len() && messages[j].role == "tool" {
+            while j < messages.len() && messages[j].role == TOOL_ROLE {
                 j += 1;
             }
             let found: HashSet<_> = messages[i + 1..j]
                 .iter()
                 .filter_map(|m| m.tool_call_id.as_deref().map(key))
                 .collect();
-            if found == expected && !result.last().is_some_and(|m| m.role == "system") {
+            if found == expected && !result.last().is_some_and(|m| m.role == SYSTEM_ROLE) {
                 result.push(message.clone());
                 result.extend(repair_results(&messages[i + 1..j], calls));
             }
             i = j;
         } else {
-            if message.role != "tool" {
+            if message.role != TOOL_ROLE {
                 result.push(message.clone());
             }
             i += 1;

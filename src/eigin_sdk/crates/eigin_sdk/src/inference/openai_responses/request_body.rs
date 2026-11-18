@@ -1,4 +1,5 @@
 use super::super::types::*;
+use crate::conversation::{ASSISTANT_ROLE, DEVELOPER_ROLE, SYSTEM_ROLE, TOOL_ROLE};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 
@@ -7,12 +8,12 @@ pub(super) fn encode(input: &InferenceCompletionInput) -> Result<Vec<u8>, Infere
     let mut items = Vec::new();
     for message in &input.messages {
         match message.role.as_str() {
-            "system" | "developer" => {
+            SYSTEM_ROLE | DEVELOPER_ROLE => {
                 if let Some(text) = &message.content {
                     instructions.push(text.as_str());
                 }
             }
-            "assistant" => {
+            ASSISTANT_ROLE => {
                 if let Some(text) = &message.content
                     && !text.is_empty()
                 {
@@ -22,7 +23,7 @@ pub(super) fn encode(input: &InferenceCompletionInput) -> Result<Vec<u8>, Infere
                     items.push(json!({"type":"function_call", "call_id":call.id, "name":call.name, "arguments":call.arguments}));
                 }
             }
-            "tool" => {
+            TOOL_ROLE => {
                 if let Some(id) = &message.tool_call_id {
                     items.push(json!({"type":"function_call_output", "call_id":id, "output":message.content.as_deref().unwrap_or("")}));
                 }

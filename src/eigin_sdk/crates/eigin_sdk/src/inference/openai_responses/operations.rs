@@ -1,5 +1,5 @@
 use super::super::{operation_request::ProviderRequest, types::*};
-use crate::http::HttpTransport;
+use crate::{conversation::USER_ROLE, http::HttpTransport};
 use serde::Deserialize;
 use std::{collections::HashSet, sync::Arc};
 
@@ -99,7 +99,7 @@ impl OpenAiResponsesValidation {
                 let body = super::request_body::encode(&InferenceCompletionInput {
                     model: model.clone(),
                     messages: vec![InferenceMessage {
-                        role: "user".into(),
+                        role: USER_ROLE.into(),
                         content: Some("hi".into()),
                         ..Default::default()
                     }],

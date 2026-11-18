@@ -10,9 +10,15 @@ actor FakeModelRouter: ModelRouter {
     private(set) var recorded: [AttemptOutcome] = []
     private(set) var resolveCount = 0
 
+    private var onRecord: (@Sendable () async -> Void)?
+
     init(retryModels: [String] = [], canSatisfyAnswer: Bool = true) {
         self.retryModels = retryModels
         self.canSatisfyAnswer = canSatisfyAnswer
+    }
+
+    func setRecordHook(_ hook: @escaping @Sendable () async -> Void) {
+        onRecord = hook
     }
 
     func resolve(_ request: RouteRequest) async -> ResolvedRoute {
@@ -28,6 +34,7 @@ actor FakeModelRouter: ModelRouter {
 
     func record(_ attempt: AttemptOutcome) async {
         recorded.append(attempt)
+        await onRecord?()
     }
 
     func retry(after _: Error, request: RouteRequest) async -> ResolvedRoute? {

@@ -62,9 +62,10 @@ enum MessagePreparationSDKConversion {
         )
     }
 
-    private static func restore(
+    static func restore(
         _ entry: SDK.PreparedMessage,
-        history: [ChatMessage]
+        history: [ChatMessage],
+        localID: String? = nil
     ) -> ChatMessage {
         var result: ChatMessage
         switch entry.origin {
@@ -78,7 +79,11 @@ enum MessagePreparationSDKConversion {
         case .summaryAcknowledgement:
             result = ChatMessage(role: "assistant", content: "", localID: "context-summary-ack")
         case .system, .hintFallback, .supplied:
-            result = ChatMessage(role: entry.message.role, content: "")
+            result = ChatMessage(
+                role: entry.message.role,
+                content: "",
+                localID: localID ?? UUID().uuidString
+            )
         }
         let value = entry.message
         result.role = value.role

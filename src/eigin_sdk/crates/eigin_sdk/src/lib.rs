@@ -5,6 +5,8 @@ extern crate uniffi_runtime_wasm as _;
 
 uniffi::setup_scaffolding!();
 
+/// Transient streamed replies and tool-result transcripts.
+pub mod agent;
 /// Context estimation, selection, and summary parsing.
 pub mod context;
 /// Request-local conversation preparation.

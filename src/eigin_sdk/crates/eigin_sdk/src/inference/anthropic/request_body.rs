@@ -1,4 +1,5 @@
 use super::super::types::*;
+use crate::conversation::{ASSISTANT_ROLE, SYSTEM_ROLE, TOOL_ROLE};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 
@@ -20,15 +21,15 @@ pub(super) fn encode(input: &InferenceCompletionInput) -> Result<Vec<u8>, Infere
     let system = input
         .messages
         .iter()
-        .filter(|m| m.role == "system")
+        .filter(|m| m.role == SYSTEM_ROLE)
         .filter_map(|m| m.content.as_deref())
         .collect::<Vec<_>>()
         .join("\n\n");
     let mut messages: Vec<Value> = Vec::new();
-    for message in input.messages.iter().filter(|m| m.role != "system") {
+    for message in input.messages.iter().filter(|m| m.role != SYSTEM_ROLE) {
         let text = message.content.as_deref().unwrap_or("");
         let (role, content) = match message.role.as_str() {
-            "assistant" => {
+            ASSISTANT_ROLE => {
                 let calls = message.tool_calls.as_deref().unwrap_or_default();
                 if calls.is_empty() {
                     ("assistant", json!(text))
@@ -47,7 +48,7 @@ pub(super) fn encode(input: &InferenceCompletionInput) -> Result<Vec<u8>, Infere
                     ("assistant", json!(blocks))
                 }
             }
-            "tool" => {
+            TOOL_ROLE => {
                 let block = json!({"type":"tool_result","tool_use_id":message.tool_call_id.as_deref().unwrap_or(""),"content":text});
                 if let Some(last) = messages.last_mut()
                     && last["role"] == "user"
