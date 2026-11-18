@@ -114,8 +114,9 @@ struct IMAPEmailProviderTests {
         credentialStore.save(settings, for: integrationID)
         let imapSession = FakeIMAPSession()
         imapSession.messagesByUID[42] = IMAPFullMessage(
-            uid: 42, from: "alice@example.com", to: ["me@example.com"], subject: "Hi",
-            body: "Hello there", date: "2026-01-01", messageID: "<abc@example.com>"
+            uid: 42, from: "alice@example.com", to: ["me@example.com"],
+            subject: "Hi — æøå “quotes”",
+            body: "Hello there — æøå ‘quotes’", date: "2026-01-01", messageID: "<abc@example.com>"
         )
         let provider = IMAPEmailProvider(
             integrationID: integrationID,
@@ -128,7 +129,8 @@ struct IMAPEmailProviderTests {
         #expect(message.id == "42")
         #expect(message.threadID == "<abc@example.com>")
         #expect(message.from == "alice@example.com")
-        #expect(message.body == "Hello there")
+        #expect(message.body == "Hello there — æøå ‘quotes’")
+        #expect(message.subject == "Hi — æøå “quotes”")
     }
 
     @Test func readEmailThrowsNotFoundForNonNumericID() async throws {
@@ -188,13 +190,16 @@ struct IMAPEmailProviderTests {
         )
 
         let sent = try await provider.sendEmail(
-            to: ["bob@example.com"], cc: [], subject: "Hi", body: "Body text"
+            to: ["bob@example.com"], cc: [], subject: "Hi — æøå “quotes”",
+            body: "Body — æøå ‘quotes’"
         )
 
         #expect(sent.from == settings.emailAddress)
         #expect(smtpSession.sent.count == 1)
         let message = try #require(smtpSession.sent.first)
         #expect(message.to == ["bob@example.com"])
+        #expect(message.subject == "Hi — æøå “quotes”")
+        #expect(message.body == "Body — æøå ‘quotes’")
         #expect(message.inReplyTo == nil)
         #expect(message.references == nil)
         #expect(smtpSession.closeCallCount == 1)
@@ -206,7 +211,7 @@ struct IMAPEmailProviderTests {
         credentialStore.save(settings, for: integrationID)
         let imapSession = FakeIMAPSession()
         imapSession.messagesByUID[7] = IMAPFullMessage(
-            uid: 7, from: "alice@example.com", to: ["me@example.com"], subject: "Original",
+            uid: 7, from: "alice@example.com", to: ["me@example.com"], subject: "Original — æøå",
             body: "hi", date: "2026-01-01", messageID: "<orig@example.com>"
         )
         let smtpSession = FakeSMTPSession()
@@ -217,11 +222,13 @@ struct IMAPEmailProviderTests {
             makeSMTPSession: { smtpSession }
         )
 
-        let sent = try await provider.replyEmail(messageID: "7", body: "Thanks!")
+        let sent = try await provider.replyEmail(messageID: "7", body: "Thanks — æøå!")
 
-        #expect(sent.subject == "Re: Original")
+        #expect(sent.subject == "Re: Original — æøå")
         let message = try #require(smtpSession.sent.first)
         #expect(message.to == ["alice@example.com"])
+        #expect(message.subject == "Re: Original — æøå")
+        #expect(message.body == "Thanks — æøå!")
         #expect(message.inReplyTo == "<orig@example.com>")
         #expect(message.references == ["<orig@example.com>"])
     }
