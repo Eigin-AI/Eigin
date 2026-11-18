@@ -120,7 +120,7 @@ def main():
             os.environ.update(IOS_TEST_DESTINATION=f"platform=iOS Simulator,id={simulator}",
                               IOS_TEST_RESULT_BUNDLE=str(bundle), IOS_TEST_AD_HOC_SIGNING="true",
                               IOS_TEST_PACKAGES=str(cache / "swift-packages"),
-                              IOS_TEST_DERIVED_DATA=str(workspace / "DerivedData"))
+                              IOS_TEST_DERIVED_DATA=str(cache / "DerivedData"))
             with (directory / "test.log").open("w") as log:
                 process = subprocess.Popen(["just", "test", "ios", "--verbose"], stdout=subprocess.PIPE,
                                            stderr=subprocess.STDOUT, text=True, cwd=checkout)

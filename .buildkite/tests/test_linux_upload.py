@@ -11,6 +11,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class UploadTests(unittest.TestCase):
+    script = ".buildkite/scripts/upload-linux-tests.sh"
+    target_variable = "MR_DIFF_TARGET"
+
     def upload(self, failure="", branch="main", pull_request="12"):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -19,7 +22,7 @@ import json, os, pathlib, sys
 name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
 with open(os.environ["COMMAND_LOG"], "a") as log:
-    log.write(json.dumps([name, args, os.environ.get("LINUX_DIFF_TARGET")]) + "\\n")
+    log.write(json.dumps([name, args, os.environ.get(os.environ["TARGET_VARIABLE"])]) + "\\n")
 if name == os.environ.get("FAIL_COMMAND"):
     sys.exit(7)
 if name == "git" and args[0] == "rev-parse":
@@ -35,9 +38,10 @@ if name == "buildkite-agent":
                 path.chmod(0o755)
             env = {**os.environ, "PATH": f"{root}:{os.environ['PATH']}",
                    "COMMAND_LOG": str(root / "log"), "FAIL_COMMAND": failure,
+                   "TARGET_VARIABLE": self.target_variable,
                    "BUILDKITE_PULL_REQUEST": pull_request,
                    "BUILDKITE_PULL_REQUEST_BASE_BRANCH": branch}
-            result = subprocess.run(["bash", ".buildkite/scripts/upload-linux-tests.sh"],
+            result = subprocess.run(["bash", self.script],
                                     cwd=ROOT, env=env, capture_output=True)
             calls = [json.loads(line) for line in (root / "log").read_text().splitlines()]
             return result, calls
