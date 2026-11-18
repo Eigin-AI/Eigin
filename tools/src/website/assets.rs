@@ -12,13 +12,13 @@ pub(super) fn generate(root: &Path) -> Result<()> {
     };
     let ink = color("color.text.standard.base")?;
     let brand = color("color.surface.impact.base")?;
-    let mark = fs::read_to_string(root.join("design/assets/icons/brand/avatar.svg"))?;
+    let source_mark = fs::read_to_string(root.join("design/assets/icons/brand/avatar.svg"))?;
     let mark = regex::Regex::new(r##"fill="#[0-9A-Fa-f]{3,8}""##)?
-        .replace_all(&mark, format!("fill=\"{ink}\""))
+        .replace_all(&source_mark, format!("fill=\"{ink}\""))
         .into_owned();
     let icon = format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"180\" height=\"180\" viewBox=\"0 0 180 180\"><rect width=\"180\" height=\"180\" fill=\"{brand}\"/>{}</svg>",
-        place_mark(&mark, 7, 7, 166)
+        place_mark(&mark, 7, 7, 166)?
     );
     let options = usvg::Options::default();
     let bird = fs::read_to_string(root.join("design/assets/icons/illustration/hero-bird.svg"))?
@@ -36,6 +36,19 @@ pub(super) fn generate(root: &Path) -> Result<()> {
     );
     let out = root.join("src/eigin_website/static");
     fs::create_dir_all(out.join("social"))?;
+    fs::create_dir_all(out.join("assets/icons/brand"))?;
+    fs::create_dir_all(out.join("assets/images"))?;
+    fs::write(out.join("assets/icons/brand/avatar.svg"), &source_mark)?;
+    let tree = usvg::Tree::from_str(&source_mark, &options)?;
+    let bounds = tree.root().abs_bounding_box();
+    let tight_mark = format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{} {} {} {}\">{source_mark}</svg>\n",
+        bounds.x(),
+        bounds.y(),
+        bounds.width(),
+        bounds.height()
+    );
+    fs::write(out.join("assets/images/eigin-logo-tight.svg"), tight_mark)?;
     fs::write(out.join("favicon.svg"), &icon)?;
     render(&icon, &options, 32, 32, &out.join("favicon-32.png"))?;
     render(&icon, &options, 180, 180, &out.join("apple-touch-icon.png"))?;
@@ -52,10 +65,13 @@ pub(super) fn generate(root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn place_mark(mark: &str, x: u32, y: u32, size: u32) -> String {
-    mark.replace("<svg ", &format!("<svg x=\"{x}\" y=\"{y}\" "))
-        .replace("width=\"167\"", &format!("width=\"{size}\""))
-        .replace("height=\"166\"", &format!("height=\"{size}\""))
+fn place_mark(mark: &str, x: u32, y: u32, size: u32) -> Result<String> {
+    let (root, contents) = mark.split_once('>').context("missing SVG root element")?;
+    let dimensions = regex::Regex::new(r#"\s(?:width|height|x|y)="[^"]*""#)?;
+    let root = dimensions.replace_all(root, "");
+    Ok(format!(
+        "{root} x=\"{x}\" y=\"{y}\" width=\"{size}\" height=\"{size}\">{contents}"
+    ))
 }
 
 fn render(svg: &str, options: &usvg::Options, width: u32, height: u32, path: &Path) -> Result<()> {

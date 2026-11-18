@@ -9,6 +9,7 @@
 
 .site-brand > span:first-child {
   display: flex;
+  transform: translateY(-2.5px);
 }
 
 .site-header {
