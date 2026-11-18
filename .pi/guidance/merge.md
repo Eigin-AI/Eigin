@@ -9,19 +9,19 @@ Signpost briefly what you expect the user to do — keep the flow tight and self
 ## Open the MR
 
 1. Confirm the branch is pushed.
-2. Draft the MR description — follow `.gitlab/merge_request_templates/Default.md`, matched to the length and tone of this example `.pi/guidance/mr-example.md`.
-    - Keep it short and concise.
-    - Focus on what changed and why it matters;
-      leave how it works to the code.
-    - No design history, no decision log.
+2. Draft the MR description — use `.gitlab/merge_request_templates/Default.md` as a starting point and `.pi/guidance/mr-example.md` for length and tone. Omit empty or redundant sections.
+    - Always put the issue-closing line first: `Closes #123` (use the actual issue number). Include all issues this MR closes. If no issue exists, omit the line; never invent an issue or leave a placeholder.
+    - Keep it short, direct, readable, and clear. Describe in plain language what the MR is for, what it does, and anything noteworthy for review.
+    - Explain the purpose once. Use a few relevant bullets where helpful; leave implementation detail to the code.
+    - No design history, no decision log, and no notes about the automated fresh-eyes review, its rounds, findings, or verification. Describe meaningful resulting changes directly, without narrating the review process.
     - Avoid referencing gitignored artifacts such as in `.pi/plans/` and `.pi/mr/`.
 3. Save to `.pi/mr/<issue#>-<work-name>.md` (e.g. `162-auto-activating-skills.md`; drop the issue# if none).
 4. Create the MR (project: dev/eigin on code.eigin.ai):
    `glab mr create --title "..." --description "$(cat <path>)" --source-branch <branch>`
-    - Title in Conventional Commits form: pick the type from what the MR actually does
-      (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, …), then a short, lowercase,
-      imperative summary.
-    - Good: `feat: disclose tool payloads in permission prompts`.
+    - EVERY MR title MUST use Conventional Commits form: `type: summary` or `type(scope): summary` (with `!` before `:` for breaking changes). This is required for every MR, including drafts.
+    - Pick the type from what the MR actually does (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, …). Use a scope when it helps. Write a short, lowercase, imperative summary.
+    - Good: `feat: disclose tool payloads in permission prompts`, `fix(sdk): preserve tool call order`, `docs: clarify planning guidance`.
+    - Before creating the MR, check the title format and confirm the description starts with `Closes #<issue>` when an issue exists. Apply the same rules when updating an existing MR.
     - Check `glab label list` for the right tags.
 5. Open it for the user: `glab mr view --web` (on the current branch).
 
