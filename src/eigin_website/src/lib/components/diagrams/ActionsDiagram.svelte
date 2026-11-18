@@ -1589,7 +1589,7 @@
           >{labels.ask}</text
         >
       </svg>
-      <span class="tschem-actor tschem-actor--logo" style="--x:15%;--y:52.6%;--w:11%"
+      <span class="tschem-actor tschem-actor--logo" style="--x:15%;--y:50.8983%;--w:11%"
         ><Icon name="brand/avatar" size="fill" /></span
       >
     </div>

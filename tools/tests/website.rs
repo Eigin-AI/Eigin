@@ -343,6 +343,16 @@ fn website_asset_regeneration_succeeds_without_fonts_and_preserves_source_artwor
             .unwrap()
             .starts_with("<svg")
     );
+    assert_eq!(
+        fs::read_to_string(assets.join("assets/icons/brand/avatar.svg")).unwrap(),
+        sources[1].1
+    );
+    let tight = fs::read_to_string(assets.join("assets/images/eigin-logo-tight.svg")).unwrap();
+    let tree = resvg::usvg::Tree::from_str(&tight, &resvg::usvg::Options::default()).unwrap();
+    let bounds = tree.root().abs_bounding_box();
+    assert!(bounds.x().abs() < 0.01 && bounds.y().abs() < 0.01);
+    assert!((bounds.width() - tree.size().width()).abs() < 0.01);
+    assert!((bounds.height() - tree.size().height()).abs() < 0.01);
     for (file, width, height) in [
         ("favicon-32.png", 32, 32),
         ("apple-touch-icon.png", 180, 180),

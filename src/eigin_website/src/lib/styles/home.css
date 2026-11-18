@@ -208,8 +208,8 @@ a.plan {
 
 .open-mark {
   display: flex;
-  width: var(--spacing-n40);
-  height: var(--spacing-n40);
+  width: calc(var(--spacing-n40) * 1.15);
+  height: calc(var(--spacing-n40) * 1.15);
   margin-bottom: var(--spacing-n32);
 }
 
@@ -439,8 +439,8 @@ a.plan {
 
 @media (max-width: 1199px) {
   .open-mark {
-    width: var(--spacing-n28);
-    height: var(--spacing-n28);
+    width: calc(var(--spacing-n28) * 1.15);
+    height: calc(var(--spacing-n28) * 1.15);
   }
   .promises,
   .plans {
@@ -496,8 +496,8 @@ a.plan {
 
 @media (max-width: 600px) {
   .open-mark {
-    width: var(--spacing-n24);
-    height: var(--spacing-n24);
+    width: calc(var(--spacing-n24) * 1.15);
+    height: calc(var(--spacing-n24) * 1.15);
   }
   .hero-title {
     white-space: normal;

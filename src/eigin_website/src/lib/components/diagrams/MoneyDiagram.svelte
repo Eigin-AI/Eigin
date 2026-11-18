@@ -52,7 +52,7 @@
     </svg>
     <span
       class="tschem-actor tschem-actor--logo"
-      style="--x:22.2%;--y:52.9%;--w:13%;--actor:var(--color-surface-impact-base)"
+      style="--x:22.222%;--y:50%;--w:13%;--actor:var(--color-surface-impact-base)"
       ><Icon name="brand/avatar" size="fill" /></span
     >
   </div>

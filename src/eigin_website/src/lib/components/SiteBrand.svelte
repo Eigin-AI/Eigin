@@ -4,6 +4,6 @@
 </script>
 
 <a class="site-brand" {href} aria-label={label}>
-  <span aria-hidden="true"><Icon name="brand/avatar" size={24} /></span>
+  <span aria-hidden="true"><Icon name="brand/avatar" size={26} /></span>
   <span class="t-titleXS">Eigin</span>
 </a>

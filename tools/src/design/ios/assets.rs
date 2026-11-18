@@ -126,7 +126,7 @@ pub fn generate(repo_root: &str, tokens: &Value) -> Result<()> {
     let dark_bg = token_rgb(tokens, "color.surface.standard.base", "dark")?;
     let dark_icon = token_hex(tokens, "palette.brand.primary", "light")?;
 
-    let logo_path = format!("{repo_root}/design/assets/app_icon/logo.svg");
+    let logo_path = format!("{repo_root}/design/assets/icons/brand/avatar.svg");
     let overlay_path = format!("{repo_root}/design/assets/app_icon/dev_overlay.png");
     let prod_dir =
         format!("{repo_root}/src/eigin_ios/Resources/Assets.xcassets/AppIcon.appiconset");

@@ -52,7 +52,7 @@
         >{labels.relayNote}</text
       >
     </svg>
-    <span class="tschem-actor tschem-actor--logo" style="--x:50%;--y:51.8%;--w:6.5%"
+    <span class="tschem-actor tschem-actor--logo" style="--x:50%;--y:51.8%;--w:7.5%"
       ><Icon name="brand/avatar" size="fill" /></span
     >
   </div>

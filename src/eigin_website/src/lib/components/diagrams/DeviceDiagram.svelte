@@ -166,7 +166,7 @@
       <!-- A backing disc, so lines and pulses never show through the conversation icon's cut-outs. -->
       <circle class="ts-on-solid" cx="290" cy="168" r="22" />
     </svg>
-    <span class="tschem-actor tschem-actor--logo" style="--x:38%;--y:55.3%;--w:9%"
+    <span class="tschem-actor tschem-actor--logo" style="--x:38%;--y:54.1655%;--w:9%"
       ><Icon name="brand/avatar" size="fill" /></span
     >
     <span class="tschem-actor" style="--x:53.7%;--y:55.3%;--w:9%"

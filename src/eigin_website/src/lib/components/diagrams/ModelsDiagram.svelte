@@ -127,7 +127,7 @@
         >{labels.ask}</text
       >
     </svg>
-    <span class="tschem-actor tschem-actor--logo" style="--x:14.8%;--y:46.8%;--w:11%"
+    <span class="tschem-actor tschem-actor--logo" style="--x:14.8%;--y:44.8147%;--w:11%"
       ><Icon name="brand/avatar" size="fill" /></span
     >
   </div>
