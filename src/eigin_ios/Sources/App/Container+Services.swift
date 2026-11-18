@@ -3,6 +3,11 @@ import Foundation
 import SwiftData
 
 extension Container {
+    /// WeatherKit source metadata and marks, shared by chat and Settings.
+    var weatherAttributionService: Factory<any WeatherAttributionServing> {
+        self { AppleWeatherAttributionService() }.singleton
+    }
+
     // MARK: - Infrastructure
 
     var keychainService: Factory<any KeychainService> {

@@ -1,13 +1,12 @@
 <script lang="ts">
   import { ContentGroup, Row } from "@lib";
   import SecondaryScreen from "./SecondaryScreen.svelte";
-  let licenses = $state(false);
 </script>
 
 <SecondaryScreen title="About" back="settings">
-  <ContentGroup
-    ><Row title="Eigin" description="Version 1.0 (100) · Preview" accessory="none" /></ContentGroup
-  >
+  <ContentGroup>
+    <Row title="Eigin" description="Version 1.0 (100) · Preview" accessory="none" />
+  </ContentGroup>
   <ContentGroup label="Legal">
     <Row
       title="Privacy policy"
@@ -20,14 +19,16 @@
       onclick={() => window.open("https://eigin.ai/terms", "_blank", "noopener,noreferrer")}
     />
   </ContentGroup>
-  <ContentGroup label="Open source"
-    ><Row
-      title="Licenses"
+  <ContentGroup label="Licenses">
+    <Row
+      title="Open source"
       description="Third-party packages"
-      onclick={() => (licenses = !licenses)}
-    /></ContentGroup
-  >
-  {#if licenses}<p class="t-note" role="status">
-      The iOS app lists package licenses here. License browsing is outside this preview.
-    </p>{/if}
+      onclick={() => (location.hash = "#/screens/licenses")}
+    />
+    <Row
+      title="Data sources"
+      description="Services used by your agent"
+      onclick={() => (location.hash = "#/screens/data-sources")}
+    />
+  </ContentGroup>
 </SecondaryScreen>

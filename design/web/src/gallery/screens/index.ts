@@ -1,6 +1,8 @@
 import KnowledgeGraphScreen from "@gallery/screens/secondary/KnowledgeGraphScreen.svelte";
 import FeedbackScreen from "@gallery/screens/secondary/FeedbackScreen.svelte";
 import AboutScreen from "@gallery/screens/secondary/AboutScreen.svelte";
+import LicensesScreen from "@gallery/screens/secondary/LicensesScreen.svelte";
+import DataSourcesScreen from "@gallery/screens/secondary/DataSourcesScreen.svelte";
 import AdvancedSettingsScreen from "@gallery/screens/secondary/AdvancedSettingsScreen.svelte";
 import PermissionsScreen from "@gallery/screens/secondary/PermissionsScreen.svelte";
 import SpaceDetailScreen from "@gallery/screens/secondary/SpaceDetailScreen.svelte";
@@ -234,7 +236,21 @@ export const screenEntries: ScreenEntry[] = [
     title: "About",
     section: "settings",
     component: AboutScreen,
-    about: "App information and legal links. License browsing is outside this preview.",
+    about: "App information, legal links, open-source licenses and data sources.",
+  },
+  {
+    id: "licenses",
+    title: "Open source",
+    section: "settings",
+    component: LicensesScreen,
+    about: "Representative native library and model licenses with full text details.",
+  },
+  {
+    id: "data-sources",
+    title: "Data sources",
+    section: "settings",
+    component: DataSourcesScreen,
+    about: "Data providers and their attribution. Open Apple Weather for its mark and legal link.",
   },
   {
     id: "feedback",

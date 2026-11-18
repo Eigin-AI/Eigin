@@ -153,6 +153,12 @@ struct GetWeatherTool: Tool {
                 "forecast": snapshot.daily.map(dayDict),
             ]
             if let name = location.name, !name.isEmpty { output["location"] = name }
+            if snapshot.attributionSource == .appleWeather {
+                output["attribution"] = [
+                    "source": "apple-weather",
+                    "instruction": Prompt.Tools.weatherAttribution,
+                ]
+            }
 
             return ToolResult(
                 toolCallID: id,

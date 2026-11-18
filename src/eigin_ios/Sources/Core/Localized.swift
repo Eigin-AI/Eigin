@@ -5254,6 +5254,14 @@ enum Localized {
                 String(format: Localized.get("settings.about.appVersionFormat"), p1)
             }
 
+            static var dataSources: String {
+                Localized.get("settings.about.dataSources")
+            }
+
+            static var dataSourcesDescription: String {
+                Localized.get("settings.about.dataSourcesDescription")
+            }
+
             /// Section header grouping the privacy policy and terms links
             static var legal: String {
                 Localized.get("settings.about.legal")
@@ -5286,6 +5294,10 @@ enum Localized {
                 Localized.get("settings.about.models")
             }
 
+            static var openSource: String {
+                Localized.get("settings.about.openSource")
+            }
+
             /// Row linking to the privacy policy
             static var privacyPolicy: String {
                 Localized.get("settings.about.privacyPolicy")
@@ -5300,6 +5312,10 @@ enum Localized {
             /// Row linking to the terms of service
             static var termsOfService: String {
                 Localized.get("settings.about.termsOfService")
+            }
+
+            static var thirdPartyPackages: String {
+                Localized.get("settings.about.thirdPartyPackages")
             }
         }
 
@@ -7685,6 +7701,50 @@ enum Localized {
         /// Reply when the turn is given up because the background time ran out
         static var turnDelayed: String {
             Localized.get("watch.turn-delayed")
+        }
+    }
+
+    enum Weather {
+        enum Attribution {
+            static var disclosure: String {
+                Localized.get("weather.attribution.disclosure")
+            }
+
+            static var legalDescription: String {
+                Localized.get("weather.attribution.legalDescription")
+            }
+
+            static var legalLink: String {
+                Localized.get("weather.attribution.legalLink")
+            }
+
+            static var loading: String {
+                Localized.get("weather.attribution.loading")
+            }
+
+            static var provenance: String {
+                Localized.get("weather.attribution.provenance")
+            }
+
+            static var provider: String {
+                Localized.get("weather.attribution.provider")
+            }
+
+            static var retry: String {
+                Localized.get("weather.attribution.retry")
+            }
+
+            static var sourcesDisclosure: String {
+                Localized.get("weather.attribution.sourcesDisclosure")
+            }
+
+            static var summary: String {
+                Localized.get("weather.attribution.summary")
+            }
+
+            static var unavailable: String {
+                Localized.get("weather.attribution.unavailable")
+            }
         }
     }
 

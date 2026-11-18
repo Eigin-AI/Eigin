@@ -36,3 +36,15 @@ Each turn, the [gatekeeper](./context.md) hydrates the user's message with dynam
 | [Context paging](./context-paging.md) | Bounds requests while preserving stored history and supporting text recovery. |
 | [Spaces](./spaces.md) | Organise chats and isolate knowledge by domain. |
 | [Attachments](./attachments.md) | Files a message can carry, images today. |
+
+## Message rendering
+
+Chat renders Markdown as native content blocks. A standalone `eigin` fence carries typed JSON for app-rendered components. Currently, Apple Weather attribution is the only supported component:
+
+````markdown
+```eigin
+{"type":"attribution","source":"apple-weather"}
+```
+````
+
+The app renders the official mark and legal link. Incomplete blocks wait while streaming; unsupported or invalid blocks remain code. The syntax is preserved in saved messages.

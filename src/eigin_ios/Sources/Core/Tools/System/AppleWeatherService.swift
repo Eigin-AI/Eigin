@@ -75,7 +75,8 @@ struct AppleWeatherService: WeatherService {
                 windSpeedKPH: kph(current.wind.speed)
             ),
             restOfToday: Self.restOfToday(hours: hours, after: now, calendar: calendar),
-            daily: Self.forecast(days: days, after: now, count: forecastDays, calendar: calendar)
+            daily: Self.forecast(days: days, after: now, count: forecastDays, calendar: calendar),
+            attributionSource: .appleWeather
         )
     }
 
