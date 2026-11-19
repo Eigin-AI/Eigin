@@ -285,6 +285,10 @@ fn entry(
     files.retain(|path| {
         path.is_file() && is_notice(path.file_name().unwrap().to_str().unwrap_or(""))
     });
+    // The published timers crate omits its workspace license.
+    if (ecosystem, name, version) == ("Cargo", "gloo-timers", "0.4.0") && files.is_empty() {
+        files.push(root.join("LICENSES/gloo/LICENSE-MIT"));
+    }
     files.sort();
     if matches!(license, "MIT OR Apache-2.0" | "Apache-2.0 OR MIT") {
         ensure!(

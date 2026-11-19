@@ -47,3 +47,9 @@ test("performance events preserve optional measurements", async ({ page }) => {
     window.contracts.performanceEventsPreserveOptionalMeasurements(),
   );
 });
+
+test("tool execution wakes on host completion or deadline", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.contracts.toolDeadlinesSettleOnce());
+});

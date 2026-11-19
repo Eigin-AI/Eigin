@@ -1158,6 +1158,59 @@ struct AgenticChatLoopTests {
         }
     }
 
+    @Test(arguments: [true, false])
+    @MainActor func deniedCallKeepsExistingErrorAndSkipsExecutor(never: Bool) async throws {
+        let (agent, _, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false, permissionPolicy: AgentPermissionPolicy(
+            builtInGrants: ["read_core": never ? .never : .ask], discoveredGrants: [:],
+            chatGrants: [], canPromptUser: false
+        ))
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "denied",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        let result = await loop.executeToolCall(call, agent: agent, executor: executor)
+        let message = never ? Localized.Permission.toolDeniedByPolicy :
+            "Permission required. Ask the user to open the app to grant permission for this action."
+        #expect(result.toolCallID == call.id)
+        #expect(result.isError)
+        #expect(result.content == ToolHelpers.output(errors: [message]))
+        #expect(loop.toolEvents.first?.status == .error(result.content))
+        #expect(executor.calls.isEmpty)
+    }
+
+    @Test @MainActor func chatGrantAppliesBeforeTheNextCall() async throws {
+        let (agent, _, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false, permissionPolicy: AgentPermissionPolicy(
+            builtInGrants: ["read_core": .ask], discoveredGrants: [:], chatGrants: [],
+            canPromptUser: true
+        ))
+        let executor = FakeToolExecutor()
+        var grants: [[String]] = []
+        loop.onChatGrant = { grants.append($0.map(\.key)) }
+        let first = ToolCall(
+            id: "first",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        let pending = Task { await loop.executeToolCall(first, agent: agent, executor: executor) }
+        defer { _ = loop.stop(); pending.cancel() }
+        try await waitForPermission("first", in: loop)
+        loop.resolvePermission(.allowForChat, requestID: "first")
+        #expect(await pending.value.isError == false)
+        #expect(grants == [["read_core"]])
+        try #require(loop.permissionPolicy.permissionLevel(for: "read_core") == .always)
+        let second = ToolCall(id: "second", type: "function", function: first.function)
+        #expect(await loop.executeToolCall(second, agent: agent, executor: executor)
+            .isError == false)
+        #expect(executor.calls.map(\.id) == ["first", "second"])
+        #expect(grants.count == 1)
+    }
+
     @Test(arguments: ["approve", "deny", "stop"])
     @MainActor func multiplePermissionsIgnoreLateResponses(action: String) async throws {
         let approveSecond = action == "approve"

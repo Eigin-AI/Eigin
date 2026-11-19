@@ -5,6 +5,7 @@ import {
   performanceEventsFixture,
   InitializationError,
   PendingOperation,
+  ToolCallDeadline,
   failInitializationFixture,
   uniffiInitAsync,
 } from "./generated";
@@ -50,6 +51,18 @@ export const contracts = {
     );
   },
   diagnostics,
+  async toolDeadlinesSettleOnce() {
+    const pending = new ToolCallDeadline(5);
+    assert(!(await pending.completedInTime()), "Deadline did not expire");
+    pending.complete();
+    assert(!(await pending.completedInTime()), "Late result replaced timeout");
+    const finished = new ToolCallDeadline(0xffff_ffff);
+    const result = finished.completedInTime();
+    // Give an overflowing signed browser timer time to fire.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    finished.complete();
+    assert(await result, "Host completion did not wake the runner");
+  },
   async initializationErrorPreservesReason() {
     const error = await rejection(failInitializationFixture());
     assert(
