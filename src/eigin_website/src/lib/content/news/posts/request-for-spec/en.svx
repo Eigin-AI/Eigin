@@ -1,0 +1,27 @@
+---
+title: 'Request for Spec'
+description: 'Eigin pays for your best thinking on open software problems. Our first call is about local detection of malicious instructions.'
+date: '2026-11-19'
+---
+
+Coding agents have made it faster to write code. But good engineering doesn't start with code. It starts with judgment: understanding a problem, weighing trade-offs, setting a direction, and thinking through a solution.
+
+We will pay you for that thinking.
+
+## How it works
+
+We share a problem we're trying to solve. You write a spec: a plan for how you'd solve it. Work on your own or with a coding agent.
+
+When the call closes, we choose a spec to implement. We publish both the selected spec and the runner-up, with payment and credit to both authors.
+
+This is an experiment: an AI-native way to do open source. A good spec helps humans and agents understand why a solution is worth building.
+
+Eigin is open technology. Open works best when we work together. We want to honor the people who are ready to do that.
+
+## Our first call is open:
+
+<p><a href="https://contribute.eigin.ai/calls/tool-safety" target="_blank" rel="noopener noreferrer"><strong>Local detection of malicious instructions</strong></a></p>
+
+Submissions close on 29 November at 17:00 Copenhagen time.
+
+Together, we can shape a future where personal AI belongs to us.

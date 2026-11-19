@@ -1,0 +1,27 @@
+---
+title: 'Request for Spec'
+description: 'Eigin betaler for gennemtænkte løsningsforslag til åbne softwareproblemer. Første runde hedder Local detection of malicious instructions.'
+date: '2026-11-19'
+---
+
+Kodeagenter har gjort det hurtigere at skrive kode. Men god softwareudvikling starter ikke med kode. Den starter med dømmekraft: at forstå et problem, afveje fordele og ulemper, sætte en retning og tænke en løsning igennem.
+
+De tanker vil vi betale dig for.
+
+## Sådan fungerer det
+
+Vi deler et problem, vi prøver at løse. Du skriver en spec: en plan for, hvordan du ville løse problemet. Du kan arbejde på egen hånd eller sammen med en kodeagent.
+
+Når fristen udløber, vælger vi en spec, vi vil føre ud i livet. Vi udgiver både den valgte spec og den, der kom på andenpladsen. Begge forfattere får betaling og bliver krediteret.
+
+Det er et eksperiment: en AI-native måde at arbejde med open source på. En god spec hjælper mennesker og agenter med at forstå, hvorfor en løsning er værd at bygge.
+
+Eigin er åben teknologi. Åben teknologi fungerer bedst, når vi arbejder sammen. Vi vil gerne anerkende dem, der er klar til at være med.
+
+## Første runde er åben:
+
+<p><a href="https://contribute.eigin.ai/calls/tool-safety" target="_blank" rel="noopener noreferrer"><strong>Local detection of malicious instructions</strong></a></p>
+
+Fristen for at indsende din spec er den 29. november kl. 17.00 dansk tid.
+
+Sammen kan vi forme en fremtid, hvor personlig AI tilhører os.
