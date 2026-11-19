@@ -774,6 +774,14 @@ enum Localized {
             Localized.get("development.agentChoseToStaySilent")
         }
 
+        static var backgroundActivitiesBusy: String {
+            Localized.get("development.backgroundActivitiesBusy")
+        }
+
+        static var backgroundActivitiesDue: String {
+            Localized.get("development.backgroundActivitiesDue")
+        }
+
         /// Button to cancel scheduled background task
         static var cancelScheduledTask: String {
             Localized.get("development.cancelScheduledTask")
@@ -814,9 +822,17 @@ enum Localized {
             Localized.get("development.importSuccessful")
         }
 
+        static var makeBackgroundActivitiesDue: String {
+            Localized.get("development.makeBackgroundActivitiesDue")
+        }
+
         /// Navigation link to model storage view
         static var modelStorage: String {
             Localized.get("development.modelStorage")
+        }
+
+        static var noBackgroundActivitiesDue: String {
+            Localized.get("development.noBackgroundActivitiesDue")
         }
 
         /// Empty state message when no transcripts exist
@@ -837,6 +853,10 @@ enum Localized {
         /// Button to request notification permission
         static var requestNotificationPermission: String {
             Localized.get("development.requestNotificationPermission")
+        }
+
+        static var runDueBackgroundActivities: String {
+            Localized.get("development.runDueBackgroundActivities")
         }
 
         /// Button to schedule balanced background review
@@ -5581,6 +5601,10 @@ enum Localized {
         }
 
         enum Proactivity {
+            static var cloudProviderRequired: String {
+                Localized.get("settings.proactivity.cloudProviderRequired")
+            }
+
             enum Balanced {
                 /// Full description of the balanced proactivity mode
                 static var description: String {

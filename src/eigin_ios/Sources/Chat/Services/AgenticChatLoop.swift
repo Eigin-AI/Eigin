@@ -89,6 +89,7 @@ final class AgenticChatLoop {
     private(set) var isAwaitingUserInteraction = false
 
     let isBootstrap: Bool
+    var propagatesStreamCancellation = false
     /// Optional callback fired on each content delta (used by live call for streaming TTS).
     var onContentDelta: ((String) -> Void)?
     /// Fired when a round ends with a tool call and prose was buffered for it
@@ -379,6 +380,7 @@ final class AgenticChatLoop {
                     provider: provider, start: streamStart,
                     firstTokenAt: firstTokenAt, result: .cancelled
                 )
+                if propagatesStreamCancellation { throw CancellationError() }
                 return []
             } catch {
                 logTurnTiming(

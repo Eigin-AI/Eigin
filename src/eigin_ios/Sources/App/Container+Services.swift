@@ -229,6 +229,11 @@ extension Container {
     }
 
     @MainActor
+    var backgroundActivityCoordinator: Factory<BackgroundActivityCoordinator> {
+        self { @MainActor in BackgroundActivityCoordinator() }.singleton
+    }
+
+    @MainActor
     var followUpScheduler: Factory<any FollowUpScheduling> {
         self { @MainActor in DefaultFollowUpScheduler(container: self.modelContainer(), onChange: {
             do { try Container.shared.initiativeService().refreshWaiting() }

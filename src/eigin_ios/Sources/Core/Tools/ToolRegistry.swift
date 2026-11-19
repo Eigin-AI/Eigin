@@ -5,7 +5,10 @@ struct ToolRegistry: ToolExecutor {
     private let toolsByName: [String: any Tool]
     let isSmallContext: Bool
 
-    init(tools: [any Tool], isSmallContext: Bool = false) {
+    private let coordinatesKnowledge: Bool
+
+    init(tools: [any Tool], isSmallContext: Bool = false, coordinatesKnowledge: Bool = false) {
+        self.coordinatesKnowledge = coordinatesKnowledge
         var map = [String: any Tool]()
         for tool in tools {
             map[tool.name] = tool
@@ -46,7 +49,22 @@ struct ToolRegistry: ToolExecutor {
                 isError: true
             )
         }
-        var result = await tool.execute(toolCall, agent: agent)
+        var result: ToolResult
+        if coordinatesKnowledge, tool.category == .knowledge {
+            do {
+                result = try await KnowledgeOperationCoordinator.shared.perform {
+                    await tool.execute(toolCall, agent: agent)
+                }
+            } catch {
+                return ToolResult(
+                    toolCallID: toolCall.id,
+                    content: error.localizedDescription,
+                    isError: true
+                )
+            }
+        } else {
+            result = await tool.execute(toolCall, agent: agent)
+        }
         if isSmallContext, !result.isError,
            result.content.count > Self.smallContextResultLimit
         {

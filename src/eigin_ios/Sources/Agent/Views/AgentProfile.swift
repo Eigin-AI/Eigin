@@ -67,7 +67,10 @@ struct AgentProfile: View {
         .toolbar(.hidden, for: .navigationBar)
         .onChange(of: agent.name) { agent.updatedAt = .now }
         .onChange(of: agent.emoji) { agent.updatedAt = .now }
-        .onChange(of: agent.providerID) { agent.updatedAt = .now }
+        .onChange(of: agent.providerID) {
+            agent.updatedAt = .now
+            BackgroundPromptScheduler.reschedule(for: agent.proactivity, in: agent.modelContext)
+        }
         .onChange(of: agent.model) { agent.updatedAt = .now }
         .onChange(of: agent.voiceIdentifier) { agent.updatedAt = .now }
         .onChange(of: languageManager.currentLanguage) {
@@ -76,7 +79,7 @@ struct AgentProfile: View {
         .onChange(of: agent.proactivity) { _, newValue in
             agent.updatedAt = .now
             ProactivityDecision.markDecided()
-            BackgroundPromptScheduler.reschedule(for: newValue)
+            BackgroundPromptScheduler.reschedule(for: newValue, in: agent.modelContext)
             if newValue.isBackgroundEnabled {
                 Task {
                     _ = await NotificationPermission.requestIfNeeded()
@@ -181,7 +184,9 @@ struct AgentProfile: View {
                 // Initiative row
                 AppOptionPicker(
                     title: Localized.Agent.Profile.Section.initiative,
-                    description: agent.proactivity.description,
+                    description: currentProvider.map { ProviderPreset.isLocal($0.baseURL) } == true
+                        ? Localized.Settings.Proactivity.cloudProviderRequired
+                        : agent.proactivity.description,
                     options: ProactivityLevel.allCases.map {
                         AppOption($0.displayName, value: $0)
                     },

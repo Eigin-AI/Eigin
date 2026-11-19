@@ -19,6 +19,7 @@ struct BackgroundPromptTranscript: Codable, Identifiable {
 /// `UserDefaults`. Conforms to ``BackgroundPromptTranscriptSink`` so the
 /// background service records through injection instead of `#if DEBUG` calls.
 struct BackgroundPromptDebug: BackgroundPromptTranscriptSink {
+    private static let lock = NSLock()
     private static let maxStored = 5
     private static let key = "backgroundPromptTranscripts"
 
@@ -40,6 +41,8 @@ struct BackgroundPromptDebug: BackgroundPromptTranscriptSink {
             reason: reason
         )
 
+        Self.lock.lock()
+        defer { Self.lock.unlock() }
         var transcripts = Self.transcripts()
         transcripts.insert(transcript, at: 0)
         if transcripts.count > Self.maxStored {
@@ -52,11 +55,11 @@ struct BackgroundPromptDebug: BackgroundPromptTranscriptSink {
     }
 
     static func getTranscripts() -> [BackgroundPromptTranscript] {
-        transcripts()
+        lock.withLock { transcripts() }
     }
 
     static func clear() {
-        UserDefaults.standard.removeObject(forKey: key)
+        lock.withLock { UserDefaults.standard.removeObject(forKey: key) }
     }
 
     private static func transcripts() -> [BackgroundPromptTranscript] {
