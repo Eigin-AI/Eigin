@@ -55,6 +55,13 @@ struct DevelopmentMenu: View {
                 }
                 .disabled(isRunning)
 
+                Button {
+                    runBackgroundPrompt(mode: .reflection)
+                } label: {
+                    Label(Localized.Development.triggerReflectionRun, systemImage: "sparkles")
+                }
+                .disabled(isRunning)
+
                 if let result = lastResult {
                     resultView(result)
                 }

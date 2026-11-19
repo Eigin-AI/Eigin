@@ -22,14 +22,12 @@ struct BackgroundNotifyTool: Tool {
 
     var now: @Sendable () -> Date = { Date() }
     var calendar: Calendar = .current
-    var isAuthorized: @Sendable () async
-        -> Bool = { await NotificationPermission.requestIfNeeded(canPromptUser: false) }
     let onSignal: @Sendable (BackgroundToolSignal) -> Void
 
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Send a notification to the user.",
+            description: "Queue a useful message for For you and optional notification delivery. Ends this background turn.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [
@@ -99,19 +97,6 @@ struct BackgroundNotifyTool: Tool {
                 isError: true
             )
         }
-        guard await isAuthorized() else {
-            return ToolResult(
-                toolCallID: id,
-                content: ToolHelpers
-                    .output(
-                        errors: [
-                            "Notifications are unavailable. Enable notifications for Eigin in Settings; initial authorization requires opening the app.",
-                        ]
-                    ),
-                isError: true
-            )
-        }
-
         onSignal(.notify(
             title: title,
             message: message,

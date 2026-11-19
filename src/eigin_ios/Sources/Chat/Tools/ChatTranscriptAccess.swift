@@ -20,6 +20,7 @@ enum ChatTranscriptAccess {
         agent: Agent,
         spaceID: UUID?,
         currentChatID: UUID?,
+        accessPolicy: SpaceAccessPolicy? = nil,
         search: Bool
     ) -> ToolResult {
         do {
@@ -32,7 +33,8 @@ enum ChatTranscriptAccess {
             let chatID = try requestedChatID(args, currentChatID: currentChatID)
             guard let chat = ChatLookup.find(chatID, in: context),
                   chat.agentID == agent.id,
-                  spaceID == nil || chat.spaceID == spaceID
+                  spaceID == nil || chat.spaceID == spaceID,
+                  accessPolicy?.canAccess(itemSpaceID: chat.spaceID) != false
             else {
                 throw AccessError.invalid("Chat not found")
             }

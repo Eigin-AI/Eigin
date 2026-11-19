@@ -100,4 +100,31 @@ struct ToolRegistryFilterTests {
         #expect(!background.contains("follow_up"))
         #expect(background.contains("background_notify"))
     }
+
+    @Test @MainActor func reflectionUsesOnlyGrantedBackgroundTools() {
+        let policy = AgentPermissionPolicy(
+            builtInGrants: ["web_search": .ask, "web_fetch": .never, "get_knowledge": .always],
+            discoveredGrants: [:], chatGrants: [], canPromptUser: false
+        )
+        let names = Set(ToolRegistry.background(
+            permissionPolicy: policy,
+            agentID: UUID(),
+            onSignal: { _ in }
+        )
+        .definitions.map(\.function.name))
+        #expect(names.contains("get_knowledge"))
+        #expect(names.contains("background_notify"))
+        for excluded in [
+            "web_search",
+            "web_fetch",
+            "follow_up",
+            "add_intent",
+            "update_intent",
+            "resolve_intent",
+            "set_initiatives",
+            "cancel_initiative",
+        ] {
+            #expect(!names.contains(excluded))
+        }
+    }
 }

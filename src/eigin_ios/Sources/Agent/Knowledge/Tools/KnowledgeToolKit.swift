@@ -16,9 +16,24 @@ enum KnowledgeToolKit: ToolKit {
     ]
 
     @MainActor static func tools(context: ToolContext) -> [any Tool] {
-        let knowledgeService = Container.shared.knowledgeService()
+        tools(
+            context: context,
+            knowledgeService: Container.shared.knowledgeService(),
+            exposesSourceChat: true
+        )
+    }
 
-        return [
+    /// Uses run-scoped knowledge and leaves chat retrieval to the transcript tools.
+    @MainActor static func backgroundTools(
+        context: ToolContext, knowledgeService: any KnowledgeService
+    ) -> [any Tool] {
+        tools(context: context, knowledgeService: knowledgeService, exposesSourceChat: false)
+    }
+
+    @MainActor private static func tools(
+        context: ToolContext, knowledgeService: any KnowledgeService, exposesSourceChat: Bool
+    ) -> [any Tool] {
+        [
             SearchKnowledgeTool(
                 knowledgeService: knowledgeService,
                 spaceID: context.spaceID,
@@ -27,7 +42,8 @@ enum KnowledgeToolKit: ToolKit {
             GetKnowledgeTool(
                 knowledgeService: knowledgeService,
                 spaceID: context.spaceID,
-                agentID: context.agentID
+                agentID: context.agentID,
+                exposesSourceChat: exposesSourceChat
             ),
             AddKnowledgeTool(
                 knowledgeService: knowledgeService,

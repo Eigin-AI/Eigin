@@ -113,8 +113,9 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
     /// use across turns.
     private let accessDebounceWindow: TimeInterval = 90
 
-    init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer, initialAccessPolicy: SpaceAccessPolicy? = nil) {
         self.modelContainer = modelContainer
+        activeAccessPolicy = initialAccessPolicy
     }
 
     // MARK: - Scope resolution
@@ -763,6 +764,42 @@ final class DefaultKnowledgeService: KnowledgeService, @unchecked Sendable {
                 state.recentAccess["\(spaceLabel)|\(agentLabel)|\(targetKey)"] = now
             }
         }
+    }
+
+    /// Returns recent saved entries using the same visibility and shadowing rules as retrieval.
+    func recentSources(
+        since: Date, agentID: UUID, accessPolicy: SpaceAccessPolicy, limit: Int
+    ) throws -> [String] {
+        let context = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<FirmSource>(
+            predicate: #Predicate { $0.agentID == nil || $0.agentID == agentID },
+            sortBy: [SortDescriptor(\.createdAt), SortDescriptor(\.id)]
+        )
+        descriptor.fetchLimit = 50
+        // Older scoped entries can shadow recent global entries; inspect metadata in pages.
+        var winners: [String: FirmSource] = [:]
+        while true {
+            let page = try context.fetch(descriptor)
+            for source in page where accessPolicy.canAccess(itemSpaceID: source.spaceID) {
+                let key = entityKey(for: source.path)
+                if let previous = winners[key],
+                   scopeSpecificity(previous, spaceID: nil, agentID: agentID)
+                   >= scopeSpecificity(source, spaceID: nil, agentID: agentID) { continue }
+                winners[key] = source
+            }
+            if page.count < 50 { break }
+            descriptor.fetchOffset = (descriptor.fetchOffset ?? 0) + page.count
+        }
+        return winners.values
+            .filter { !$0.expired && $0.updatedAt >= since }
+            .sorted {
+                $0.updatedAt == $1.updatedAt ? $0.path < $1.path : $0.updatedAt > $1.updatedAt
+            }
+            .prefix(limit).map {
+                let content = String($0.content.prefix(350))
+                return "\($0.path) \($0.updatedAt.ISO8601Format()): \(content)"
+                    + ($0.content.count > 350 ? " …[truncated]" : "")
+            }
     }
 
     /// Returns all visible FirmSource records for the current scope.
