@@ -131,7 +131,7 @@ Eigin ships no content of its own. Text in the App is written by the user or gen
 | Req | Verdict | Evidence |
 |---|---|---|
 | 2.4.1 | Met | `TARGETED_DEVICE_FAMILY: 1` — the App Store build is iPhone-only. Runs on iPad in compatibility mode |
-| 2.4.2 | Met | On-device AI runs only while the user is in a conversation and only on devices with enough memory ([local model](../ios/local-model.md)). Background work is a scheduled system task, not a continuous process. No mining or unrelated background activity |
+| 2.4.2 | Met | On-device AI runs only on devices with enough memory ([local model](../ios/local-model.md)). Proactive background activities require a selected cloud provider. Background work is bounded by the system task. No mining or unrelated background activity |
 | 2.4.3, 2.4.5 | N/A | No Apple TV or Mac App Store build |
 | 2.4.4 | Met | The App never asks the user to restart or change unrelated system settings |
 

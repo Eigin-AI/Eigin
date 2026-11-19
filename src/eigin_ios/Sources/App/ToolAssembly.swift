@@ -1,5 +1,6 @@
 import Factory
 import Foundation
+import SwiftData
 
 extension ToolRegistry {
     /// All domain tool kits. Each kit owns its tool construction and capabilities.
@@ -242,9 +243,10 @@ extension ToolRegistry {
         ),
         permissionPolicy: (any ToolPermissionPolicy)? = nil,
         agentID: UUID? = nil,
-        knowledgeService: (any KnowledgeService)? = nil,
         additionalTools: [any Tool] = [],
         preparationOnly: Bool = false,
+        knowledgeService: (any KnowledgeService)? = nil,
+        modelContainer: ModelContainer? = nil,
         skillSession: SkillSession? = nil,
         onSignal: @escaping @Sendable (BackgroundToolSignal) -> Void
     ) -> ToolRegistry {
@@ -267,8 +269,8 @@ extension ToolRegistry {
         tools += additionalTools
         if preparationOnly {
             tools.append(SavePreparationTool(
-                modelContainer: Container.shared.modelContainer(),
-                knowledgeService: Container.shared.knowledgeService(),
+                modelContainer: modelContainer ?? Container.shared.modelContainer(),
+                knowledgeService: knowledgeService ?? Container.shared.knowledgeService(),
                 accessPolicy: accessPolicy
             ))
             tools.removeAll { !PreparationToolPolicy.allows($0.name) }
@@ -286,6 +288,6 @@ extension ToolRegistry {
 
         var result = alwaysTools
         if !preparationOnly { result.append(BackgroundNotifyTool(onSignal: onSignal)) }
-        return ToolRegistry(tools: result)
+        return ToolRegistry(tools: result, coordinatesKnowledge: knowledgeService != nil)
     }
 }

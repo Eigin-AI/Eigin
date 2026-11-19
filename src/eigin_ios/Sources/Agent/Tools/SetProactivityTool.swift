@@ -110,7 +110,7 @@ struct SetProactivityTool: Tool {
         agent.updatedAt = .now
         ProactivityDecision.markDecided()
 
-        BackgroundPromptScheduler.reschedule(for: level)
+        BackgroundPromptScheduler.reschedule(for: level, in: agent.modelContext)
 
         if level.isBackgroundEnabled {
             _ = await notificationAuthorizer.requestIfNeeded()

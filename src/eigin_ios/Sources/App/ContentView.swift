@@ -91,13 +91,15 @@ struct ContentView: View {
 
     private func ensureBackgroundSchedule() {
         guard let agents = try? modelContext.fetch(Agent.primaryDescriptor),
-              let agent = agents.primary,
-              agent.proactivity.isBackgroundEnabled
+              let agent = agents.primary
         else {
             return
         }
         Task {
-            await BackgroundPromptScheduler.scheduleIfNeeded(for: agent.proactivity)
+            await BackgroundPromptScheduler.scheduleIfNeeded(
+                for: agent.proactivity,
+                in: modelContext
+            )
         }
     }
 

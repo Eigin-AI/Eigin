@@ -372,8 +372,8 @@ struct ReflectionContextTests {
                 return false
             }
         )
-        #expect(await BackgroundPromptScheduler.runAndDeliver(
-            container: container, modeOverride: .reflection, model: model, scheduler: scheduler
+        #expect(await runReflection(
+            container: container, model: model, scheduler: scheduler
         ))
         #expect(authorizationAttempts == 1)
         #expect(center.requests.isEmpty)
@@ -424,9 +424,8 @@ struct ReflectionContextTests {
         try container.mainContext.save()
         let model = FakeChatService()
         model.enqueueEventStream([.contentDelta("Nothing useful to add."), .finished(.stop)])
-        #expect(await BackgroundPromptScheduler.runAndDeliver(
+        #expect(await runReflection(
             container: container,
-            modeOverride: .reflection,
             model: model
         ))
         #expect(!model.capturedEventMessages.isEmpty)
@@ -444,9 +443,8 @@ struct ReflectionContextTests {
         try container.mainContext.save()
         let model = FakeChatService()
         model.enqueueEventStream([.contentDelta("Unexpected model call"), .finished(.stop)])
-        #expect(await BackgroundPromptScheduler.runAndDeliver(
+        #expect(await runReflection(
             container: container,
-            modeOverride: .reflection,
             model: model
         ))
         #expect(model.capturedEventMessages.isEmpty)
@@ -638,10 +636,9 @@ struct ReflectionContextTests {
         }
         try context.save()
         let model = FakeChatService()
-        model.enqueueEventStream([.finished(.stop)])
-        #expect(await BackgroundPromptScheduler.runAndDeliver(
+        model.enqueueEventStream([.contentDelta("Nothing useful to add."), .finished(.stop)])
+        #expect(await runReflection(
             container: container,
-            modeOverride: .reflection,
             model: model
         ))
         let system = try #require(model.capturedEventMessages.first { $0.role == "system" }?
@@ -726,10 +723,9 @@ struct ReflectionContextTests {
             ))
         }
         model.enqueueEventStream(calls.map { .toolCall($0) } + [.finished(.toolCalls)])
-        model.enqueueEventStream([.finished(.stop)])
-        #expect(await BackgroundPromptScheduler.runAndDeliver(
+        model.enqueueEventStream([.contentDelta("Nothing useful to add."), .finished(.stop)])
+        #expect(await runReflection(
             container: container,
-            modeOverride: .reflection,
             model: model
         ))
         let privateResult = try #require(model.capturedEventMessages
@@ -746,20 +742,43 @@ struct ReflectionContextTests {
         #expect(readTool.function.parameters.properties?["include_context"] == nil)
     }
 
-    @Test func rotationPreservesExistingKeysAndSharesOpportunities() {
+    @Test func reflectionUsesItsOwnCooldownAndPreservesExistingKeys() throws {
+        let suite = "reflection-cooldown-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
         let now = Date.now
         #expect(BackgroundRunMode.preparation.lastRunKey == "backgroundLastRun_initiative")
         #expect(BackgroundRunMode.maintenance.lastRunKey == "backgroundLastRun_maintenance")
         #expect(BackgroundRunMode.reflection.lastRunKey == "backgroundLastRun_reflection")
-        var history: [BackgroundRunMode: Date] = [:]
-        var chosen = Set<BackgroundRunMode>()
-        for step in 0 ..< 12 {
-            let instant = now.addingTimeInterval(Double(step) * 6 * 3600)
-            let mode = BackgroundRunMode.select(now: instant, firstSelection: now) { history[$0] }
-            history[mode] = instant
-            chosen.insert(mode)
+        #expect(BackgroundPromptService
+            .eligibleModes(now: now, defaults: defaults) == BackgroundRunMode.allCases)
+        defaults.set(now, forKey: BackgroundRunMode.preparation.lastRunKey)
+        defaults.set(now, forKey: BackgroundRunMode.maintenance.lastRunKey)
+        defaults.set(
+            now.addingTimeInterval(-6 * 3600),
+            forKey: BackgroundRunMode.reflection.lastRunKey
+        )
+        #expect(BackgroundPromptService
+            .eligibleModes(now: now, defaults: defaults) == [.reflection])
+    }
+
+    private func runReflection(
+        container: ModelContainer, model: any ChatService,
+        scheduler: (any FollowUpScheduling)? = nil
+    ) async -> Bool {
+        var saved = true
+        let outcome = await BackgroundPromptService.runOpportunity(
+            container: container, modeOverride: .reflection, model: model,
+            coordinator: BackgroundActivityCoordinator()
+        ) { result in
+            guard result.didNotify else { return }
+            let delivery = await BackgroundPromptScheduler.deliver(
+                result,
+                container: container,
+                scheduler: scheduler
+            )
+            if case .saved = delivery {} else { saved = false }
         }
-        #expect(chosen == Set(BackgroundRunMode.allCases))
-        #expect(!ProactivityLevel.reactive.isBackgroundEnabled)
+        return outcome.succeeded && saved
     }
 }

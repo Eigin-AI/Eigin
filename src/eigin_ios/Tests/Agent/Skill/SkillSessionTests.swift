@@ -294,7 +294,7 @@ struct SkillSessionTests {
         let toolCalls = ([allowed] + excluded).map { call($0) }
         model.enqueueEventStream(toolCalls.map { .toolCall($0) } + [.finished(.toolCalls)])
         model.enqueueEventStream([.contentDelta("Checked current issues."), .finished(.stop)])
-        let (produced, _) = await BackgroundPromptService.runChatLoop(
+        let (produced, _) = try await BackgroundPromptService.runChatLoop(
             apiMessages: [ChatMessage(role: "user", content: "Check GitLab")], registry: registry,
             agent: agent, provider: provider, chatService: model, signalBox: signals,
             skillSession: state, accessPolicy: access, permissionPolicy: policy

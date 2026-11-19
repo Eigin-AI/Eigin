@@ -21,64 +21,51 @@ final class BackgroundSignalBox: @unchecked Sendable {
 }
 
 /// Orchestrates a background agent review turn.
-/// Creates its own `ModelContext` so it's safe to call from a `BGProcessingTask`.
+/// Keeps per-activity contexts on the main actor while model requests overlap.
+@MainActor
 enum BackgroundPromptService {
-    struct Result {
-        let didNotify: Bool
-        let agentID: UUID?
-        let notificationTitle: String?
-        let notificationBody: String?
-        let summary: String?
-        let deliverAt: Date?
-        let agentName: String?
-        let agentEmoji: String?
+    enum Status: Sendable { case completed, failed, cancelled, skipped }
+
+    struct Result: Sendable {
+        var status: Status = .completed
+        var reason: String?
+        var mode: BackgroundRunMode?
+        var didNotify = false
+        var agentID: UUID?
+        var notificationTitle: String?
+        var notificationBody: String?
+        var summary: String?
+        var deliverAt: Date?
+        var agentName: String?
+        var agentEmoji: String?
     }
 
-    private static let silentResult = Result(
-        didNotify: false, agentID: nil, notificationTitle: nil, notificationBody: nil,
-        summary: nil, deliverAt: nil, agentName: nil, agentEmoji: nil
-    )
-
-    /// Where `run` records transcripts when the caller doesn't supply one.
-    private static var defaultSink: any BackgroundPromptTranscriptSink {
-#if DEBUG
-        DebugTranscriptSink()
-#else
-        NoOpTranscriptSink()
-#endif
-    }
-
-    /// Runs a single background agent turn. Returns the result indicating whether to notify.
-    /// Pass `modeOverride` to force a specific mode (useful for debugging); otherwise the most
-    /// overdue mode is
-    /// selected. Pass `transcriptSink` to record the loop transcript (debug builds record
-    /// into ``BackgroundPromptDebug`` by default).
-    static func run(
-        container: ModelContainer,
-        modeOverride: BackgroundRunMode? = nil,
-        model: (any ChatService)? = nil,
-        transcriptSink: any BackgroundPromptTranscriptSink = defaultSink
+    static func execute(
+        container: ModelContainer, agentID: UUID, providerID: UUID,
+        mode: BackgroundRunMode, model: (any ChatService)?,
+        transcriptSink: any BackgroundPromptTranscriptSink
     ) async -> Result {
+        guard !Task.isCancelled else {
+            return Result(status: .cancelled)
+        }
         let context = ModelContext(container)
 
         // Fetch the primary agent.
-        guard let agents = try? context.fetch(Agent.primaryDescriptor),
-              let agent = agents.primary
+        guard let agents = try? context.fetch(FetchDescriptor<Agent>(
+            predicate: #Predicate { $0.id == agentID }
+        )), let agent = agents.first
         else {
             AppLogger.warning("No active agent found", category: .backgroundPrompt)
-            return silentResult
+            return Result(status: .skipped, reason: "Agent unavailable")
         }
 
         let proactivity = agent.proactivity
         guard proactivity.isBackgroundEnabled else {
             AppLogger.info("Proactivity is reactive, skipping", category: .backgroundPrompt)
-            return silentResult
+            return Result(status: .skipped, reason: "Proactivity is reactive")
         }
 
-        let mode = modeOverride ?? selectMode()
-
         // Fetch the provider.
-        let providerID = agent.providerID
         let providerDescriptor = FetchDescriptor<Provider>(
             predicate: #Predicate { $0.id == providerID }
         )
@@ -86,12 +73,17 @@ enum BackgroundPromptService {
               let provider = providers.first
         else {
             AppLogger.warning("Provider not found for agent", category: .backgroundPrompt)
-            return silentResult
+            return Result(status: .skipped, reason: "Provider unavailable")
         }
 
-        // Verify the provider has usable credentials (DefaultChatService will resolve them itself).
-        // Relay and on-device providers carry no keychain API key, so this resolves to an empty
-        // token and the turn proceeds; relay is authorized per-request via the credit wallet.
+        guard !ProviderPreset.isLocal(provider.baseURL) else {
+            return Result(
+                status: .skipped,
+                reason: "Background activities require a cloud provider"
+            )
+        }
+
+        // DefaultChatService resolves credentials again at dispatch; relay uses credits.
         let keychain = DefaultKeychainService(serviceKey: AppKeys.keychainServiceName)
         if model == nil, await ProviderCredentials.apiToken(
             baseURL: provider.baseURL,
@@ -100,7 +92,7 @@ enum BackgroundPromptService {
             credentialStores: Container.shared.providerCredentialResolver()
         ) == nil {
             AppLogger.warning("Provider credentials not available", category: .backgroundPrompt)
-            return silentResult
+            return Result(status: .skipped, reason: "Provider credentials unavailable")
         }
 
         // Build access policy — background has no current space but can see global + public space
@@ -140,7 +132,6 @@ enum BackgroundPromptService {
         } else { upcomingInitiatives = [] }
 
         // Fetch recent notifications so the agent doesn't repeat itself.
-        let agentID = agent.id
         let recentRequestDescriptor = FetchDescriptor<AgentInitiativeRequest>(
             predicate: #Predicate { $0.agentID == agentID },
             sortBy: [SortDescriptor(\AgentInitiativeRequest.createdAt, order: .reverse)]
@@ -154,69 +145,63 @@ enum BackgroundPromptService {
                     createdAt: $0.createdAt
                 ) }
 
-        nonisolated(unsafe) let agentRef = agent
-        nonisolated(unsafe) let providerRef = provider
         AppLogger.info(
             "Selected background mode: \(public: mode.rawValue)",
             category: .backgroundPrompt
         )
 
         // Load the agent's permission policy so user-granted tools are available.
-        nonisolated(unsafe) let contextRef = context
-        let permissionPolicy = await MainActor.run {
-            PermissionPolicyLoader.load(for: agentRef, chatID: nil, modelContext: contextRef)
-        }
+        let permissionPolicy = PermissionPolicyLoader.load(
+            for: agent,
+            chatID: nil,
+            modelContext: context
+        )
 
-        // For consolidation, compute the candidate list (duplicates, conflicts,
-        // stale entries) fresh and inject it into the prompt.
-        let knowledgeSection: String
+        let knowledgeService = DefaultKnowledgeService(
+            modelContainer: container,
+            initialAccessPolicy: mode == .reflection ? accessPolicy : nil
+        )
+        let additionalContext: String
         if mode == .reflection {
             do {
-                knowledgeSection = try await ReflectionContext.load(
-                    container: container, agentID: agent.id, accessPolicy: accessPolicy,
+                additionalContext = try ReflectionContext.load(
+                    container: container, agentID: agentID, accessPolicy: accessPolicy,
                     permissionPolicy: permissionPolicy
                 )
             } catch {
-                AppLogger.warning(
-                    "Reflection history unavailable, skipping",
-                    category: .backgroundPrompt
-                )
-                recordRun(mode: mode)
-                return silentResult
+                AppLogger.warning("Reflection history unavailable", category: .backgroundPrompt)
+                return Result(status: .failed, reason: error.localizedDescription)
             }
         } else {
-            knowledgeSection = await knowledgeConsolidationSection(mode: mode)
-        }
-
-        let systemPrompt = await MainActor.run {
-            BackgroundPrompt.build(
-                agent: agentRef,
-                proactivity: proactivity,
-                activeIntents: promptIntents,
-                recentNotifications: mode == .reflection ? [] : recentNotifications,
-                mode: mode,
-                upcomingInitiatives: upcomingInitiatives,
-                additionalContext: knowledgeSection
+            additionalContext = await knowledgeConsolidationSection(
+                mode: mode, knowledgeService: knowledgeService
             )
         }
 
+        let systemPrompt = BackgroundPrompt.build(
+            agent: agent,
+            proactivity: proactivity,
+            activeIntents: promptIntents,
+            recentNotifications: mode == .reflection ? [] : recentNotifications,
+            mode: mode,
+            upcomingInitiatives: upcomingInitiatives,
+            additionalContext: additionalContext
+        )
+
         // Build tool registry - includes tools the agent has .always permission for.
         let signalBox = BackgroundSignalBox()
-        let skillSession = await MainActor.run {
-            mode == .preparation ? SkillSession(
-                toolAccess: .preparation,
-                permissionPolicy: permissionPolicy, accessPolicy: accessPolicy,
-                agentID: agentRef.id
-            ) : nil
-        }
-        let registry = await ToolRegistry.background(
+        let skillSession = mode == .preparation ? SkillSession(
+            toolAccess: .preparation,
+            permissionPolicy: permissionPolicy, accessPolicy: accessPolicy,
+            agentID: agent.id
+        ) : nil
+        let registry = ToolRegistry.background(
             accessPolicy: accessPolicy,
             permissionPolicy: permissionPolicy,
-            agentID: mode == .maintenance ? nil : agentRef.id,
-            knowledgeService: mode == .reflection ? DefaultKnowledgeService(
-                modelContainer: container, initialAccessPolicy: accessPolicy
-            ) : nil,
+            agentID: mode == .maintenance ? nil : agent.id,
             preparationOnly: mode == .preparation,
+            knowledgeService: knowledgeService,
+            modelContainer: container,
             skillSession: skillSession,
             onSignal: { signalBox.set($0) }
         )
@@ -235,19 +220,40 @@ enum BackgroundPromptService {
             consentStore: Container.shared.aiConsentStore()
         )
 
-        let (produced, rounds) = await runChatLoop(
-            apiMessages: apiMessages,
-            registry: registry,
-            agent: agentRef,
-            provider: providerRef,
-            chatService: chatService,
-            signalBox: signalBox,
-            skillSession: skillSession,
-            accessPolicy: accessPolicy,
-            permissionPolicy: permissionPolicy
-        )
-
-        recordRun(mode: mode)
+        let produced: [ChatMessage]
+        let rounds: Int
+        do {
+            (produced, rounds) = try await runChatLoop(
+                apiMessages: apiMessages,
+                registry: registry,
+                agent: agent,
+                provider: provider,
+                chatService: chatService,
+                signalBox: signalBox,
+                skillSession: skillSession,
+                accessPolicy: accessPolicy,
+                permissionPolicy: permissionPolicy,
+                knowledgeService: knowledgeService,
+                modelContainer: container,
+                onFailure: { checkpoint, rounds, error in
+                    transcriptSink.store(
+                        systemPrompt: systemPrompt, apiMessages: apiMessages,
+                        producedMessages: checkpoint, rounds: rounds,
+                        signal: "interrupted (\(mode.rawValue))", reason: error.localizedDescription
+                    )
+                }
+            )
+        } catch {
+            let result = Result(
+                status: Task.isCancelled || error is CancellationError ? .cancelled : .failed,
+                reason: error.localizedDescription
+            )
+            AppLogger.warning(
+                "Background \(public: mode.rawValue) ended: \(private: error.localizedDescription)",
+                category: .backgroundPrompt
+            )
+            return result
+        }
 
         AppLogger.info(
             "Loop produced \(public: produced.count) messages, rounds: \(public: rounds), mode: \(public: mode.rawValue)",
@@ -275,7 +281,7 @@ enum BackgroundPromptService {
                 reason: reason
             )
 
-            return silentResult
+            return Result()
         }
 
         AppLogger.info(
@@ -298,43 +304,30 @@ enum BackgroundPromptService {
         )
     }
 
-    /// Picks the most overdue background mode based on elapsed time vs preferred interval.
-    private static func selectMode() -> BackgroundRunMode {
-        let defaults = UserDefaults.standard
-        let now = Date.now
-        let key = "backgroundFirstModeSelection"
-        let firstSelection = defaults.object(forKey: key) as? Date ?? now
-        defaults.set(firstSelection, forKey: key)
-        return BackgroundRunMode.select(now: now, firstSelection: firstSelection) {
-            defaults.object(forKey: $0.lastRunKey) as? Date
-        }
-    }
-
-    private static func recordRun(mode: BackgroundRunMode) {
-        UserDefaults.standard.set(Date(), forKey: mode.lastRunKey)
-    }
-
     /// Deterministic consolidation candidates for the maintenance run, rendered
     /// for prompt injection. Uses the shared knowledge service so it sees the
     /// same graph the background tools will act on (global scope). Empty for
     /// other modes or when nothing is flagged.
-    private static func knowledgeConsolidationSection(mode: BackgroundRunMode) async -> String {
+    static func knowledgeConsolidationSection(
+        mode: BackgroundRunMode, knowledgeService: any KnowledgeService
+    ) async -> String {
         guard mode == .maintenance else { return "" }
-        let knowledgeService = await MainActor.run { Container.shared.knowledgeService() }
-        let candidates = await MemoryConsolidation.candidates(
-            knowledgeService: knowledgeService, spaceID: nil, agentID: nil
-        )
-        // Stamp everything surfaced this run so the next run rotates to different
-        // work, even if the agent decided some items needed no action.
-        try? await knowledgeService.markReviewed(
-            candidates.reviewedIDs, spaceID: nil, agentID: nil
-        )
-        let section = candidates.promptSection()
-        // Empty list still needs an explicit stop, so the agent doesn't wander
-        // off and start browsing the base (e.g. read-only bundled knowledge).
-        return section.isEmpty
-            ? "Nothing stood out in your knowledge this time — there's nothing to consolidate. Stop."
-            : section
+        return await (try? KnowledgeOperationCoordinator.shared.perform {
+            let candidates = await MemoryConsolidation.candidates(
+                knowledgeService: knowledgeService, spaceID: nil, agentID: nil
+            )
+            // Stamp everything surfaced this run so the next run rotates to different
+            // work, even if the agent decided some items needed no action.
+            try? await knowledgeService.markReviewed(
+                candidates.reviewedIDs, spaceID: nil, agentID: nil
+            )
+            let section = candidates.promptSection()
+            // Empty list still needs an explicit stop, so the agent doesn't wander
+            // off and start browsing the base (e.g. read-only bundled knowledge).
+            return section.isEmpty
+                ? "Nothing stood out in your knowledge this time — there's nothing to consolidate. Stop."
+                : section
+        }) ?? ""
     }
 
     /// `UserDefaults` key for a given agent's initiative focus-rotation history.
@@ -353,13 +346,17 @@ enum BackgroundPromptService {
         signalBox: BackgroundSignalBox,
         skillSession: SkillSession?,
         accessPolicy: SpaceAccessPolicy,
-        permissionPolicy: any ToolPermissionPolicy
-    ) async -> ([ChatMessage], Int) {
+        permissionPolicy: any ToolPermissionPolicy,
+        knowledgeService: (any KnowledgeService)? = nil,
+        modelContainer: ModelContainer? = nil,
+        onFailure: ([ChatMessage], Int, any Error) -> Void = { _, _, _ in }
+    ) async throws -> ([ChatMessage], Int) {
         let chatLoop = AgenticChatLoop(
             isBootstrap: false,
             throttler: PassthroughThrottler(),
             permissionPolicy: AlwaysAllowPolicy()
         )
+        chatLoop.propagatesStreamCancellation = true
         chatLoop.shouldTerminate = { signalBox.value != nil }
         if let skillSession {
             chatLoop.onToolsChanged = {
@@ -371,12 +368,15 @@ enum BackgroundPromptService {
                     agentID: agent.id,
                     additionalTools: tools,
                     preparationOnly: skillSession.toolAccess == .preparation,
+                    knowledgeService: knowledgeService,
+                    modelContainer: modelContainer,
                     skillSession: skillSession,
                     onSignal: { signalBox.set($0) }
                 )
                 return (updated.definitions, updated)
             }
         }
+        defer { chatLoop.settle() }
         do {
             let produced = try await chatLoop.run(
                 messages: apiMessages,
@@ -386,25 +386,11 @@ enum BackgroundPromptService {
                 chatService: chatService,
                 toolExecutor: registry
             )
-            let rounds = chatLoop.roundsExecuted
-            chatLoop.settle()
-            return (produced, rounds)
-        } catch is CancellationError {
-            AppLogger.warning(
-                "Chat loop cancelled (likely OS expiration)",
-                category: .backgroundPrompt
-            )
-            chatLoop.settle()
-            return ([], 0)
+            try Task.checkCancellation()
+            return (produced, chatLoop.roundsExecuted)
         } catch {
-            AppLogger.error(
-                "Chat loop error: \(private: error.localizedDescription)",
-                category: .backgroundPrompt
-            )
-            let checkpoint = chatLoop.buildCheckpoint()
-            let rounds = chatLoop.roundsExecuted
-            chatLoop.settle()
-            return (checkpoint, rounds)
+            onFailure(chatLoop.buildCheckpoint(), chatLoop.roundsExecuted, error)
+            throw error
         }
     }
 }

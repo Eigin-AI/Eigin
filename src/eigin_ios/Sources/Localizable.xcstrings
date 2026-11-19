@@ -1,6 +1,86 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "development.backgroundActivitiesBusy": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Et andet baggrundsarbejde er i gang."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another background run is in progress."
+          }
+        }
+      }
+    },
+    "development.backgroundActivitiesDue": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle baggrundsaktiviteter er klar til at køre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All background activities are due."
+          }
+        }
+      }
+    },
+    "development.makeBackgroundActivitiesDue": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gør alle aktiviteter klar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make All Activities Due"
+          }
+        }
+      }
+    },
+    "development.noBackgroundActivitiesDue": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen baggrundsaktiviteter er klar til at køre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No background activities are due."
+          }
+        }
+      }
+    },
+    "development.runDueBackgroundActivities": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kør aktiviteter, der er klar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run Due Activities"
+          }
+        }
+      }
+    },
     "integrations.notion.description": {
       "localizations": {
         "da": {
@@ -16247,6 +16327,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sometimes works on its own and reaches out when there’s something useful."
+          }
+        }
+      }
+    },
+    "settings.proactivity.cloudProviderRequired": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baggrundsaktiviteter kræver en cloududbyder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background activities need a cloud provider."
           }
         }
       }

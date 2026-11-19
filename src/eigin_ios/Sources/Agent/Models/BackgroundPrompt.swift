@@ -1,13 +1,13 @@
 import Foundation
 
-/// How often each background mode ideally runs.
-enum BackgroundRunMode: String, CaseIterable {
+/// Background activities with independent completion cooldowns.
+enum BackgroundRunMode: String, CaseIterable, Sendable {
     case preparation
     case maintenance
     case reflection
 
-    /// How often this mode ideally runs.
-    var preferredInterval: TimeInterval {
+    /// Minimum time between completed runs.
+    var cooldownInterval: TimeInterval {
         switch self {
         case .preparation: 6 * 3600 // 6 hours
         case .maintenance: 2 * 86400 // 2 days
@@ -15,7 +15,7 @@ enum BackgroundRunMode: String, CaseIterable {
         }
     }
 
-    /// UserDefaults key for last-run timestamp.
+    /// UserDefaults key for the last completed run timestamp.
     var lastRunKey: String {
         // The persisted key keeps preparation's existing run cadence.
         switch self {
@@ -23,27 +23,6 @@ enum BackgroundRunMode: String, CaseIterable {
         case .maintenance: "backgroundLastRun_maintenance"
         case .reflection: "backgroundLastRun_reflection"
         }
-    }
-
-    /// Chooses one opportunity fairly using persisted mode history.
-    static func select(
-        now: Date,
-        firstSelection: Date,
-        lastRun: (BackgroundRunMode) -> Date?
-    ) -> BackgroundRunMode {
-        var selected = BackgroundRunMode.preparation
-        var bestUrgency = -Double.infinity
-        for mode in allCases {
-            let elapsed = lastRun(mode)
-                .map { now.timeIntervalSince($0) } ??
-                (now.timeIntervalSince(firstSelection) + mode.preferredInterval)
-            let urgency = elapsed / mode.preferredInterval
-            if urgency > bestUrgency {
-                selected = mode
-                bestUrgency = urgency
-            }
-        }
-        return selected
     }
 }
 

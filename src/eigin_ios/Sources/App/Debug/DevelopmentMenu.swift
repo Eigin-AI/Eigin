@@ -9,8 +9,19 @@ struct DevelopmentMenu: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colors) private var colors
 
-    @State private var isRunning = false
-    @State private var lastResult: BackgroundPromptService.Result?
+    private enum BackgroundRunAction: Equatable {
+        case due
+        case activity(BackgroundRunMode)
+
+        var mode: BackgroundRunMode? {
+            if case .activity(let mode) = self { return mode }
+            return nil
+        }
+    }
+
+    @State private var activeBackgroundRun: BackgroundRunAction?
+    @State private var lastResults: [BackgroundPromptService.Result] = []
+    @State private var backgroundStatus: String?
     @State private var lastError: String?
     @State private var transcripts: [BackgroundPromptTranscript] = []
     @State private var selectedTranscript: BackgroundPromptTranscript?
@@ -27,43 +38,57 @@ struct DevelopmentMenu: View {
     var body: some View {
         List {
             Section(Localized.Settings.backgroundPrompt) {
+                backgroundRunButton(
+                    Localized.Development.triggerInitiativeRun,
+                    icon: "play.fill", color: .green, action: .activity(.preparation)
+                )
+                backgroundRunButton(
+                    Localized.Development.triggerMaintenanceRun,
+                    icon: "wrench.fill", color: .orange, action: .activity(.maintenance)
+                )
+                backgroundRunButton(
+                    Localized.Development.triggerReflectionRun,
+                    icon: "sparkles", color: .purple, action: .activity(.reflection)
+                )
+                backgroundRunButton(
+                    Localized.Development.runDueBackgroundActivities,
+                    icon: "play.circle", color: .green, action: .due
+                )
+
                 Button {
-                    runBackgroundPrompt(mode: .preparation)
-                } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "play.fill", color: .green)
-                        Text(Localized.Development.triggerInitiativeRun)
-                        Spacer()
-                        if isRunning {
-                            ProgressView()
-                        }
+                    lastResults = []
+                    backgroundStatus = nil
+                    lastError = nil
+                    if BackgroundPromptService.makeAllActivitiesDue() {
+                        backgroundStatus = Localized.Development.backgroundActivitiesDue
+                    } else {
+                        lastError = Localized.Development.backgroundActivitiesBusy
                     }
-                }
-                .disabled(isRunning)
-
-                Button {
-                    runBackgroundPrompt(mode: .maintenance)
                 } label: {
-                    HStack(spacing: Spacing.n8) {
-                        SettingsIcon(systemName: "wrench.fill", color: .orange)
-                        Text(Localized.Development.triggerMaintenanceRun)
-                        Spacer()
-                        if isRunning {
-                            ProgressView()
-                        }
+                    Label(
+                        Localized.Development.makeBackgroundActivitiesDue,
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                }
+                .disabled(activeBackgroundRun != nil)
+
+                if let backgroundStatus {
+                    Text(backgroundStatus)
+                        .typography(Typography.note)
+                        .foregroundStyle(colors.text.standard.muted)
+                }
+
+                ForEach(lastResults, id: \.mode) { result in
+                    if let mode = result.mode {
+                        Text(mode.rawValue.capitalized).typography(Typography.titleXS)
                     }
-                }
-                .disabled(isRunning)
-
-                Button {
-                    runBackgroundPrompt(mode: .reflection)
-                } label: {
-                    Label(Localized.Development.triggerReflectionRun, systemImage: "sparkles")
-                }
-                .disabled(isRunning)
-
-                if let result = lastResult {
-                    resultView(result)
+                    if result.status == .completed {
+                        resultView(result)
+                    } else {
+                        Text(result.reason ?? String(describing: result.status))
+                            .typography(Typography.note)
+                            .foregroundStyle(.red)
+                    }
                 }
 
                 if let error = lastError {
@@ -279,7 +304,7 @@ struct DevelopmentMenu: View {
 
             Section(Localized.Development.Section.backgroundScheduler) {
                 Button {
-                    BackgroundPromptScheduler.reschedule(for: .balanced)
+                    BackgroundPromptScheduler.reschedule(for: .balanced, in: modelContext)
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "clock.arrow.circlepath", color: .purple)
@@ -288,7 +313,7 @@ struct DevelopmentMenu: View {
                 }
 
                 Button {
-                    BackgroundPromptScheduler.reschedule(for: .proactive)
+                    BackgroundPromptScheduler.reschedule(for: .proactive, in: modelContext)
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "clock.arrow.circlepath", color: .indigo)
@@ -297,7 +322,7 @@ struct DevelopmentMenu: View {
                 }
 
                 Button(role: .destructive) {
-                    BackgroundPromptScheduler.reschedule(for: .reactive)
+                    BackgroundPromptScheduler.reschedule(for: .reactive, in: modelContext)
                 } label: {
                     HStack(spacing: Spacing.n8) {
                         SettingsIcon(systemName: "xmark.circle", color: .red)
@@ -407,46 +432,63 @@ struct DevelopmentMenu: View {
         }
     }
 
-    private func runBackgroundPrompt(mode: BackgroundRunMode) {
-        isRunning = true
-        lastResult = nil
+    private func backgroundRunButton(
+        _ title: String, icon: String, color: Color, action: BackgroundRunAction
+    ) -> some View {
+        Button {
+            runBackgroundPrompt(action)
+        } label: {
+            HStack(spacing: Spacing.n8) {
+                SettingsIcon(systemName: icon, color: color)
+                Text(title)
+                Spacer()
+                if activeBackgroundRun == action { ProgressView() }
+            }
+        }
+        .disabled(activeBackgroundRun != nil)
+    }
+
+    private func runBackgroundPrompt(_ action: BackgroundRunAction) {
+        activeBackgroundRun = action
+        let mode = action.mode
+        lastResults = []
+        backgroundStatus = nil
         lastError = nil
 
-        Task {
-            var bgTaskID = UIBackgroundTaskIdentifier.invalid
-            bgTaskID = UIApplication.shared.beginBackgroundTask {
+        var bgTaskID = UIBackgroundTaskIdentifier.invalid
+        let work = Task { @MainActor in
+            let container = modelContext.container
+            let results = await BackgroundPromptService.runOpportunity(
+                container: container, modeOverride: mode
+            ) { result in
+                var preview = result
+                if mode != nil { preview.deliverAt = Date().addingTimeInterval(1) }
+                let delivery = await BackgroundPromptScheduler.deliver(
+                    preview,
+                    container: container
+                )
+                if !delivery.succeeded { lastError = "Background delivery: \(delivery)" }
+            }
+            switch results {
+            case .ran(let activities): lastResults = activities
+            case .localProvider: backgroundStatus = Localized.Settings.Proactivity
+                .cloudProviderRequired
+            case .nothingDue: backgroundStatus = Localized.Development.noBackgroundActivitiesDue
+            case .busy: lastError = Localized.Development.backgroundActivitiesBusy
+            default: lastError = "Background run: \(results)"
+            }
+            transcripts = BackgroundPromptDebug.getTranscripts()
+            activeBackgroundRun = nil
+            if bgTaskID != .invalid {
                 UIApplication.shared.endBackgroundTask(bgTaskID)
                 bgTaskID = .invalid
             }
-
-            let container = modelContext.container
-            let result = await BackgroundPromptService.run(container: container, modeOverride: mode)
-
-            await MainActor.run {
-                lastResult = result
-                isRunning = false
-                // If agent chose to notify, also fire the local notification
-                // so we can test the full flow including deep linking.
-                if result.didNotify, let agentID = result.agentID {
-                    Task {
-                        let container = modelContext.container
-                        await BackgroundPromptScheduler.sendNotification(
-                            container: container,
-                            title: result.notificationTitle ?? "Background Prompt",
-                            body: String((result.notificationBody ?? "").prefix(200)),
-                            agentID: agentID,
-                            message: result.notificationBody ?? "",
-                            summary: result.summary,
-                            deliverAt: Date().addingTimeInterval(1),
-                            agentName: result.agentName,
-                            agentEmoji: result.agentEmoji
-                        )
-                    }
-                }
-
-                if bgTaskID != .invalid {
-                    UIApplication.shared.endBackgroundTask(bgTaskID)
-                }
+        }
+        bgTaskID = UIApplication.shared.beginBackgroundTask {
+            work.cancel()
+            if bgTaskID != .invalid {
+                UIApplication.shared.endBackgroundTask(bgTaskID)
+                bgTaskID = .invalid
             }
         }
     }
