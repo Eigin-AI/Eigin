@@ -31,12 +31,15 @@ struct SavePreparationTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Save a useful sourced finding for active intents immediately. Use the same stable id to update the same finding. observed_at is when you checked the source, not when you edit the note. Findings are context for later foreground work, not completed tasks. Only link intents in the same space.",
+            description: "Save a useful sourced finding for active intents immediately. Recheck sources before updating a finding with the same stable id. Findings are context for later foreground work, not completed tasks. Only link intents in the same space.",
             parameters: JSONSchema(type: "object", properties: [
-                "id": .init(type: "string", description: "Stable snake_case finding ID."),
+                "id": .init(
+                    type: "string",
+                    description: "Stable snake_case finding ID: 1–100 lowercase letters, digits or underscores, starting with a letter."
+                ),
                 "intent_ids": .init(
                     type: "array",
-                    description: "Related active intent UUIDs.",
+                    description: "1–10 related active intent UUIDs.",
                     items: .init(type: "string")
                 ),
                 "content": .init(
@@ -45,36 +48,48 @@ struct SavePreparationTool: Tool {
                 ),
                 "sources": .init(
                     type: "array",
-                    description: "Source URLs or provider item identifiers.",
+                    description: "1–20 nonempty source URLs or provider item identifiers, each at most 2000 characters.",
                     items: .init(type: "string")
                 ),
-                "observed_at": .init(
-                    type: "string",
-                    description: "ISO8601 time when the sources were checked."
-                ),
-            ], required: ["id", "intent_ids", "content", "sources", "observed_at"])
+            ], required: ["id", "intent_ids", "content", "sources"])
         )
     }
 
     @MainActor func execute(_ call: ToolCall, agent: Agent) async -> ToolResult {
         do {
-            guard let args = ToolHelpers.parseArguments(call.function.arguments),
-                  let id = args["id"] as? String, id.range(
-                      of: "^[a-z][a-z0-9_]{0,99}$",
-                      options: .regularExpression
-                  ) != nil,
-                  let texts = args["intent_ids"] as? [String], !texts.isEmpty, texts.count <= 10,
-                  let content = args["content"] as? String, !content.isEmpty, content.count <= 6000,
-                  let sources = args["sources"] as? [String], !sources.isEmpty, sources.count <= 20,
-                  sources.allSatisfy({ !$0.isEmpty && $0.count <= 2000 }),
-                  let observed = args["observed_at"] as? String,
-                  let date = ISO8601DateFormatter().date(from: observed),
-                  date <= Date.now.addingTimeInterval(60)
+            guard let args = ToolHelpers.parseArguments(call.function.arguments) else {
+                throw PreparationValidationError(
+                    message: "Provide save_preparation arguments as a JSON object."
+                )
+            }
+            guard let id = args["id"] as? String,
+                  id.range(of: "^[a-z][a-z0-9_]{0,99}$", options: .regularExpression) != nil
             else {
-                throw InitiativeError.invalidContent
+                throw PreparationValidationError(
+                    message: "id must be 1–100 lowercase letters, digits or underscores, starting with a letter."
+                )
+            }
+            guard let texts = args["intent_ids"] as? [String], !texts.isEmpty, texts.count <= 10,
+                  texts.allSatisfy({ UUID(uuidString: $0) != nil })
+            else {
+                throw PreparationValidationError(
+                    message: "intent_ids must contain 1–10 valid intent UUIDs."
+                )
+            }
+            guard let content = args["content"] as? String, !content.isEmpty, content.count <= 6000
+            else {
+                throw PreparationValidationError(
+                    message: "content must be a nonempty string of at most 6000 characters."
+                )
+            }
+            guard let sources = args["sources"] as? [String], !sources.isEmpty, sources.count <= 20,
+                  sources.allSatisfy({ !$0.isEmpty && $0.count <= 2000 })
+            else {
+                throw PreparationValidationError(
+                    message: "sources must contain 1–20 nonempty source URLs or provider item identifiers, each at most 2000 characters."
+                )
             }
             let ids = texts.compactMap(UUID.init(uuidString:))
-            guard ids.count == texts.count else { throw InitiativeError.inaccessibleIntent }
             let context = ModelContext(modelContainer)
             let intents = try context.fetch(FetchDescriptor<Intent>())
                 .filter { ids.contains($0.id) }
@@ -84,7 +99,9 @@ struct SavePreparationTool: Tool {
                       $0.agentID == agent.id && $0.intentStatus == .active && $0.spaceID == first
                           .spaceID && accessPolicy.canAccess(itemSpaceID: $0.spaceID) })
             else {
-                throw InitiativeError.inaccessibleIntent
+                throw PreparationValidationError(
+                    message: "intent_ids must refer to accessible active intents belonging to this agent in the same space."
+                )
             }
             let scopedID = "\(agent.id.uuidString)_\(first.spaceID?.uuidString ?? "global")_\(id)"
                 .lowercased().replacingOccurrences(
@@ -104,7 +121,10 @@ struct SavePreparationTool: Tool {
                         name: "sources",
                         value: .list(items: sources.map { .string(value: $0) })
                     ),
-                    FirmField(name: "observed_at", value: .dateTime(value: date.ISO8601Format())),
+                    FirmField(
+                        name: "observed_at",
+                        value: .dateTime(value: Date.now.ISO8601Format())
+                    ),
                 ]
             )
             try await knowledgeService.addEntity(
@@ -125,5 +145,13 @@ struct SavePreparationTool: Tool {
                 isError: true
             )
         }
+    }
+}
+
+/// Reports which preparation argument needs correction.
+private struct PreparationValidationError: LocalizedError {
+    let message: String
+    var errorDescription: String? {
+        message
     }
 }

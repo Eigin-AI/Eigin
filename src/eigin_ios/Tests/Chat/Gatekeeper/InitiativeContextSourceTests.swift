@@ -178,33 +178,41 @@ struct InitiativeContextSourceTests {
             context: context
         )
         let knowledge = DefaultKnowledgeService(modelContainer: f.container)
-        try await knowledge.addEntity(
-            FirmEntity(id: "preparation.long_finding", entityType: "preparation", fields: [
-                .init(
-                    name: "content",
-                    value: .string(value: String(repeating: "Long finding. ", count: 400))
-                ),
-                .init(
-                    name: "intent_ids",
-                    value: .list(items: [.string(value: intent.id.uuidString)])
-                ),
-                .init(
-                    name: "sources",
-                    value: .list(items: [.string(value: "https://example.com/observed-source")])
-                ),
-                .init(name: "observed_at", value: .dateTime(value: "2026-10-01T07:00:00Z")),
-            ]),
-            spaceID: nil,
-            agentID: f.agent.id,
-            chatID: nil
+        let tool = SavePreparationTool(
+            modelContainer: f.container,
+            knowledgeService: knowledge,
+            accessPolicy: SpaceAccessPolicy(currentSpaceID: nil, publicSpaceIDs: [])
         )
+        let arguments: [String: Any] = [
+            "id": "long_finding",
+            "intent_ids": [intent.id.uuidString],
+            "content": String(repeating: "Long finding. ", count: 400),
+            "sources": ["https://example.com/observed-source"],
+        ]
+        let result = try await tool.execute(ToolCall(
+            id: "save", type: "function",
+            function: .init(name: "save_preparation", arguments: String(
+                decoding: JSONSerialization.data(withJSONObject: arguments), as: UTF8.self
+            ))
+        ), agent: f.agent)
+        #expect(!result.isError, "\(result.content)")
+        let finding = try #require(try await knowledge.unexpiredEntities(
+            type: "preparation", spaceID: nil, agentID: f.agent.id
+        ).first)
+        let observed = try #require(finding.fields.first { $0.name == "observed_at" })
+        guard case .dateTime(let observedAt) = observed.value else {
+            Issue.record("Expected a saved timestamp")
+            return
+        }
         let source = InitiativeContextSource(
             knowledgeService: knowledge,
             modelContainer: f.container
         )
         let hint = try #require(await source.render(input(chatID: chatID, agentID: f.agent.id)))
         #expect(hint.contains("https://example.com/observed-source"))
-        #expect(hint.contains("2026-10-01T07:00:00Z"))
+        let savedTime = try #require(ISO8601DateFormatter().date(from: observedAt))
+        #expect(hint.contains(savedTime.ISO8601Format()))
+        #expect(hint.contains("Long finding."))
         #expect(hint.count < 4000)
     }
 
