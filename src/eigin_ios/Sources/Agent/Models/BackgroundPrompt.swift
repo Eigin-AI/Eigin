@@ -4,19 +4,46 @@ import Foundation
 enum BackgroundRunMode: String, CaseIterable {
     case preparation
     case maintenance
+    case reflection
 
     /// How often this mode ideally runs.
     var preferredInterval: TimeInterval {
         switch self {
         case .preparation: 6 * 3600 // 6 hours
         case .maintenance: 2 * 86400 // 2 days
+        case .reflection: 6 * 3600 // 6 hours
         }
     }
 
     /// UserDefaults key for last-run timestamp.
     var lastRunKey: String {
         // The persisted key keeps preparation's existing run cadence.
-        self == .preparation ? "backgroundLastRun_initiative" : "backgroundLastRun_maintenance"
+        switch self {
+        case .preparation: "backgroundLastRun_initiative"
+        case .maintenance: "backgroundLastRun_maintenance"
+        case .reflection: "backgroundLastRun_reflection"
+        }
+    }
+
+    /// Chooses one opportunity fairly using persisted mode history.
+    static func select(
+        now: Date,
+        firstSelection: Date,
+        lastRun: (BackgroundRunMode) -> Date?
+    ) -> BackgroundRunMode {
+        var selected = BackgroundRunMode.preparation
+        var bestUrgency = -Double.infinity
+        for mode in allCases {
+            let elapsed = lastRun(mode)
+                .map { now.timeIntervalSince($0) } ??
+                (now.timeIntervalSince(firstSelection) + mode.preferredInterval)
+            let urgency = elapsed / mode.preferredInterval
+            if urgency > bestUrgency {
+                selected = mode
+                bestUrgency = urgency
+            }
+        }
+        return selected
     }
 }
 
@@ -90,6 +117,8 @@ enum BackgroundPrompt {
         let modeText: String = switch mode {
         case .preparation: Prompt.Background.preparation
         case .maintenance: Prompt.Background.maintenance
+        case .reflection: Prompt.Background
+            .reflection(proactive: proactivity == .proactive ? "yes" : "")
         }
 
         var prompt = Prompt.Background.main(

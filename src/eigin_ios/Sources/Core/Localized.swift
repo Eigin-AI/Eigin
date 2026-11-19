@@ -869,6 +869,11 @@ enum Localized {
             Localized.get("development.triggerMaintenanceRun")
         }
 
+        /// Debug action that runs a background reflection
+        static var triggerReflectionRun: String {
+            Localized.get("development.triggerReflectionRun")
+        }
+
         /// Navigation link to app log viewer
         static var viewAppLog: String {
             Localized.get("development.viewAppLog")

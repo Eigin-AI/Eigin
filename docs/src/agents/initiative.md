@@ -5,6 +5,7 @@ Agreed notifications appear in **For you** and, when enabled, on the device. Bot
 | Kind | Tool | Opening it |
 | --- | --- | --- |
 | Recurring initiative | `set_initiatives` | Starts current work on an intent |
+| Reflection | `background_notify` | Shows a useful observation or completed work and briefing; waits for a reply |
 | One-off follow-up | `follow_up` | Shows the prepared message and briefing in the original space; waits for a reply |
 
 ## Scheduling
@@ -25,6 +26,8 @@ The avatar in either chat header opens the newest five due messages across the a
 
 ## Background work
 
-With permission, the agent prepares context and maintains knowledge. Balanced runs occasionally; proactive runs more often. Reactive keeps explicitly agreed notifications while disabling background work.
+With permission, the agent reflects on recent activity, prepares context, and maintains knowledge. Balanced reaches out selectively; proactive works and shares useful observations more often. Reactive keeps explicitly agreed notifications while disabling background work.
+
+Reflections focus on unscheduled goals and recent conversations, avoiding topics covered by prior or upcoming outreach. With balanced or proactive enabled, the selected model may receive excerpts from multiple accessible chats, saved knowledge, goals, and outreach history without an active chat. They use only tools already allowed in the background and can stay silent. Saved reflections appear in For you when due, even without notification permission.
 
 Preparation uses authorized read tools and saves scoped findings for later conversations. Maintenance consolidates knowledge and may ask for clarification.

@@ -42,8 +42,18 @@ extension ToolRegistry {
 
     /// Full chat tool set from all kits.
     @MainActor
-    private static func allChatTools(context: ToolContext) -> [any Tool] {
-        allKits.flatMap { $0.tools(context: context) }
+    private static func allChatTools(
+        context: ToolContext, backgroundKnowledge: (any KnowledgeService)? = nil
+    ) -> [any Tool] {
+        allKits.flatMap { kit in
+            if kit == KnowledgeToolKit.self, let backgroundKnowledge {
+                return KnowledgeToolKit.backgroundTools(
+                    context: context,
+                    knowledgeService: backgroundKnowledge
+                )
+            }
+            return kit.tools(context: context)
+        }
     }
 
     /// Chat tool set filtered by a permission policy and active skills.
@@ -232,6 +242,7 @@ extension ToolRegistry {
         ),
         permissionPolicy: (any ToolPermissionPolicy)? = nil,
         agentID: UUID? = nil,
+        knowledgeService: (any KnowledgeService)? = nil,
         additionalTools: [any Tool] = [],
         preparationOnly: Bool = false,
         skillSession: SkillSession? = nil,
@@ -243,7 +254,7 @@ extension ToolRegistry {
             canPromptUser: false,
             skillSession: skillSession
         )
-        var tools = allChatTools(context: context)
+        var tools = allChatTools(context: context, backgroundKnowledge: knowledgeService)
 
         // Background uses its own notification tool and only reads intents.
         let excludedFromBackground: Set<String> = [

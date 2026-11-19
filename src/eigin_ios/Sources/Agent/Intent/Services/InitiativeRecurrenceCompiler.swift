@@ -16,15 +16,7 @@ enum InitiativeRecurrenceCompiler {
 
         var groups: [Group: [Int: Set<UUID>]] = [:]
         for initiative in initiatives {
-            let days = try weekdays(for: initiative.schedule)
-            guard let hour = initiative.schedule.hour,
-                  let minute = initiative.schedule.minute
-            else {
-                throw InitiativeScheduleError.explicitTimeRequired
-            }
-            guard (0 ... 23).contains(hour), (0 ... 59).contains(minute) else {
-                throw InitiativeScheduleError.invalidTime
-            }
+            let (days, hour, minute) = try validate(initiative.schedule)
             let group = Group(
                 initiativeID: initiative.initiativeID,
                 agentID: initiative.agentID,
@@ -55,6 +47,18 @@ enum InitiativeRecurrenceCompiler {
             )
         }
         return patterns
+    }
+
+    /// Validates a schedule against supported initiative recurrence rules.
+    static func validate(_ schedule: IntentSchedule) throws -> (Set<Int>, Int, Int) {
+        let days = try weekdays(for: schedule)
+        guard let hour = schedule.hour, let minute = schedule.minute else {
+            throw InitiativeScheduleError.explicitTimeRequired
+        }
+        guard (0 ... 23).contains(hour), (0 ... 59).contains(minute) else {
+            throw InitiativeScheduleError.invalidTime
+        }
+        return (days, hour, minute)
     }
 
     private static func weekdays(for schedule: IntentSchedule) throws -> Set<Int> {

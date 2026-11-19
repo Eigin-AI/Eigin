@@ -92,22 +92,7 @@ enum BackgroundPromptScheduler {
     ) async {
         AppLogger.info("Background task fired", category: .backgroundPrompt)
 
-        let result = await BackgroundPromptService.run(container: container)
-
-        var deliverySucceeded = true
-        if result.didNotify, let agentID = result.agentID {
-            deliverySucceeded = await sendNotification(
-                container: container,
-                title: result.notificationTitle ?? "New message",
-                body: result.notificationBody ?? "",
-                agentID: agentID,
-                message: result.notificationBody ?? "",
-                summary: result.summary,
-                deliverAt: result.deliverAt,
-                agentName: result.agentName,
-                agentEmoji: result.agentEmoji
-            )
-        }
+        let deliverySucceeded = await runAndDeliver(container: container)
 
         // Always reschedule so the chain never breaks.
         // Fall back to .balanced if the agent fetch fails.
@@ -125,6 +110,26 @@ enum BackgroundPromptScheduler {
         task.setTaskCompleted(success: deliverySucceeded)
     }
 
+    /// Runs a background turn and saves any outreach it produces.
+    static func runAndDeliver(
+        container: ModelContainer, modeOverride: BackgroundRunMode? = nil,
+        model: (any ChatService)? = nil, scheduler: (any FollowUpScheduling)? = nil
+    ) async -> Bool {
+        let result = await BackgroundPromptService.run(
+            container: container,
+            modeOverride: modeOverride,
+            model: model
+        )
+        guard result.didNotify, let agentID = result.agentID else { return true }
+        return await sendNotification(
+            container: container,
+            title: result.notificationTitle ?? "New message", body: result.notificationBody ?? "",
+            agentID: agentID, message: result.notificationBody ?? "", summary: result.summary,
+            deliverAt: result.deliverAt, agentName: result.agentName, agentEmoji: result.agentEmoji,
+            scheduler: scheduler
+        )
+    }
+
     @discardableResult
     static func sendNotification(
         container: ModelContainer,
@@ -135,12 +140,16 @@ enum BackgroundPromptScheduler {
         summary: String? = nil,
         deliverAt: Date?,
         agentName: String? = nil,
-        agentEmoji: String? = nil
+        agentEmoji: String? = nil,
+        scheduler: (any FollowUpScheduling)? = nil
     ) async -> Bool {
         do {
-            _ = try await DefaultFollowUpScheduler(container: container).schedule(
+            let delivery = await MainActor
+                .run { scheduler ?? DefaultFollowUpScheduler(container: container) }
+            _ = try await delivery.schedule(
                 title: title, body: body, message: message, summary: summary, deliverAt: deliverAt,
-                agentID: agentID, agentName: agentName, agentEmoji: agentEmoji
+                agentID: agentID, agentName: agentName, agentEmoji: agentEmoji, spaceID: nil,
+                canPromptUser: false
             )
             return true
         } catch {

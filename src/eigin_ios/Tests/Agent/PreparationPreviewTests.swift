@@ -14,11 +14,15 @@ struct PreparationPreviewTests {
                 proactivity: .proactive,
                 mode: mode
             )
-            #expect(balanced == proactive)
+            #expect((balanced == proactive) == (mode != .reflection))
             #expect(balanced.components(separatedBy: "You have a moment to yourself.").count == 2)
             if mode == .preparation {
                 #expect(balanced.contains("Save findings as you go with save_preparation"))
                 #expect(!balanced.contains("background_notify"))
+            } else if mode == .reflection {
+                #expect(balanced.contains("Be selective"))
+                #expect(proactive.contains("Be proactive"))
+                #expect(balanced.contains("background_notify"))
             } else {
                 #expect(balanced.contains("tidy the knowledge"))
                 #expect(balanced.contains("background_notify"))

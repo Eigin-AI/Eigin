@@ -13,6 +13,8 @@ struct GetKnowledgeTool: Tool {
     let knowledgeService: any KnowledgeService
     let spaceID: UUID?
     let agentID: UUID?
+    /// Exposes the originating chat ID and permits reading nearby messages.
+    var exposesSourceChat = true
     var isSmallContext: Bool = false
     var displayName: String {
         Self.capability.displayName
@@ -49,45 +51,42 @@ struct GetKnowledgeTool: Tool {
                 )
             )
         }
+        var properties: [String: JSONSchema.Property] = [
+            "type": .init(
+                type: "string",
+                description: "Knowledge type.",
+                enum: ["actor", "thing", "fact", "output", "note"]
+            ),
+            "id": .init(
+                type: "string",
+                description: "Knowledge ID (e.g. \"daniel_rothmann\", \"eigin\")."
+            ),
+            "include_related": .init(
+                type: "boolean",
+                description: "If true, include full details of the top related entities (sorted by recency). Defaults to false."
+            ),
+            "related_limit": .init(
+                type: "integer",
+                description: "Maximum related entities to expand when include_related is true. Defaults to 5."
+            ),
+        ]
+        var description = "Get full details for a single piece of knowledge by type and ID. Always returns all fields and the complete relationship ID lists. Optionally include expanded details of the top related entities."
+        if exposesSourceChat {
+            description += " You can also include nearby messages from the source chat."
+            properties.merge([
+                "include_context": .init(
+                    type: "boolean",
+                    description: "If true and this entry was created in a chat, include surrounding messages from that chat. Defaults to false."
+                ),
+                "context_characters": .init(
+                    type: "integer",
+                    description: "Total characters of surrounding chat context to include. Split evenly before/after the entry. Defaults to 2000."
+                ),
+            ], uniquingKeysWith: { _, new in new })
+        }
         return ToolDefinition(
-            name: name,
-            description: """
-            Get full details for a single piece of knowledge by type and ID. \
-            Always returns all fields and the complete relationship ID lists. \
-            Optionally include expanded details of the top related entities \
-            and/or surrounding chat context from when this entry was created.
-            """,
-            parameters: JSONSchema(
-                type: "object",
-                properties: [
-                    "type": .init(
-                        type: "string",
-                        description: "Knowledge type.",
-                        enum: ["actor", "thing", "fact", "output", "note"]
-                    ),
-                    "id": .init(
-                        type: "string",
-                        description: "Knowledge ID (e.g. \"daniel_rothmann\", \"eigin\")."
-                    ),
-                    "include_related": .init(
-                        type: "boolean",
-                        description: "If true, include full details of the top related entities (sorted by recency). Defaults to false."
-                    ),
-                    "related_limit": .init(
-                        type: "integer",
-                        description: "Maximum related entities to expand when include_related is true. Defaults to 5."
-                    ),
-                    "include_context": .init(
-                        type: "boolean",
-                        description: "If true and this entry was created in a chat, include surrounding messages from that chat. Defaults to false."
-                    ),
-                    "context_characters": .init(
-                        type: "integer",
-                        description: "Total characters of surrounding chat context to include. Split evenly before/after the entry. Defaults to 2000."
-                    ),
-                ],
-                required: ["type", "id"]
-            )
+            name: name, description: description,
+            parameters: JSONSchema(type: "object", properties: properties, required: ["type", "id"])
         )
     }
 
@@ -158,7 +157,7 @@ struct GetKnowledgeTool: Tool {
             )
 
             // Look up the FirmSource for chatID and context expansion.
-            if let source = try await knowledgeService.getFirmSource(
+            if exposesSourceChat, let source = try await knowledgeService.getFirmSource(
                 type: entityType,
                 id: entityID,
                 spaceID: spaceID,

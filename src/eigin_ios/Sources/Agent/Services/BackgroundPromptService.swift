@@ -56,6 +56,7 @@ enum BackgroundPromptService {
     static func run(
         container: ModelContainer,
         modeOverride: BackgroundRunMode? = nil,
+        model: (any ChatService)? = nil,
         transcriptSink: any BackgroundPromptTranscriptSink = defaultSink
     ) async -> Result {
         let context = ModelContext(container)
@@ -92,12 +93,12 @@ enum BackgroundPromptService {
         // Relay and on-device providers carry no keychain API key, so this resolves to an empty
         // token and the turn proceeds; relay is authorized per-request via the credit wallet.
         let keychain = DefaultKeychainService(serviceKey: AppKeys.keychainServiceName)
-        guard await ProviderCredentials.apiToken(
+        if model == nil, await ProviderCredentials.apiToken(
             baseURL: provider.baseURL,
             providerID: provider.id,
             keychain: keychain,
             credentialStores: Container.shared.providerCredentialResolver()
-        ) != nil else {
+        ) == nil {
             AppLogger.warning("Provider credentials not available", category: .backgroundPrompt)
             return silentResult
         }
@@ -114,7 +115,7 @@ enum BackgroundPromptService {
 
         // Build system prompt with active intents.
         let intentService = DefaultIntentService(modelContainer: container)
-        let promptIntents = await (try? intentService.activeIntents(
+        let promptIntents = mode == .reflection ? [] : await (try? intentService.activeIntents(
             agentID: agent.id, limit: mode == .preparation ? Int.max : 5, accessPolicy: accessPolicy
         )) ?? []
         let upcomingInitiatives: [String]
@@ -160,26 +161,43 @@ enum BackgroundPromptService {
             category: .backgroundPrompt
         )
 
+        // Load the agent's permission policy so user-granted tools are available.
+        nonisolated(unsafe) let contextRef = context
+        let permissionPolicy = await MainActor.run {
+            PermissionPolicyLoader.load(for: agentRef, chatID: nil, modelContext: contextRef)
+        }
+
         // For consolidation, compute the candidate list (duplicates, conflicts,
         // stale entries) fresh and inject it into the prompt.
-        let knowledgeSection = await knowledgeConsolidationSection(mode: mode)
+        let knowledgeSection: String
+        if mode == .reflection {
+            do {
+                knowledgeSection = try await ReflectionContext.load(
+                    container: container, agentID: agent.id, accessPolicy: accessPolicy,
+                    permissionPolicy: permissionPolicy
+                )
+            } catch {
+                AppLogger.warning(
+                    "Reflection history unavailable, skipping",
+                    category: .backgroundPrompt
+                )
+                recordRun(mode: mode)
+                return silentResult
+            }
+        } else {
+            knowledgeSection = await knowledgeConsolidationSection(mode: mode)
+        }
 
         let systemPrompt = await MainActor.run {
             BackgroundPrompt.build(
                 agent: agentRef,
                 proactivity: proactivity,
                 activeIntents: promptIntents,
-                recentNotifications: recentNotifications,
+                recentNotifications: mode == .reflection ? [] : recentNotifications,
                 mode: mode,
                 upcomingInitiatives: upcomingInitiatives,
                 additionalContext: knowledgeSection
             )
-        }
-
-        // Load the agent's permission policy so user-granted tools are available.
-        nonisolated(unsafe) let contextRef = context
-        let permissionPolicy = await MainActor.run {
-            PermissionPolicyLoader.load(for: agentRef, chatID: nil, modelContext: contextRef)
         }
 
         // Build tool registry - includes tools the agent has .always permission for.
@@ -194,7 +212,10 @@ enum BackgroundPromptService {
         let registry = await ToolRegistry.background(
             accessPolicy: accessPolicy,
             permissionPolicy: permissionPolicy,
-            agentID: mode == .preparation ? agentRef.id : nil,
+            agentID: mode == .maintenance ? nil : agentRef.id,
+            knowledgeService: mode == .reflection ? DefaultKnowledgeService(
+                modelContainer: container, initialAccessPolicy: accessPolicy
+            ) : nil,
             preparationOnly: mode == .preparation,
             skillSession: skillSession,
             onSignal: { signalBox.set($0) }
@@ -208,7 +229,7 @@ enum BackgroundPromptService {
         ]
 
         // Use AgenticChatLoop for full provider compatibility (thought signatures, etc.).
-        let chatService: ChatService = DefaultChatService(
+        let chatService: ChatService = model ?? DefaultChatService(
             keychainService: keychain,
             providerCredentialResolver: Container.shared.providerCredentialResolver(),
             consentStore: Container.shared.aiConsentStore()
@@ -279,19 +300,14 @@ enum BackgroundPromptService {
 
     /// Picks the most overdue background mode based on elapsed time vs preferred interval.
     private static func selectMode() -> BackgroundRunMode {
-        var bestMode = BackgroundRunMode.preparation
-        var bestUrgency = -1.0
-
-        for mode in BackgroundRunMode.allCases {
-            let lastRun = UserDefaults.standard.object(forKey: mode.lastRunKey) as? Date
-            let elapsed = lastRun.map { Date().timeIntervalSince($0) } ?? mode.preferredInterval
-            let urgency = elapsed / mode.preferredInterval
-            if urgency > bestUrgency {
-                bestUrgency = urgency
-                bestMode = mode
-            }
+        let defaults = UserDefaults.standard
+        let now = Date.now
+        let key = "backgroundFirstModeSelection"
+        let firstSelection = defaults.object(forKey: key) as? Date ?? now
+        defaults.set(firstSelection, forKey: key)
+        return BackgroundRunMode.select(now: now, firstSelection: firstSelection) {
+            defaults.object(forKey: $0.lastRunKey) as? Date
         }
-        return bestMode
     }
 
     private static func recordRun(mode: BackgroundRunMode) {

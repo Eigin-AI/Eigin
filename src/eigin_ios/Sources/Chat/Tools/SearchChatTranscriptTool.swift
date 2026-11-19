@@ -13,6 +13,7 @@ struct SearchChatTranscriptTool: Tool {
     var isSmallContext: Bool = false
     let spaceID: UUID?
     let currentChatID: UUID?
+    let accessPolicy: SpaceAccessPolicy?
     var displayName: String {
         Self.capability.displayName
     }
@@ -29,9 +30,10 @@ struct SearchChatTranscriptTool: Tool {
         .always
     }
 
-    init(spaceID: UUID? = nil, currentChatID: UUID? = nil) {
+    init(spaceID: UUID? = nil, currentChatID: UUID? = nil, accessPolicy: SpaceAccessPolicy? = nil) {
         self.spaceID = spaceID
         self.currentChatID = currentChatID
+        self.accessPolicy = accessPolicy
     }
 
     func definition() -> ToolDefinition {
@@ -69,6 +71,7 @@ struct SearchChatTranscriptTool: Tool {
             agent: agent,
             spaceID: spaceID,
             currentChatID: currentChatID,
+            accessPolicy: accessPolicy,
             search: true
         )
     }

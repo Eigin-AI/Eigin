@@ -12,6 +12,7 @@ struct ListChatsTool: Tool {
     let name = "list_chats"
     var isSmallContext: Bool = false
     let spaceID: UUID?
+    let accessPolicy: SpaceAccessPolicy?
     var displayName: String {
         Self.capability.displayName
     }
@@ -28,8 +29,9 @@ struct ListChatsTool: Tool {
         .always
     }
 
-    init(spaceID: UUID? = nil) {
+    init(spaceID: UUID? = nil, accessPolicy: SpaceAccessPolicy? = nil) {
         self.spaceID = spaceID
+        self.accessPolicy = accessPolicy
     }
 
     func definition() -> ToolDefinition {
@@ -52,7 +54,7 @@ struct ListChatsTool: Tool {
         let id = toolCall.id
 
         let args = ToolHelpers.parseArguments(toolCall.function.arguments)
-        let limit = (args?["limit"] as? Int) ?? 10
+        let limit = min(50, max(1, (args?["limit"] as? Int) ?? 10))
 
         guard let context = agent.modelContext else {
             return ToolResult(
@@ -75,9 +77,17 @@ struct ListChatsTool: Tool {
                 sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
             )
         }
-        descriptor.fetchLimit = limit
-
-        guard let chats = try? context.fetch(descriptor) else {
+        descriptor.fetchLimit = 50
+        var chats: [Chat] = []
+        do {
+            while chats.count < limit {
+                let page = try context.fetch(descriptor)
+                chats += page.filter { accessPolicy?.canAccess(itemSpaceID: $0.spaceID) != false }
+                    .prefix(limit - chats.count)
+                if page.count < 50 { break }
+                descriptor.fetchOffset = (descriptor.fetchOffset ?? 0) + page.count
+            }
+        } catch {
             return ToolResult(
                 toolCallID: id,
                 content: ToolHelpers.output(errors: ["Failed to fetch chats"]),

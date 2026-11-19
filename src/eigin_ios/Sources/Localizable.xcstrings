@@ -16223,13 +16223,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forbereder lejlighedsvis viden til dine mål og vedligeholder sin hukommelse. Planlagte initiativer fungerer uafhængigt."
+            "value": "Arbejder nogle gange på egen hånd og kontakter dig, når der er noget nyttigt. Planlagte initiativer og aftalte opfølgninger fungerer stadig på alle niveauer."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Occasionally prepares context for your intents and maintains its knowledge. Scheduled initiatives work independently."
+            "value": "Sometimes works on its own and reaches out when there’s something useful. Scheduled initiatives and agreed follow-ups still work at every level."
           }
         }
       }
@@ -16240,13 +16240,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forbereder lejlighedsvis viden og vedligeholder hukommelsen."
+            "value": "Arbejder nogle gange på egen hånd og kontakter dig, når der er noget nyttigt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Occasionally prepares context and maintains knowledge."
+            "value": "Sometimes works on its own and reaches out when there’s something useful."
           }
         }
       }
@@ -16257,13 +16257,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forbereder viden og vedligeholder hukommelsen oftere, når iOS giver baggrundstid. Planlagte initiativer fungerer uafhængigt."
+            "value": "Arbejder oftere på egen hånd og kontakter dig om flere ting. Planlagte initiativer og aftalte opfølgninger fungerer stadig på alle niveauer."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prepares context and maintains knowledge more frequently when iOS grants background time. Scheduled initiatives work independently."
+            "value": "Works on its own more often and reaches out about more things. Scheduled initiatives and agreed follow-ups still work at every level."
           }
         }
       }
@@ -16274,13 +16274,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forbereder viden og vedligeholder hukommelsen oftere."
+            "value": "Arbejder oftere på egen hånd og kontakter dig om flere ting."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prepares context and maintains knowledge more often."
+            "value": "Works on its own more often and reaches out about more things."
           }
         }
       }
@@ -16291,13 +16291,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ingen forberedelse eller vedligeholdelse i baggrunden. Planlagte initiativer fungerer stadig."
+            "value": "Svarer, når du skriver. Intet baggrundsarbejde. Planlagte initiativer og aftalte opfølgninger fungerer stadig på alle niveauer."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No background preparation or maintenance. Explicitly scheduled initiatives still work."
+            "value": "Responds when you chat. No background work. Scheduled initiatives and agreed follow-ups still work at every level."
           }
         }
       }
@@ -16308,13 +16308,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Intet baggrundsarbejde."
+            "value": "Svarer, når du skriver. Intet baggrundsarbejde."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No background work."
+            "value": "Responds when you chat. No background work."
           }
         }
       }
@@ -18925,13 +18925,13 @@
         "da": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ændrer hvor ofte din agent forbereder viden og vedligeholder hukommelsen i baggrunden."
+            "value": "Ændrer, hvor ofte din agent arbejder på egen hånd og kontakter dig."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changes how often your agent prepares context and maintains knowledge in the background."
+            "value": "Changes how often your agent works on its own and reaches out."
           }
         }
       }
@@ -23937,6 +23937,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Retry"
+          }
+        }
+      }
+    },
+    "development.triggerReflectionRun": {
+      "comment": "Debug action that runs a background reflection",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trigger Reflection Run"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start refleksion"
           }
         }
       }
