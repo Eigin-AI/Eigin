@@ -1,5 +1,6 @@
 //! Renderers project the resolved config into the form a consumer expects.
 
+pub mod contributors;
 pub mod ios;
 pub mod relay;
 pub mod shell;

@@ -7,6 +7,8 @@
     href,
     lang,
     hreflang,
+    target,
+    rel,
     onclick,
     children,
   }: {
@@ -16,6 +18,9 @@
     href?: string;
     lang?: string;
     hreflang?: string;
+    /** Browser destination and relationship for navigation links. */
+    target?: "_blank" | "_self";
+    rel?: string;
     onclick?: () => void;
     /** Row content, such as a label, icon, or description. */
     children: Snippet;
@@ -38,6 +43,8 @@
     {href}
     {lang}
     {hreflang}
+    {target}
+    {rel}
     {onclick}
     aria-current={selected ? "page" : undefined}>{@render content()}</a
   >

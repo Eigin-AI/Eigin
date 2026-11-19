@@ -1,0 +1,18 @@
+{
+  "slug": "tool-safety",
+  "state": "draft",
+  "issueUrl": "https://code.eigin.ai/dev/eigin/-/issues/417",
+  "title": "Local detection of malicious instructions",
+  "summary": "Help Eigin use external information with fewer permission prompts, without sending user data to a cloud service.",
+  "selectedAmountMinor": 50000,
+  "runnerUpAmountMinor": 25000,
+  "currency": "EUR",
+  "opensAt": "2026-11-18T00:00:00+01:00",
+  "closesAt": "2026-11-29T17:00:00+01:00",
+  "decisionAt": null,
+  "displayTimezone": "Europe/Copenhagen",
+  "termsVersion": null,
+  "termsApproved": false,
+  "eligibility": "individual",
+  "publicListing": true
+}

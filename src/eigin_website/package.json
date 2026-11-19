@@ -28,5 +28,16 @@
     "svelte-check": "^4.3.4",
     "typescript": "^6.0.0",
     "vite": "^8.0.12"
+  },
+  "exports": {
+    "./SiteHeader.svelte": "./src/lib/components/SiteHeader.svelte",
+    "./SiteFooter.svelte": "./src/lib/components/SiteFooter.svelte",
+    "./content": "./src/lib/content/site/index.ts",
+    "./styles.css": "./src/lib/site.css",
+    "./Disclosure.svelte": "./src/lib/components/Disclosure.svelte",
+    "./DocumentIndex.svelte": "./src/lib/components/DocumentIndex.svelte",
+    "./favicon.svg": "./static/favicon.svg",
+    "./favicon-32.png": "./static/favicon-32.png",
+    "./apple-touch-icon.png": "./static/apple-touch-icon.png"
   }
 }

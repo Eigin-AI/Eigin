@@ -45,6 +45,8 @@ pub struct ExportArgs {
 
 #[derive(Clone, Copy, clap::ValueEnum)]
 enum Target {
+    /// A locally run contributor portal.
+    Contributors,
     /// xcodegen and fastlane.
     Ios,
     /// A locally run relay.
@@ -81,6 +83,7 @@ pub fn run(args: Args) -> Result<()> {
         ConfigCommand::Init(_) => unreachable!("handled above"),
         ConfigCommand::Export(args) => {
             let rendered = match args.target {
+                Target::Contributors => render::contributors::render(&resolved),
                 Target::Ios => render::ios::render(&resolved),
                 Target::Relay => render::relay::render(&resolved, require_env(args.env)?, &root)?,
                 Target::TfVars => render::tf_vars::render(&resolved, require_env(args.env)?)?,

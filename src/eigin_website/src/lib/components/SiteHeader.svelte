@@ -1,10 +1,39 @@
 <script lang="ts">
   import { FloatingPicker, LinkButton, PickerRow } from "@eigin/ui";
+  import type { Snippet } from "svelte";
   import { page } from "$app/state";
   import { siteHref, type Locale } from "../locales";
   import type { SiteContent } from "../content/site";
   import SiteBrand from "./SiteBrand.svelte";
-  let { locale, copy }: { locale: Locale; copy: SiteContent } = $props();
+  let {
+    locale,
+    copy,
+    websiteOrigin = "",
+    homeHref,
+    showGetAction = true,
+    accountAction,
+    brandName = "Eigin",
+    externalLinksNewTab = false,
+  }: {
+    locale: Locale;
+    copy: SiteContent;
+    /** Website origin when rendering the shared shell in a separate application. */
+    websiteOrigin?: string;
+    /** Application home; defaults to the website locale homepage. */
+    homeHref?: string;
+    /** Keep the marketing CTA on website pages. */
+    showGetAction?: boolean;
+    /** Optional application account control. */
+    accountAction?: Snippet;
+    /** Visible application name beside the Eigin mark. */
+    brandName?: string;
+    /** Open absolute navigation destinations in another tab. */
+    externalLinksNewTab?: boolean;
+  } = $props();
+  function href(path: string) {
+    const resolved = siteHref(path, locale);
+    return websiteOrigin ? new URL(resolved, websiteOrigin).href : resolved;
+  }
   const sectionIds = $derived(
     copy.navigation.filter((link) => link.href.startsWith("#")).map((link) => link.href.slice(1)),
   );
@@ -41,34 +70,49 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <SiteBrand href="/{locale}/" label={copy.homeLabel} />
+    <SiteBrand href={homeHref ?? href(`/${locale}/`)} label={copy.homeLabel} name={brandName} />
     <nav class="desktop-nav" aria-label={copy.mainNavigation}>
       {#each copy.navigation as link}
-        <a class="t-navTab" href={siteHref(link.href, locale)}>{link.label}</a>
+        <a
+          class="t-navTab"
+          href={href(link.href)}
+          target={externalLinksNewTab && /^https?:/.test(link.href) ? "_blank" : undefined}
+          rel={externalLinksNewTab && /^https?:/.test(link.href) ? "noopener" : undefined}
+          >{link.label}</a
+        >
       {/each}
     </nav>
     <div class="header-actions">
-      <div class="header-cta">
-        <LinkButton href="/{locale}/#get" label={copy.action} size="extraSmall" variant="spot" />
-      </div>
+      {#if accountAction}{@render accountAction()}{/if}
+      {#if showGetAction}<div class="header-cta">
+          <LinkButton
+            href={href(`/${locale}/#get`)}
+            label={copy.action}
+            size="extraSmall"
+            variant="spot"
+          />
+        </div>
+      {/if}
       <div class="mobile-menu">
         <FloatingPicker label={copy.menu}>
           {#snippet trigger()}<span class="t-buttonSmall">{copy.menu}</span>{/snippet}
           {#snippet children(dismiss)}
             {#each copy.navigation as link}
               <PickerRow
-                href={siteHref(link.href, locale)}
+                href={href(link.href)}
+                target={externalLinksNewTab && /^https?:/.test(link.href) ? "_blank" : undefined}
+                rel={externalLinksNewTab && /^https?:/.test(link.href) ? "noopener" : undefined}
                 selected={isCurrent(link.href)}
                 onclick={dismiss}><span class="t-navTab">{link.label}</span></PickerRow
               >
             {/each}
-            <LinkButton
-              href="/{locale}/#get"
-              label={copy.action}
-              size="extraSmall"
-              variant="spot"
-              onclick={dismiss}
-            />
+            {#if showGetAction}<LinkButton
+                href={href(`/${locale}/#get`)}
+                label={copy.action}
+                size="extraSmall"
+                variant="spot"
+                onclick={dismiss}
+              />{/if}
           {/snippet}
         </FloatingPicker>
       </div>

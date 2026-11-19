@@ -7,6 +7,8 @@
     isError = false,
     errorMessage = "",
     isSecure = false,
+    required = false,
+    type = "text",
   }: {
     label: string;
     value?: string;
@@ -14,6 +16,10 @@
     errorMessage?: string;
     /** Renders a password field. */
     isSecure?: boolean;
+    /** Native required-field semantics for forms. */
+    required?: boolean;
+    /** Input purpose; secure fields always use password. */
+    type?: "text" | "email";
   } = $props();
 
   let focused = $state(false);
@@ -37,7 +43,9 @@
         bind:this={field}
         bind:value
         aria-label={label}
-        type={isSecure ? "password" : "text"}
+        type={isSecure ? "password" : type}
+        {required}
+        aria-invalid={isError || undefined}
         class="t-description"
         onfocus={() => (focused = true)}
         onblur={() => (focused = false)}

@@ -9,6 +9,7 @@
     "design/web",
     "src/eigin_website",
     "src/eigin_sdk/web",
-    "src/eigin_web"
+    "src/eigin_web",
+    "src/eigin_contributors"
   ]
 }

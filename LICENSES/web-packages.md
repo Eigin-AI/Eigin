@@ -1,6 +1,6 @@
 # Web package licenses
 
-Direct runtime and development dependencies of the gallery, website, and browser test host.
+Direct runtime and development dependencies of the gallery, website, contributor portal, and browser test host.
 SDK browser runtime dependencies are owned by [Eigin SDK](eigin_sdk.md).
 Resolved versions and transitive dependency licenses are recorded in the root lockfile.
 
@@ -9,11 +9,14 @@ Resolved versions and transitive dependency licenses are recorded in the root lo
 | [@eslint/js](https://github.com/eslint/eslint) | MIT |
 | [@floating-ui/dom](https://github.com/floating-ui/floating-ui) | MIT |
 | [@playwright/test](https://github.com/microsoft/playwright) | Apache-2.0 |
+| [@sveltejs/adapter-node](https://github.com/sveltejs/kit) | MIT |
 | [@sveltejs/adapter-static](https://github.com/sveltejs/kit) | MIT |
 | [@sveltejs/kit](https://github.com/sveltejs/kit) | MIT |
 | [@sveltejs/vite-plugin-svelte](https://github.com/sveltejs/vite-plugin-svelte) | MIT |
 | [@tsconfig/svelte](https://github.com/tsconfig/bases) | MIT |
 | [@types/node](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
+| [@types/pg](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
+| [@types/sanitize-html](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [eslint](https://github.com/eslint/eslint) | MIT |
 | [eslint-plugin-svelte](https://github.com/sveltejs/eslint-plugin-svelte) | MIT |
 | [globals](https://github.com/sindresorhus/globals) | MIT |
@@ -22,6 +25,8 @@ Resolved versions and transitive dependency licenses are recorded in the root lo
 | [katex](https://github.com/KaTeX/KaTeX) | MIT |
 | [mdsvex](https://github.com/pngwn/MDsveX) | MIT |
 | [marked](https://github.com/markedjs/marked) | MIT |
+| [pg](https://github.com/brianc/node-postgres) | MIT |
+| [sanitize-html](https://github.com/apostrophecms/apostrophe) | MIT |
 | [prettier](https://github.com/prettier/prettier) | MIT |
 | [prettier-plugin-svelte](https://github.com/sveltejs/prettier-plugin-svelte) | MIT |
 | [reveal.js](https://github.com/hakimel/reveal.js) | MIT |
