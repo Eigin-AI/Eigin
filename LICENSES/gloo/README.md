@@ -1,0 +1,1 @@
+`gloo-timers` 0.4.0 omits its workspace license files from the published crate. `LICENSE-MIT` is the [upstream license at the crate's published revision](https://github.com/rustwasm/gloo/blob/c8feeb18bf5dde6b7aed80c749e1aef89b34fb52/LICENSE-MIT).

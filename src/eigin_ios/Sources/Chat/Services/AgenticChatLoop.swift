@@ -129,9 +129,6 @@ final class AgenticChatLoop {
     /// and executor for subsequent rounds.
     var onToolsChanged: (() async -> (tools: [ToolDefinition], executor: ToolExecutor))?
 
-    /// Timeout for individual tool executions.
-    private let toolExecutionTimeout: Duration = .seconds(30)
-
     private var activeTurn: EiginSDK.Experimental.Agent.Turn?
     var roundsExecuted: Int {
         Int(activeTurn?.roundsExecuted() ?? 0)
@@ -799,81 +796,53 @@ final class AgenticChatLoop {
             arguments: call.function.arguments
         )
 
-        let executionMode = executor.executionMode(for: call.function.name)
-        let result: ToolResult
-        switch permission {
-        case .always:
-            switch executionMode {
-            case .interactive:
-                isAwaitingUserInteraction = true
-                result = await executor.execute(call, agent: agent)
-                guard !Task.isCancelled, !shouldStop else { return result }
-                isAwaitingUserInteraction = false
-            case .background:
-                result = await executeWithTimeout(call, agent: agent, executor: executor)
-            }
-        case .never:
-            result = ToolResult(
-                toolCallID: call.id,
-                content: ToolHelpers
-                    .output(errors: [Localized.Permission.toolDeniedByPolicy]),
-                isError: true
-            )
-            updateToolEvent(id: eventID, status: .denied)
-        case .ask:
-            if let agentPolicy = permissionPolicy as? AgentPermissionPolicy,
-               !agentPolicy.canPromptUser
-            {
-                result = ToolResult(
-                    toolCallID: call.id,
-                    content: ToolHelpers.output(errors: [
-                        "Permission required. Ask the user to open the app to grant permission for this action.",
-                    ]),
-                    isError: true
-                )
-                updateToolEvent(id: eventID, status: .denied)
-            } else {
-                let capabilities = ToolRegistry.capabilities(for: toolName)
+        var requestedCapabilities: [ToolCapability] = []
+        let outcome = await EiginSDK.Experimental.Agent.runTool(
+            permission: ToolRunnerSDKConversion.permission(permission),
+            canPrompt: (permissionPolicy as? AgentPermissionPolicy)?.canPromptUser ?? true,
+            interactive: executor.executionMode(for: toolName) == .interactive,
+            prompt: {
+                requestedCapabilities = ToolRegistry.capabilities(for: toolName)
                 let request = PermissionRequest(
-                    id: call.id,
-                    toolName: toolName,
+                    id: call.id, toolName: toolName,
                     toolDisplayName: ToolRegistry.displayName(for: toolName),
                     disclosure: executor.disclosure(for: call)
                 )
                 updateToolEvent(id: eventID, status: .awaitingPermission)
-
-                let response = await requestPermission(request)
-
-                switch response {
-                case .allowOnce:
-                    // Granted — resume the live executing state.
-                    seedToolEvent(
-                        id: eventID,
-                        toolName: toolName,
-                        arguments: call.function.arguments
-                    )
-                    result = await executeWithTimeout(call, agent: agent, executor: executor)
-                case .allowForChat:
-                    onChatGrant?(capabilities)
-                    if var agentPolicy = permissionPolicy as? AgentPermissionPolicy {
-                        agentPolicy.grantForChat(capabilities)
-                        permissionPolicy = agentPolicy
+                return await ToolRunnerSDKConversion.grant(requestPermission(request))
+            },
+            granted: { forChat in
+                if forChat {
+                    onChatGrant?(requestedCapabilities)
+                    if var policy = permissionPolicy as? AgentPermissionPolicy {
+                        policy.grantForChat(requestedCapabilities)
+                        permissionPolicy = policy
                     }
-                    seedToolEvent(
-                        id: eventID,
-                        toolName: toolName,
-                        arguments: call.function.arguments
-                    )
-                    result = await executeWithTimeout(call, agent: agent, executor: executor)
-                case .deny:
-                    result = ToolResult(
-                        toolCallID: call.id,
-                        content: ToolHelpers.output(errors: ["User denied this action."]),
-                        isError: true
-                    )
-                    updateToolEvent(id: eventID, status: .denied)
                 }
-            }
+                seedToolEvent(id: eventID, toolName: toolName, arguments: call.function.arguments)
+            },
+            interactionChanged: { awaiting in
+                guard awaiting || (!Task.isCancelled && !shouldStop) else { return }
+                isAwaitingUserInteraction = awaiting
+            },
+            execute: { await executor.execute(call, agent: agent) }
+        )
+        let result: ToolResult
+        switch outcome {
+        case .executed(let value): result = value
+        case .denied(let reason):
+            result = ToolResult(
+                toolCallID: eventID,
+                content: ToolHelpers.output(errors: [ToolRunnerSDKConversion.error(reason)]),
+                isError: true
+            )
+            updateToolEvent(id: eventID, status: .denied)
+        case .timedOut(let seconds):
+            result = ToolResult(
+                toolCallID: eventID,
+                content: ToolHelpers.output(errors: ["Tool timed out after \(seconds)s"]),
+                isError: true
+            )
         }
 
         guard !Task.isCancelled, !shouldStop else { return result }
@@ -889,48 +858,6 @@ final class AgenticChatLoop {
         }
 
         return result
-    }
-
-    private func executeWithTimeout(
-        _ call: ToolCall, agent: Agent, executor: ToolExecutor
-    ) async -> ToolResult {
-        let timeout = toolExecutionTimeout
-        // Race the tool execution against a sleep timer.
-        // We use a continuation + atomic flag to ensure exactly one resume.
-        let resumed = OSAllocatedUnfairLock(initialState: false)
-        return await withCheckedContinuation {
-            (continuation: CheckedContinuation<ToolResult, Never>) in
-            let cont = continuation
-            let workTask = Task { @MainActor in
-                let r = await executor.execute(call, agent: agent)
-                let shouldResume = resumed.withLock { done -> Bool in
-                    if done { return false }
-                    done = true
-                    return true
-                }
-                if shouldResume { cont.resume(returning: r) }
-            }
-            Task {
-                try? await Task.sleep(for: timeout)
-                let shouldResume = resumed.withLock { done -> Bool in
-                    if done { return false }
-                    done = true
-                    return true
-                }
-                if shouldResume {
-                    workTask.cancel()
-                    cont.resume(
-                        returning: ToolResult(
-                            toolCallID: call.id,
-                            content: ToolHelpers.output(errors: [
-                                "Tool timed out after \(Int(timeout.components.seconds))s",
-                            ]),
-                            isError: true
-                        )
-                    )
-                }
-            }
-        }
     }
 
     /// Captures completed work and partial prose for persistence after a failure.

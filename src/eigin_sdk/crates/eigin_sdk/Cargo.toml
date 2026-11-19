@@ -23,14 +23,21 @@ base64 = "0.22"
 uuid = { version = "1", features = ["v4", "js"] }
 url = "2"
 web-time = "1"
+futures-channel = "0.3"
+futures-util = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+futures-timer = "3"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+gloo-timers = { version = "0.4", features = ["futures"] }
 uniffi-runtime-wasm = "=0.31.0-6"
 uniffi_core = { version = "=0.31.0", features = ["wasm-unstable-single-threaded"] }
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 futures = { version = "0.3", features = ["executor"] }
