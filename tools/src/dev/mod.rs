@@ -6,6 +6,7 @@
 
 use anyhow::{Result, bail};
 
+mod contributor_database;
 mod device;
 mod ios;
 mod logs;
@@ -30,7 +31,7 @@ pub struct RunArgs {
 pub struct StopArgs {
     /// relay | web
     target: String,
-    /// Web surface: gallery | site | app.
+    /// Web surface: gallery | site | app | contributor.
     args: Vec<String>,
 }
 

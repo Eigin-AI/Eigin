@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DocumentIndex from "./DocumentIndex.svelte";
   import PageHead from "./PageHead.svelte";
   import { LinkButton } from "@eigin/ui";
   import SiteHeader from "./SiteHeader.svelte";
@@ -23,37 +24,6 @@
   } = $props();
   const contentsLabel = $derived(locale === "da" ? "På denne side" : "On this page");
   const legal = $derived(slug === "privacy" || slug === "terms");
-  let currentSection = $state<string | null>(null);
-
-  $effect(() => {
-    if (!legal) return;
-    const headings = content.sections.map((section) => document.getElementById(section.id));
-    currentSection = content.sections[0]?.id ?? null;
-    let frame = 0;
-    let disposed = false;
-    const update = () => {
-      frame = 0;
-      const threshold = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) + 1;
-      let current = headings[0];
-      for (const heading of headings) {
-        if (heading && heading.getBoundingClientRect().top <= threshold) current = heading;
-      }
-      currentSection = current?.id ?? null;
-    };
-    const schedule = () => {
-      if (!disposed && !frame) frame = requestAnimationFrame(update);
-    };
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    void document.fonts.ready.then(schedule);
-    schedule();
-    return () => {
-      disposed = true;
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-    };
-  });
 </script>
 
 <PageHead
@@ -62,24 +32,6 @@
   {locale}
   path={`${slug}/`}
 />
-
-{#snippet contents()}
-  <nav aria-label={contentsLabel}>
-    <ol class="document-index t-body">
-      {#each content.sections as section}
-        <li>
-          <a
-            href="#{section.id}"
-            lang="en"
-            aria-current={(currentSection ?? content.sections[0]?.id) === section.id
-              ? "location"
-              : undefined}>{section.title}</a
-          >
-        </li>
-      {/each}
-    </ol>
-  </nav>
-{/snippet}
 
 <a class="skip t-body" href="#main">{site.skip}</a>
 <SiteHeader {locale} copy={site} />
@@ -105,16 +57,7 @@
         {/if}
       </header>
       <div class="content-grid document-layout">
-        <aside class="document-sidebar" lang={locale}>
-          <div class="document-desktop-index">
-            <p class="t-miniLabel eyebrow">{contentsLabel}</p>
-            {@render contents()}
-          </div>
-          <details class="document-mobile-index">
-            <summary class="t-miniLabel">{contentsLabel}</summary>
-            {@render contents()}
-          </details>
-        </aside>
+        <DocumentIndex sections={content.sections} label={contentsLabel} {locale} />
         <article class="document-prose t-body" aria-label={content.title}>
           <div class="document-introduction">
             {#each content.introduction as block, index}

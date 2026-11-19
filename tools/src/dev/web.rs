@@ -10,7 +10,10 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
-use super::logs::{self, Since};
+use super::{
+    contributor_database,
+    logs::{self, Since},
+};
 
 /// Independently runnable web surfaces.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,6 +21,7 @@ pub enum WebTarget {
     Gallery,
     Site,
     App,
+    Contributor,
 }
 
 impl WebTarget {
@@ -26,13 +30,18 @@ impl WebTarget {
             Self::Gallery => 5173,
             Self::Site => 5174,
             Self::App => 5175,
+            Self::Contributor => 5176,
         }
+    }
+    fn local_url(self) -> String {
+        format!("http://localhost:{}", self.port())
     }
     fn directory(self) -> &'static str {
         match self {
             Self::Gallery => "design/web",
             Self::Site => "src/eigin_website",
             Self::App => "src/eigin_web",
+            Self::Contributor => "src/eigin_contributors",
         }
     }
     fn workspace(self) -> &'static str {
@@ -40,6 +49,7 @@ impl WebTarget {
             Self::Gallery => "@eigin/ui",
             Self::Site => "@eigin/website",
             Self::App => "@eigin/app",
+            Self::Contributor => "@eigin/contributors",
         }
     }
     fn identity(self) -> &'static str {
@@ -47,6 +57,7 @@ impl WebTarget {
             Self::Gallery => "web",
             Self::Site => "website",
             Self::App => "app",
+            Self::Contributor => "contributors",
         }
     }
 }
@@ -59,7 +70,8 @@ pub fn parse(args: &[String]) -> Result<WebTarget> {
         [value] if value.as_str() == "gallery" => Ok(WebTarget::Gallery),
         [value] if value.as_str() == "site" => Ok(WebTarget::Site),
         [value] if value.as_str() == "app" => Ok(WebTarget::App),
-        _ => bail!("Expected web [gallery | site | app]"),
+        [value] if value.as_str() == "contributor" => Ok(WebTarget::Contributor),
+        _ => bail!("Expected web [gallery | site | app | contributor]"),
     }
 }
 const READY_TIMEOUT: Duration = Duration::from_secs(60);
@@ -84,6 +96,13 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
             target.directory()
         );
     }
+    let contributor_config = (target == WebTarget::Contributor)
+        .then(|| crate::config::resolve::resolve(root))
+        .transpose()?;
+    let contributor_env = contributor_config
+        .as_ref()
+        .map(crate::config::render::contributors::environment)
+        .unwrap_or_default();
     fs::create_dir_all(PathBuf::from(root).join("logs")).context("creating the logs directory")?;
 
     crate::sdk::ensure_web_dependencies(root)?;
@@ -95,6 +114,22 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
     if target == WebTarget::App {
         crate::sdk::generate(root, crate::sdk::SdkTarget::Web)?;
     }
+
+    let database_url = if target == WebTarget::Contributor {
+        let url = contributor_database::start(root)?;
+        let status = Command::new("npm")
+            .current_dir(root)
+            .args(["run", "db:migrate", "--workspace", target.workspace()])
+            .env("DATABASE_URL", &url)
+            .status()
+            .context("running contributor database migrations")?;
+        if !status.success() {
+            bail!("contributor database migration failed");
+        }
+        Some(url)
+    } else {
+        None
+    };
 
     stop_running(root, target)?;
     reclaim_port(target.port(), root, target)?;
@@ -108,6 +143,7 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
     // Its own process group, so the server outlives whatever started it.
     let mut command = Command::new("npm");
     command
+        .envs(contributor_env)
         .args([
             "run",
             "dev",
@@ -122,6 +158,11 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
         .stdout(log.try_clone()?)
         .stderr(log)
         .stdin(std::process::Stdio::null());
+    if let Some(url) = database_url {
+        command
+            .env("ORIGIN", target.local_url())
+            .env("DATABASE_URL", url);
+    }
     #[cfg(unix)]
     command.process_group(0);
     let child = command.spawn().context("starting the web dev server")?;
@@ -131,11 +172,7 @@ pub fn start(root: &str, target: WebTarget) -> Result<()> {
 
     if wait_until_serving(target.port()) {
         let _ = std::io::stdout().flush();
-        println!(
-            "Web {:?} running at http://localhost:{}",
-            target,
-            target.port()
-        );
+        println!("Web {target:?} running at {}", target.local_url());
         let _ = std::io::stdout().flush();
         return Ok(());
     }
@@ -322,6 +359,10 @@ mod tests {
         assert_eq!(parse(&[]).unwrap(), WebTarget::Gallery);
         assert_eq!(parse(&["site".into()]).unwrap(), WebTarget::Site);
         assert_eq!(parse(&["app".into()]).unwrap(), WebTarget::App);
+        assert_eq!(
+            parse(&["contributor".into()]).unwrap(),
+            WebTarget::Contributor
+        );
         assert!(parse(&["site".into(), "production".into()]).is_err());
     }
     #[test]
@@ -330,6 +371,7 @@ mod tests {
             (WebTarget::Site, WebTarget::Gallery),
             (WebTarget::Gallery, WebTarget::Site),
             (WebTarget::App, WebTarget::Site),
+            (WebTarget::Contributor, WebTarget::Site),
         ] {
             let command = format!(
                 "node /repo/{}/node_modules/.bin/vite --port {} --strictPort",

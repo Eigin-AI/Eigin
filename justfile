@@ -32,7 +32,7 @@ generate target="all" sdk_target="":
     if [ -n {{ quote(sdk_target) }} ]; then args+=({{ quote(sdk_target) }}); fi
     {{ tools }} generate "${args[@]}"
 
-[doc('Config (init | check | secret <NAME> <env> | export ios|relay|tf-vars [env])')]
+[doc('Config (init | check | secret <NAME> <env> | export contributors|ios|relay|tf-vars [env])')]
 config *args="check":
     {{ tools }} config {{ args }}
 
@@ -96,7 +96,7 @@ _test-relay verbose="false":
     fi
 
 [arg("verbose", short="v", long="verbose", value="true")]
-[doc('Run tests (target: all | ios | relay | web | website | sdk | cli, variant: unit | postgres)')]
+[doc('Run tests (target: all | ios | relay | web | website | contributor | sdk | cli, variant: unit | postgres)')]
 test target="all" variant="unit" env="staging" verbose="false":
     #!/usr/bin/env bash
     set -e
@@ -115,6 +115,14 @@ test target="all" variant="unit" env="staging" verbose="false":
     fi
     if [ "{{ target }}" = "cli" ] || [ "{{ target }}" = "all" ]; then just _test-cli; fi
     if [ "{{ target }}" = "website" ]; then just _test-website; fi
+    if [ "{{ target }}" = "contributor" ]; then
+        if [ "{{ variant }}" = "postgres" ]; then
+            just _test-contributor-postgres
+        else
+            npm run test --workspace @eigin/contributors
+            npm run test:content --workspace @eigin/contributors
+        fi
+    fi
     if [ "{{ target }}" = "web" ] || [ "{{ target }}" = "all" ]; then just _test-web; fi
 
 # Compile both web consumers against freshly generated design assets.
@@ -144,6 +152,11 @@ _test-relay-postgres:
     until docker exec "$container" pg_isready -U postgres -q; do sleep 0.5; done
     DATABASE_URL=postgres://postgres:postgres@localhost/postgres \
         cargo test --manifest-path {{ relay_dir }}/Cargo.toml -- --ignored --nocapture
+
+[private]
+_test-contributor-postgres:
+    {{ tools }} generate web
+    bash src/eigin_contributors/scripts/test-postgres.sh
 
 # --- Build ---
 
@@ -317,16 +330,16 @@ assets *args:
 # CLI; these recipes name the arguments and hand them over. Slots are quoted
 # because a device can be called "Daniel's iPhone (2)".
 
-[doc('Run a target (target: relay | web | ios | cli; cli runs in foreground). web: [site | gallery | app]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
+[doc('Run a target (target: relay | web | ios | cli; cli runs in foreground). web: [site | gallery | app | contributor]. ios: `just run ios simulator [env]` / `just run ios device [device] [env]`')]
 [positional-arguments]
 run target="relay" *args:
     @target="$1"; shift; {{ tools }} run "$target" -- "$@"
 
-[doc('Stop a detached target (target: relay | web; web: [site | gallery | app])')]
+[doc('Stop a detached target (target: relay | web; web: [site | gallery | app | contributor])')]
 stop target="relay" mode="":
     @{{ tools }} stop {{ quote(target) }} {{ quote(mode) }}
 
-[doc('Show target logs (target: relay | web | ios). web: [site | gallery | app]. ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
+[doc('Show target logs (target: relay | web | ios). web: [site | gallery | app | contributor]. ios: `just logs ios [simulator | device [name]] [env] [since] [--follow]`; since is 30s/10m/2h/7d or a date like 2026-09-02')]
 [arg("follow", short="f", long="follow", value="true")]
 [arg("since", long="since")]
 logs target="relay" mode="" value="" env="" since="" follow="false":
