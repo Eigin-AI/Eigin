@@ -153,7 +153,9 @@
   }
 
   .stack.active input {
-    height: 21px;
+    /* Native inputs need space above accents and below descenders. */
+    text-box: normal;
+    height: calc(1lh + var(--spacing-n4));
     opacity: 1;
   }
 

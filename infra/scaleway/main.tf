@@ -48,3 +48,12 @@ module "website" {
   region       = var.scw_region
   domains      = var.website_domains
 }
+
+module "contributor" {
+  source = "./modules/contributor"
+  count  = terraform.workspace == "production" ? 1 : 0
+
+  project_name = "${var.project_name}-contributor"
+  oauth        = var.contributor_oauth
+  region       = var.scw_region
+}

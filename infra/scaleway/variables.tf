@@ -173,3 +173,10 @@ variable "model_health_interval_seconds" {
   type        = number
   default     = 900
 }
+
+variable "contributor_oauth" {
+  description = "Production-only GitLab OAuth application credentials."
+  type        = object({ client_id = string, client_secret = string })
+  sensitive   = true
+  default     = { client_id = "", client_secret = "" }
+}

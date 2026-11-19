@@ -1,0 +1,13 @@
+**
+!package.json
+!package-lock.json
+!design/web/package.json
+!src/eigin_sdk/web/package.json
+!src/eigin_web/package.json
+!src/eigin_website/package.json
+!src/eigin_contributors/package.json
+!src/eigin_contributors/build/**
+!src/eigin_contributors/migrations/*.sql
+!src/eigin_contributors/scripts/migrate.ts
+!src/eigin_contributors/scripts/prune-oauth-attempts.ts
+!src/eigin_contributors/src/lib/server/database.ts

@@ -35,6 +35,13 @@ pub fn render(r: &Resolved, env: Env) -> Result<Rendered> {
         "TF_VAR_staan_api_key",
         r.secrets.optional_env("STAAN_API_KEY", env),
     );
+    if env == Env::Production {
+        let oauth = serde_json::json!({
+            "client_id": r.secrets.optional("CONTRIBUTORS_GITLAB_CLIENT_ID"),
+            "client_secret": r.secrets.optional("CONTRIBUTORS_GITLAB_CLIENT_SECRET"),
+        });
+        export(&mut out, "TF_VAR_contributor_oauth", &oauth.to_string());
+    }
     // Optional previous keys, accepted only during a rotation.
     export(
         &mut out,

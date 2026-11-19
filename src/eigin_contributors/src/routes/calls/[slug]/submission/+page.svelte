@@ -92,6 +92,13 @@
             <dt class="t-miniLabel">Author credit</dt>
             <dd>{data.submission.author}<br />{data.submission.authorEmail}</dd>
           </div>
+          <div>
+            <dt class="t-miniLabel">Agreements</dt>
+            <dd>
+              Individual CLA ({data.submission.acceptance.cla.version}) ·
+              Participation terms ({data.submission.acceptance.terms.version})
+            </dd>
+          </div>
         </dl>
         <div class="actions">
           {#if !data.closed}<LinkButton
@@ -211,6 +218,17 @@
         </section>
         <section class="form-section stack">
           <h2 class="t-titleS">Agreements</h2>
+          <p>
+            <a
+              href="https://docs.eigin.ai/contributing/individual-agreement.html"
+              target="_blank"
+              rel="noopener">Eigin Individual CLA v1.0</a
+            >
+            ·
+            <a href="/guides/participation-terms" target="_blank" rel="noopener"
+              >participation terms</a
+            >
+          </p>
           <div class="agreement-options">
             <label class="check-row"
               ><input
@@ -218,13 +236,7 @@
                 checked={data.accepted.cla}
                 type="checkbox"
                 required
-              /><span
-                >I agree to the <a
-                  href="https://docs.eigin.ai/contributing/individual-agreement.html"
-                  target="_blank"
-                  rel="noopener">Eigin Individual CLA v1.0</a
-                >.</span
-              ></label
+              /><span>{data.statements.cla}</span></label
             >
             <label class="check-row"
               ><input
@@ -232,13 +244,7 @@
                 checked={data.accepted.terms}
                 type="checkbox"
                 required
-              /><span
-                >I accept the <a
-                  href="/guides/participation-terms"
-                  target="_blank"
-                  rel="noopener">participation terms</a
-                >.</span
-              ></label
+              /><span>{data.statements.terms}</span></label
             >
           </div>
         </section>

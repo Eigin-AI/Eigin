@@ -4,6 +4,8 @@ use clap::{Parser, Subcommand};
 mod assets;
 mod codegen;
 mod config;
+mod confirm;
+mod contributor;
 mod design;
 mod dev;
 mod exec;
@@ -70,6 +72,8 @@ enum Command {
     Watermark(watermark::WatermarkArgs),
     /// Manage website branding assets, publishing and verification.
     Website(website::Args),
+    /// Publish or roll back the production contributor portal.
+    Contributor(contributor::Args),
 }
 
 fn main() -> Result<()> {
@@ -92,6 +96,7 @@ fn main() -> Result<()> {
         Command::Exec(args) => exec::run(args),
         Command::Security(args) => security::run(args),
         Command::Watermark(args) => watermark::run(args),
+        Command::Contributor(args) => contributor::run(args),
         Command::Website(args) => website::run(args),
     }
 }

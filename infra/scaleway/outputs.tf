@@ -58,21 +58,30 @@ output "website_bucket_name" {
   description = "Website publishing bucket (production only)."
   value       = try(module.website[0].bucket_name, null)
 }
+
 output "website_s3_endpoint" {
   description = "Website S3-compatible upload endpoint."
   value       = try(module.website[0].s3_endpoint, null)
 }
+
 output "website_preview_url" {
   description = "Generated website HTTPS endpoint used for release verification."
   value       = try(module.website[0].preview_url, null)
 }
+
 output "website_upload_access_key" {
   description = "Website publisher access key; consumed by the local tools CLI."
   value       = try(module.website[0].upload_access_key, null)
   sensitive   = true
 }
+
 output "website_upload_secret_key" {
   description = "Website publisher secret key; consumed by the local tools CLI."
   value       = try(module.website[0].upload_secret_key, null)
   sensitive   = true
+}
+
+output "contributor_release" {
+  description = "Non-secret deployment identifiers for the operator release command."
+  value       = try(module.contributor[0].release, null)
 }

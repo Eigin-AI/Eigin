@@ -11,7 +11,9 @@ import type {
 export class PublishedCalls {
   private pool: Pool;
   private configured: PublicCall[];
-  constructor(pool: Pool, configured: PublicCall[]) {
+  private mode?: string;
+  constructor(pool: Pool, configured: PublicCall[], mode?: string) {
+    this.mode = mode;
     this.pool = pool;
     this.configured = configured;
   }
@@ -94,13 +96,13 @@ export class PublishedCalls {
       LEFT JOIN call_contracts f ON f.slug=c.slug
     ), catalog AS (
       SELECT slug,title,summary,closes_at,NULL::timestamptz AS published_at,NULL::text AS selected_author,NULL::text AS runner_author FROM configured c
-      WHERE closes_at<=clock_timestamp() AND NOT EXISTS (SELECT 1 FROM call_publications p WHERE p.call_slug=c.slug)
+      WHERE closes_at<=clock_timestamp() AND NOT EXISTS (SELECT 1 FROM call_publications p WHERE p.call_slug=c.slug AND ($3::text IS NULL OR p.mode=$3))
       UNION ALL
       SELECT call_slug,public_snapshot->>'title',public_snapshot->>'summary',
-      (public_snapshot->>'closesAt')::timestamptz,published_at,public_snapshot->'selected'->>'author',public_snapshot->'runnerUp'->>'author' FROM call_publications
+      (public_snapshot->>'closesAt')::timestamptz,published_at,public_snapshot->'selected'->>'author',public_snapshot->'runnerUp'->>'author' FROM call_publications WHERE ($3::text IS NULL OR (mode=$3 AND call_slug IN (SELECT slug FROM configured)))
     ) SELECT slug,title,summary,closes_at,published_at,selected_author,runner_author FROM catalog
     ORDER BY closes_at DESC,slug LIMIT 21 OFFSET $2`,
-      [JSON.stringify(configured), (current - 1) * 20],
+      [JSON.stringify(configured), (current - 1) * 20, this.mode ?? null],
     );
     const entries: PublicCallCard[] = rows.slice(0, 20).map((row) => ({
       slug: row.slug,
@@ -123,8 +125,8 @@ export class PublishedCalls {
       'closesAt',public_snapshot->'closesAt','currency',public_snapshot->'currency','copy',public_snapshot->'copy',
       'selected',jsonb_build_object('author',public_snapshot->'selected'->'author','title',public_snapshot->'selected'->'title','amountMinor',public_snapshot->'selected'->'amountMinor'),
       'runnerUp',jsonb_build_object('author',public_snapshot->'runnerUp'->'author','title',public_snapshot->'runnerUp'->'title','amountMinor',public_snapshot->'runnerUp'->'amountMinor')
-      ) AS result,published_at FROM call_publications WHERE call_slug=$1`,
-      [slug],
+      ) AS result,published_at FROM call_publications WHERE call_slug=$1 AND ($2::text IS NULL OR mode=$2)`,
+      [slug, this.mode ?? null],
     );
     return row
       ? { ...row.result, publishedAt: row.published_at.toISOString() }
@@ -137,8 +139,8 @@ export class PublishedCalls {
       rows: [row],
     } = await this.pool.query(
       `SELECT jsonb_build_object('author',spec->'author','title',spec->'title','markdown',spec->'markdown','amountMinor',spec->'amountMinor') AS spec
-      FROM (SELECT public_snapshot->$2::text AS spec FROM call_publications WHERE call_slug=$1) chosen`,
-      [slug, place === "selected" ? "selected" : "runnerUp"],
+      FROM (SELECT public_snapshot->$2::text AS spec FROM call_publications WHERE call_slug=$1 AND ($3::text IS NULL OR mode=$3)) chosen`,
+      [slug, place === "selected" ? "selected" : "runnerUp", this.mode ?? null],
     );
     return row?.spec ?? null;
   }

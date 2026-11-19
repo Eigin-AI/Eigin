@@ -12,14 +12,20 @@ export type Contract = {
   selectedAmountMinor: number;
   runnerUpAmountMinor: number;
   currency: string;
-  mode: "rehearsal";
+  mode: "rehearsal" | "production";
   cla: Agreement;
   terms: Agreement;
 };
-export const consentStatements = {
-  cla: "I agree to the Eigin Individual CLA v1.0.",
-  terms: "I accept the participation terms.",
-};
+export const consentStatements = (mode: Contract["mode"]) => ({
+  cla:
+    mode === "rehearsal"
+      ? "I acknowledge the Individual CLA for this rehearsal only. This is not a signature."
+      : "I sign the Eigin Individual CLA v1.0 for this submission.",
+  terms:
+    mode === "rehearsal"
+      ? "I acknowledge the participation terms for this rehearsal only."
+      : "I accept the participation terms.",
+});
 
 export type Revision = {
   id: string;
@@ -90,7 +96,7 @@ export function acceptedAgreements(saved: Revision | null, contract: Contract) {
       evidence &&
       evidence[kind].version === contract[kind].version &&
       evidence[kind].sha256 === contract[kind].sha256 &&
-      evidence[kind].statement === consentStatements[kind]
+      evidence[kind].statement === consentStatements(contract.mode)[kind]
     );
   return {
     cla: matches("cla"),
@@ -247,7 +253,7 @@ export async function submit(
       mode: contract.mode,
       gitlabId: user.gitlabId,
       username: user.username,
-      ...consentStatements,
+      ...consentStatements(contract.mode),
       claVersion: contract.cla.version,
       termsVersion: contract.terms.version,
       acceptedAt: received.toISOString(),

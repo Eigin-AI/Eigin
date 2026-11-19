@@ -128,7 +128,7 @@ dd {
   font-family: var(--font-ui);
   font-size: var(--portal-standfirst-size);
   font-weight: var(--portal-body-weight);
-  line-height: var(--portal-standfirst-leading);
+  line-height: var(--portal-standfirst-leading-ratio);
   overflow-wrap: anywhere;
 }
 .prose h1,
@@ -138,6 +138,7 @@ dd {
   font-family: var(--font-display);
   font-size: var(--portal-titleM-size);
   font-weight: var(--portal-titleM-weight);
+  line-height: var(--portal-titleM-leading-ratio);
   margin-block: var(--spacing-n32) var(--spacing-n16);
 }
 .prose h3 {
@@ -259,7 +260,8 @@ input[type="file"] {
     5.5vw,
     var(--portal-display-size)
   );
-  line-height: var(--portal-display-leading);
+  line-height: var(--portal-display-leading-ratio);
+  overflow-wrap: anywhere;
   max-width: 22ch;
 }
 .page-intro .intro {
@@ -515,6 +517,11 @@ input[type="file"] {
   border: 0;
   border-radius: var(--radius-card);
   cursor: pointer;
+}
+.review-entry-author,
+.review-entry-title {
+  /* Keep the full line box inside the author and title clipping bounds. */
+  text-box: normal;
 }
 .review-entry-author {
   overflow: hidden;

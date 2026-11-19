@@ -18,6 +18,14 @@ address=$(docker port "$container" 5432/tcp)
 export TEST_DATABASE_URL="postgresql://$username:$nonce@$address/$database"
 DATABASE_URL="$TEST_DATABASE_URL" npm run db:migrate
 npm run test
-for suite in auth submissions review selection publication content e2e production; do
+for suite in auth submissions review selection publication content e2e; do
     npm run "test:$suite"
 done
+
+# The built HTTP test owns a fresh call and advances its frozen dates.
+smoke=$(node -p 'require("node:crypto").randomBytes(16).toString("hex")')
+docker exec "$container" createdb -U "$username" "contributors_test_$smoke"
+docker exec "$container" psql -U "$username" -d "$database" -c "ALTER USER contributors_test PASSWORD '$smoke'" >/dev/null
+export TEST_DATABASE_URL="postgresql://$username:$smoke@$address/contributors_test_$smoke"
+DATABASE_URL="$TEST_DATABASE_URL" npm run db:migrate
+npm run test:production

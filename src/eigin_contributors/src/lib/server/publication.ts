@@ -107,7 +107,7 @@ export class Publication {
       const result = await client.query(
         `INSERT INTO call_publications
         (call_slug,public_snapshot,snapshot_sha256,published_by_user_id,published_by_gitlab_id,mode)
-        SELECT $1,$2,$3,$4,$5,'rehearsal'
+        SELECT $1,$2,$3,$4,$5,(SELECT mode FROM call_selections WHERE call_slug=$1)
         WHERE EXISTS (SELECT 1 FROM publication_confirmations WHERE token_hash=$6 AND expires_at>clock_timestamp())
         AND EXISTS (SELECT 1 FROM sessions WHERE token_hash=$7 AND expires_at>clock_timestamp())`,
         [

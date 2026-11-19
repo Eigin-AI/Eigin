@@ -4,6 +4,6 @@ import { typographyStyles } from "@eigin/ui";
 export const typeProperties = typographyStyles
   .map(
     (style) =>
-      `--portal-${style.name}-size:${style.fontSize}px;--portal-${style.name}-leading:${style.lineHeight}px;--portal-${style.name}-weight:${style.fontWeight}`,
+      `--portal-${style.name}-size:${style.fontSize}px;--portal-${style.name}-leading:${style.lineHeight}px;--portal-${style.name}-leading-ratio:${style.lineHeight / style.fontSize};--portal-${style.name}-weight:${style.fontWeight}`,
   )
   .join(";");
