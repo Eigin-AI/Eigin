@@ -163,3 +163,5 @@ src/eigin_contributors/build/
 # Python bytecode
 __pycache__/
 *.py[cod]
+infra/scaleway/contributor-releases/
+infra/scaleway/.contributor-image/

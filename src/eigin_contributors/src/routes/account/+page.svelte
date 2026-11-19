@@ -14,9 +14,7 @@
   {#if data.canReview}<p class="t-body spaced">
       <a href="/review">Review submissions</a>
     </p>{/if}
-  {#if data.canReadCalls}
-    <p class="t-body spaced">
-      <a href="/#open-calls">Browse open calls</a>
-    </p>
-  {/if}
+  <p class="t-body spaced">
+    <a href="/#open-calls">Browse open calls</a>
+  </p>
 </section>

@@ -57,7 +57,7 @@ export async function lockedContract(client: PoolClient, slug: string) {
     );
   const contract = row.snapshot;
   if (
-    contract.mode !== "rehearsal" ||
+    !["rehearsal", "production"].includes(contract.mode) ||
     !/^[A-Z]{3}$/.test(contract.currency) ||
     !Number.isSafeInteger(contract.selectedAmountMinor) ||
     contract.selectedAmountMinor <= 0 ||
@@ -80,6 +80,7 @@ export async function lockedContract(client: PoolClient, slug: string) {
       "A selection has already been recorded. View the recorded selection before continuing.",
     );
   return {
+    mode: contract.mode,
     hash: row.sha256 as string,
     selectedAmount: contract.selectedAmountMinor as number,
     runnerUpAmount: contract.runnerUpAmountMinor as number,

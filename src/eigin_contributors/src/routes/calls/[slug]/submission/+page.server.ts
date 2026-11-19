@@ -6,6 +6,7 @@ import {
   submit,
   SubmissionFailure,
   acceptedAgreements,
+  consentStatements,
 } from "#lib/server/submissions.ts";
 import { boundedForm } from "#lib/server/form.ts";
 import type { Actions, PageServerLoad } from "./$types";
@@ -22,6 +23,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
   return {
     call: { slug: call.slug, title: call.title },
     submission,
+    statements: consentStatements(terms.mode),
     accepted: acceptedAgreements(submission, terms),
     editing: url.searchParams.has("edit"),
     closed:

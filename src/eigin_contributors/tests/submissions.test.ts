@@ -96,8 +96,8 @@ test("receipt survives reload and stays scoped to its owner, with immutable cons
   ).rows[0];
   assert.equal(row.consent.gitlabId, user.gitlabId);
   assert.equal(row.consent.mode, "rehearsal");
-  assert.equal(row.consent.cla, consentStatements.cla);
-  assert.equal(row.consent.terms, "I accept the participation terms.");
+  assert.equal(row.consent.cla, consentStatements("rehearsal").cla);
+  assert.equal(row.consent.terms, consentStatements("rehearsal").terms);
   assert.equal(row.consent.acceptedAt, saved.receivedAt);
   assert.equal(row.consent.claVersion, contract.cla.version);
   assert.equal(row.consent.termsVersion, contract.terms.version);

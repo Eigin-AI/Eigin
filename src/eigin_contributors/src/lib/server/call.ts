@@ -1,3 +1,4 @@
+import { dev } from "$app/env";
 import { error } from "@sveltejs/kit";
 import termsBody from "../../../content/guides/participation-terms.md?raw";
 import claBody from "../../../../../docs/src/contributing/individual-agreement.md?raw";
@@ -22,11 +23,27 @@ type CallMetadata = {
   eligibility: string;
 };
 
+/** Only approved, listed calls can enter the production catalog. */
+export function availableCall(slug: string) {
+  const call = callFiles[`../../../content/calls/${slug}/call.json`];
+  return (
+    dev ||
+    Boolean(
+      call?.slug === slug &&
+      call.state === "open" &&
+      call.publicListing &&
+      call.termsApproved &&
+      call.termsVersion,
+    )
+  );
+}
+
 /** Read a configured call and its authored brief. */
 export function configuredCall(slug: string) {
   const metadata = callFiles[`../../../content/calls/${slug}/call.json`];
   const brief = briefFiles[`../../../content/calls/${slug}/brief.md`];
-  if (!metadata || brief === undefined) error(404, "Not found");
+  if (!availableCall(slug) || !metadata || brief === undefined)
+    error(404, "Not found");
   return { ...metadata, brief };
 }
 /** Resolve a call available through the public contribution routes. */
@@ -45,10 +62,10 @@ export function submissionContract(slug: string): Contract {
     selectedAmountMinor: call.selectedAmountMinor,
     runnerUpAmountMinor: call.runnerUpAmountMinor,
     currency: call.currency,
-    mode: "rehearsal",
+    mode: dev ? "rehearsal" : "production",
     cla: { version: "individual-v1.0", body: claBody, sha256: digest(claBody) },
     terms: {
-      version: "participation-v1",
+      version: dev ? "participation-v1" : call.termsVersion!,
       body: termsBody,
       sha256: digest(termsBody),
     },
@@ -66,26 +83,28 @@ const briefFiles = import.meta.glob<string>(
 
 /** Retain call directories after closing so historical review keeps titles and briefs. */
 export function reviewCalls() {
-  return Object.entries(callFiles).map(([path, call]) => {
-    if (
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(call.slug) ||
-      !path.endsWith(`/${call.slug}/call.json`)
-    )
-      throw new Error("Invalid call identifier");
-    return {
-      slug: call.slug,
-      title: call.title,
-      opensAt: call.opensAt,
-      closesAt: call.closesAt,
-      timeZone: call.displayTimezone,
-      briefHref:
-        briefFiles[path.replace("call.json", "brief.md")] !== undefined
-          ? call.publicListing === true
-            ? `/calls/${call.slug}`
-            : `/review/calls/${call.slug}/brief`
-          : null,
-    };
-  });
+  return Object.entries(callFiles)
+    .filter(([, call]) => availableCall(call.slug))
+    .map(([path, call]) => {
+      if (
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(call.slug) ||
+        !path.endsWith(`/${call.slug}/call.json`)
+      )
+        throw new Error("Invalid call identifier");
+      return {
+        slug: call.slug,
+        title: call.title,
+        opensAt: call.opensAt,
+        closesAt: call.closesAt,
+        timeZone: call.displayTimezone,
+        briefHref:
+          briefFiles[path.replace("call.json", "brief.md")] !== undefined
+            ? call.publicListing === true
+              ? `/calls/${call.slug}`
+              : `/review/calls/${call.slug}/brief`
+            : null,
+      };
+    });
 }
 
 /** A private reading fallback for configured calls without their own public route. */
@@ -98,7 +117,9 @@ export function publicCalls() {
   reviewCalls();
   return Object.entries(callFiles).flatMap(([path, call]) => {
     const brief = briefFiles[path.replace("call.json", "brief.md")];
-    return call.publicListing === true && brief !== undefined
+    return availableCall(call.slug) &&
+      call.publicListing === true &&
+      brief !== undefined
       ? [
           {
             slug: call.slug,

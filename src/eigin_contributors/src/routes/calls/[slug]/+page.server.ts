@@ -1,10 +1,8 @@
-import { dev } from "$app/env";
 import { error } from "@sveltejs/kit";
 import { configuredCall } from "#lib/server/call.ts";
 import { database, publishedCalls } from "#lib/server/runtime.ts";
 import type { PageServerLoad } from "./$types";
 export const load: PageServerLoad = async ({ locals, params }) => {
-  if (!dev) error(404, "Not found");
   const result = await publishedCalls().result(params.slug);
   if (result)
     return {

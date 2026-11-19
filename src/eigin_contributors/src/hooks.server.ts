@@ -1,13 +1,16 @@
-import { dev } from "$app/env";
+import { availableCall } from "./lib/server/call.ts";
 import type { Handle } from "@sveltejs/kit/hooks";
 import { auth } from "./lib/server/runtime.ts";
 
 export const handle: Handle = async ({ event, resolve }) => {
   event.locals.user = null;
   const route = event.route.id ?? "";
-  // Call workflows remain gated until launch approval.
-  if (!dev && /^\/(calls|review)(\/|$)/.test(route)) {
-    return new Response("Calls and submissions are not available yet.", {
+  if (
+    event.params.slug &&
+    /^\/(calls|review)(\/|$)/.test(route) &&
+    !availableCall(event.params.slug)
+  ) {
+    return new Response("Not found.", {
       status: 404,
       headers: { "Cache-Control": "no-store" },
     });

@@ -90,6 +90,7 @@ before(async () => {
     "006_review_selection.sql",
     "007_selection_results.sql",
     "008_call_publications.sql",
+    "010_production_calls.sql",
   ])
     await pool.query(
       await readFile(new URL(`../migrations/${name}`, import.meta.url), "utf8"),
@@ -118,7 +119,7 @@ beforeEach(async () => {
     selectedAmountMinor: 50000,
     runnerUpAmountMinor: 25000,
     currency: "EUR",
-    mode: "rehearsal",
+    mode: "production",
     cla: agreement,
     terms: agreement,
   };
@@ -180,7 +181,7 @@ function metadata(): PublicCall {
     displayTimezone: "Europe/Copenhagen",
   };
 }
-const published = () => new PublishedCalls(pool, [metadata()]);
+const published = () => new PublishedCalls(pool, [metadata()], "production");
 async function select() {
   await confirm((await ready()).confirmationToken);
 }

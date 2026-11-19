@@ -6,7 +6,6 @@ mod verify;
 use anyhow::{Context, Result, bail, ensure};
 use std::{
     env, fs,
-    io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -71,7 +70,7 @@ pub fn run(args: Args) -> Result<()> {
         "Missing website publisher credentials in production state"
     );
     let archive = build_site(&root, &build, &infra)?;
-    confirm(&format!(
+    crate::confirm::confirm(&format!(
         "Publish to {} at {} using the website publisher? Check {}.",
         target.bucket, target.endpoint, target.url
     ))?;
@@ -106,15 +105,6 @@ fn preflight(root: &Path, tools: &[&str]) -> Result<()> {
         command(root, "which", &[tool], true)
             .with_context(|| format!("Install required tool: {tool}"))?;
     }
-    Ok(())
-}
-
-fn confirm(message: &str) -> Result<()> {
-    print!("{message} Type yes to continue: ");
-    io::stdout().flush()?;
-    let mut response = String::new();
-    io::stdin().read_line(&mut response)?;
-    ensure!(response.trim() == "yes", "Cancelled");
     Ok(())
 }
 

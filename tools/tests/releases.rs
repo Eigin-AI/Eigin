@@ -104,3 +104,10 @@ fn ios_release_stops_on_version_drift() {
     assert!(log.contains("generate all"));
     assert!(!log.contains("fastlane"));
 }
+
+#[test]
+fn contributor_is_not_a_release_target() {
+    let (output, log) = release(&["contributor"]);
+    assert!(!output.status.success());
+    assert!(log.is_empty());
+}

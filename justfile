@@ -231,6 +231,14 @@ _test-sdk-web:
     {{ tools }} generate sdk web
     npm test --workspace @eigin/sdk
 
+[doc('Roll back the contributor portal to a known healthy image digest')]
+rollback-contributor digest:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    vars="$({{ tools }} config export tf-vars production)"
+    eval "$vars"
+    {{ tools }} contributor rollback {{ quote(digest) }}
+
 # --- Release ---
 
 # No arguments releases iOS staging beta; website explicitly selects production publishing.
@@ -396,6 +404,7 @@ infra command env="staging":
             terraform init -migrate-state
             ;;
         plan)
+            if [ "{{ env }}" = production ]; then bash src/eigin_contributors/scripts/prepare-image.sh; fi
             vars="$({{ tools }} config export tf-vars {{ env }})"
             eval "$vars"
             cd {{ infra_dir }}
@@ -407,11 +416,16 @@ infra command env="staging":
             if [ "{{ env }}" = "production" ]; then
                 read -p "Deploy to production? [y/N] " confirm && [ "$confirm" = "y" ] || exit 1
             fi
+            if [ "{{ env }}" = production ]; then bash src/eigin_contributors/scripts/prepare-image.sh; fi
             vars="$({{ tools }} config export tf-vars {{ env }})"
             eval "$vars"
             cd {{ infra_dir }}
             terraform workspace select -or-create {{ env }}
             terraform apply -var-file=environments/{{ env }}.tfvars
+            if [ "{{ env }}" = production ]; then
+                cd ../..
+                EIGIN_DEPLOY_HANDOFF=production {{ tools }} contributor after-apply
+            fi
             ;;
         token-key-status)
             # Read-only: how many wallets are still on which token encryption key.

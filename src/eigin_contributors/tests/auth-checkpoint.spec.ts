@@ -742,7 +742,7 @@ test("call discussion links to the issue separately from the submission action",
   ).toHaveAttribute("href", "https://chat.eigin.ai");
   await expect(
     discussion.getByRole("link", { name: "Discuss on GitLab" }),
-  ).toHaveAttribute("href", "https://code.eigin.ai/dev/eigin/-/issues/417");
+  ).toHaveAttribute("href", "https://code.eigin.ai/dev/eigin/-/work_items/443");
   await expect(discussion.locator(".eigin-btn")).toHaveCount(0);
   const submit = await page
     .getByRole("link", { name: "Submit your spec", exact: true })

@@ -20,11 +20,8 @@ export async function publicationSnapshot(
     FROM call_contracts WHERE slug=$1 FOR UPDATE`,
     [slug],
   );
-  if (!contract?.closed || contract.mode !== "rehearsal")
-    throw new SelectionFailure(
-      409,
-      "Only a closed rehearsal call can be published.",
-    );
+  if (!contract?.closed || !["rehearsal", "production"].includes(contract.mode))
+    throw new SelectionFailure(409, "Only a closed call can be published.");
   const {
     rows: [recorded],
   } = await client.query(
@@ -34,7 +31,7 @@ export async function publicationSnapshot(
   );
   if (
     !recorded ||
-    recorded.mode !== "rehearsal" ||
+    recorded.mode !== contract.mode ||
     recorded.contract_sha256 !== contract.sha256
   )
     throw new SelectionFailure(

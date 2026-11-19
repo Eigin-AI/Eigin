@@ -1,3 +1,4 @@
+import { checkPublication } from "./smoke-publication.ts";
 import { testDatabaseUrl } from "../tests/database.ts";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -8,9 +9,7 @@ import { digest } from "../src/lib/server/submissions.ts";
 
 const pool = createPool(testDatabaseUrl());
 const token = randomBytes(32).toString("base64url");
-const gitlabId = String(
-  8600000000000000 + Math.floor(Math.random() * 1000000000000),
-);
+const gitlabId = "5";
 const canonical = "https://contributors.example.invalid";
 const base = "http://127.0.0.1:5376";
 let userId: string | undefined;
@@ -64,6 +63,16 @@ try {
   assert.equal(home.status, 200);
   assert.ok(!(await home.text()).includes("Demo: choosing funded specs"));
   for (const path of [
+    "/calls/tool-safety",
+    "/guides/participation-terms",
+    "/calls/tool-safety/submission",
+    "/review",
+    "/review/calls/tool-safety",
+  ]) {
+    assert.equal((await fetch(base + path, { headers })).status, 200, path);
+  }
+  assert.equal((await fetch(base + "/review")).status, 404);
+  for (const path of [
     "/calls/unknown-call",
     "/%63alls/unknown-call",
     "/%63alls/unknown-call/__data.json",
@@ -71,7 +80,6 @@ try {
     "/%63alls/local-memory/__data.json",
     "/%72eview/calls/unknown-call/selection/publish",
     "/calls/unknown-call/__data.json",
-    "/calls/tool-safety",
     "/calls/unknown-call/specs/selected",
     "/calls/unknown-call/specs/runner-up",
     "/review/calls/unknown-call/selection/publish",
@@ -91,18 +99,24 @@ try {
     );
     assert.equal(response.status, 404, action);
   }
+  await checkPublication(pool, base, headers);
+  await pool.query("UPDATE users SET gitlab_user_id=$1 WHERE id=$2", [
+    "8600000000000099",
+    userId,
+  ]);
+  assert.equal((await fetch(base + "/account", { headers })).status, 200);
+  assert.equal(
+    (await fetch(base + "/review/calls/tool-safety", { headers })).status,
+    404,
+  );
   console.log(
-    "Production gate passed: valid reviewer session, no rehearsal catalog, public readers and publication actions return 404.",
+    "Production launch passed: public brief, private reviewer access and rehearsal isolation.",
   );
 } finally {
   if (server && server.exitCode === null && server.signalCode === null) {
     const exited = once(server, "exit");
     server.kill("SIGTERM");
     await exited;
-  }
-  if (userId) {
-    await pool.query("DELETE FROM sessions WHERE user_id=$1", [userId]);
-    await pool.query("DELETE FROM users WHERE id=$1", [userId]);
   }
   await pool.end();
 }

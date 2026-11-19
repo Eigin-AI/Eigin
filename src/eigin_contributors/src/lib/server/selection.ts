@@ -25,7 +25,7 @@ export type { Pair, SelectionSummary } from "./selection-store.ts";
 export type RecordedSelection = SelectionSummary & {
   confirmedByGitlabId: string;
   confirmedAt: string;
-  mode: "rehearsal";
+  mode: "rehearsal" | "production";
   resultsCopy: ResultsCopy | null;
   resultsVersion: string | null;
 };
@@ -214,7 +214,7 @@ export class Selection {
         `INSERT INTO call_selections
         (call_slug,contract_sha256,selected_submission_id,selected_revision_id,runner_up_submission_id,runner_up_revision_id,
          selected_amount_minor,runner_up_amount_minor,currency,mode,confirmed_by_user_id,confirmed_by_gitlab_id,results_copy,results_version)
-        SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,'rehearsal',$10,$11,$14,$15
+        SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$16,$10,$11,$14,$15
         WHERE EXISTS (SELECT 1 FROM selection_confirmations WHERE token_hash=$12 AND expires_at>clock_timestamp())
         AND EXISTS (SELECT 1 FROM sessions WHERE token_hash=$13 AND expires_at>clock_timestamp())
         AND EXISTS (SELECT 1 FROM call_contracts WHERE slug=$1 AND (snapshot->>'closesAt')::timestamptz<=clock_timestamp())`,
@@ -234,6 +234,7 @@ export class Selection {
           sessionHash,
           JSON.stringify(draft.copy),
           draft.version,
+          contract.mode,
         ],
       );
       if (!inserted.rowCount) throw invalidConfirmation();

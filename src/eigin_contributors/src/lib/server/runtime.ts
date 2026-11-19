@@ -48,9 +48,9 @@ export function auth() {
   return service;
 }
 
-/** Reviewer access remains local-only until the production launch gates are ready. */
+/** Authorize reviewers by numeric GitLab ID. */
 export function canReview(user: User | null): user is User {
-  return dev && isReviewer(user, env.REVIEWER_GITLAB_IDS);
+  return isReviewer(user, env.REVIEWER_GITLAB_IDS);
 }
 
 /** Create a reviewer service using private server configuration. */
@@ -58,16 +58,20 @@ export function review() {
   return new Review(database(), env.REVIEWER_GITLAB_IDS);
 }
 
-/** Private decision service; routes enforce the development launch gate. */
+/** Private selection for authorized reviewers. */
 export function selection() {
   return new Selection(database(), env.REVIEWER_GITLAB_IDS);
 }
 
-/** Reviewer publication writes; routes retain the development-only launch gate. */
+/** Publish confirmed selections after explicit reviewer approval. */
 export function publication() {
   return new Publication(database(), env.REVIEWER_GITLAB_IDS);
 }
-/** Public snapshot reads are available only in the local rehearsal runtime. */
+/** Read public snapshots from the active catalog. */
 export function publishedCalls() {
-  return new PublishedCalls(database(), publicCalls());
+  return new PublishedCalls(
+    database(),
+    publicCalls(),
+    dev ? undefined : "production",
+  );
 }

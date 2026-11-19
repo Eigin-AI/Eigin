@@ -1,9 +1,6 @@
-import { dev } from "$app/env";
-import { error } from "@sveltejs/kit";
 import body from "../../../../content/guides/participation-terms.md?raw";
 
 export function load() {
-  if (!dev) error(404, "Not found");
   const [introduction, ...sections] = body
     .replace(/^# Participation terms\s*/, "")
     .split(/^## /m);

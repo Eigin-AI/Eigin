@@ -22,8 +22,10 @@ The first submission freezes dates, awards, and agreement versions. Each account
 
 ## Deployment
 
-Inject `ORIGIN`, `DATABASE_URL`, `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET`, and optionally `REVIEWER_GITLAB_IDS` through the hosting environment. Apply migrations before serving traffic. Schedule `npm run db:prune-oauth --workspace @eigin/contributors` (e.g. every 10 minutes). Use an ingress rate limit across replicas and configure adapter-node client addresses through trusted proxies only.
+See the [production deployment and rollback runbook](../../infra/scaleway/modules/contributor/README.md).
 
-Sign-in uses two HttpOnly, SameSite=Lax cookies (Secure on HTTPS): a ten-minute OAuth browser binding and a seven-day session. The public privacy notice still needs legal review.
+Inject `ORIGIN`, `DATABASE_URL`, `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET`, and optionally `REVIEWER_GITLAB_IDS` through the hosting environment. Apply migrations before serving traffic. Schedule `npm run db:prune-oauth --workspace @eigin/contributors` (e.g. every 10 minutes). Production uses the application limiter with at most one replica and trusts one verified proxy hop. Revisit ingress-wide limiting before adding replicas.
 
-Calls and review are gated in production until launch approval. Rehearsal consent is not a signed CLA. Git publication, email, and payments remain manual.
+Sign-in uses two HttpOnly, SameSite=Lax cookies (Secure on HTTPS): a ten-minute OAuth browser binding and a seven-day session. Participation terms v1.0 describe privacy and payment handling.
+
+Production lists approved calls, including #443. Real submissions explicitly sign the Individual CLA v1.0 and accept participation terms v1.0. Only configured GitLab reviewer IDs have review access. Rehearsal consent is not a signed CLA. Git publication, email, and payments remain manual.
