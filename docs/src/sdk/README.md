@@ -8,6 +8,7 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 
 ## SDK capabilities
 
+- [Agent turn progression](turn-progression.md): execute tool rounds, recover an interrupted or empty reply, and finish a turn.
 - [Agent checkpoints](../conversation/agentic-loop.md#safe-checkpoints): retain interrupted output before host persistence.
 
 - [Outgoing conversation preparation](conversation-preparation.md): select history and assemble request-only messages.
