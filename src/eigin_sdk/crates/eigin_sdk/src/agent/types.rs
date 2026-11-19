@@ -7,7 +7,7 @@ pub struct RoundToolResult {
     pub content: String,
 }
 
-/// Completed inference output; the host decides whether to continue or retry.
+/// Completed inference output consumed by turn progression and host transcript delivery.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum RoundOutcome {
     Reply {

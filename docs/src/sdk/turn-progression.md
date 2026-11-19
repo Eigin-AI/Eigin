@@ -1,0 +1,11 @@
+# Turn progression
+
+Create one `Experimental.Agent.Turn` per user turn (Rust: `agent::AgentTurn`). The controller counts inference requests and owns the single shared recovery allowance. It holds no transcript, provider client, executor, or persistent state.
+
+1. Call `beginRound()`. On `.finish(reason: .roundLimit)`, return completed work. On `.requestInference`, create a fresh `Agent.Round`, send the prepared request, feed it events, and report the provider attempt. Provider failover and hedging are independent of the turn budget.
+2. Pass the finished round outcome to `completeRound(outcome:)`. On `.finish(reason: .reply)`, deliver the final reply. On `.checkEmptyReply`, sample host stop, cancellation, and explicit termination and call `resolveEmptyReply(signals:)`. On `.finish(reason: .explicitTermination)`, return completed work without requiring final prose.
+3. On `.executeTools`, commit the assistant batch, run calls through host permissions, and append each `recordResult` in order. Call `completeTools(terminate:)` after the batch. On `.continue`, refresh tool definitions and executor, then begin the next round. The 40th batch still executes; there is no 41st request. Local inline tools use `recordInlineExchange` during inference and never re-enter batch execution.
+4. For a failed stream, classify the error in the adapter and call `failRound(failure:signals:allowInterruptionRecovery:)`. Enable interruption recovery only for cloud generation. Keep the original error to propagate on `.propagateFailure`; `.missingReply` reports exhausted empty-reply recovery.
+5. On `.recover`, keep completed exchanges. If `reason` is `.interrupted`, drain and commit nonempty partial text with its original streaming identity. Drop the unfinished round, including tool fragments, and map `reason` to a hint for the next request only. Both interrupted and missing-reply recovery consume the same allowance.
+
+Sample lifecycle signals at each decision and check again after host suspension points. `.returnStopped` and `.cancelled` preserve distinct host outcomes. Calls out of order throw `TurnError.InvalidPhase`. The host owns tool execution, registry refresh, UI and speech callbacks, cancellation wiring, and checkpoint timing.

@@ -1,4 +1,5 @@
 @testable import Eigin
+import EiginSDK
 import Factory
 import Foundation
 import os
@@ -194,7 +195,109 @@ struct AgenticChatLoopTests {
         #expect(parts.count == (prose ? 2 : 1))
     }
 
-    @Test(arguments: ["", " \n\t"])
+    @Test @MainActor func streamReportedSilenceRechecksTerminationBeforeRecovery() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        var checks = 0
+        loop.shouldTerminate = { checks += 1; return checks == 2 }
+        let service = FakeChatService()
+        service.enqueueEventStream(
+            [.contentDelta("Partial")],
+            endingWith: TurnCompletionError.missingReply
+        )
+        let produced = try await loop.run(
+            messages: [], tools: nil, agent: agent, provider: provider,
+            chatService: service, toolExecutor: FakeToolExecutor()
+        )
+        #expect(produced.isEmpty)
+        #expect(loop.roundsExecuted == 1)
+        #expect(checks == 2)
+    }
+
+    @Test @MainActor func cancellationDuringEmptyReplyCheckPrecedesRecovery() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.shouldTerminate = {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return false
+        }
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta(" "), .finished(.stop)])
+        let task = Task {
+            try await loop.run(
+                messages: [], tools: nil, agent: agent, provider: provider,
+                chatService: service, toolExecutor: FakeToolExecutor()
+            )
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(loop.roundsExecuted == 1)
+    }
+
+    @Test @MainActor func returnsCompletedToolsAtRoundLimit() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        for index in 0 ..< 40 {
+            service.enqueueEventStream([
+                .toolCall(ToolCall(
+                    id: "call-\(index)",
+                    type: "function",
+                    function: .init(name: "read_core", arguments: "{}")
+                )),
+                .finished(.toolCalls),
+            ])
+        }
+        let loop = AgenticChatLoop(isBootstrap: false)
+        var refreshes = 0
+        loop.onToolsChanged = {
+            refreshes += 1
+            return (tools: [], executor: executor)
+        }
+        let produced = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Keep working")], tools: nil,
+            agent: agent, provider: provider, chatService: service, toolExecutor: executor
+        )
+        #expect(loop.roundsExecuted == 40)
+        #expect(executor.calls.count == 40)
+        #expect(refreshes == 40)
+        #expect(produced.count(where: { $0.role == "tool" }) == 40)
+        #expect(produced.last?.toolCallID == "call-39")
+    }
+
+    @Test(arguments: [false, true])
+    @MainActor func recoveryCausesShareOneAllowance(emptyFirst: Bool) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        if emptyFirst { service.enqueueEventStream([.finished(.stop)]) }
+        service.enqueueEventStream(
+            [.contentDelta("Partial")],
+            endingWith: URLError(.networkConnectionLost)
+        )
+        if !emptyFirst { service.enqueueEventStream([.finished(.stop)]) }
+        let loop = AgenticChatLoop(isBootstrap: false)
+        do {
+            _ = try await loop.run(
+                messages: [ChatMessage(role: "user", content: "Help")], tools: nil,
+                agent: agent, provider: provider, chatService: service,
+                toolExecutor: FakeToolExecutor()
+            )
+            Issue.record("Expected the second failure to exhaust recovery")
+        } catch {
+            if emptyFirst {
+                #expect((error as? URLError)?.code == .networkConnectionLost)
+            } else {
+                #expect(error is TurnCompletionError)
+            }
+        }
+        #expect(loop.roundsExecuted == 2)
+        #expect(loop.buildCheckpoint().contains { $0.content == "Partial" })
+    }
+
+    @Test(arguments: ["", " \n\t", "\u{0085}\u{00A0}\u{200B}\u{2028}\u{3000}"])
     @MainActor func recoversEmptyFinalReply(empty: String) async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
@@ -685,6 +788,33 @@ struct AgenticChatLoopTests {
         for call in calls {
             #expect(service.capturedEventMessages.count { $0.toolCallID == call.id } == 1)
         }
+    }
+
+    @Test(arguments: [true, false])
+    @MainActor func resourceLimitPreservesCurrentAdapterPolicy(local: Bool) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        if local { provider.baseURL = "local://test" }
+        let service = FakeChatService()
+        let limit = EiginSDK.Experimental.Inference.Failure.LimitExceeded(limit: "stream")
+        service.enqueueEventStream(
+            [.contentDelta("Partial")],
+            endingWith: InferenceSDKConversion.error(limit)
+        )
+        service.enqueueEventStream([.contentDelta("Done"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        do {
+            let produced = try await loop.run(
+                messages: [], tools: nil, agent: agent, provider: provider,
+                chatService: service, toolExecutor: FakeToolExecutor()
+            )
+            #expect(!local)
+            #expect(produced.map(\.content) == ["Partial", "Done"])
+        } catch StreamCompletionError.interrupted {
+            #expect(local)
+            #expect(loop.buildCheckpoint().last?.content == "Partial")
+        }
+        #expect(loop.roundsExecuted == (local ? 1 : 2))
     }
 
     @Test(arguments: [StreamCompletionError.outputLimit, .policyStop, .invalidToolCall])
@@ -1491,6 +1621,17 @@ struct AgenticChatLoopTests {
 
     // MARK: - InlineToolRunner (local model path)
 
+    @Test @MainActor func localModelCannotActivateSkillsInline() {
+        let activation = ActivateSkillTool().definition()
+        let search = ToolDefinition(
+            name: "search_knowledge",
+            description: "Search",
+            parameters: .init(type: "object")
+        )
+        #expect(LocalClient.makeBridgedTools([activation]).isEmpty)
+        #expect(LocalClient.makeBridgedTools([search]).count == 1)
+    }
+
     /// Verifies that when a local model executes a tool inline via the
     /// ``InlineToolRunner``, the loop records the assistant(tool_calls) +
     /// tool(result) round into `produced` and appends a final assistant message.
@@ -1512,6 +1653,7 @@ struct AgenticChatLoopTests {
             for: "inline_1", content: "{\"result\":\"I am a test agent.\"}"
         )
 
+        provider.baseURL = "local://test"
         // Queue a tool call to be executed inline by the fake service.
         fakeChatService.enqueueInlineToolCalls([call])
 
@@ -1525,6 +1667,11 @@ struct AgenticChatLoopTests {
             isBootstrap: false,
             permissionPolicy: AlwaysAllowPolicy()
         )
+
+        loop.onToolsChanged = {
+            Issue.record("Local inline execution must not refresh the batch registry")
+            return (tools: [], executor: fakeToolExecutor)
+        }
 
         let produced = try await loop.run(
             messages: [ChatMessage(role: "user", content: "Who am I?")],

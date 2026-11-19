@@ -1,8 +1,15 @@
 import EiginSDKBindings
 
 public extension EiginSDK.Experimental {
-    /// Transient reply and tool transcript handling; hosts own execution and orchestration.
+    /// Transient reply and tool transcript handling; hosts execute operations.
     enum Agent {
+        public typealias Turn = AgentTurn
+        public typealias Action = TurnAction
+        public typealias FinishReason = TurnFinishReason
+        public typealias Signals = TurnSignals
+        public typealias TurnFailure = EiginSDKBindings.TurnFailure
+        public typealias Continuation = TurnContinuation
+        public typealias TurnError = EiginSDKBindings.TurnError
         public typealias Round = AgentRound
         public typealias Outcome = RoundOutcome
         public typealias ToolResult = RoundToolResult

@@ -128,13 +128,13 @@ final class AgenticChatLoop {
     /// and executor for subsequent rounds.
     var onToolsChanged: (() async -> (tools: [ToolDefinition], executor: ToolExecutor))?
 
-    /// Maximum number of tool-calling rounds before forcing a stop.
-    private let maxRounds = 40
-
     /// Timeout for individual tool executions.
     private let toolExecutionTimeout: Duration = .seconds(30)
 
-    private(set) var roundsExecuted: Int = 0
+    private var activeTurn: EiginSDK.Experimental.Agent.Turn?
+    var roundsExecuted: Int {
+        Int(activeTurn?.roundsExecuted() ?? 0)
+    }
 
     var chatPhase: ChatPhase = .idle
     private var activeRound: EiginSDK.Experimental.Agent.Round?
@@ -235,16 +235,21 @@ final class AgenticChatLoop {
             paging = try ContextPagingSession(agent: agent, chatID: conversationID)
         }
         var allMessages = messages
-        var recoveryUsed = false
+        let progression = EiginSDK.Experimental.Agent.Turn()
+        activeTurn = progression
         var nextInstruction = continuationInstruction
         var currentTools = tools
         var currentExecutor: ToolExecutor = toolExecutor
 
-        for round in 0 ..< maxRounds {
-            roundsExecuted = round + 1
+        rounds: while true {
+            switch try progression.beginRound() {
+            case .requestInference: break
+            case .finish(.roundLimit): break rounds
+            default: throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
+            }
             if shouldStop { return [] }
             AppLogger.debug(
-                "Round \(public: round): sending \(public: allMessages.count) messages",
+                "Round \(public: roundsExecuted - 1): sending \(public: allMessages.count) messages",
                 category: .chat
             )
 
@@ -400,20 +405,23 @@ final class AgenticChatLoop {
                         result: .failed(RoutingFailure(from: error))
                     )
                 }
-                if !Task.isCancelled, !shouldStop, shouldTerminate?() != true,
-                   !recoveryUsed, round + 1 < maxRounds,
-                   !ProviderPreset.isLocal(provider.baseURL), isStreamInterruption(error)
-                {
-                    recoveryUsed = true
-                    if !contentBuffer.isEmpty {
+                let failure = TurnSDKConversion.failure(error)
+                var signals = failureSignals()
+                // Stream-reported silence samples lifecycle again after the interruption check.
+                if failure == .missingReply { signals = failureSignals() }
+                let action = try progression.failRound(
+                    failure: failure, signals: signals,
+                    allowInterruptionRecovery: !ProviderPreset.isLocal(provider.baseURL)
+                )
+                switch action {
+                case .recover(let reason):
+                    if reason == .interrupted, !contentBuffer.isEmpty {
                         throttler.finish()
                         await waitForThrottlerDrain()
                         if shouldStop { return [] }
                         try Task.checkCancellation()
                         let partial = ChatMessage(
-                            role: "assistant",
-                            content: contentBuffer,
-                            localID: currentMessageID
+                            role: "assistant", content: contentBuffer, localID: currentMessageID
                         )
                         produced.append(partial)
                         allMessages.append(partial)
@@ -422,22 +430,16 @@ final class AgenticChatLoop {
                     activeRound = nil
                     throttler.resetKeepingPhase(.waiting)
                     currentMessageID = "msg-\(UUID().uuidString)"
-                    nextInstruction = Prompt.Hints.Continuation.interrupted
+                    nextInstruction = TurnSDKConversion.instruction(reason)
                     chatPhase = .streamingProse
                     continue
+                case .returnStopped:
+                    return []
+                case .propagateFailure, .missingReply:
+                    throw error
+                default:
+                    throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
                 }
-                if let completion = error as? TurnCompletionError, case .missingReply = completion {
-                    if Task.isCancelled || shouldStop || shouldTerminate?() == true { return [] }
-                    guard !recoveryUsed, round + 1 < maxRounds else { throw completion }
-                    recoveryUsed = true
-                    throttler.resetKeepingPhase(.waiting)
-                    activeRound = nil
-                    currentMessageID = "msg-\(UUID().uuidString)"
-                    nextInstruction = Prompt.Hints.Continuation.missingReply
-                    chatPhase = .streamingProse
-                    continue
-                }
-                throw error
             }
 
             await reportAttempt(
@@ -447,7 +449,14 @@ final class AgenticChatLoop {
 
             if shouldStop { return [] }
             let outcome = try RoundSDKConversion.finish(sdkRound)
-            if case .tools(let assistant, let calls) = outcome {
+            var action = try progression.completeRound(outcome: outcome)
+            if case .checkEmptyReply = action {
+                let terminate = shouldTerminate?() == true
+                action = try progression.resolveEmptyReply(signals: .init(
+                    cancelled: Task.isCancelled, stopped: false, terminate: terminate
+                ))
+            }
+            if case .executeTools = action, case .tools(let assistant, let calls) = outcome {
                 if shouldStop { return [] }
                 let pendingToolCalls = calls.map(RoundSDKConversion.call)
                 chatPhase = .executingTools
@@ -521,8 +530,10 @@ final class AgenticChatLoop {
                 // No drain needed: the round's prose was already drained and
                 // committed before tool execution, and the throttler is parked
                 // in .waiting with empty buffers.
-                if shouldTerminate?() == true {
-                    break
+                switch try progression.completeTools(terminate: shouldTerminate?() == true) {
+                case .finish(.explicitTermination): break rounds
+                case .continue: break
+                default: throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
                 }
 
                 // Rebuild tools if a skill was activated (or any other tool changed the registry).
@@ -540,20 +551,24 @@ final class AgenticChatLoop {
                 continue
             }
 
-            if contentBuffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               shouldTerminate?() != true
-            {
-                try Task.checkCancellation()
-                guard !recoveryUsed, round + 1 < maxRounds else {
-                    throw TurnCompletionError.missingReply
-                }
-                recoveryUsed = true
+            switch action {
+            case .recover(let reason):
                 throttler.resetKeepingPhase(.waiting)
                 activeRound = nil
                 currentMessageID = "msg-\(UUID().uuidString)"
-                nextInstruction = Prompt.Hints.Continuation.missingReply
+                nextInstruction = TurnSDKConversion.instruction(reason)
                 chatPhase = .streamingProse
                 continue
+            case .missingReply:
+                throw TurnCompletionError.missingReply
+            case .cancelled:
+                throw CancellationError()
+            case .returnStopped:
+                return []
+            case .finish:
+                break
+            default:
+                throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
             }
 
             // Drain before marking the turn done so stopping can still save its text.
@@ -743,13 +758,14 @@ final class AgenticChatLoop {
         }
     }
 
-    private func isStreamInterruption(_ error: Error) -> Bool {
-        if let error = error as? StreamCompletionError, case .interrupted = error { return true }
-        if let error = error as? ResponsesAPIError, case .interruptedStream = error { return true }
-        if let error = error as? URLError {
-            return error.code == .timedOut || error.code == .networkConnectionLost
-        }
-        return false
+    private func failureSignals() -> EiginSDK.Experimental.Agent.Signals {
+        let cancelled = Task.isCancelled
+        let stopped = shouldStop
+        return .init(
+            cancelled: cancelled,
+            stopped: stopped,
+            terminate: !cancelled && !stopped && shouldTerminate?() == true
+        )
     }
 
     private func waitForThrottlerDrain() async {
