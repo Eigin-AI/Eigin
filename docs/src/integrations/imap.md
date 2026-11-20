@@ -2,6 +2,10 @@
 
 Provides the `email` capability via plain IMAP/SMTP: list, search, read, send, and reply. This is the catch-all provider for accounts that aren't reachable through the Google or Microsoft OAuth integrations — iCloud, Fastmail, most self-hosted or ISP mailboxes, and encrypted providers like Proton (via [Proton Bridge](https://proton.me/mail/bridge), which runs a local IMAP/SMTP server for the app to talk to).
 
+## Attachments
+
+`email_read` includes attachment metadata. Attachment downloads are not supported yet.
+
 ## Folder access
 
 - Listing and search use INBOX. The search tool describes this account's plain-text query syntax.

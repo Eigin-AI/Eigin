@@ -33,6 +33,7 @@ struct EmailMessage: Sendable, Equatable {
     let subject: String
     let body: String
     let date: String
+    var attachments: [EmailAttachment] = []
 }
 
 /// Shared email operations for connected accounts.
@@ -46,6 +47,11 @@ protocol EmailProvider: Sendable {
         pageToken: String?
     ) async throws -> EmailPage
     func readEmail(id: String) async throws -> EmailMessage
+    /// Fetches a selected attachment belonging to this account and message.
+    func fetchAttachment(
+        messageID: String,
+        attachmentID: String
+    ) async throws -> EmailAttachmentContent
     /// Sends the message and returns it as sent, so the agent keeps the
     /// subject/body it just committed to even if the tool call's own
     /// arguments later drop out of context.
@@ -68,6 +74,7 @@ extension EmailMessage {
             "subject": subject,
             "body": body,
             "date": date,
+            "attachments": attachments.map(\.jsonObject),
         ]
     }
 }

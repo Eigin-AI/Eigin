@@ -29,6 +29,94 @@ struct EmailToolsTests {
         )
     }
 
+    @Test @MainActor func attachmentFetchReturnsTextAndContinuation() async throws {
+        let provider = FakeEmailProvider()
+        provider.attachmentContent = EmailAttachmentContent(
+            metadata: EmailAttachment(id: "a", filename: "invoice.txt", mimeType: "text/plain"),
+            data: Data(String(repeating: "invoice ", count: 500).utf8)
+        )
+        var tool = FetchEmailAttachmentTool(provider: provider, reader: DocumentReader())
+        tool.isSmallContext = true
+        let result = try await tool.execute(
+            call("email_fetch_attachment", #"{"message_id":"m","attachment_id":"a"}"#),
+            agent: makeAgent()
+        )
+        #expect(!result.isError)
+        #expect(result.content.contains("next_content_offset"))
+        #expect(result.content.contains("invoice"))
+        #expect(provider.lastAttachmentID == "a")
+    }
+
+    @Test @MainActor func genericTextAttachmentIsValidatedBeforeReading() async throws {
+        let provider = FakeEmailProvider()
+        let metadata = EmailAttachment(
+            id: "a",
+            filename: "invoice.txt",
+            mimeType: "application/octet-stream"
+        )
+        provider.attachmentContent = EmailAttachmentContent(
+            metadata: metadata,
+            data: Data("Invoice 123".utf8)
+        )
+        let tool = FetchEmailAttachmentTool(provider: provider, reader: DocumentReader())
+        let agent = try makeAgent()
+        let request = call("email_fetch_attachment", #"{"message_id":"m","attachment_id":"a"}"#)
+        let readable = await tool.execute(request, agent: agent)
+        #expect(readable.content.contains("Invoice 123"))
+        provider.attachmentContent = EmailAttachmentContent(
+            metadata: metadata,
+            data: Data([0, 1, 2])
+        )
+        let binary = await tool.execute(request, agent: agent)
+        #expect(binary.content.contains("unreadable"))
+    }
+
+    @Test @MainActor func corruptPDFRetainsMetadataWithUnreadableStatus() async throws {
+        let provider = FakeEmailProvider()
+        provider.attachmentContent = EmailAttachmentContent(
+            metadata: EmailAttachment(id: "a", filename: "broken.pdf", mimeType: "application/pdf"),
+            data: Data("broken".utf8)
+        )
+        let tool = FetchEmailAttachmentTool(provider: provider, reader: DocumentReader())
+        let result = try await tool.execute(
+            call("email_fetch_attachment", #"{"message_id":"m","attachment_id":"a"}"#),
+            agent: makeAgent()
+        )
+        #expect(!result.isError)
+        #expect(result.content.contains("unreadable"))
+        #expect(result.content.contains("broken.pdf"))
+    }
+
+    @Test @MainActor func invalidAttachmentSelectionAvoidsDownload() async throws {
+        let provider = FakeEmailProvider()
+        let tool = FetchEmailAttachmentTool(provider: provider, reader: DocumentReader())
+        let result = try await tool.execute(
+            call(
+                "email_fetch_attachment",
+                #"{"message_id":"m","attachment_id":"a","start_page":0}"#
+            ),
+            agent: makeAgent()
+        )
+        #expect(result.isError)
+        #expect(provider.lastAttachmentID == nil)
+    }
+
+    @Test @MainActor func imapAttachmentDownloadReturnsExplicitUnsupportedStatus() async throws {
+        let provider = IMAPEmailProvider(
+            integrationID: UUID(),
+            credentialStore: FakeIMAPCredentialStore()
+        )
+        let tool = FetchEmailAttachmentTool(provider: provider, reader: DocumentReader())
+        let result = try await tool.execute(
+            call("email_fetch_attachment", #"{"message_id":"1","attachment_id":"a"}"#),
+            agent: makeAgent()
+        )
+        #expect(!result.isError)
+        #expect(result.content.contains("unsupported"))
+        #expect(result.content.contains("IMAP attachment downloads are not supported yet."))
+        #expect(!result.content.contains("SwiftMail"))
+    }
+
     @Test @MainActor func foldersAreDiscoveredAndForwarded() async throws {
         let provider = FakeEmailProvider()
         provider.folders = [EmailFolder(id: "folder-1", name: "Receipts", parentID: nil)]

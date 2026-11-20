@@ -74,6 +74,21 @@ struct IMAPEmailProvider: EmailProvider {
         }
     }
 
+    func fetchAttachment(
+        messageID: String,
+        attachmentID: String
+    ) async throws -> EmailAttachmentContent {
+        EmailAttachmentContent(
+            metadata: EmailAttachment(
+                id: attachmentID,
+                filename: "attachment",
+                mimeType: "application/octet-stream",
+                unsupportedReason: "IMAP attachment downloads are not supported yet."
+            ),
+            data: Data()
+        )
+    }
+
     func sendEmail(
         to: [String],
         cc: [String],
@@ -251,7 +266,8 @@ struct IMAPEmailProvider: EmailProvider {
             to: message.to,
             subject: message.subject,
             body: message.body,
-            date: message.date
+            date: message.date,
+            attachments: message.attachments
         )
     }
 

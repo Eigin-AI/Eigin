@@ -8,6 +8,7 @@ enum EmailToolCapabilities {
         ListEmailsTool.capability,
         SearchEmailsTool.capability,
         ReadEmailTool.capability,
+        FetchEmailAttachmentTool.capability,
         SendEmailTool.capability,
         ReplyEmailTool.capability,
     ]
@@ -20,6 +21,7 @@ enum EmailToolKit {
             ListEmailsTool(provider: provider),
             SearchEmailsTool(provider: provider),
             ReadEmailTool(provider: provider),
+            FetchEmailAttachmentTool(provider: provider),
             SendEmailTool(provider: provider),
             ReplyEmailTool(provider: provider),
             ListEmailFoldersTool(provider: provider),

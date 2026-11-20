@@ -2,6 +2,10 @@
 
 Provides the `email` capability via the Microsoft Graph API: list, search, read, send, and reply. Personal accounts only — Hotmail, outlook.com, and live.dk. Work/school (Microsoft 365) accounts aren't supported.
 
+## Attachments
+
+`email_read` lists attachments; `email_fetch_attachment` reads PDF and plain-text attachments using existing read permissions.
+
 ## Folders and labels
 
 - `email_list_folders` discovers available folders and returns their IDs and names.
