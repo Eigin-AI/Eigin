@@ -398,6 +398,30 @@ struct AgenticChatLoopTests {
         #expect(!service.capturedEventMessages.contains { !($0.toolCalls ?? []).isEmpty })
     }
 
+    @Test @MainActor func recoveredProseKeepsBothStreamingIdentities() async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("Partial answer")])
+        service.enqueueEventStream([.contentDelta("Recovered answer"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        var streamingIDs: [String] = []
+        loop.onContentDelta = { _ in streamingIDs.append(loop.currentMessageID) }
+        let messages = try await loop.run(
+            messages: [], tools: toolDefinitions, agent: agent, provider: provider,
+            chatService: service, toolExecutor: FakeToolExecutor()
+        )
+        #expect(streamingIDs.count == 2)
+        #expect(Set(streamingIDs).count == 2)
+        #expect(messages.map(\.localID) == streamingIDs)
+        #expect(messages.map(\.content) == ["Partial answer", "Recovered answer"])
+        #expect(loop.committedMessages.map(\.localID) == Array(streamingIDs.prefix(1)))
+        #expect(loop.buildCheckpoint().map(\.localID) == streamingIDs)
+        #expect(loop.buildCheckpoint().map(\.localID) == streamingIDs)
+        loop.settle()
+        #expect(loop.buildCheckpoint().isEmpty)
+    }
+
     @Test @MainActor func sharedBudgetPreservesTextBeforeUnexecutedTools() async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container

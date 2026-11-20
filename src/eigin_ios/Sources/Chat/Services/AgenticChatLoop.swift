@@ -140,15 +140,11 @@ final class AgenticChatLoop {
         activeRound?.partialContent() ?? ""
     }
 
-    private var produced: [ChatMessage] = []
-    /// Safe-to-retain prefix, including the assistant batch and each recorded result.
-    /// The SDK checkpoint closes outstanding calls with uncertainty results.
-    private var safeProducedCount = 0
+    private var turnOutput = TurnOutputSDKConversion()
 
-    /// Messages from completed rounds that the UI can display while the loop
-    /// is still running. Only includes full rounds (assistant + all tool results).
+    /// Retained output available to display while the turn is running.
     var committedMessages: [ChatMessage] {
-        Array(produced.prefix(safeProducedCount))
+        turnOutput.committedMessages
     }
 
     private var shouldStop = false
@@ -206,6 +202,7 @@ final class AgenticChatLoop {
         activeModel = model ?? agent.model
         shouldStop = false
         currentMessageID = "msg-\(UUID().uuidString)"
+        try turnOutput.beginDraft(localID: currentMessageID)
         throttler.start()
 
         let paging: ContextPagingSession
@@ -271,9 +268,7 @@ final class AgenticChatLoop {
                         call: RoundSDKConversion.call(call),
                         result: RoundSDKConversion.result(result)
                     )
-                    let messages = values.map { RoundSDKConversion.message($0) }
-                    produced.append(contentsOf: messages)
-                    safeProducedCount = produced.count
+                    let messages = try turnOutput.recordInlineExchange(values)
                     allMessages.append(contentsOf: messages)
                 } catch {
                     AppLogger.error("Inline result arrived after round completion", category: .chat)
@@ -323,6 +318,7 @@ final class AgenticChatLoop {
                     }
 
                     try sdkRound.acceptEvent(event: RoundSDKConversion.event(event))
+                    try turnOutput.updateDraft(contentBuffer)
                     turn.observe(event)
                     switch event {
                     case .contentDelta(let delta):
@@ -383,16 +379,14 @@ final class AgenticChatLoop {
                         await waitForThrottlerDrain()
                         if shouldStop { return [] }
                         try Task.checkCancellation()
-                        let partial = ChatMessage(
-                            role: "assistant", content: contentBuffer, localID: currentMessageID
-                        )
-                        produced.append(partial)
-                        allMessages.append(partial)
-                        safeProducedCount = produced.count
+                        if let partial = try turnOutput.retainInterruptedProse() {
+                            allMessages.append(partial)
+                        }
                     }
                     activeRound = nil
                     throttler.resetKeepingPhase(.waiting)
                     currentMessageID = "msg-\(UUID().uuidString)"
+                    try turnOutput.beginDraft(localID: currentMessageID)
                     nextInstruction = TurnSDKConversion.instruction(reason)
                     chatPhase = .streamingProse
                     continue
@@ -420,6 +414,7 @@ final class AgenticChatLoop {
                 if shouldStop { return [] }
                 let pendingToolCalls = calls.map(RoundSDKConversion.call)
                 chatPhase = .executingTools
+                try turnOutput.beginTools()
 
                 if contentBuffer.isEmpty {
                     // No prose to drain — stay in .waiting to keep
@@ -436,12 +431,8 @@ final class AgenticChatLoop {
                 // Build the assistant message with tool calls (include provider metadata
                 // if present). Reuse currentMessageID as the localID when there's prose, so
                 // the committed row keeps the live streaming row's feed identity.
-                let assistantMessage = RoundSDKConversion.message(
-                    assistant, localID: contentBuffer.isEmpty ? nil : currentMessageID
-                )
+                let assistantMessage = try turnOutput.recordBatch(assistant)
                 allMessages.append(assistantMessage)
-                produced.append(assistantMessage)
-                safeProducedCount = produced.count
 
                 // Now that the committed message is in the items list,
                 // clear streaming view so the typing indicator appears.
@@ -475,16 +466,11 @@ final class AgenticChatLoop {
                     if shouldStop { return [] }
                     afterToolCall?()
 
-                    let toolMessage = try RoundSDKConversion.message(
+                    let toolMessage = try turnOutput.recordResult(
                         sdkRound.recordResult(result: RoundSDKConversion.result(result))
                     )
                     allMessages.append(toolMessage)
-                    produced.append(toolMessage)
-                    safeProducedCount = produced.count
                 }
-
-                // All tool results appended — mark this as a safe checkpoint.
-                safeProducedCount = produced.count
 
                 // Check if the caller wants to stop early (e.g. background decision tool fired).
                 // No drain needed: the round's prose was already drained and
@@ -508,6 +494,7 @@ final class AgenticChatLoop {
                 chatPhase = .streamingProse
                 activeRound = nil
                 currentMessageID = "msg-\(UUID().uuidString)"
+                try turnOutput.beginDraft(localID: currentMessageID)
                 continue
             }
 
@@ -516,6 +503,7 @@ final class AgenticChatLoop {
                 throttler.resetKeepingPhase(.waiting)
                 activeRound = nil
                 currentMessageID = "msg-\(UUID().uuidString)"
+                try turnOutput.beginDraft(localID: currentMessageID)
                 nextInstruction = TurnSDKConversion.instruction(reason)
                 chatPhase = .streamingProse
                 continue
@@ -539,8 +527,9 @@ final class AgenticChatLoop {
             chatPhase = .done
 
             if case .reply(let message) = outcome {
-                produced.append(RoundSDKConversion.message(message, localID: currentMessageID))
-                // The streaming row remains visible until settle(); keep it out of the safe prefix.
+                try turnOutput.finish(message)
+            } else {
+                try turnOutput.finish(nil)
             }
 
             // Don't reset the throttler here — the caller should append
@@ -549,16 +538,19 @@ final class AgenticChatLoop {
             break
         }
 
-        AppLogger.debug("Done. Produced \(public: produced.count) messages", category: .chat)
+        AppLogger.debug(
+            "Done. Produced \(public: turnOutput.messages.count) messages",
+            category: .chat
+        )
         if shouldStop { return [] }
-        return produced
+        return turnOutput.messages
     }
 
     /// Commits the current round: captures produced messages and settles streaming
     /// state. Call synchronously before appending to the display message list so
     /// SwiftUI batches both changes in one update cycle.
     func completeRound() -> [ChatMessage] {
-        let messages = produced
+        let messages = turnOutput.messages
         settle()
         return messages
     }
@@ -570,8 +562,7 @@ final class AgenticChatLoop {
         throttler.reset()
         activeRound = nil
         toolEvents = []
-        produced = []
-        safeProducedCount = 0
+        turnOutput = TurnOutputSDKConversion()
     }
 
     /// Aborts a running stream.
@@ -585,8 +576,7 @@ final class AgenticChatLoop {
         toolEvents = []
         chatPhase = .idle
         activeRound = nil
-        produced = []
-        safeProducedCount = 0
+        turnOutput = TurnOutputSDKConversion()
         shouldStop = false
         pendingBrowsing = nil
         pendingOptions = nil
@@ -822,10 +812,6 @@ final class AgenticChatLoop {
 
     /// Captures completed work and partial prose for persistence after a failure.
     func buildCheckpoint() -> [ChatMessage] {
-        CheckpointSDKConversion.build(
-            produced: produced, retainedCount: safeProducedCount, isDone: chatPhase == .done,
-            isExecutingTools: chatPhase == .executingTools,
-            partialContent: contentBuffer, currentMessageID: currentMessageID
-        )
+        turnOutput.checkpoint()
     }
 }
