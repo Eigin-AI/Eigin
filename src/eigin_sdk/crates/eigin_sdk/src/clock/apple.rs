@@ -30,7 +30,7 @@ fn timebase() -> &'static Timebase {
     })
 }
 
-pub(super) fn now() -> Duration {
+pub(crate) fn now() -> Duration {
     let base = timebase();
     let nanos = u128::from(unsafe { mach_continuous_time() }) * u128::from(base.numer)
         / u128::from(base.denom);
@@ -55,7 +55,7 @@ fn timers() -> &'static Timers {
     });
     WORKER.call_once(|| {
         std::thread::Builder::new()
-            .name("eigin-tool-deadlines".into())
+            .name("eigin-deadlines".into())
             .spawn(move || {
                 loop {
                     let mut event = change(0, 0, 0);
@@ -73,7 +73,7 @@ fn timers() -> &'static Timers {
                     }
                 }
             })
-            .expect("start tool timer worker");
+            .expect("start deadline worker");
     });
     queue
 }
@@ -110,7 +110,7 @@ impl Drop for Registration {
     }
 }
 
-pub(super) async fn sleep_until(expires: Duration) {
+pub(crate) async fn sleep_until(expires: Duration) {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let queue = timers();
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
@@ -123,6 +123,6 @@ pub(super) async fn sleep_until(expires: Duration) {
         queue,
         change(id, libc::EV_ADD | libc::EV_ONESHOT, ticks as i64),
     )
-    .expect("register tool deadline");
+    .expect("register deadline");
     let _ = receiver.await;
 }

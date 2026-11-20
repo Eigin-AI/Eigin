@@ -1,5 +1,5 @@
+import EiginSDK
 import Foundation
-import os
 
 /// Thrown when nobody speaks within the race's ceiling budget: either a first
 /// expiry with a hook that has no replacement, or a second expiry where
@@ -11,24 +11,6 @@ struct StreamEndedWithoutUsefulOutput: Error {}
 
 /// A candidate exceeded its in-memory buffer for events preceding its answer.
 struct PreWinnerBufferOverflow: Error {}
-
-/// The race's winning model — whichever side spoke first. The racing stream
-/// reports it here; the consuming loop reads it once to adopt the turn's model.
-final class RaceWinner: @unchecked Sendable {
-    private let lock = OSAllocatedUnfairLock(initialState: String?.none)
-
-    /// The winning model, or nil while the race is undecided.
-    var current: String? {
-        lock.withLock { $0 }
-    }
-
-    /// First call wins; later calls are ignored.
-    func set(_ model: String) {
-        lock.withLock {
-            if $0 == nil { $0 = model }
-        }
-    }
-}
 
 /// When the runner-up opens, and against which model.
 struct HedgePlan: Sendable {
@@ -55,16 +37,17 @@ func withHedgedFirstToken<T: Sendable>(
     primaryModel: String,
     plan: HedgePlan?,
     ceiling: Duration,
-    raceWinner: RaceWinner,
-    isWinningEvent: @escaping @Sendable (T) -> Bool = { _ in true },
+    attempts: EiginSDK.Experimental.Inference.Attempts,
+    classify: @escaping @Sendable (T) -> EiginSDK.Experimental.Inference
+        .CandidateEvent = { _ in .content(nonempty: true) },
     bufferedEventBytes: @escaping @Sendable (T) -> Int = { _ in 1 },
-    maxBufferedBytes: Int = 1_048_576,
     emptyStreamError: @escaping @Sendable ([T]) -> Error = { _ in
         StreamEndedWithoutUsefulOutput()
     },
     openPrimary: @escaping @Sendable (String) async throws -> AsyncThrowingStream<T, Error>,
-    openFallback: @escaping @Sendable () async -> AsyncThrowingStream<T, Error>?,
-    primaryFailed: @escaping @Sendable (String, Error) async -> (
+    openFallback: @escaping @Sendable () async throws -> AsyncThrowingStream<T, Error>?,
+    onOpenFailure: @escaping @Sendable (String, Error) async -> Void = { _, _ in },
+    primaryFailed: @escaping @Sendable (UInt64, String, Error) async -> (
         model: String,
         stream: AsyncThrowingStream<
             T, Error
@@ -77,589 +60,212 @@ func withHedgedFirstToken<T: Sendable>(
             primaryModel: primaryModel,
             plan: plan,
             ceiling: ceiling,
-            raceWinner: raceWinner,
-            isWinningEvent: isWinningEvent,
+            classify: classify,
             bufferedEventBytes: bufferedEventBytes,
-            maxBufferedBytes: maxBufferedBytes,
+            policy: attempts,
             emptyStreamError: emptyStreamError,
             openPrimary: openPrimary,
             openFallback: openFallback,
+            onOpenFailure: onOpenFailure,
             primaryFailed: primaryFailed,
             onLoser: onLoser,
             continuation: continuation
         )
-        race.start()
-        continuation.onTermination = { _ in race.cancel() }
+        Task { await race.start() }
+        continuation.onTermination = { _ in Task { await race.cancel() } }
     }
 }
 
-/// One side of the race.
-private enum RaceSide: Sendable, CustomStringConvertible {
-    case primary
-    case fallback
-
-    var description: String {
-        switch self {
-        case .primary: "primary"
-        case .fallback: "runner-up"
-        }
-    }
-}
-
-/// Coordinates the lazily-opened primary stream, the runner-up once opened, and
-/// the ceiling watchdog. The first eligible event from either side wins; a side that
-/// loses is cancelled and its late events dropped. All clocks tick from
-/// `start()`, covering the primary's dispatch.
-private final class HedgeRace<T: Sendable>: @unchecked Sendable {
-    private struct State {
-        var winner: RaceSide?
-        var finished = false
-        /// The model the primary side currently carries — updated when the
-        /// failure hook hands back a replacement under a different model.
-        var primaryGeneration = 0
-        var currentPrimaryModel: String
-        /// The runner-up once its stream is attached. Dispatch, or a stream
-        /// still awaiting headers, is not attached.
-        var fallback = Attached()
-        /// Pre-winner deaths. Both sides dead ends the race immediately, with
-        /// whichever error surfaced, instead of the ceiling's timeout.
-        var primaryDeath = Death()
-        var fallbackDeath = Death()
-        var primaryChases: [Task<Void, Never>] = []
-        var primaryForwarding: Task<Void, Never>?
-        var fallbackForwarding: Task<Void, Never>?
-        var hedgeTimer: Task<Void, Never>?
-        var watchdog: Task<Void, Never>?
-
-        struct Attached {
-            var opened = false
-            var dispatchedAt = ContinuousClock.Instant?.none
-        }
-
-        struct Death {
-            var dead = false
-            var surfacedError = Error?.none
-        }
-
-        /// Spent by the first expiry that reaches a decision. A second
-        /// expiry — a rearmed ceiling that nobody met — fails the race.
-        var timeoutChaseUsed = false
-        /// One chase at a time: concurrent initiators (expiry + stream death)
-        /// would otherwise record the failure twice and race two replacements.
-        var chaseInFlight = false
-
-        var tasks: [Task<Void, Never>] {
-            [primaryForwarding, fallbackForwarding, hedgeTimer, watchdog]
-                .compactMap { $0 } + primaryChases
-        }
-    }
-
-    private struct Decision {
-        var accepted = false
-        var winnerModel: String?
-        var loserModel: String?
-        var loserForwarding: Task<Void, Never>?
-    }
-
-    private let lock = OSAllocatedUnfairLock(initialState: State(currentPrimaryModel: ""))
-
-    private let primaryModel: String
-    private let plan: HedgePlan?
-    private let ceiling: Duration
-    private let isWinningEvent: @Sendable (T) -> Bool
-    private let bufferedEventBytes: @Sendable (T) -> Int
-    private let emptyStreamError: @Sendable ([T]) -> Error
-    private let maxBufferedBytes: Int
-    private let raceWinner: RaceWinner
-    private let openPrimary: @Sendable (String) async throws -> AsyncThrowingStream<T, Error>
-    private let openFallback: @Sendable () async -> AsyncThrowingStream<T, Error>?
-    private let primaryFailed: @Sendable (String, Error) async -> (
-        model: String,
-        stream:
-        AsyncThrowingStream<T, Error>
-    )?
-    private let onLoser: @Sendable (String, Duration) async -> Void
-    private let continuation: AsyncThrowingStream<T, Error>.Continuation
-    /// Silence origin for a losing primary, matching time-to-first-token origin.
-    private let dispatchedAt = ContinuousClock.now
+/// Serializes host observations and performs the SDK's ordered stream actions.
+private actor HedgeRace<T: Sendable> {
+    typealias Stream = AsyncThrowingStream<T, Error>
+    typealias SDK = EiginSDK.Experimental.Inference
+    let plan: HedgePlan?
+    let ceiling: Duration
+    let classify: @Sendable (T) -> EiginSDK.Experimental.Inference.CandidateEvent
+    let bufferedEventBytes: @Sendable (T) -> Int
+    let policy: SDK.Attempts
+    let emptyStreamError: @Sendable ([T]) -> Error
+    let openPrimary: @Sendable (String) async throws -> Stream
+    let openFallback: @Sendable () async throws -> Stream?
+    let onOpenFailure: @Sendable (String, Error) async -> Void
+    private var openFailureReport: Task<Void, Never>?
+    let primaryFailed: @Sendable (UInt64, String, Error) async -> (model: String, stream: Stream)?
+    let onLoser: @Sendable (String, Duration) async -> Void
+    let continuation: Stream.Continuation
+    let startTime = ContinuousClock.now
+    private var hedgeOpenedAt: ContinuousClock.Instant?
+    private var models: [UInt64: String]
+    private var buffers: [UInt64: [T]] = [:]
+    private var errors: [UInt64: Error] = [:]
+    private var tasks: [UInt64: Task<Void, Never>] = [:]
+    private var deadlineWait: Task<Void, Never>?
 
     init(
         primaryModel: String,
         plan: HedgePlan?,
         ceiling: Duration,
-        raceWinner: RaceWinner,
-        isWinningEvent: @escaping @Sendable (T) -> Bool,
+        classify: @escaping @Sendable (T) -> EiginSDK.Experimental.Inference.CandidateEvent,
         bufferedEventBytes: @escaping @Sendable (T) -> Int,
-        maxBufferedBytes: Int,
+        policy: SDK.Attempts,
         emptyStreamError: @escaping @Sendable ([T]) -> Error,
-        openPrimary: @escaping @Sendable (String) async throws -> AsyncThrowingStream<T, Error>,
-        openFallback: @escaping @Sendable () async -> AsyncThrowingStream<T, Error>?,
-        primaryFailed: @escaping @Sendable (String, Error) async -> (
+        openPrimary: @escaping @Sendable (String) async throws -> Stream,
+        openFallback: @escaping @Sendable () async throws -> Stream?,
+        onOpenFailure: @escaping @Sendable (String, Error) async -> Void,
+        primaryFailed: @escaping @Sendable (UInt64, String, Error) async -> (
             model: String,
-            stream:
-            AsyncThrowingStream<T, Error>
+            stream: Stream
         )?,
         onLoser: @escaping @Sendable (String, Duration) async -> Void,
-        continuation: AsyncThrowingStream<T, Error>.Continuation
+        continuation: Stream.Continuation
     ) {
-        self.primaryModel = primaryModel
+        models = [0: primaryModel]
+        models[1] = plan?.fallbackModel
         self.plan = plan
         self.ceiling = ceiling
-        self.raceWinner = raceWinner
-        self.isWinningEvent = isWinningEvent
+        self.classify = classify
         self.bufferedEventBytes = bufferedEventBytes
-        self.maxBufferedBytes = maxBufferedBytes
+        self.policy = policy
         self.emptyStreamError = emptyStreamError
         self.openPrimary = openPrimary
         self.openFallback = openFallback
+        self.onOpenFailure = onOpenFailure
         self.primaryFailed = primaryFailed
         self.onLoser = onLoser
         self.continuation = continuation
-        lock.withLock { $0.currentPrimaryModel = primaryModel }
     }
 
     func start() {
-        startWatchdog()
-        if plan != nil { startHedgeTimer() }
-        let task = Task { [self] in await primarySide() }
-        lock.withLock { $0.primaryForwarding = task }
+        apply(.start(
+            hedgeDelayMs: plan.map { UInt32(clamping: $0.delay.milliseconds) },
+            ceilingMs: UInt32(clamping: ceiling.milliseconds)
+        ))
+        deadlineWait = Task {
+            while await policy.waitForDeadline() {
+                perform(policy.drainDeadline())
+            }
+        }
     }
 
-    /// The consumer walked away: stop everything, including any in-flight dispatch.
     func cancel() {
-        let tasks = lock.withLock { state -> [Task<Void, Never>] in
-            state.finished = true
-            return state.tasks
-        }
-        tasks.forEach { $0.cancel() }
+        apply(.cancel)
+        stopTasks()
     }
 
-    // MARK: - Timers
-
-    private func startWatchdog() {
-        let task = Task { [self] in
-            try? await Task.sleep(for: ceiling)
-            guard !Task.isCancelled else { return }
-            expired()
+    private func stopTasks() {
+        deadlineWait?.cancel()
+        for task in tasks.values {
+            task.cancel()
         }
-        // Replace, don't append: overlapping starters (a rearmed ceiling and
-        // a guard-restarted one) must leave exactly one ticker running.
-        lock.withLock { state in
-            state.watchdog?.cancel()
-            state.watchdog = task
-        }
+        tasks.removeAll()
     }
 
-    /// Nothing spoke anywhere within the ceiling. The first expiry hands the
-    /// timeout to the chase hook once — it may re-dispatch under a model that
-    /// answers within a rearmed ceiling. A live runner-up keeps that fresh
-    /// ceiling itself (the hook can't answer for it). The second expiry fails
-    /// the race: nobody spoke in two ceilings.
-    private func expired() {
-        let decision: ExpiryDecision = lock.withLock { state in
-            guard !state.finished, state.winner == nil else { return .ignore }
-            if state.timeoutChaseUsed {
-                state.finished = true
-                return .fail
-            }
-            state.timeoutChaseUsed = true
-            return !state.fallback.opened || state.fallbackDeath.dead
-                ? .chase
-                : .rearm
-        }
-        switch decision {
-        case .ignore:
-            break
-        case .fail:
-            cancelTasks()
-            continuation.finish(throwing: FirstEventTimeout())
-        case .rearm:
-            startWatchdog()
-        case .chase:
-            // The consumed watchdog is done; drop it so nothing expired lingers.
-            lock.withLock { $0.watchdog = nil }
-            let (model, generation) = lock
-                .withLock { ($0.currentPrimaryModel, $0.primaryGeneration) }
-            let chase = Task { [self] in
-                await handlePrimaryFailure(model, FirstEventTimeout(), generation: generation)
-                // The runner-up may have attached while the hook ran. If the
-                // chase was then abandoned (the hook can't answer for a live
-                // side, or the race closed meanwhile), the live runner-up
-                // still owes a ceiling — otherwise a fully silent race would
-                // sit with no timers at all.
-                let needsClock = lock.withLock { state -> Bool in
-                    !state.finished && state.winner == nil
-                        && state.fallback.opened && !state.fallbackDeath.dead
-                }
-                if needsClock { startWatchdog() }
-            }
-            trackPrimaryChase(chase)
-        }
+    private func ended(_ id: UInt64, _ error: Error?) {
+        errors[id] = error
+        apply(.ended(id: id))
     }
 
-    private enum ExpiryDecision: Sendable {
-        /// The race was decided or finished since the timer fired.
-        case ignore
-        /// The chase was already spent: fail instead of waiting forever.
-        case fail
-        /// A live runner-up gets a fresh ceiling.
-        case rearm
-        /// Hand the timeout to the chase hook.
-        case chase
+    @discardableResult private func apply(
+        _ observation: SDK.Observation,
+        id source: UInt64 = 0,
+        event: T? = nil,
+        stream: Stream? = nil
+    ) -> Bool {
+        perform(policy.step(observation: observation), id: source, event: event, stream: stream)
     }
 
-    private func startHedgeTimer() {
-        let task = Task { [self] in
-            try? await Task.sleep(for: plan?.delay ?? .zero)
-            guard !Task.isCancelled else { return }
-            await openRunnerUp()
-        }
-        lock.withLock { $0.hedgeTimer = task }
-    }
-
-    private func openRunnerUp() async {
-        let raceOpen = lock.withLock { state -> Bool in
-            !state.finished && state.winner == nil
-        }
-        guard raceOpen, let fallback = await openFallback() else { return }
-
-        // The race may have closed while the dispatch was in flight.
-        let attached = lock.withLock { state -> Bool in
-            guard !state.finished, state.winner == nil else { return false }
-            state.fallback.opened = true
-            state.fallback.dispatchedAt = state.fallback.dispatchedAt ?? ContinuousClock.now
-            state.fallbackForwarding = Task { [self] in await forward(.fallback, fallback) }
-            return true
-        }
-        if !attached {
-            // The race closed while dispatching; dropping the stream tears it down.
-            _ = fallback
-        }
-    }
-
-    // MARK: - Primary side
-
-    /// Lazily opens the primary and forwards it; failures consult `primaryFailed`,
-    /// which may hand back a replacement under a different model.
-    private func primarySide() async {
-        while !Task.isCancelled {
-            let model = lock.withLock { $0.currentPrimaryModel }
-            do {
-                let stream = try await openPrimary(model)
-                await forward(.primary, stream, generation: 0)
-                return
-            } catch {
-                let recovered = await handlePrimaryFailure(model, error, generation: 0)
-                guard recovered else {
-                    return
-                }
-            }
-        }
-    }
-
-    /// Decides whether a primary-side failure can be chased. True only for an
-    /// undecided race with no fallback yet attached — anything else is either a
-    /// settled loser (swallow) or already covered by the fallback stream. One
-    /// chase runs at a time: concurrent initiators would otherwise record the
-    /// failure twice and race two replacements.
-    private func handlePrimaryFailure(
-        _ failedModel: String,
-        _ error: Error,
-        generation: Int
-    ) async -> Bool {
-        let claimed = lock.withLock { state -> Bool in
-            guard !state.finished, state.winner == nil,
-                  state.primaryGeneration == generation,
-                  !state.fallback.opened || state.fallbackDeath.dead,
-                  !state.chaseInFlight else { return false }
-            state.chaseInFlight = true
-            state.primaryGeneration += 1
-            return true
-        }
-        guard claimed else { return false }
-        let replacementGeneration = generation + 1
-        defer {
-            lock.withLock { state in
-                if state.primaryGeneration == replacementGeneration {
-                    state.chaseInFlight = false
-                }
-            }
-        }
-
-        guard let replacement = await primaryFailed(failedModel, error) else {
-            // Nothing to switch to — surface the error to the consumer.
-            finish(throwing: error, generation: replacementGeneration)
-            return false
-        }
-
-        let decided = lock.withLock { state -> Bool in
-            guard !state.finished, state.winner == nil,
-                  state.primaryGeneration == replacementGeneration else { return false }
-            state.chaseInFlight = false
-            state.currentPrimaryModel = replacement.model
-            // A replacement gets a fresh ceiling: the old window was the
-            // original primary's.
-            state.watchdog?.cancel()
-            state.watchdog = nil
-            return true
-        }
-        guard decided else {
-            // The race closed while switching; dropping the stream tears it down.
-            _ = replacement.stream
-            return false
-        }
-        startWatchdog()
-        AppLogger.info(
-            "Primary \(public: failedModel) failed (\(public: String(describing: error))); racing on \(public: replacement.model)",
-            category: .routing
-        )
-        await forward(.primary, replacement.stream, generation: replacementGeneration)
-        return false
-    }
-
-    // MARK: - Forwarding
-
-    private func forward(
-        _ side: RaceSide,
-        _ stream: AsyncThrowingStream<T, Error>,
-        generation: Int = 0
-    ) async {
-        var pending: [T] = []
-        var pendingBytes = 0
-        var hasWon = false
-        do {
-            for try await element in stream {
-                let active = lock.withLock { state in
-                    !state.finished && (state.winner == nil || state.winner == side)
-                        && (side != .primary || state.primaryGeneration == generation)
-                }
-                guard active else { return }
-                let alreadyWon = lock.withLock { $0.winner == side }
-                if !alreadyWon, !isWinningEvent(element) {
-                    let bytes = max(1, bufferedEventBytes(element))
-                    guard bytes <= maxBufferedBytes - pendingBytes else {
-                        throw PreWinnerBufferOverflow()
+    @discardableResult private func perform(
+        _ actions: [SDK.Action],
+        id source: UInt64 = 0,
+        event: T? = nil,
+        stream: Stream? = nil
+    ) -> Bool {
+        for action in actions {
+            switch action {
+            case .cancelOpening(let id):
+                tasks[id]?.cancel()
+            case .open(let id):
+                tasks[id] = Task {
+                    do {
+                        let opened: Stream? = if id == 1 { try await openFallback() }
+                        else { try await openPrimary(models[id]!) }
+                        if let opened { apply(.opened(id: id), stream: opened) }
+                    } catch {
+                        errors[id] = error
+                        apply(.openFailed(id: id))
                     }
-                    pendingBytes += bytes
-                    pending.append(element)
-                    continue
                 }
-                guard claim(side, generation: generation) else { return }
-                hasWon = true
-                for event in pending {
-                    continuation.yield(event)
+            case .forward(let id):
+                guard let stream else { preconditionFailure("Missing opened stream") }
+                if id == 1 { hedgeOpenedAt = .now }
+                tasks[id] = Task {
+                    do {
+                        for try await element in stream {
+                            guard !Task.isCancelled else { return }
+                            let kind = classify(element)
+                            let bytes = UInt64(max(1, bufferedEventBytes(element)))
+                            guard apply(
+                                .event(id: id, kind: kind, bytes: bytes),
+                                id: id,
+                                event: element
+                            ) else { return }
+                        }
+                        if !Task.isCancelled { ended(id, buffers[id].map(emptyStreamError)) }
+                    } catch { ended(id, error) }
                 }
-                pending.removeAll(keepingCapacity: false)
-                pendingBytes = 0
-                continuation.yield(element)
-            }
-            ended(side, hasWon ? nil : emptyStreamError(pending), generation: generation)
-        } catch {
-            ended(side, error, generation: generation)
-        }
-    }
-
-    /// Whether `side` may forward an element. The first eligible event anywhere makes its
-    /// side the winner: the model is attributed to the turn, and the other side —
-    /// if it had actually opened — is cancelled and reported as having gone
-    /// silent. Returns false for a settled loser.
-    private func claim(_ side: RaceSide, generation: Int) -> Bool {
-        let decision = lock.withLock { state -> Decision in
-            guard !state.finished,
-                  side != .primary || state.primaryGeneration == generation
-            else { return Decision() }
-            if let winner = state.winner {
-                return Decision(accepted: winner == side)
-            }
-            state.winner = side
-            state.hedgeTimer?.cancel()
-            state.hedgeTimer = nil
-            state.watchdog?.cancel()
-            state.watchdog = nil
-
-            if side == .primary {
-                guard state.fallback.opened, let task = state.fallbackForwarding else {
-                    return Decision(accepted: true, winnerModel: state.currentPrimaryModel)
+                buffers[id] = []
+            case .recordOpenFailure(let id):
+                let model = models[id]!, error = errors[id]!
+                openFailureReport = Task { await onOpenFailure(model, error) }
+            case .buffer: buffers[source, default: []].append(event!)
+            case .overflow:
+                tasks[source]?.cancel()
+                ended(source, PreWinnerBufferOverflow())
+            case .win(let id):
+                policy.selected(model: models[id]!)
+            case .lose(let id):
+                let model = models[id]!
+                let duration = (id == 1 ? hedgeOpenedAt ?? startTime : startTime).duration(to: .now)
+                if id == 1 {
+                    tasks[id]?.cancel()
+                } else {
+                    for (key, task) in tasks where key != 1 {
+                        task.cancel()
+                    }
                 }
-                state.fallbackForwarding = nil
-                return Decision(
-                    accepted: true,
-                    winnerModel: state.currentPrimaryModel,
-                    loserModel: plan?.fallbackModel,
-                    loserForwarding: task
-                )
-            }
-            let task = state.primaryForwarding
-            state.primaryChases.forEach { $0.cancel() }
-            state.primaryChases.removeAll()
-            state.primaryForwarding = nil
-            return Decision(
-                accepted: true,
-                winnerModel: plan?.fallbackModel,
-                loserModel: state.currentPrimaryModel,
-                loserForwarding: task
-            )
-        }
-
-        guard decision.accepted else { return false }
-        if let winnerModel = decision.winnerModel {
-            raceWinner.set(winnerModel)
-        }
-        if let loserForwarding = decision.loserForwarding {
-            loserForwarding.cancel()
-            let loserModel = decision.loserModel ?? ""
-            // Measure the loser's silence from when the loser itself began.
-            let loserSide: RaceSide = side == .primary ? .fallback : .primary
-            let silentFor = silenceOrigin(of: loserSide).duration(to: .now)
-            Task { await onLoser(loserModel, silentFor) }
-        }
-        return true
-    }
-
-    private func ended(_ side: RaceSide, _ error: Error?, generation: Int) {
-        let terminalError = error ?? {
-            if case .fallback = side { return PrimaryStreamEnded() }
-            return nil
-        }()
-
-        // A primary-side failure on an undecided race with no live runner-up is
-        // chased via the failure hook - it may re-dispatch under a different
-        // model. A dead runner-up also can't answer for the primary, so a
-        // re-dispatch still has something to win.
-        if case .primary = side {
-            let chase = lock.withLock { state -> Bool in
-                !state.finished && state.winner == nil
-                    && state.primaryGeneration == generation
-                    && (!state.fallback.opened || state.fallbackDeath.dead)
-            }
-            if chase {
-                let model = lock.withLock { $0.currentPrimaryModel }
-                let task = Task { [self] in
-                    _ = await handlePrimaryFailure(
-                        model,
-                        error ?? PrimaryStreamEnded(),
-                        generation: generation
-                    )
+                buffers[id] = nil
+                Task { await onLoser(model, duration) }
+            case .deliver:
+                for prior in buffers.removeValue(forKey: source) ?? [] {
+                    continuation.yield(prior)
                 }
-                trackPrimaryChase(task)
-                return
-            }
-        }
-
-        let finish: Bool = lock.withLock { state -> Bool in
-            guard !state.finished,
-                  side != .primary || state.primaryGeneration == generation else { return false }
-            if let winner = state.winner {
-                // A settled loser ends into its own cancellation; nothing to do.
-                guard winner == side else { return false }
-                state.finished = true
-                return true
-            }
-            // Undecided race: this side is now dead. If its counterpart is also
-            // dead, nobody can speak anymore - fail now instead of making the
-            // user wait out the ceiling on dead streams.
-            if case .primary = side {
-                state.primaryDeath.dead = true
-                state.primaryDeath.surfacedError = state.primaryDeath.surfacedError ?? terminalError
-                if state.fallbackDeath.dead {
-                    state.finished = true
-                    return true
+                continuation.yield(event!)
+            case .chase(let failed, let replacement, let timeout):
+                tasks[failed]?.cancel()
+                buffers[failed] = nil
+                let model = models[failed]!
+                let error: Error = timeout ? FirstEventTimeout() : errors[failed] ??
+                    StreamEndedWithoutUsefulOutput()
+                models[replacement] = model
+                errors[replacement] = error
+                let report = openFailureReport
+                tasks[replacement] = Task {
+                    await report?.value
+                    guard !Task.isCancelled else { return }
+                    if let next = await primaryFailed(replacement, model, error) {
+                        models[replacement] = next.model
+                        errors[replacement] = nil
+                        apply(.opened(id: replacement), stream: next.stream)
+                    } else { apply(.noReplacement(id: replacement)) }
                 }
-                return false
-            }
-            state.fallbackDeath.dead = true
-            state.fallbackDeath.surfacedError = state.fallbackDeath.surfacedError ?? terminalError
-            // The primary either lives (a chase is pending) or is dead; a dead
-            // counterpart ends the race here.
-            if state.primaryDeath.dead {
-                state.finished = true
-                return true
-            }
-            return false
-        }
-
-        // The winner owns completion; an undecided race surfaces a recorded failure.
-        if finish {
-            cancelTasks()
-            let surfaced = lock.withLock { state in
-                if state.winner == side { return error }
-                return state.primaryDeath.surfacedError ?? state.fallbackDeath.surfacedError
-            }
-            if let surfaced {
-                continuation.finish(throwing: surfaced)
-            } else {
-                continuation.finish()
+            case .finish(let errorSource, let timeout):
+                stopTasks()
+                let error = timeout ? FirstEventTimeout() : errors[errorSource]
+                if let report = openFailureReport {
+                    Task { await report.value; continuation.finish(throwing: error) }
+                } else { continuation.finish(throwing: error) }
             }
         }
+        return !actions.isEmpty
     }
-
-    /// A primary stream that ended cleanly without a single event.
-    private struct PrimaryStreamEnded: Error {}
-
-    /// The loser's silence origin. A losing runner-up is measured from its own
-    /// dispatch; a losing primary - including a retry replacement - owes its
-    /// silence to the turn, so the race start stands in. Only shapes the
-    /// recorded log value, never any decision.
-    private func silenceOrigin(of losing: RaceSide) -> ContinuousClock.Instant {
-        lock.withLock { state -> ContinuousClock.Instant in
-            if case .fallback = losing, let dispatched = state.fallback.dispatchedAt {
-                return dispatched
-            }
-            return dispatchedAt
-        }
-    }
-
-    private func trackPrimaryChase(_ task: Task<Void, Never>) {
-        lock.withLock { state in
-            if state.finished || state.winner == .fallback {
-                task.cancel()
-            } else {
-                state.primaryChases.append(task)
-            }
-        }
-    }
-
-    private func cancelTasks() {
-        let tasks = lock.withLock { state -> [Task<Void, Never>] in
-            let tasks = state.tasks
-            state.primaryForwarding = nil
-            state.primaryChases.removeAll()
-            state.fallbackForwarding = nil
-            state.hedgeTimer = nil
-            state.watchdog = nil
-            return tasks
-        }
-        tasks.forEach { $0.cancel() }
-    }
-
-    private func finish(throwing error: Error, generation: Int) {
-        let accepted = lock.withLock { state in
-            guard !state.finished, state.winner == nil,
-                  state.primaryGeneration == generation else { return false }
-            state.finished = true
-            return true
-        }
-        guard accepted else { return }
-        cancelTasks()
-        continuation.finish(throwing: error)
-    }
-}
-
-/// One turn's event stream plus the race bookkeeping its consumer needs
-/// (the winning model, chosen switches, failures already recorded).
-struct TurnStream: Sendable {
-    /// How many models one turn's race may hand the primary side before
-    /// surfacing the error. The hedge loser is free — it isn't a switch.
-    static let maxModelSwitches = 2
-
-    let stream: AsyncThrowingStream<ChatStreamEvent, Error>
-    let dispatchedAt: ContinuousClock.Instant
-    let raceWinner: RaceWinner
-    /// Set by the retry hook whenever the primary side switched models; the
-    /// consuming loop persists the agent's model once that model carries the
-    /// turn (same-actor state, so the switch is user-visible only when real).
-    var switchCandidate = OSAllocatedUnfairLock(initialState: String?.none)
-    /// Set by the retry hook when it surfaces an error it already recorded;
-    /// the consuming loop then skips reporting that failure again.
-    var failureReported = OSAllocatedUnfairLock(initialState: false)
 }

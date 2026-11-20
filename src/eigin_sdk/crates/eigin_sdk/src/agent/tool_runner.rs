@@ -1,16 +1,8 @@
 //! Per-call authorization and execution deadlines. The host executes the tool.
+use crate::clock::{now, sleep_until};
 use futures_channel::oneshot;
 use futures_util::future::{Either, FutureExt, Shared, select};
 use std::{sync::Mutex, time::Duration};
-#[cfg(target_vendor = "apple")]
-mod apple_clock;
-#[cfg(target_vendor = "apple")]
-use apple_clock::now;
-#[cfg(not(target_vendor = "apple"))]
-fn now() -> Duration {
-    static ORIGIN: std::sync::OnceLock<web_time::Instant> = std::sync::OnceLock::new();
-    ORIGIN.get_or_init(web_time::Instant::now).elapsed()
-}
 
 const TIMEOUT_MS: u32 = 30_000;
 
@@ -132,17 +124,7 @@ impl ToolCallDeadline {
                     .await
                     .expect("deadline retains sender");
             }
-            #[cfg(target_vendor = "apple")]
-            let timer = std::pin::pin!(apple_clock::sleep_until(self.expires));
-            #[cfg(not(any(target_arch = "wasm32", target_vendor = "apple")))]
-            let timer = futures_timer::Delay::new(remaining);
-            #[cfg(target_arch = "wasm32")]
-            let timer = gloo_timers::future::TimeoutFuture::new(
-                remaining
-                    .as_nanos()
-                    .div_ceil(1_000_000)
-                    .min(i32::MAX as u128) as u32,
-            );
+            let timer = std::pin::pin!(sleep_until(self.expires));
             if let Either::Left((result, _)) = select(self.finished.clone(), timer).await {
                 return result.expect("deadline retains sender");
             }

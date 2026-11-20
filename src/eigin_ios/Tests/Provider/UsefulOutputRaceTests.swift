@@ -23,22 +23,23 @@ struct UsefulOutputRaceTests {
             .providerMetadata(["side": "winner"]), .contentDelta("Answer"), .finished(.stop),
         ]
         let fallback = stream(events)
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts()
         let race = withHedgedFirstToken(
             primaryModel: "primary", plan: HedgePlan(
                 delay: .milliseconds(10),
                 fallbackModel: "fallback"
             ),
-            ceiling: .seconds(1), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
+            ceiling: .seconds(1), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary.stream }, openFallback: { fallback },
-            primaryFailed: { _, _ in nil }, onLoser: { _, _ in }
+            primaryFailed: { _, _, _ in nil }, onLoser: { _, _ in }
         )
         var received: [ChatStreamEvent] = []
         for try await event in race {
             received.append(event)
         }
-        #expect(winner.current == "fallback")
+        #expect(winner.winningModel() == "fallback")
         #expect(received == events)
     }
 
@@ -48,23 +49,24 @@ struct UsefulOutputRaceTests {
             id: "invalid", type: "function", function: .init(name: "search", arguments: "{broken")
         )))
         let fallback = stream([.contentDelta("Answer"), .finished(.stop)])
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts()
         let race = withHedgedFirstToken(
             primaryModel: "primary", plan: HedgePlan(
                 delay: .milliseconds(10),
                 fallbackModel: "fallback"
             ),
-            ceiling: .seconds(1), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
+            ceiling: .seconds(1), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary.stream }, openFallback: { fallback },
-            primaryFailed: { _, _ in nil }, onLoser: { _, _ in }
+            primaryFailed: { _, _, _ in nil }, onLoser: { _, _ in }
         )
         var received: [ChatStreamEvent] = []
         for try await event in race {
             received.append(event)
         }
         #expect(received == [.contentDelta("Answer"), .finished(.stop)])
-        #expect(winner.current == "fallback")
+        #expect(winner.winningModel() == "fallback")
     }
 
     @Test func overflowRetriesThroughRealRouterWithoutQuarantiningModel() async throws {
@@ -82,13 +84,13 @@ struct UsefulOutputRaceTests {
         )
         let primary = stream([.providerMetadata(["status": String(repeating: "x", count: 1024)])])
         let replacement = stream([.contentDelta("Replacement"), .finished(.stop)])
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts(limit: 256)
         let race = withHedgedFirstToken(
-            primaryModel: request.currentModel, plan: nil, ceiling: .seconds(1), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
-            maxBufferedBytes: 256,
+            primaryModel: request.currentModel, plan: nil, ceiling: .seconds(1), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary }, openFallback: { nil },
-            primaryFailed: { _, error in
+            primaryFailed: { _, _, error in
                 guard let route = await router.retry(after: error, request: request)
                 else { return nil }
                 return (model: route.model, stream: replacement)
@@ -99,7 +101,7 @@ struct UsefulOutputRaceTests {
             received.append(event)
         }
         #expect(received == [.contentDelta("Replacement"), .finished(.stop)])
-        #expect(winner.current == "mistral-medium-3-5")
+        #expect(winner.winningModel() == "mistral-medium-3-5")
         let fresh = RouteRequest(
             currentProviderID: provider.id, currentModel: request.currentModel, isAuto: true,
             requirements: RouteRequirements(), providers: [provider], conversationID: UUID()
@@ -110,12 +112,13 @@ struct UsefulOutputRaceTests {
     @Test func metadataDoesNotDisableCeiling() async {
         let primary = AsyncThrowingStream<ChatStreamEvent, Error>.makeStream()
         primary.continuation.yield(.providerMetadata(["status": "thinking"]))
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts()
         let race = withHedgedFirstToken(
-            primaryModel: "primary", plan: nil, ceiling: .milliseconds(20), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
+            primaryModel: "primary", plan: nil, ceiling: .milliseconds(20), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary.stream }, openFallback: { nil },
-            primaryFailed: { _, _ in nil }, onLoser: { _, _ in }
+            primaryFailed: { _, _, _ in nil }, onLoser: { _, _ in }
         )
         do {
             for try await _ in race {
@@ -123,20 +126,20 @@ struct UsefulOutputRaceTests {
             }
             Issue.record("Expected first-output timeout")
         } catch { #expect(error is FirstEventTimeout) }
-        #expect(winner.current == nil)
+        #expect(winner.winningModel().isEmpty)
     }
 
     @Test(arguments: [false, true])
     func nonUsefulCompletionOrOverflowRetries(overflow: Bool) async throws {
         let primary = stream([.providerMetadata(["status": "thinking"]), .finished(.stop)])
         let replacement = stream([.contentDelta("Replacement"), .finished(.stop)])
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts(limit: overflow ? 1 : 1024)
         let race = withHedgedFirstToken(
-            primaryModel: "primary", plan: nil, ceiling: .seconds(1), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
-            maxBufferedBytes: overflow ? 1 : 1024,
+            primaryModel: "primary", plan: nil, ceiling: .seconds(1), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary }, openFallback: { nil },
-            primaryFailed: { _, _ in (model: "replacement", stream: replacement) },
+            primaryFailed: { _, _, _ in (model: "replacement", stream: replacement) },
             onLoser: { _, _ in }
         )
         var received: [ChatStreamEvent] = []
@@ -144,7 +147,7 @@ struct UsefulOutputRaceTests {
             received.append(event)
         }
         #expect(received == [.contentDelta("Replacement"), .finished(.stop)])
-        #expect(winner.current == "replacement")
+        #expect(winner.winningModel() == "replacement")
     }
 
     @Test func staleDispatchFailureCannotReplaceActiveChase() async throws {
@@ -152,16 +155,17 @@ struct UsefulOutputRaceTests {
         let replacement = AsyncThrowingStream<ChatStreamEvent, Error>.makeStream()
         let chased = AsyncStream<Void>.makeStream()
         let failures = OSAllocatedUnfairLock(initialState: 0)
-        let winner = RaceWinner()
+        let winner = makeRaceAttempts()
         let race = withHedgedFirstToken(
-            primaryModel: "primary", plan: nil, ceiling: .milliseconds(100), raceWinner: winner,
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
+            primaryModel: "primary", plan: nil, ceiling: .milliseconds(100), attempts: winner,
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in
                 for try await _ in original.stream {}
                 return original.stream
             },
             openFallback: { nil },
-            primaryFailed: { _, _ in
+            primaryFailed: { _, _, _ in
                 failures.withLock { $0 += 1 }
                 chased.continuation.yield(())
                 return (model: "replacement", stream: replacement.stream)
@@ -183,7 +187,7 @@ struct UsefulOutputRaceTests {
         replacement.continuation.finish()
         #expect(try await consumer.value == [.contentDelta("Replacement")])
         #expect(failures.withLock { $0 } == 1)
-        #expect(winner.current == "replacement")
+        #expect(winner.winningModel() == "replacement")
     }
 
     @Test func toolCallWinsAndPreservesMetadata() async throws {
@@ -199,18 +203,21 @@ struct UsefulOutputRaceTests {
         ]
         let primary = stream(events)
         let race = withHedgedFirstToken(
-            primaryModel: "primary", plan: nil, ceiling: .seconds(1), raceWinner: RaceWinner(),
-            isWinningEvent: { $0.isUsefulOutput }, bufferedEventBytes: { $0.bufferedByteCount },
+            primaryModel: "primary", plan: nil, ceiling: .seconds(1), attempts: makeRaceAttempts(),
+            classify: { InferenceSDKConversion.attemptEvent($0) },
+            bufferedEventBytes: { $0.bufferedByteCount },
             openPrimary: { _ in primary }, openFallback: { nil },
-            primaryFailed: { _, _ in nil }, onLoser: { _, _ in }
+            primaryFailed: { _, _, _ in nil }, onLoser: { _, _ in }
         )
         var received: [ChatStreamEvent] = []
         for try await event in race {
             received.append(event)
         }
         #expect(received == events)
-        #expect(!ChatStreamEvent.contentDelta("").isUsefulOutput)
-        #expect(!ChatStreamEvent.performance(.init(timeToFirstToken: nil, tokensPerSecond: nil))
-            .isUsefulOutput)
+        #expect(InferenceSDKConversion.attemptEvent(.contentDelta("")) == .content(nonempty: false))
+        #expect(InferenceSDKConversion.attemptEvent(.performance(.init(
+            timeToFirstToken: nil,
+            tokensPerSecond: nil
+        ))) == .ancillary)
     }
 }

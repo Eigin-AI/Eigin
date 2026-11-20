@@ -156,15 +156,11 @@ final class AgenticChatLoop {
     private var pagingHistory: Set<String> = []
     private var pagingAgentID: UUID?
 
-    /// Internal: shared with the loop's stream-opening and reporting extensions.
     @ObservationIgnored
     @Injected(\.modelRouter) var modelRouter
 
     @ObservationIgnored
     @Injected(\.providerModelRefresher) var modelRefresher
-
-    /// Guards the catalog refresh so a turn re-fetches at most once.
-    private var didRefreshCatalog = false
 
     /// The model this turn is running on. Usually the agent's, but an offline turn runs
     /// on-device without disturbing the provider and model the user chose.
@@ -190,10 +186,6 @@ final class AgenticChatLoop {
 
     // MARK: - API
 
-    /// When the user sent the message, for perceived-latency reporting. Nil for
-    /// callers that don't have a user-visible send moment (tests, tools).
-    var turnSentAt: ContinuousClock.Instant?
-
     /// Runs a complete chat turn, handling tool calls recursively.
     /// Returns all messages produced during the turn (assistant + tool results + final assistant).
     func run(
@@ -211,7 +203,6 @@ final class AgenticChatLoop {
         continuationInstruction: String? = nil
     ) async throws -> [ChatMessage] {
         reset()
-        turnSentAt = sentAt
         activeModel = model ?? agent.model
         shouldStop = false
         currentMessageID = "msg-\(UUID().uuidString)"
@@ -304,18 +295,11 @@ final class AgenticChatLoop {
             nextInstruction = nil
 
             let stream = turn.stream
-            let streamStart = turn.dispatchedAt
-            let raceWinner = turn.raceWinner
 
-            // Adopted once, before any reporting: the race winner becomes the
-            // turn's model; see adoptTurnModel(_:).
+            // The first delivered event commits the model that carries this round.
             var turnModelAdopted = false
 
             chatPhase = .streamingProse
-
-            // Measured from request dispatch: the first-token wait is spent inside openStream.
-            var firstTokenAt: ContinuousClock.Instant?
-            var performance: InferencePerformance?
 
             do {
                 // `shouldStop` exits inside this loop return without a drain:
@@ -326,13 +310,22 @@ final class AgenticChatLoop {
 
                     if !turnModelAdopted {
                         turnModelAdopted = true
-                        adoptTurnModel(turn, providerID: provider.id, agent: agent)
+                        let winner = turn.winningModel
+                        if winner != activeModel {
+                            AppLogger.info(
+                                "Race winner \(public: winner) carries the turn",
+                                category: .chat
+                            )
+                            activeModel = winner
+                            if turn.retryWon,
+                               agent.providerID == provider.id { agent.model = winner }
+                        }
                     }
 
                     try sdkRound.acceptEvent(event: RoundSDKConversion.event(event))
+                    turn.observe(event)
                     switch event {
                     case .contentDelta(let delta):
-                        if firstTokenAt == nil, !delta.isEmpty { firstTokenAt = .now }
                         chatPhase = .streamingProse
                         throttler.feed(delta)
                         onContentDelta?(delta)
@@ -344,11 +337,8 @@ final class AgenticChatLoop {
                         )
                         chatPhase = .streamingTools
 
-                    case .reasoningHistory:
+                    case .reasoningHistory, .performance:
                         break
-
-                    case .performance(let measured):
-                        performance = measured
 
                     case .providerMetadata(let meta):
                         AppLogger.debug(
@@ -373,37 +363,11 @@ final class AgenticChatLoop {
                 // Either handleStop already committed partial prose via its
                 // checkpoint, or the whole turn is being torn down — nothing
                 // to preserve here.
-                await reportAttempt(
-                    provider: provider, start: streamStart,
-                    firstTokenAt: firstTokenAt, result: .cancelled
-                )
+                await turn.report(sentAt: sentAt, result: .cancelled)
                 if propagatesStreamCancellation { throw CancellationError() }
                 return []
             } catch {
-                logTurnTiming(
-                    prep: turnSentAt.map { $0.duration(to: streamStart) },
-                    modelTTFT: firstTokenAt.map { streamStart.duration(to: $0) },
-                    result: .failed(RoutingFailure(from: error))
-                )
-                // The race's retry hook records everything it chases before
-                // resurfacing an error; skip only that case. A failure after a
-                // first token (mid-stream, the winner dying) is still unrecorded
-                // and must count - it blames the model that carried the turn.
-                if firstTokenAt == nil, turn.failureReported.withLock({ $0 }) {
-                    // The race's retry hook already recorded this failure; only
-                    // the timing is new information here.
-                    logTurnTiming(
-                        prep: turnSentAt.map { $0.duration(to: streamStart) },
-                        modelTTFT: nil,
-                        result: .failed(RoutingFailure(from: error))
-                    )
-                } else {
-                    await reportAttempt(
-                        provider: provider, start: streamStart,
-                        firstTokenAt: firstTokenAt,
-                        result: .failed(RoutingFailure(from: error))
-                    )
-                }
+                await turn.report(sentAt: sentAt, result: .failed(RoutingFailure(from: error)))
                 let failure = TurnSDKConversion.failure(error)
                 var signals = failureSignals()
                 // Stream-reported silence samples lifecycle again after the interruption check.
@@ -441,10 +405,7 @@ final class AgenticChatLoop {
                 }
             }
 
-            await reportAttempt(
-                provider: provider, start: streamStart,
-                firstTokenAt: firstTokenAt, result: .succeeded, performance: performance
-            )
+            await turn.report(sentAt: sentAt, result: .succeeded)
 
             if shouldStop { return [] }
             let outcome = try RoundSDKConversion.finish(sdkRound)
@@ -632,7 +593,6 @@ final class AgenticChatLoop {
         pendingConnection = nil
         isAwaitingUserInteraction = false
         currentMessageID = ""
-        didRefreshCatalog = false
     }
 
     /// Resolves only the displayed request; late and duplicate responses are ignored.

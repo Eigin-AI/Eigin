@@ -94,9 +94,11 @@ final class FakeChatService: ChatService, @unchecked Sendable {
     /// Delay before the stream returns, mimicking a provider holding the response.
     private var _preStreamDelay: Duration = .zero
 
+    private var delayedModel: String?
+
     /// Make ``chatCompletionEventStream`` wait `delay` before returning the stream.
-    func delayBeforeStream(_ delay: Duration) {
-        lock.withLock { _preStreamDelay = delay }
+    func delayBeforeStream(_ delay: Duration, for model: String? = nil) {
+        lock.withLock { _preStreamDelay = delay; delayedModel = model }
     }
 
     func chatCompletionStream(
@@ -183,7 +185,8 @@ final class FakeChatService: ChatService, @unchecked Sendable {
             _capturedEventTools = tools
             _capturedEventCacheKey = cacheKey
         }
-        let preStreamDelay = lock.withLock { _preStreamDelay }
+        let preStreamDelay = lock
+            .withLock { delayedModel == nil || delayedModel == model ? _preStreamDelay : .zero }
         if preStreamDelay > .zero {
             try await Task.sleep(for: preStreamDelay)
         }

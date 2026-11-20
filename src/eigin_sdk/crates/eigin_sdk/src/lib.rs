@@ -7,6 +7,7 @@ uniffi::setup_scaffolding!();
 
 /// Transient streamed replies and tool-result transcripts.
 pub mod agent;
+mod clock;
 /// Context estimation, selection, and summary parsing.
 pub mod context;
 /// Request-local conversation preparation.

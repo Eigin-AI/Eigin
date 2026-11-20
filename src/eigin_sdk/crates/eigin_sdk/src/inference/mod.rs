@@ -19,3 +19,6 @@ mod streaming;
 
 pub mod anthropic;
 pub use anthropic::*;
+
+mod attempt;
+pub use attempt::*;

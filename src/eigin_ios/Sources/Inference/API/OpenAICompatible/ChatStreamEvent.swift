@@ -29,17 +29,6 @@ struct InferencePerformance: Equatable {
 }
 
 extension ChatStreamEvent {
-    /// Only output that can advance the turn settles a model race.
-    var isUsefulOutput: Bool {
-        switch self {
-        case .contentDelta(let text): !text.isEmpty
-        case .toolCall(let call):
-            !call.id.isEmpty && !call.function.name.isEmpty
-                && ToolHelpers.parseArguments(call.function.arguments) != nil
-        default: false
-        }
-    }
-
     /// Estimated memory held while waiting for a candidate's first answer or usable tool call.
     var bufferedByteCount: Int {
         switch self {
