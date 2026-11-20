@@ -1,4 +1,5 @@
 @testable import Eigin
+import EiginSDK
 import Foundation
 import os
 import Testing
@@ -55,9 +56,9 @@ struct HedgedFirstTokenTests {
         let raced = withHedgedFirstToken(
             primaryModel: "primary",
             plan: fallbackWins ? HedgePlan(delay: .zero, fallbackModel: "fallback") : nil,
-            ceiling: .seconds(2), raceWinner: RaceWinner(),
+            ceiling: .seconds(2), attempts: makeRaceAttempts(),
             openPrimary: { _ in primary }, openFallback: { fallback },
-            primaryFailed: { _, _ in
+            primaryFailed: { _, _, _ in
                 Issue.record("A winning stream must not retry through the opening hook")
                 return nil
             },
@@ -81,13 +82,13 @@ struct HedgedFirstTokenTests {
         let (primary, primaryTx) = makeStream()
         let (fallback, fallbackTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(200), fallbackModel: "glm-5.2"),
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
@@ -96,7 +97,7 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -121,7 +122,7 @@ struct HedgedFirstTokenTests {
         #expect(received.items == [1])
         #expect(!opened.fallbackOpened.withLock { $0 })
         #expect(opened.losers.withLock { $0.isEmpty })
-        #expect(attribution.current == "glm-5.3")
+        #expect(attribution.winningModel() == "glm-5.3")
         #expect(opened.primaryModels.withLock { $0 == ["glm-5.3"] })
     }
 
@@ -130,13 +131,13 @@ struct HedgedFirstTokenTests {
         let (primary, primaryTx) = makeStream()
         let (fallback, fallbackTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(50), fallbackModel: "glm-5.2"),
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
@@ -145,7 +146,7 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -174,7 +175,7 @@ struct HedgedFirstTokenTests {
         consumer.cancel()
 
         #expect(received.items == [20, 21])
-        #expect(attribution.current == "glm-5.2")
+        #expect(attribution.winningModel() == "glm-5.2")
 
         let recorded = opened.losers.withLock { $0 }
         #expect(recorded.count == 1)
@@ -187,13 +188,13 @@ struct HedgedFirstTokenTests {
         let (primary, primaryTx) = makeStream()
         let (fallback, fallbackTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(20), fallbackModel: "glm-5.2"),
             ceiling: .milliseconds(120),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
@@ -202,7 +203,7 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -218,7 +219,7 @@ struct HedgedFirstTokenTests {
 
         #expect(caught is FirstEventTimeout)
         #expect(opened.fallbackOpened.withLock { $0 })
-        #expect(attribution.current == nil)
+        #expect(attribution.winningModel().isEmpty)
 
         primaryTx.finish()
         fallbackTx.finish()
@@ -229,13 +230,13 @@ struct HedgedFirstTokenTests {
         let (primary, primaryTx) = makeStream()
         let (fallback, fallbackTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(60), fallbackModel: "glm-5.2"),
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 // The hang: headers take 300ms and no token ever follows.
@@ -246,7 +247,7 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -271,7 +272,7 @@ struct HedgedFirstTokenTests {
         consumer.cancel()
 
         #expect(received.items == [20])
-        #expect(attribution.current == "glm-5.2")
+        #expect(attribution.winningModel() == "glm-5.2")
         let recorded = opened.losers.withLock { $0 }
         #expect(recorded.count == 1)
         #expect(recorded.first?.0 == "glm-5.3")
@@ -281,19 +282,19 @@ struct HedgedFirstTokenTests {
     func failedDispatchDegradesToPrimary() async throws {
         let (primary, primaryTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(20), fallbackModel: "glm-5.2"),
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -316,7 +317,7 @@ struct HedgedFirstTokenTests {
         try await Task.sleep(for: .milliseconds(50))
         consumer.cancel()
 
-        #expect(attribution.current == "glm-5.3")
+        #expect(attribution.winningModel() == "glm-5.3")
         #expect(opened.losers.withLock { $0.isEmpty })
     }
 
@@ -324,13 +325,13 @@ struct HedgedFirstTokenTests {
     func primaryFailureRedispatches() async throws {
         let opened = DispatchLog()
         let replacement = makeStream()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: nil,
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 if model == "glm-5.3" {
@@ -339,7 +340,7 @@ struct HedgedFirstTokenTests {
                 return replacement.stream
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 opened.replacements.withLock { $0.append("gpt-5.6") }
                 return ("gpt-5.6", replacement.stream)
@@ -364,7 +365,7 @@ struct HedgedFirstTokenTests {
         consumer.cancel()
 
         #expect(received.items == [7])
-        #expect(attribution.current == "gpt-5.6")
+        #expect(attribution.winningModel() == "gpt-5.6")
         #expect(opened.failures.withLock { $0.count } == 1)
         #expect(opened.replacements.withLock { $0 == ["gpt-5.6"] })
     }
@@ -374,13 +375,13 @@ struct HedgedFirstTokenTests {
         let (primary, primaryTx) = makeStream()
         let (fallback, fallbackTx) = makeStream()
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(20), fallbackModel: "glm-5.2"),
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
@@ -389,7 +390,7 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -413,7 +414,7 @@ struct HedgedFirstTokenTests {
         fallbackTx.yield(20)
         try await Task.sleep(for: .milliseconds(60))
         #expect(received.items == [20])
-        #expect(attribution.current == "glm-5.2")
+        #expect(attribution.winningModel() == "glm-5.2")
 
         fallbackTx.finish()
         try await Task.sleep(for: .milliseconds(30))
@@ -424,18 +425,18 @@ struct HedgedFirstTokenTests {
     @Test("Terminal primary failure surfaces the error to the consumer")
     func terminalFailureSurfaces() async throws {
         let opened = DispatchLog()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: nil,
             ceiling: .seconds(2),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { (_: String) -> AsyncThrowingStream<Int, Error> in
                 throw DispatchFailure()
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -456,22 +457,24 @@ struct HedgedFirstTokenTests {
     @Test("Expiry hands the timeout to the hook once: the replacement wins the race")
     func expiryChasesAndReplacementWins() async throws {
         let opened = DispatchLog()
-        let silent = makeStream().stream
+        let cancelled = OSAllocatedUnfairLock(initialState: false)
         let replacement = makeStream()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: nil,
             ceiling: .milliseconds(150),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
-                // Silent forever: the ceiling expires.
-                return silent
+                do { try await Task.sleep(for: .seconds(5)) } catch {
+                    cancelled.withLock { $0 = true }; throw error
+                }
+                throw DispatchFailure()
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return ("gpt-5.6", replacement.stream)
             },
@@ -483,6 +486,7 @@ struct HedgedFirstTokenTests {
         // of the stream before this test task continues.
         let feeder = Task {
             try? await Task.sleep(for: .milliseconds(250))
+            #expect(cancelled.withLock { $0 })
             replacement.continuation.yield(7)
             try? await Task.sleep(for: .milliseconds(80))
             replacement.continuation.finish()
@@ -499,7 +503,7 @@ struct HedgedFirstTokenTests {
 
         #expect(received.items == [7])
         #expect(caught == nil)
-        #expect(attribution.current == "gpt-5.6")
+        #expect(attribution.winningModel() == "gpt-5.6")
 
         let failures = opened.failures.withLock { $0 }
         #expect(failures.count == 1)
@@ -511,19 +515,19 @@ struct HedgedFirstTokenTests {
         let opened = DispatchLog()
         let silent = makeStream().stream
         let silentReplacement = makeStream()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: nil,
             ceiling: .milliseconds(100),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return silent
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return ("gpt-5.6", silentReplacement.stream)
             },
@@ -538,7 +542,7 @@ struct HedgedFirstTokenTests {
         }
 
         #expect(caught is FirstEventTimeout)
-        #expect(attribution.current == nil)
+        #expect(attribution.winningModel().isEmpty)
         // One expiry chased, one expiry failed: the hook saw the timeout once.
         #expect(opened.failures.withLock { $0.count } == 1)
 
@@ -549,19 +553,19 @@ struct HedgedFirstTokenTests {
     func expiryWithoutReplacementSurfaces() async throws {
         let opened = DispatchLog()
         let (primary, primaryTx) = makeStream()
-        let attribution = RaceWinner()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: nil,
             ceiling: .milliseconds(100),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return primary
             },
             openFallback: { nil },
-            primaryFailed: { model, error in
+            primaryFailed: { _, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 return nil
             },
@@ -576,7 +580,7 @@ struct HedgedFirstTokenTests {
         }
 
         #expect(caught is FirstEventTimeout)
-        #expect(attribution.current == nil)
+        #expect(attribution.winningModel().isEmpty)
         let failures = opened.failures.withLock { $0 }
         #expect(failures.count == 1)
         #expect(failures.first?.1 is FirstEventTimeout)
@@ -590,13 +594,14 @@ struct HedgedFirstTokenTests {
         let silent = makeStream().stream
         let (fallback, fallbackTx) = makeStream()
         let slowReplacement = makeStream()
-        let attribution = RaceWinner()
+        let dispatchGrants = AsyncStream<Bool>.makeStream()
+        let attribution = makeRaceAttempts()
 
         let raced = withHedgedFirstToken(
             primaryModel: "glm-5.3",
             plan: HedgePlan(delay: .milliseconds(200), fallbackModel: "glm-5.2"),
             ceiling: .milliseconds(120),
-            raceWinner: attribution,
+            attempts: attribution,
             openPrimary: { model in
                 opened.recordPrimary(model)
                 return silent
@@ -605,24 +610,23 @@ struct HedgedFirstTokenTests {
                 opened.fallbackOpened.withLock { $0 = true }
                 return fallback
             },
-            primaryFailed: { model, error in
+            primaryFailed: { chase, model, error in
                 opened.failures.withLock { $0.append((model, error)) }
                 // A slow router: the chase is still pending when the
                 // runner-up opens and speaks.
                 try? await Task.sleep(for: .milliseconds(200))
+                let granted = attribution.claimSwitch(chase: chase, from: model, to: "gpt-5.6")
+                dispatchGrants.continuation.yield(granted)
+                dispatchGrants.continuation.finish()
+                guard granted else { return nil }
                 return ("gpt-5.6", slowReplacement.stream)
             },
             onLoser: { _, _ in }
         )
 
         let received = Collector()
-        let feeder = Task {
-            // Opening at 200ms, speaking at 240ms — both inside the slow hook.
-            try? await Task.sleep(for: .milliseconds(240))
-            fallbackTx.yield(20)
-            try? await Task.sleep(for: .milliseconds(80))
-            fallbackTx.finish()
-        }
+        fallbackTx.yield(20)
+        fallbackTx.finish()
         var caught: (any Error)?
         do {
             for try await event in raced {
@@ -631,14 +635,52 @@ struct HedgedFirstTokenTests {
         } catch {
             caught = error
         }
-        feeder.cancel()
 
         #expect(caught == nil)
         #expect(received.items == [20])
-        #expect(attribution.current == "glm-5.2")
+        #expect(attribution.winningModel() == "glm-5.2")
         #expect(opened.failures.withLock { $0.count } == 1)
 
+        var grants: [Bool] = []
+        for await grant in dispatchGrants.stream {
+            grants.append(grant)
+        }
+        #expect(grants == [false])
         slowReplacement.continuation.finish()
+    }
+
+    @Test func chaseAwaitsObservedHedgeFailureSample() async throws {
+        let primary = makeStream()
+        let recording = AsyncStream<Void>.makeStream(), release = AsyncStream<Void>.makeStream()
+        let order = OSAllocatedUnfairLock(initialState: [String]())
+        let race = withHedgedFirstToken(
+            primaryModel: "a",
+            plan: .init(delay: .zero, fallbackModel: "b"),
+            ceiling: .seconds(2),
+            attempts: makeRaceAttempts(),
+            openPrimary: { _ in primary.stream },
+            openFallback: { throw DispatchFailure() },
+            onOpenFailure: { _, _ in
+                recording.continuation.yield(())
+                for await _ in release.stream {
+                    break
+                }
+                order.withLock { $0.append("recorded") }
+            },
+            primaryFailed: { _, _, _ in
+                order.withLock { $0.append("rank") }
+                return nil
+            },
+            onLoser: { _, _ in }
+        )
+        for await _ in recording.stream {
+            break
+        }
+        primary.continuation.finish(throwing: DispatchFailure())
+        try await Task.sleep(for: .milliseconds(30))
+        release.continuation.yield(())
+        await #expect(throws: DispatchFailure.self) { for try await _ in race {} }
+        #expect(order.withLock { $0 } == ["recorded", "rank"])
     }
 
     private struct DispatchFailure: Error {}
@@ -792,4 +834,9 @@ struct RouterHedgeTests {
                 .model == Self.second
         )
     }
+}
+
+/// A fresh routed SDK request. An empty starting model makes the absence of a winner observable.
+func makeRaceAttempts(limit: UInt64 = 1_048_576) -> EiginSDK.Experimental.Inference.Attempts {
+    .init(local: false, routed: true, maxBufferedBytes: limit, startingModel: "")
 }

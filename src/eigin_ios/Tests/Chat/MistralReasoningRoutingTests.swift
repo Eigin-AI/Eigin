@@ -86,8 +86,7 @@ struct MistralReasoningRoutingTests {
             ),
             statusCode: 200
         )
-        let loop = AgenticChatLoop(isBootstrap: false)
-        loop.activeModel = initialModel
+        let coordinator = InferenceAttemptCoordinator(modelRouter: router)
         let routing = RouteRequest(
             currentProviderID: provider.id, currentModel: initialModel, isAuto: true,
             requirements: RouteRequirements(),
@@ -98,9 +97,14 @@ struct MistralReasoningRoutingTests {
                 availableModels: provider.availableModels
             )]
         )
-        let turn = try await loop.openStream(
-            chatService: ReasoningHTTPChatService(), provider: provider, agent: agent,
-            messages: prepared.apiMessages, tools: nil, cacheKey: nil, routing: routing
+        let turn = try await coordinator.open(
+            chatService: ReasoningHTTPChatService(), host: provider.baseURL, hostID: provider.id,
+            model: initialModel,
+            messages: prepared.apiMessages, tools: nil, cacheKey: nil,
+            routing: { routing.forPreparedTurn(
+                model: initialModel,
+                requirements: $0
+            ) }
         )
         for try await _ in turn.stream {}
         let body = try #require(FakeURLProtocol.lastRequestBody(for: url))

@@ -11,6 +11,22 @@ enum ToolHistoryError: Error {
 enum InferenceSDKConversion {
     private typealias SDK = EiginSDK.Experimental.Inference
 
+    /// Only output that can advance the turn settles a model race.
+    static func attemptEvent(_ event: ChatStreamEvent) -> EiginSDK.Experimental.Inference
+        .CandidateEvent
+    {
+        switch event {
+        case .contentDelta(let text): .content(nonempty: !text.isEmpty)
+        case .toolCall(let call):
+            .toolCall(
+                hasId: !call.id.isEmpty,
+                hasName: !call.function.name.isEmpty,
+                objectArguments: ToolHelpers.parseArguments(call.function.arguments) != nil
+            )
+        default: .ancillary
+        }
+    }
+
     static func input(
         messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
         cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool,

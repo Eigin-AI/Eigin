@@ -4,6 +4,10 @@ import Foundation
 public extension EiginSDK.Experimental {
     /// Inference values and Apple runtime adaptation.
     enum Inference {
+        public typealias CandidateEvent = AttemptEvent
+        public typealias Attempts = InferenceAttempts
+        public typealias Observation = AttemptObservation
+        public typealias Action = AttemptAction
         public typealias Configuration = InferenceProviderConfig
         public typealias EiginRelayConfiguration = EiginRelayProviderConfig
         public typealias EiginRelayWalletSource = EiginSDKBindings.EiginRelayWalletSource

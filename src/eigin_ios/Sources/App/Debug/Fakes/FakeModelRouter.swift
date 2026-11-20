@@ -5,14 +5,25 @@ import Foundation
 actor FakeModelRouter: ModelRouter {
     var routeToReturn: ResolvedRoute?
     var retryModels: [String] = []
+    private let hedgeModel: String?
+    private(set) var hedgeLosses: [String] = []
+    private(set) var retryRequests: [RouteRequest] = []
     var canSatisfyAnswer = true
 
     private(set) var recorded: [AttemptOutcome] = []
     private(set) var resolveCount = 0
 
+    private let effortLookup: @Sendable (String) async -> ReasoningEffort?
     private var onRecord: (@Sendable () async -> Void)?
 
-    init(retryModels: [String] = [], canSatisfyAnswer: Bool = true) {
+    init(
+        retryModels: [String] = [],
+        canSatisfyAnswer: Bool = true,
+        hedgeModel: String? = nil,
+        effortLookup: @escaping @Sendable (String) async -> ReasoningEffort? = { _ in nil }
+    ) {
+        self.effortLookup = effortLookup
+        self.hedgeModel = hedgeModel
         self.retryModels = retryModels
         self.canSatisfyAnswer = canSatisfyAnswer
     }
@@ -38,6 +49,7 @@ actor FakeModelRouter: ModelRouter {
     }
 
     func retry(after _: Error, request: RouteRequest) async -> ResolvedRoute? {
+        retryRequests.append(request)
         guard !retryModels.isEmpty else { return nil }
         let model = retryModels.removeFirst()
         return ResolvedRoute(
@@ -46,6 +58,30 @@ actor FakeModelRouter: ModelRouter {
             model: model,
             change: .modelDegraded(previous: request.currentModel, reason: .errors)
         )
+    }
+
+    func hedgeCandidate(after _: String, request: RouteRequest) async -> ResolvedRoute? {
+        hedgeModel.map { ResolvedRoute(
+            providerID: request.currentProviderID,
+            baseURL: request.currentProvider?.baseURL ?? "",
+            model: $0,
+            change: nil
+        ) }
+    }
+
+    func reasoningEffort(
+        for model: String,
+        request _: RouteRequest
+    ) async -> ReasoningEffort? {
+        await effortLookup(model)
+    }
+
+    func hedgeDelay(for _: String) async -> Duration {
+        .zero
+    }
+
+    func recordHedgeLoss(_ model: String, silentFor _: Duration) async {
+        hedgeLosses.append(model)
     }
 
     func canSatisfy(_: RouteRequest) async -> Bool {

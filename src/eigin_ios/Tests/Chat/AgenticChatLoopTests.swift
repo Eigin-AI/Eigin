@@ -35,79 +35,6 @@ struct AgenticChatLoopTests {
         ).definitions
     }
 
-    @Test(arguments: ["same-model", "retry", "hedge"], [false, true])
-    @MainActor func dispatchesSessionEffortAcrossTurnsAndFallbacks(
-        mode: String,
-        early: Bool
-    ) async throws {
-        let (agent, provider, container) = try makeTestContext()
-        _ = container
-        provider.baseURL = "https://api.mistral.ai/v1"
-        provider.availableModels = mode == "same-model"
-            ? ["mistral-large-4-0"] : ["mistral-medium-3-5", "mistral-large-4-0"]
-        let router = DefaultModelRouter(
-            reachability: FakeNetworkReachability(), localModelReadiness: { false }
-        )
-        Container.shared.modelRouter.register { router }
-        defer { Container.shared.modelRouter.reset() }
-        let conversation = UUID()
-        let routingProvider = RoutingProvider(
-            id: provider.id, name: provider.name, baseURL: provider.baseURL,
-            availableModels: provider.availableModels
-        )
-        let service = ObservedChatService { _, _, _ in }
-        let calls = OSAllocatedUnfairLock(initialState: [(String, ReasoningEffort?)]())
-        service.observeEffort = { model, effort in calls.withLock { $0.append((model, effort)) } }
-        let loop = AgenticChatLoop(isBootstrap: false)
-        let texts = ["Hello", "Analyze and compare trade-offs step by step. Explain why.", "Thanks"]
-        var firstModel = ""
-        for (index, text) in texts.enumerated() {
-            let request = RouteRequest(
-                currentProviderID: provider.id, currentModel: agent.model, isAuto: true,
-                requirements: RouteRequirements(), providers: [routingProvider],
-                conversationID: conversation, lastUserMessage: text,
-                turnContext: early ? RoutingTurnContext(responseTurnCount: 0) : nil
-            )
-            let route = await router.resolve(request)
-            agent.model = route.model
-            loop.activeModel = route.model
-            if index == 0 { firstModel = route.model }
-            if index == 2, mode == "retry" {
-                service.scripted.throwOnEventStream(OpenAICompatibleClientError.httpError(
-                    503,
-                    body: nil
-                ))
-            }
-            if index == 2, mode == "hedge" {
-                service.scripted.delayBeforeStream(.seconds(7))
-            }
-            service.scripted.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
-            if index == 2, mode == "hedge" {
-                service.scripted.enqueueEventStream([.contentDelta("Answer"), .finished(.stop)])
-            }
-            let stream = try await loop.openStream(
-                chatService: service, provider: provider, agent: agent,
-                messages: [ChatMessage(role: "user", content: text)], tools: nil,
-                cacheKey: nil, routing: request, conversationID: conversation
-            )
-            for try await _ in stream.stream {}
-        }
-        let dispatched = calls.withLock { $0 }
-        #expect(dispatched[0].1 == .low)
-        #expect(dispatched[1].0 == firstModel)
-        #expect(dispatched.dropFirst().allSatisfy {
-            $0.1 == ($0.0 == "mistral-large-4-0"
-                ? (early ? .low : .medium) : (early ? ReasoningEffort.none : .high))
-        })
-        if mode == "same-model" {
-            #expect(dispatched.count == 3)
-            #expect(dispatched.allSatisfy { $0.0 == firstModel })
-        } else {
-            #expect(dispatched.count == 4)
-            #expect(dispatched.last?.0 != firstModel)
-        }
-    }
-
     @Test(arguments: [false, true], [false, true])
     @MainActor func retainsPrivateHistoryAcrossToolRounds(
         prose: Bool,
@@ -1520,12 +1447,14 @@ struct AgenticChatLoopTests {
         #expect(produced[0].content == "Recovered!")
     }
 
-    @Test @MainActor func retriesOnTheModelTheRouterOffers() async throws {
+    @Test(arguments: [false, true])
+    @MainActor func retriesOnTheModelTheRouterOffers(sameProvider: Bool) async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container
         provider.availableModels = ["claude-sonnet-5", "gpt-5.6"]
         agent.model = "claude-sonnet-5"
 
+        if !sameProvider { agent.providerID = UUID() }
         let router = FakeModelRouter(retryModels: ["gpt-5.6"])
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
@@ -1546,7 +1475,9 @@ struct AgenticChatLoopTests {
 
         #expect(produced.count == 1)
         #expect(produced[0].content == "Second try")
-        #expect(agent.model == "gpt-5.6")
+        #expect(agent.model == (sameProvider ? "gpt-5.6" : "claude-sonnet-5"))
+
+        #expect(loop.activeModel == "gpt-5.6")
 
         // One failed open, one successful stream.
         let outcomes = await router.outcomes()
@@ -1558,7 +1489,8 @@ struct AgenticChatLoopTests {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container
 
-        Container.shared.modelRouter.register { FakeModelRouter(retryModels: []) }
+        let router = FakeModelRouter()
+        Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
 
         let fakeChatService = FakeChatService()
@@ -1575,6 +1507,87 @@ struct AgenticChatLoopTests {
                 toolExecutor: FakeToolExecutor()
             )
         }
+        #expect(await router.outcomes().map(\.model) == [agent.model])
+    }
+
+    @Test(arguments: [true, false])
+    @MainActor func failureSwitchesOnlyBeforeOutput(emitted: Bool) async throws {
+        let (agent, provider, store) = try makeTestContext()
+        defer { _ = store }
+        let router = FakeModelRouter(retryModels: ["replacement"])
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+        let service = FakeChatService()
+        let error = OpenAICompatibleClientError.httpError(503, body: nil)
+        service.enqueueEventStream(emitted ? [.contentDelta("partial")] : [], endingWith: error)
+        service.enqueueEventStream([], endingWith: error)
+        let loop = AgenticChatLoop(isBootstrap: false)
+        await #expect(throws: OpenAICompatibleClientError.self) {
+            try await loop.run(
+                messages: [ChatMessage(role: "user", content: "Hi")],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: FakeToolExecutor()
+            )
+        }
+        #expect(agent.model == "test-model")
+        #expect(loop.activeModel == "test-model")
+        #expect(await router.outcomes().map(\.model) == (emitted ? ["test-model"] : [
+            "test-model",
+            "replacement",
+        ]))
+    }
+
+    @Test @MainActor func backgroundCancellationIsReportedBeforePropagation() async throws {
+        let (agent, provider, store) = try makeTestContext()
+        defer { _ = store }
+        let router = FakeModelRouter()
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+        let service = FakeChatService()
+        service.enqueueEventStream([.contentDelta("partial")], endingWith: CancellationError())
+        let loop = AgenticChatLoop(isBootstrap: false)
+        loop.propagatesStreamCancellation = true
+        await #expect(throws: CancellationError.self) {
+            try await loop.run(
+                messages: [.init(role: "user", content: "Start")],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: FakeToolExecutor()
+            )
+        }
+        let outcomes = await router.outcomes()
+        #expect(outcomes.count == 1)
+        let outcome = try #require(outcomes.first)
+        guard case .cancelled = outcome.result
+        else { Issue.record("Expected a cancelled provider attempt"); return }
+    }
+
+    @Test @MainActor func hedgeWinnerCarriesRoundWithoutChangingAgentModel() async throws {
+        let (agent, provider, store) = try makeTestContext()
+        defer { _ = store }
+        let router = FakeModelRouter(hedgeModel: "runner-up")
+        Container.shared.modelRouter.register { router }
+        defer { Container.shared.modelRouter.reset() }
+        let service = FakeChatService()
+        service.delayBeforeStream(.seconds(60), for: agent.model)
+        service.enqueueEventStream([.contentDelta("answer"), .finished(.stop)])
+        let loop = AgenticChatLoop(isBootstrap: false)
+        _ = try await loop.run(
+            messages: [ChatMessage(role: "user", content: "Hi")],
+            tools: nil,
+            agent: agent,
+            provider: provider,
+            chatService: service,
+            toolExecutor: FakeToolExecutor()
+        )
+        #expect(loop.activeModel == "runner-up")
+        #expect(agent.model == "test-model")
+        #expect(await router.outcomes().map(\.model) == ["runner-up"])
     }
 
     @Test @MainActor func anOfflineRouteLeavesTheAgentsOwnModelAlone() async throws {
