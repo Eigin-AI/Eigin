@@ -4,13 +4,25 @@ import SwiftMail
 /// ``IMAPSession`` backed by SwiftMail's `IMAPServer`.
 final class DefaultIMAPSession: IMAPSession, @unchecked Sendable {
     private var server: IMAPServer?
+    private var uidValidity: UInt32 = 0
+    private let makeServer: @Sendable (IMAPAccountSettings) -> IMAPServer
+
+    init(makeServer: @escaping @Sendable (IMAPAccountSettings) -> IMAPServer = { settings in
+        IMAPServer(
+            host: settings.imapHost,
+            port: settings.imapPort,
+            responseBufferLimit: EmailAttachmentLimits.transportBytes
+        )
+    }) {
+        self.makeServer = makeServer
+    }
 
     func open(settings: IMAPAccountSettings) async throws {
-        let server = IMAPServer(host: settings.imapHost, port: settings.imapPort)
+        let server = makeServer(settings)
         do {
             try await server.connect()
             try await server.login(username: settings.imapUsername, password: settings.password)
-            _ = try await server.selectMailbox("INBOX")
+            uidValidity = try await server.selectMailbox("INBOX").uidValidity.value
         } catch {
             throw Self.mapError(error)
         }
@@ -50,11 +62,56 @@ final class DefaultIMAPSession: IMAPSession, @unchecked Sendable {
             guard let header = try await server.fetchMessageInfo(for: UID(uid)) else {
                 return nil
             }
-            let message = try await server.fetchMessage(from: header)
-            return Self.fullMessage(uid: uid, header: header, message: message)
+            let parts = try await server.fetchStructure(UID(uid))
+            let attachmentSections = parts.filter(Self.isAttachment).map { $0.section.components }
+            let visibleParts = parts.filter { part in
+                !attachmentSections.contains { parent in
+                    part.section.components.count > parent.count && part.section.components
+                        .starts(with: parent)
+                }
+            }
+            var bodyParts: [MessagePart] = []
+            for var part in visibleParts
+                where !Self.isAttachment(part) && ["text/plain", "text/html"]
+                .contains(Self.mediaType(part))
+            {
+                try Task.checkCancellation()
+                part.data = try await server.fetchPart(section: part.section, of: UID(uid))
+                bodyParts.append(part)
+            }
+            let message = SwiftMail.Message(header: header, parts: bodyParts)
+            var result = Self.fullMessage(uid: uid, header: header, message: message)
+            result.attachments = visibleParts.filter(Self.isAttachment)
+                .map { metadata($0, uid: uid) }
+            return result
         } catch {
             throw Self.mapError(error)
         }
+    }
+
+    private static func mediaType(_ part: MessagePart) -> String {
+        part.contentType.components(separatedBy: ";")[0].trimmingCharacters(in: .whitespaces)
+            .lowercased()
+    }
+
+    private static func isAttachment(_ part: MessagePart) -> Bool {
+        if part.disposition?.lowercased() == "attachment" { return true }
+        guard ["text/plain", "text/html"].contains(mediaType(part)) else { return true }
+        guard let filename = part.filename, !filename.isEmpty else { return false }
+        // SwiftMail uses a decoded Content-ID as the filename when MIME filename parameters are
+        // absent.
+        let contentIDName = part.contentId?.trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+            .decodeMIMEHeader()
+        return filename != contentIDName
+    }
+
+    private func metadata(_ part: MessagePart, uid: UInt32) -> EmailAttachment {
+        EmailAttachment(
+            id: "\(uidValidity):\(uid):\(part.section)",
+            filename: part.filename ?? "attachment",
+            mimeType: part.contentType,
+            unsupportedReason: "IMAP attachment downloads are not supported yet."
+        )
     }
 
     func close() async {

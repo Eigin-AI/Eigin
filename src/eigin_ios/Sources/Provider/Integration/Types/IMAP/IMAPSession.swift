@@ -20,6 +20,7 @@ struct IMAPFullMessage: Sendable, Equatable {
     let body: String
     let date: String
     let messageID: String?
+    var attachments: [EmailAttachment] = []
 }
 
 /// Errors from an ``IMAPSession`` or ``SMTPSession`` operation, kept

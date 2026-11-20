@@ -35,6 +35,56 @@ struct MicrosoftEmailProviderTests {
         )
     }
 
+    @Test func discoversAndFetchesOnlySelectedFileAttachment() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/attachment-mail/attachments?$select=id,name,contentType,size,isInline",
+            data: Data(
+                ##"{"value":[{"@odata.type":"#microsoft.graph.fileAttachment","id":"file-1","name":"invoice.txt","contentType":"text/plain","size":12},{"@odata.type":"#microsoft.graph.referenceAttachment","id":"link-1","name":"cloud","contentType":"application/pdf"}]}"##
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/attachment-mail/attachments/file-1/$value",
+            data: Data("Invoice 123".utf8),
+            statusCode: 200
+        )
+        let provider = makeProvider(session: session)
+        let result = try await provider.fetchAttachment(
+            messageID: "attachment-mail",
+            attachmentID: "file-1"
+        )
+        #expect(String(data: result.data, encoding: .utf8) == "Invoice 123")
+        let unsupported = try await provider.fetchAttachment(
+            messageID: "attachment-mail",
+            attachmentID: "link-1"
+        )
+        #expect(!unsupported.metadata.readable)
+        #expect(unsupported.data.isEmpty)
+        await #expect(throws: EmailProviderError.self) {
+            try await provider.fetchAttachment(
+                messageID: "attachment-mail",
+                attachmentID: "unknown"
+            )
+        }
+    }
+
+    @Test func rejectsCrossOriginAttachmentPagination() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/hostile/attachments?$select=id,name,contentType,size,isInline",
+            data: Data(#"{"value":[],"@odata.nextLink":"https://example.com/steal"}"#.utf8),
+            statusCode: 200
+        )
+        await #expect(throws: EmailProviderError.self) {
+            try await makeProvider(session: session).fetchAttachment(
+                messageID: "hostile",
+                attachmentID: "a"
+            )
+        }
+    }
+
     @Test func discoversNestedFoldersAndPages() async throws {
         let session = FakeURLProtocol.fakeSession()
         let next = "\(Self.base)/mailFolders?$skip=1"
@@ -202,6 +252,11 @@ struct MicrosoftEmailProviderTests {
     @Test func readEmailDecodesPlainTextBody() async throws {
         let session = FakeURLProtocol.fakeSession()
         FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/m1/attachments?$select=id,name,contentType,size,isInline",
+            data: Data(#"{"value":[]}"#.utf8),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
             for: "\(Self.base)/messages/m1?$select=\(Self.messageSelect)",
             data: Data("""
             {
@@ -263,6 +318,11 @@ struct MicrosoftEmailProviderTests {
 
     @Test func replyEmailReadsOriginalThenPostsCommentToTheReplyAction() async throws {
         let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/m1/attachments?$select=id,name,contentType,size,isInline",
+            data: Data(#"{"value":[]}"#.utf8),
+            statusCode: 200
+        )
         FakeURLProtocol.stubResponse(
             for: "\(Self.base)/messages/m1?$select=\(Self.messageSelect)",
             data: Data("""

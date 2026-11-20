@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "tools.description.emailFetchAttachment": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent og læs en PDF- eller tekstfil vedhæftet en e-mail."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetch and read a PDF or text attachment from an email."
+          }
+        }
+      }
+    },
+    "tools.email.fetchAttachment": {
+      "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent vedhæftet fil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetch attachment"
+          }
+        }
+      }
+    },
     "development.backgroundActivitiesBusy": {
       "localizations": {
         "da": {

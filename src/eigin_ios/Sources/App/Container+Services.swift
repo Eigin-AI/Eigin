@@ -3,6 +3,11 @@ import Foundation
 import SwiftData
 
 extension Container {
+    /// Serial, on-device PDF and text extraction shared by attachment tools.
+    var documentReader: Factory<any DocumentReading> {
+        self { DocumentReader() }.singleton
+    }
+
     /// WeatherKit source metadata and marks, shared by chat and Settings.
     var weatherAttributionService: Factory<any WeatherAttributionServing> {
         self { AppleWeatherAttributionService() }.singleton

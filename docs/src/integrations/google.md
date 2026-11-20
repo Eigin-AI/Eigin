@@ -2,6 +2,10 @@
 
 Provides the `email` capability via Gmail's REST API: list, search, read, send, and reply.
 
+## Attachments
+
+`email_read` lists attachments; `email_fetch_attachment` reads PDF and plain-text attachments using existing read permissions.
+
 ## Folders and labels
 
 - `email_list_folders` discovers available folders and returns their IDs and names.

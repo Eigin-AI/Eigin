@@ -31,7 +31,7 @@ struct ReadEmailTool: Tool {
     func definition() -> ToolDefinition {
         ToolDefinition(
             name: name,
-            description: "Read the full content of an email by id.",
+            description: "Read an email by ID and list its attachments.",
             parameters: JSONSchema(
                 type: "object",
                 properties: [

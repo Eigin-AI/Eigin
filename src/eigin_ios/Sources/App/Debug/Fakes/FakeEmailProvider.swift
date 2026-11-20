@@ -67,6 +67,20 @@ final class FakeEmailProvider: EmailProvider, @unchecked Sendable {
         return message
     }
 
+    var attachmentContent: EmailAttachmentContent?
+    private(set) var lastAttachmentID: String?
+
+    func fetchAttachment(
+        messageID: String,
+        attachmentID: String
+    ) async throws -> EmailAttachmentContent {
+        if let errorToThrow { throw errorToThrow }
+        lastReadID = messageID
+        lastAttachmentID = attachmentID
+        guard let attachmentContent else { throw EmailProviderError.notFound }
+        return attachmentContent
+    }
+
     func sendEmail(
         to: [String],
         cc: [String],

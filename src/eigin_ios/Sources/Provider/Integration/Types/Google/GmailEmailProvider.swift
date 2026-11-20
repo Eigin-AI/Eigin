@@ -82,6 +82,57 @@ struct GmailEmailProvider: EmailProvider {
         return raw.toEmailMessage()
     }
 
+    func fetchAttachment(
+        messageID: String,
+        attachmentID: String
+    ) async throws -> EmailAttachmentContent {
+        let deadline = Date().addingTimeInterval(EmailAttachmentLimits.downloadSeconds)
+        let token = try await accessToken()
+        var components = URLComponents(
+            url: AttachmentDownload.url(Self.baseURL, segments: ["messages", messageID]),
+            resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = [URLQueryItem(name: "format", value: "full")]
+        let messageData = try await AttachmentDownload.get(
+            components.url!,
+            token: token,
+            session: urlSession,
+            deadline: deadline
+        )
+        let message = try JSONDecoder().decode(GmailMessage.self, from: messageData)
+        guard let part = message.payload?.attachmentParts
+            .first(where: { $0.attachment?.id == attachmentID }),
+            let metadata = part.attachment else { throw EmailProviderError.notFound }
+        guard metadata.readable else { return EmailAttachmentContent(
+            metadata: metadata,
+            data: Data()
+        ) }
+        if let size = metadata.sizeBytes, size > EmailAttachmentLimits.decodedBytes {
+            throw EmailProviderError.requestFailed("Attachment exceeds the 10 MiB reading limit.")
+        }
+        let encoded: String?
+        if let remoteID = part.body?.attachmentId {
+            let url = AttachmentDownload.url(
+                Self.baseURL,
+                segments: ["messages", messageID, "attachments", remoteID]
+            )
+            let data = try await AttachmentDownload.get(
+                url,
+                token: token,
+                session: urlSession,
+                deadline: deadline
+            )
+            encoded = try JSONDecoder().decode(GmailMessage.GmailBody.self, from: data).data
+        } else {
+            encoded = part.body?.data
+        }
+        guard let encoded, let data = GmailMessage.decodeBytes(encoded) else {
+            throw EmailProviderError.requestFailed("Attachment contains invalid base64url data.")
+        }
+        try EmailAttachmentLimits.validate(data)
+        return EmailAttachmentContent(metadata: metadata, data: data)
+    }
+
     func sendEmail(
         to: [String],
         cc: [String],
@@ -337,6 +388,32 @@ private struct GmailMessage: Decodable {
         let body: GmailBody?
         let parts: [GmailPayload]?
         let mimeType: String?
+        let partId: String?
+        let filename: String?
+
+        var isAttachment: Bool {
+            !(filename ?? "").isEmpty || (mimeType.map {
+                !$0.hasPrefix("multipart/") && !["text/plain", "text/html"].contains($0)
+            } ?? false) || (headers ?? []).contains {
+                $0.name.lowercased() == "content-disposition" && $0.value.lowercased()
+                    .hasPrefix("attachment")
+            }
+        }
+
+        var attachmentParts: [GmailPayload] {
+            if isAttachment { return [self] }
+            return (parts ?? []).flatMap(\.attachmentParts)
+        }
+
+        var attachment: EmailAttachment? {
+            let contentType = headers?.first { $0.name.lowercased() == "content-type" }?.value
+            return EmailAttachment(
+                id: "part:\(partId ?? "")",
+                filename: filename ?? "attachment",
+                mimeType: contentType ?? mimeType ?? "application/octet-stream",
+                sizeBytes: body?.size
+            )
+        }
     }
 
     struct GmailHeader: Decodable {
@@ -346,6 +423,8 @@ private struct GmailMessage: Decodable {
 
     struct GmailBody: Decodable {
         let data: String?
+        let attachmentId: String?
+        let size: Int?
     }
 
     func header(_ name: String) -> String? {
@@ -359,6 +438,7 @@ private struct GmailMessage: Decodable {
     }
 
     private static func findPlainText(in payload: GmailPayload) -> String? {
+        guard !payload.isAttachment else { return nil }
         if payload.mimeType == "text/plain", let data = payload.body?.data {
             return decodeBase64URL(data, headers: payload.headers ?? [])
         }
@@ -370,13 +450,20 @@ private struct GmailMessage: Decodable {
         return nil
     }
 
-    private static func decodeBase64URL(_ value: String, headers: [GmailHeader]) -> String? {
-        var base64 = value.replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
+    /// Adapts Gmail's unpadded URL-safe alphabet for Foundation's Base64 decoder.
+    static func decodeBytes(_ value: String) -> Data? {
+        var base64 = value.replacingOccurrences(of: "-", with: "+").replacingOccurrences(
+            of: "_",
+            with: "/"
+        )
         while base64.count % 4 != 0 {
             base64 += "="
         }
-        guard let data = Data(base64Encoded: base64) else { return nil }
+        return Data(base64Encoded: base64)
+    }
+
+    private static func decodeBase64URL(_ value: String, headers: [GmailHeader]) -> String? {
+        guard let data = decodeBytes(value) else { return nil }
         let contentType = headers
             .first { $0.name.caseInsensitiveCompare("Content-Type") == .orderedSame }?.value ?? ""
         let charset = contentType.components(separatedBy: ";").dropFirst()
@@ -405,7 +492,8 @@ private struct GmailMessage: Decodable {
                 .map { $0.trimmingCharacters(in: .whitespaces) },
             subject: header("Subject")?.decodeMIMEHeader() ?? "",
             body: plainTextBody() ?? snippet ?? "",
-            date: header("Date") ?? ""
+            date: header("Date") ?? "",
+            attachments: payload?.attachmentParts.compactMap(\.attachment) ?? []
         )
     }
 }

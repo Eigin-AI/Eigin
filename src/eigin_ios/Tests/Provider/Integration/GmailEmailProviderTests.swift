@@ -28,6 +28,58 @@ struct GmailEmailProviderTests {
 
     private let integrationID = UUID()
 
+    @Test func discoversNestedAttachmentsAndKeepsTextAttachmentsOutOfBody() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/attachment-mail?format=full",
+            data: Data(
+                #"{"id":"attachment-mail","threadId":"t","payload":{"mimeType":"multipart/mixed","parts":[{"partId":"0","filename":"invoice.txt","mimeType":"text/plain","body":{"data":"SW52b2ljZSAxMjM","size":11}},{"partId":"1","mimeType":"text/plain","body":{"data":"Qm9keQ"}},{"mimeType":"multipart/mixed","parts":[{"partId":"2.0","filename":"invoice.pdf","mimeType":"application/pdf","body":{"attachmentId":"remote","size":4}}]}]}}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/attachment-mail/attachments/remote",
+            data: Data(#"{"data":"JVBERg","size":4}"#.utf8),
+            statusCode: 200
+        )
+        let provider = makeProvider(session: session)
+        let message = try await provider.readEmail(id: "attachment-mail")
+        #expect(message.body == "Body")
+        #expect(message.attachments.map(\.id) == ["part:0", "part:2.0"])
+        let inline = try await provider.fetchAttachment(
+            messageID: "attachment-mail",
+            attachmentID: "part:0"
+        )
+        #expect(String(data: inline.data, encoding: .utf8) == "Invoice 123")
+        let external = try await provider.fetchAttachment(
+            messageID: "attachment-mail",
+            attachmentID: "part:2.0"
+        )
+        #expect(external.data == Data("%PDF".utf8))
+        await #expect(throws: EmailProviderError.self) {
+            try await provider.fetchAttachment(messageID: "attachment-mail", attachmentID: "remote")
+        }
+    }
+
+    @Test func rejectsMalformedAttachmentEncoding() async throws {
+        let session = FakeURLProtocol.fakeSession()
+        FakeURLProtocol.stubResponse(
+            for: "\(Self.base)/messages/bad-attachment?format=full",
+            data: Data(
+                #"{"id":"bad-attachment","threadId":"t","payload":{"partId":"0","filename":"invoice.txt","mimeType":"text/plain","body":{"data":"%%%"}}}"#
+                    .utf8
+            ),
+            statusCode: 200
+        )
+        await #expect(throws: EmailProviderError.self) {
+            try await makeProvider(session: session).fetchAttachment(
+                messageID: "bad-attachment",
+                attachmentID: "part:0"
+            )
+        }
+    }
+
     @Test func discoversLabels() async throws {
         let session = FakeURLProtocol.fakeSession()
         FakeURLProtocol.stubResponse(

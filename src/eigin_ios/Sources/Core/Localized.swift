@@ -6295,6 +6295,10 @@ enum Localized {
                 Localized.get("tools.description.editSpace")
             }
 
+            static var emailFetchAttachment: String {
+                Localized.get("tools.description.emailFetchAttachment")
+            }
+
             /// One-sentence description of the email_list tool, shown in the tool detail sheet
             static var emailList: String {
                 Localized.get("tools.description.emailList")
@@ -6568,6 +6572,10 @@ enum Localized {
         }
 
         enum Email {
+            static var fetchAttachment: String {
+                Localized.get("tools.email.fetchAttachment")
+            }
+
             /// Display name for the list-emails tool
             static var list: String {
                 Localized.get("tools.email.list")

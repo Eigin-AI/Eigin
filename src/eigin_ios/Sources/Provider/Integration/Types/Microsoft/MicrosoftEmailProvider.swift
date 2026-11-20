@@ -122,7 +122,85 @@ struct MicrosoftEmailProvider: EmailProvider {
     func readEmail(id: String) async throws -> EmailMessage {
         let token = try await accessToken()
         let data = try await get(readURL(id: id), token: token, headers: Self.plainTextBodyHeader)
-        return try data.decoded(GraphMessage.self).toEmailMessage()
+        var message = try data.decoded(GraphMessage.self).toEmailMessage()
+        message.attachments = try await attachmentMetadata(
+            messageID: id,
+            token: token,
+            deadline: Date().addingTimeInterval(10)
+        )
+        return message
+    }
+
+    func fetchAttachment(
+        messageID: String,
+        attachmentID: String
+    ) async throws -> EmailAttachmentContent {
+        let deadline = Date().addingTimeInterval(EmailAttachmentLimits.downloadSeconds)
+        let token = try await accessToken()
+        let attachments = try await attachmentMetadata(
+            messageID: messageID,
+            token: token,
+            deadline: deadline
+        )
+        guard let metadata = attachments.first(where: { $0.id == attachmentID })
+        else { throw EmailProviderError.notFound }
+        guard metadata.readable else { return EmailAttachmentContent(
+            metadata: metadata,
+            data: Data()
+        ) }
+        if let size = metadata.sizeBytes, size > EmailAttachmentLimits.decodedBytes {
+            throw EmailProviderError.requestFailed("Attachment exceeds the 10 MiB reading limit.")
+        }
+        let url = AttachmentDownload.url(
+            Self.baseURL,
+            segments: ["messages", messageID, "attachments", attachmentID]
+        ).appendingPathComponent("$value")
+        let data = try await AttachmentDownload.get(
+            url,
+            token: token,
+            session: urlSession,
+            deadline: deadline,
+            limit: EmailAttachmentLimits.decodedBytes
+        )
+        try EmailAttachmentLimits.validate(data)
+        return EmailAttachmentContent(metadata: metadata, data: data)
+    }
+
+    private func attachmentMetadata(
+        messageID: String,
+        token: String,
+        deadline: Date
+    ) async throws -> [EmailAttachment] {
+        let base = AttachmentDownload.url(
+            Self.baseURL,
+            segments: ["messages", messageID, "attachments"]
+        )
+        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(
+            name: "$select",
+            value: "id,name,contentType,size,isInline"
+        )]
+        var next: URL? = components.url
+        var seen = Set<URL>()
+        var result: [EmailAttachment] = []
+        while let url = next {
+            guard url.scheme == "https", url.host == base.host, url.port == nil,
+                  url.user == nil, url.password == nil, url.path == base.path,
+                  seen.insert(url).inserted, seen.count <= 100
+            else {
+                throw EmailProviderError.requestFailed("Invalid attachment pagination link.")
+            }
+            let data = try await AttachmentDownload.get(
+                url,
+                token: token,
+                session: urlSession,
+                deadline: deadline
+            )
+            let page = try JSONDecoder().decode(GraphAttachmentPage.self, from: data)
+            result += page.value.map { $0.metadata }
+            next = page.nextLink.flatMap(URL.init(string:))
+        }
+        return result
     }
 
     func sendEmail(
@@ -382,5 +460,36 @@ private struct GraphFolderList: Decodable {
         let displayName: String
         let parentFolderId: String?
         let childFolderCount: Int
+    }
+}
+
+private struct GraphAttachmentPage: Decodable {
+    let value: [GraphAttachment]
+    let nextLink: String?
+    enum CodingKeys: String, CodingKey {
+        case value
+        case nextLink = "@odata.nextLink"
+    }
+}
+
+private struct GraphAttachment: Decodable {
+    let id: String
+    let name: String?
+    let contentType: String?
+    let size: Int?
+    let type: String
+    enum CodingKeys: String, CodingKey {
+        case id, name, contentType, size
+        case type = "@odata.type"
+    }
+
+    var metadata: EmailAttachment {
+        EmailAttachment(
+            id: id,
+            filename: name ?? "attachment",
+            mimeType: contentType ?? "application/octet-stream",
+            sizeBytes: size,
+            unsupportedReason: type == "#microsoft.graph.fileAttachment" ? nil : "Attached messages and cloud-reference attachments are unsupported."
+        )
     }
 }
