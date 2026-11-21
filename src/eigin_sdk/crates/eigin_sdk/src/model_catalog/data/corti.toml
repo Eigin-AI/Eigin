@@ -1,0 +1,39 @@
+[[models]]
+pattern = "corti-s1-mini-instant"
+display_name = "Corti S1 Mini Instant"
+family = "corti"
+context_window = 262144
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "corti-s1-mini"
+display_name = "Corti S1 Mini"
+family = "corti"
+context_window = 262144
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "corti-s1-instant"
+display_name = "Corti S1 Instant"
+family = "corti"
+context_window = 262144
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = false
+
+[[models]]
+pattern = "corti-s1"
+display_name = "Corti S1"
+family = "corti"
+context_window = 262144
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = true

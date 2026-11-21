@@ -1,0 +1,47 @@
+[[models]]
+pattern = "deepseek-v4-pro"
+display_name = "DeepSeek V4 Pro"
+family = "deepseek"
+context_window = 1000000
+max_output = 384000
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "deepseek-v4-flash"
+display_name = "DeepSeek V4 Flash"
+family = "deepseek"
+context_window = 1000000
+max_output = 384000
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "deepseek-v3-1-terminus"
+display_name = "DeepSeek V3.1 Terminus"
+family = "deepseek"
+context_window = 163840
+max_output = 64000
+input_cost_per_million = 0.21
+output_cost_per_million = 0.79
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = true
+
+[[models]]
+pattern = "deepseek-v3.2"
+display_name = "DeepSeek V3.2"
+family = "deepseek"
+context_window = 128000
+max_output = 64000
+input_cost_per_million = 0.28
+output_cost_per_million = 0.4
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = false

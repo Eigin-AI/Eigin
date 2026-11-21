@@ -1,0 +1,272 @@
+[[models]]
+pattern = "gpt-6-astra"
+display_name = "GPT-6 Astra"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 2.5
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-6.1-astra"
+display_name = "GPT-6.1 Astra"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 2.5
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-6.1-sol"
+display_name = "GPT-6.1 Sol"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 30.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-6.1-luna"
+display_name = "GPT-6.1 Luna"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 1.0
+output_cost_per_million = 6.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-6.1"
+display_name = "GPT-6.1"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 30.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.6"
+display_name = "GPT-5.6"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 30.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.6-terra"
+display_name = "GPT-5.6 Terra"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 2.5
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.6-luna"
+display_name = "GPT-5.6 Luna"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 1.0
+output_cost_per_million = 6.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.6-sol"
+display_name = "GPT-5.6 Sol"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 30.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.5-pro"
+display_name = "GPT-5.5 Pro"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 27.27
+output_cost_per_million = 163.64
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.5"
+display_name = "GPT-5.5"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 3.0
+output_cost_per_million = 18.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.5-instant"
+display_name = "GPT-5.5 Instant"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 30.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.4"
+display_name = "GPT-5.4"
+family = "openai"
+context_window = 1050000
+max_output = 128000
+input_cost_per_million = 2.5
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.4-mini"
+display_name = "GPT-5.4 Mini"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 0.68
+output_cost_per_million = 4.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.4-nano"
+display_name = "GPT-5.4 Nano"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 0.18
+output_cost_per_million = 1.1
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.2-pro"
+display_name = "GPT-5.2 Pro"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 51.0
+output_cost_per_million = 168.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-5.2"
+display_name = "GPT-5.2"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 1.75
+output_cost_per_million = 14.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-5.1"
+display_name = "GPT-5.1"
+family = "openai"
+context_window = 400000
+max_output = 128000
+input_cost_per_million = 1.25
+output_cost_per_million = 10.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gpt-4.1"
+display_name = "GPT-4.1"
+family = "openai"
+context_window = 1047576
+max_output = 32768
+input_cost_per_million = 2.0
+output_cost_per_million = 8.0
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-4.1-mini"
+display_name = "GPT-4.1 Mini"
+family = "openai"
+context_window = 1047576
+max_output = 32768
+input_cost_per_million = 0.4
+output_cost_per_million = 1.6
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gpt-4.1-nano"
+display_name = "GPT-4.1 Nano"
+family = "openai"
+context_window = 1047576
+max_output = 32768
+input_cost_per_million = 0.1
+output_cost_per_million = 0.4
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false

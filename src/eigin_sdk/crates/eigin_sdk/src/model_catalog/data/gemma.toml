@@ -1,0 +1,23 @@
+[[models]]
+pattern = "gemma-4-e2b"
+display_name = "Gemma 4 E2B"
+family = "gemma"
+context_window = 8192
+max_output = 512
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = true
+
+[[models]]
+pattern = "gemma-4-31b-it"
+display_name = "Gemma 4 31B"
+family = "gemma"
+context_window = 128000
+max_output = 8192
+input_cost_per_million = 0.28
+output_cost_per_million = 0.55
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true

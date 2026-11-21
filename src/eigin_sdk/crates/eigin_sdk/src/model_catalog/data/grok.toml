@@ -1,0 +1,64 @@
+[[models]]
+pattern = "grok-4.3"
+display_name = "Grok 4.3"
+family = "grok"
+context_window = 1000000
+max_output = 30000
+input_cost_per_million = 1.25
+output_cost_per_million = 2.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "grok-4-fast"
+display_name = "Grok 4 Fast"
+family = "grok"
+context_window = 2000000
+max_output = 30000
+input_cost_per_million = 0.2
+output_cost_per_million = 0.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "grok-4"
+display_name = "Grok 4"
+family = "grok"
+context_window = 256000
+max_output = 64000
+input_cost_per_million = 3.0
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = false
+
+[[models]]
+pattern = "grok-3"
+display_name = "Grok 3"
+family = "grok"
+context_window = 131072
+max_output = 8192
+input_cost_per_million = 3.0
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = false
+
+[[models]]
+pattern = "grok-3-mini"
+display_name = "Grok 3 Mini"
+family = "grok"
+context_window = 131072
+max_output = 8192
+input_cost_per_million = 0.3
+output_cost_per_million = 0.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = false

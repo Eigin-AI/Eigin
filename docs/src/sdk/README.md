@@ -12,6 +12,7 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 - [Turn output and checkpoints](../conversation/agentic-loop.md#safe-checkpoints): report output transitions, map stable provenance to app identities, and retain interrupted work before persistence.
 
 - [Outgoing conversation preparation](conversation-preparation.md): select history and assemble request-only messages.
+- [Model catalog](model-catalog.md): resolve offered IDs, choose defaults, and apply model-specific policy.
 - [Inference](inference.md): choose a provider, consume events and manage cancellation.
 - [Context paging](../conversation/context-paging.md#sdk): select retained history and tool-result masks.
 

@@ -1,0 +1,64 @@
+[[models]]
+pattern = "kimi-k3"
+display_name = "Kimi K3"
+family = "moonshot"
+context_window = 1048576
+max_output = 131072
+input_cost_per_million = 3.0
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "kimi-k2.7-code"
+display_name = "Kimi K2.7 Code"
+family = "moonshot"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.95
+output_cost_per_million = 4.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "kimi-k2.6"
+display_name = "Kimi K2.6"
+family = "moonshot"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.83
+output_cost_per_million = 3.85
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "kimi-k2.5"
+display_name = "Kimi K2.5"
+family = "moonshot"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.6
+output_cost_per_million = 3.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "kimi-k2"
+display_name = "Kimi K2"
+family = "moonshot"
+context_window = 131072
+max_output = 32768
+input_cost_per_million = 0.55
+output_cost_per_million = 2.2
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = false

@@ -1,0 +1,64 @@
+[[models]]
+pattern = "minimax-m3"
+display_name = "MiniMax M3"
+family = "minimax"
+context_window = 512000
+max_output = 128000
+input_cost_per_million = 0.3
+output_cost_per_million = 1.2
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = true
+
+[[models]]
+pattern = "minimax-m2.7"
+display_name = "MiniMax M2.7"
+family = "minimax"
+context_window = 204800
+max_output = 131072
+input_cost_per_million = 0.3
+output_cost_per_million = 1.2
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = true
+
+[[models]]
+pattern = "minimax-m2.5"
+display_name = "MiniMax M2.5"
+family = "minimax"
+context_window = 204800
+max_output = 131072
+input_cost_per_million = 0.3
+output_cost_per_million = 1.2
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = true
+
+[[models]]
+pattern = "minimax-m2.1"
+display_name = "MiniMax M2.1"
+family = "minimax"
+context_window = 204800
+max_output = 131072
+input_cost_per_million = 0.3
+output_cost_per_million = 1.2
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = false
+
+[[models]]
+pattern = "minimax-m2"
+display_name = "MiniMax M2"
+family = "minimax"
+context_window = 196600
+max_output = 118000
+input_cost_per_million = 0.28
+output_cost_per_million = 1.15
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = false

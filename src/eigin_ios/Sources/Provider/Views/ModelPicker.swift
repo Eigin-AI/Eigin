@@ -153,19 +153,8 @@ struct ModelPicker: View {
         let known = all.filter { metadata[$0] != nil && matchesSearch($0) }
         let unknown = all.filter { metadata[$0] == nil && matchesSearch($0) }
 
-        let patternIndex = Dictionary(
-            uniqueKeysWithValues: KnownModelCatalog.preferenceRanking.enumerated()
-                .map { ($0.element, $0.offset) }
-        )
-        let rankByModel: [String: Int] = Dictionary(
-            uniqueKeysWithValues: known.map { id in
-                guard let pattern = KnownModelCatalog.lookup(id)?.pattern,
-                      let rank = patternIndex[pattern]
-                else {
-                    return (id, Int.max)
-                }
-                return (id, rank)
-            }
+        let rankByModel = Dictionary(
+            uniqueKeysWithValues: known.map { ($0, KnownModelCatalog.rank(of: $0)) }
         )
 
         rankedModels = known

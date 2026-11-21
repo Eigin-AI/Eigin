@@ -17,6 +17,8 @@ mod diagnostics;
 pub mod http;
 /// Portable inference provider operations.
 pub mod inference;
+/// Curated model knowledge and preference policy.
+pub mod model_catalog;
 
 pub use diagnostics::*;
 
