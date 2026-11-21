@@ -12,6 +12,12 @@ struct InitiativeChange {
     var schedule: IntentSchedule?
 }
 
+/// Saved agreements and advisory warnings from one scheduling operation.
+struct InitiativeApplyResult {
+    let initiatives: [[String: String]]
+    let warnings: [NotificationSpacingWarning]
+}
+
 /// Actionable failures returned by initiative tools and tap handling.
 enum InitiativeError: LocalizedError {
     case permissionRequired, inaccessibleIntent, missingSchedule, invalidContent, busy
@@ -74,14 +80,17 @@ extension InitiativeScheduleError: LocalizedError {
         agentID: UUID,
         spaceID: UUID?,
         canPromptUser: Bool
-    ) async throws -> [[String: String]] {
+    ) async throws -> InitiativeApplyResult {
         guard !working else { throw InitiativeError.busy }
         working = true
         defer { finish() }
         let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+        defer { context.rollback() }
         let intents = try context.fetch(FetchDescriptor<Intent>())
         var agreements = try context.fetch(FetchDescriptor<IntentInitiative>())
         var changedIDs = Set<UUID>()
+        var rescheduledIDs = Set<UUID>()
         for change in changes {
             guard let intent = intents.first(where: { $0.id == change.intentID }),
                   intent.agentID == agentID, intent.spaceID == spaceID,
@@ -97,6 +106,11 @@ extension InitiativeScheduleError: LocalizedError {
                   !change.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   change.body.count <= 200,
                   change.instructions.count <= 4000 else { throw InitiativeError.invalidContent }
+            let prior = agreements
+                .first { $0.intentID == intent.id && $0.scheduleID == change.scheduleID }
+            let reservesNewTime = prior?.enabled != true || !NotificationSpacingSchedule.sameTiming(
+                intent.schedules[index], change.schedule ?? intent.schedules[index]
+            )
             if let schedule = change.schedule {
                 guard schedule.id == change.scheduleID
                 else { throw InitiativeError.missingSchedule }
@@ -120,6 +134,7 @@ extension InitiativeScheduleError: LocalizedError {
             }
             guard changedIDs.insert(agreement.id).inserted
             else { throw InitiativeScheduleError.duplicateInitiative }
+            if reservesNewTime { rescheduledIDs.insert(agreement.id) }
             agreement.instructions = change.instructions
             agreement.notificationBody = change.body
             agreement.enabled = true
@@ -141,6 +156,17 @@ extension InitiativeScheduleError: LocalizedError {
                 availableRequestCount: 7
             )
         }
+        let proposed = agreements.filter { rescheduledIDs.contains($0.id) }
+            .compactMap { agreement -> NotificationSpacingSchedule? in
+                guard let intent = intents.first(where: { $0.id == agreement.intentID }),
+                      let schedule = intent.schedules
+                      .first(where: { $0.id == agreement.scheduleID })
+                else { return nil }
+                return NotificationSpacingSchedule(id: agreement.id, timing: .recurring(schedule))
+            }
+        let spacingWarnings = try NotificationSpacingValidator(container: modelContainer).validate(
+            proposed: proposed, context: context
+        )
         do { try WaitingInitiativeStore.reconcile(context: context) }
         catch { throw InitiativeOperationFailure(underlying: error, changesState: .unknown) }
         do {
@@ -150,7 +176,10 @@ extension InitiativeScheduleError: LocalizedError {
                 canPromptUser: canPromptUser, authorization: scheduler.authorization
             )
             try await scheduler.reconcile(context: context)
-            return try list(agentID: agentID, spaceID: spaceID)
+            return try InitiativeApplyResult(
+                initiatives: list(agentID: agentID, spaceID: spaceID),
+                warnings: spacingWarnings
+            )
         } catch { throw InitiativeOperationFailure(underlying: error, changesState: .saved) }
     }
 
@@ -219,33 +248,6 @@ extension InitiativeScheduleError: LocalizedError {
                 "error": agreement.schedulingError ?? "",
             ]
         }
-    }
-
-    /// Nearby times are suggestions only; no agreement changes until the user accepts.
-    func nearbySuggestions(agentID: UUID, spaceID: UUID?) throws -> [[String: String]] {
-        let agreements = try list(agentID: agentID, spaceID: spaceID)
-            .filter { $0["status"] == "scheduled" }
-        var suggestions: [[String: String]] = []
-        for (index, first) in agreements.enumerated() {
-            for second in agreements.dropFirst(index + 1) {
-                guard let a = first["time"], let b = second["time"] else { continue }
-                let aParts = a.split(separator: ":").compactMap { Int($0) }
-                let bParts = b.split(separator: ":").compactMap { Int($0) }
-                guard aParts.count == 2, bParts.count == 2 else { continue }
-                let distance = abs(aParts[0] * 60 + aParts[1] - bParts[0] * 60 - bParts[1])
-                let aDays = first["frequency"] == "daily" ? Set(1 ... 7) :
-                    Set((first["weekdays"] ?? "").split(separator: ",").compactMap { Int($0) })
-                let bDays = second["frequency"] == "daily" ? Set(1 ... 7) :
-                    Set((second["weekdays"] ?? "").split(separator: ",").compactMap { Int($0) })
-                guard distance > 0, distance <= 60, !aDays.isDisjoint(with: bDays) else { continue }
-                suggestions.append([
-                    "first_id": first["id"] ?? "",
-                    "second_id": second["id"] ?? "",
-                    "suggestion": "These initiatives at \(a) and \(b) overlap on some days. Ask whether the user wants one shared time; leave both unchanged until they agree.",
-                ])
-            }
-        }
-        return Array(suggestions.prefix(10))
     }
 
     /// Lifecycle writes may arrive during system I/O; repeat reconciliation after the current

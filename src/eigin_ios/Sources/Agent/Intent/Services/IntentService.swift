@@ -53,13 +53,13 @@ protocol IntentService: Sendable {
     ) async throws -> UUID
     /// Updates an intent in place. Non-nil collections fully replace the
     /// existing ones; nil leaves a field untouched. Touches `updatedAt`.
-    func update(
+    @discardableResult func update(
         id: UUID,
         content: String?,
         tasks: [IntentTask]?,
         events: [IntentEvent]?,
         schedules: [IntentSchedule]?
-    ) async throws
+    ) async throws -> [NotificationSpacingWarning]
     func resolve(id: UUID) async throws
     func dismiss(id: UUID) async throws
 }
@@ -144,22 +144,21 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         return intent.id
     }
 
-    func update(
+    @discardableResult func update(
         id: UUID,
         content: String?,
         tasks: [IntentTask]?,
         events: [IntentEvent]?,
         schedules: [IntentSchedule]?
-    ) async throws {
+    ) async throws -> [NotificationSpacingWarning] {
         if let schedules, let service = await initiativeUpdates() {
-            try await service.updateIntent(
+            return try await service.updateIntent(
                 id: id,
                 content: content,
                 tasks: tasks,
                 events: events,
                 schedules: schedules
             )
-            return
         }
         let context = ModelContext(modelContainer)
         guard let intent = try fetch(id: id, in: context) else {
@@ -172,6 +171,7 @@ final class DefaultIntentService: IntentService, @unchecked Sendable {
         intent.updatedAt = .now
         try context.save()
         await onChange()
+        return []
     }
 
     func resolve(id: UUID) async throws {
@@ -238,13 +238,16 @@ struct PreviewIntentService: IntentService {
         UUID()
     }
 
-    func update(
+    @discardableResult func update(
         id: UUID,
         content: String?,
         tasks: [IntentTask]?,
         events: [IntentEvent]?,
         schedules: [IntentSchedule]?
-    ) async throws {}
+    ) async throws -> [NotificationSpacingWarning] {
+        []
+    }
+
     func resolve(id: UUID) async throws {}
     func dismiss(id: UUID) async throws {}
 }

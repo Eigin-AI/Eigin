@@ -287,7 +287,13 @@ extension ToolRegistry {
         }
 
         var result = alwaysTools
-        if !preparationOnly { result.append(BackgroundNotifyTool(onSignal: onSignal)) }
+        if !preparationOnly {
+            let validator = NotificationSpacingValidator(container: modelContainer ?? Container
+                .shared.modelContainer())
+            result.append(BackgroundNotifyTool(validateSpacing: { date, now in
+                try validator.validate(date: date, now: now)
+            }, onSignal: onSignal))
+        }
         return ToolRegistry(tools: result, coordinatesKnowledge: knowledgeService != nil)
     }
 }

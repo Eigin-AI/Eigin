@@ -10,10 +10,23 @@ Agreed notifications appear in **For you** and, when enabled, on the device. Bot
 
 ## Scheduling
 
-- Use daily or weekly schedules for recurring initiatives. Changing agreed times requires consent.
-- Check agreements with `list_initiatives`; stop them with `cancel_initiative` or intent detail. Resolving an intent also cancels its initiatives.
-- Recurring times follow the device’s time zone when the app is active. Installed notifications keep their scheduled zone until then.
-- Saving works without notification permission. Check tool results for scheduling status.
+Use daily or weekly schedules for recurring initiatives. Get consent before changing agreed times.
+
+- **Manage:** check with `list_initiatives`; stop with `cancel_initiative`, intent detail, or by resolving the intent.
+- **Time zone:** recurring times follow the device’s zone when the app is active. Until then, installed notifications keep their scheduled zone.
+- **Delivery:** saving works without notification permission. Check the tool result for delivery status.
+
+### Notification spacing
+
+New or changed times are checked across all agents and spaces on the device.
+
+| Distance from another notification | Result |
+| --- | --- |
+| Less than 5 minutes | Rejected without saving |
+| 5 to 15 minutes | Scheduled with a warning |
+| More than 15 minutes | Scheduled |
+
+Saved future messages reserve their times even when system delivery is unavailable. Existing schedules stay unchanged; requested times are never shifted automatically.
 
 ## For you
 

@@ -61,14 +61,14 @@ struct SetInitiativesTool: InitiativeTool {
                   let values = args["changes"] as? [[String: Any]], !values.isEmpty,
                   values.count <= 20 else { throw InitiativeError.invalidChanges }
             let changes = try values.map { try parse($0, agentID: agent.id) }
-            _ = try await service.apply(
+            let result = try await service.apply(
                 changes,
                 agentID: agent.id,
                 spaceID: spaceID,
                 canPromptUser: canPromptUser
             )
             changesState = .saved
-            return try await success(call, agent: agent)
+            return try await success(call, agent: agent, warnings: result.warnings)
         } catch {
             return await failure(call, agent: agent, error: error, changesState: changesState)
         }

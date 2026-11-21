@@ -54,6 +54,7 @@ struct FollowUpScheduleResult {
     let requestID: UUID
     let dueAt: Date
     let deliveryStatus: FollowUpDeliveryStatus
+    var warnings: [NotificationSpacingWarning] = []
 }
 
 /// Persists prepared follow-ups before attempting optional notification delivery.
@@ -90,6 +91,9 @@ struct FollowUpScheduleResult {
                   context: context
               )
         else { throw InitiativeError.invalidContent }
+        let warnings = try NotificationSpacingValidator(container: container).validate(
+            date: deliverAt ?? instant, now: instant
+        )
         let saved = AgentInitiativeRequest(
             agentID: agentID,
             message: message,
@@ -106,7 +110,7 @@ struct FollowUpScheduleResult {
             FollowUpScheduleResult(
                 requestID: saved.id,
                 dueAt: deliverAt ?? instant,
-                deliveryStatus: status
+                deliveryStatus: status, warnings: warnings
             )
         }
         guard await authorize(canPromptUser) else { return result(.permissionDenied) }

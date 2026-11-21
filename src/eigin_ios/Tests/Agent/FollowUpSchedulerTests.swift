@@ -19,6 +19,144 @@ struct FollowUpSchedulerTests {
         return (container, agent, space)
     }
 
+    @Test("Background final delivery rechecks a reservation created after preflight")
+    @MainActor func backgroundFinalCollision() async throws {
+        let (container, agent, _) = try fixture()
+        let date = Date().addingTimeInterval(3600)
+        #expect(try NotificationSpacingValidator(container: container).validate(date: date).isEmpty)
+        let existing = AgentInitiativeRequest(
+            agentID: agent.id,
+            message: "Reserved after preflight"
+        )
+        existing.dueAt = date
+        container.mainContext.insert(existing)
+        try container.mainContext.save()
+        let delivery = await BackgroundPromptScheduler.sendNotification(
+            container: container,
+            title: "New",
+            body: "New",
+            agentID: agent.id,
+            message: "New",
+            deliverAt: date
+        )
+        #expect(delivery.label == "spacing_conflict")
+        #expect(!delivery.succeeded)
+        #expect(try ModelContext(container)
+            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 1)
+    }
+
+    @Test("Another agent's reserved time rejects a follow-up before any write or authorization")
+    @MainActor func collisionAcrossAgents() async throws {
+        let (container, agent, space) = try fixture()
+        let other = Agent(name: "Other", providerID: UUID(), model: "test")
+        let date = Date().addingTimeInterval(3600)
+        let request = AgentInitiativeRequest(agentID: other.id, message: "Existing")
+        request.dueAt = date
+        container.mainContext.insert(other)
+        container.mainContext.insert(request)
+        try container.mainContext.save()
+        let center = FakeLocalNotificationCenter()
+        let scheduler = DefaultFollowUpScheduler(
+            container: container,
+            notificationCenter: center,
+            authorize: { _ in
+                Issue.record("Collision must fail before authorization")
+                return true
+            }
+        )
+        await #expect(throws: NotificationSpacingConflict.self) {
+            _ = try await scheduler.schedule(
+                title: "New",
+                body: "New",
+                message: "New",
+                summary: nil,
+                deliverAt: date,
+                agentID: agent.id,
+                agentName: nil,
+                agentEmoji: nil,
+                spaceID: space.id
+            )
+        }
+        #expect(try ModelContext(container)
+            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 1)
+        #expect(center.requests.isEmpty)
+    }
+
+    @Test(
+        "Future saved requests warn despite denied permission; handled and past requests do not reserve time"
+    )
+    @MainActor func warningAndLifecycle() async throws {
+        let (container, agent, _) = try fixture()
+        let instant = Date.now
+        let date = instant.addingTimeInterval(3600)
+        let existing = AgentInitiativeRequest(agentID: agent.id, message: "Existing")
+        existing.dueAt = date.addingTimeInterval(600)
+        let handled = AgentInitiativeRequest(agentID: agent.id, message: "Handled")
+        handled.dueAt = date
+        handled.handledAt = instant
+        let discarded = AgentInitiativeRequest(agentID: agent.id, message: "Discarded")
+        discarded.dueAt = date
+        discarded.disposition = "discarded"
+        let past = AgentInitiativeRequest(agentID: agent.id, message: "Past")
+        past.dueAt = instant.addingTimeInterval(-1)
+        for request in [existing, handled, discarded, past] {
+            container.mainContext.insert(request)
+        }
+        try container.mainContext.save()
+        let scheduler = DefaultFollowUpScheduler(
+            now: { instant },
+            container: container,
+            authorize: { _ in false }
+        )
+        let result = try await scheduler.schedule(
+            title: "New",
+            body: "New",
+            message: "New",
+            summary: nil,
+            deliverAt: date,
+            agentID: agent.id,
+            agentName: nil,
+            agentEmoji: nil
+        )
+        #expect(result.deliveryStatus == .permissionDenied)
+        #expect(result.warnings.count == 1)
+        #expect(result.warnings.first?.existingAt == existing.dueAt)
+    }
+
+    @Test("A saved reservation blocks a second call while authorization is suspended")
+    @MainActor func concurrentReservation() async throws {
+        let (container, agent, _) = try fixture()
+        let date = Date().addingTimeInterval(3600)
+        let scheduler = DefaultFollowUpScheduler(container: container, authorize: { _ in
+            let second = DefaultFollowUpScheduler(container: container, authorize: { _ in false })
+            await #expect(throws: NotificationSpacingConflict.self) {
+                _ = try await second.schedule(
+                    title: "Second",
+                    body: "Second",
+                    message: "Second",
+                    summary: nil,
+                    deliverAt: date,
+                    agentID: agent.id,
+                    agentName: nil,
+                    agentEmoji: nil
+                )
+            }
+            return false
+        })
+        _ = try await scheduler.schedule(
+            title: "First",
+            body: "First",
+            message: "First",
+            summary: nil,
+            deliverAt: date,
+            agentID: agent.id,
+            agentName: nil,
+            agentEmoji: nil
+        )
+        #expect(try ModelContext(container)
+            .fetchCount(FetchDescriptor<AgentInitiativeRequest>()) == 1)
+    }
+
     @Test("Accepted notifications retain due time, source space, briefing and stable routing")
     @MainActor func persistsAndSchedules() async throws {
         let (container, agent, space) = try fixture()

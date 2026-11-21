@@ -155,12 +155,14 @@ enum BackgroundPromptScheduler {
         case silent
         case saved(FollowUpDeliveryStatus)
         case persistenceFailed(String)
+        case spacingConflict(String)
 
         var label: String {
             switch self {
             case .silent: "silent"
             case .saved(let status): status.rawValue
             case .persistenceFailed: "persistence_failed"
+            case .spacingConflict: "spacing_conflict"
             }
         }
 
@@ -217,6 +219,12 @@ enum BackgroundPromptScheduler {
                     canPromptUser: false
                 )
             return .saved(result.deliveryStatus)
+        } catch let error as NotificationSpacingConflict {
+            AppLogger.warning(
+                "Notification spacing conflict: \(public: error.localizedDescription)",
+                category: .backgroundPrompt
+            )
+            return .spacingConflict(error.localizedDescription)
         } catch {
             AppLogger.error(
                 "Failed to schedule notification: \(private: error.localizedDescription)",
