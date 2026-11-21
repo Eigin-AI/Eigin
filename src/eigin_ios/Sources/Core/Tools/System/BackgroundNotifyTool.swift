@@ -22,6 +22,7 @@ struct BackgroundNotifyTool: Tool {
 
     var now: @Sendable () -> Date = { Date() }
     var calendar: Calendar = .current
+    let validateSpacing: @MainActor @Sendable (Date, Date) throws -> [NotificationSpacingWarning]
     let onSignal: @Sendable (BackgroundToolSignal) -> Void
 
     func definition() -> ToolDefinition {
@@ -85,11 +86,13 @@ struct BackgroundNotifyTool: Tool {
             )
         }
 
+        let warnings: [NotificationSpacingWarning]
         let scheduledDate: Date
         do {
             scheduledDate = try NotificationDeliveryTime.parse(
                 args["deliver_at"], now: now(), calendar: calendar, required: false
             )
+            warnings = try validateSpacing(scheduledDate, now())
         } catch {
             return ToolResult(
                 toolCallID: id,
@@ -112,7 +115,7 @@ struct BackgroundNotifyTool: Tool {
 
         return ToolResult(
             toolCallID: id,
-            content: ToolHelpers.output(result: result),
+            content: ToolHelpers.output(result: result, warnings: warnings.map(\.message)),
             isError: false
         )
     }

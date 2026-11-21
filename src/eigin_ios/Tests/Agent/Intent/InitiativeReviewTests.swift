@@ -37,7 +37,7 @@ struct InitiativeReviewTests {
         let second = Intent(
             agentID: f.agent.id,
             content: "Email",
-            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 7, minute: 0)]
+            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 8, minute: 0)]
         )
         f.container.mainContext.insert(second)
         try f.container.mainContext.save()
@@ -386,7 +386,7 @@ struct InitiativeReviewTests {
                 agentID: agent.id,
                 spaceID: nil,
                 canPromptUser: true
-            )
+            ).initiatives
         }
     }
 }

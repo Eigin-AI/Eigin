@@ -49,6 +49,7 @@ enum InitiativeFailureCode {
         if let failure = error as? InitiativeOperationFailure {
             return code(for: failure.underlying)
         }
+        if error is NotificationSpacingConflict { return "notification_conflict" }
         if error is IntentArgumentError { return "invalid_arguments" }
         if let error = error as? InitiativeScheduleError {
             switch error {

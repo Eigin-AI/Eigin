@@ -38,13 +38,16 @@ extension InitiativeTool {
         .always
     }
 
-    @MainActor func success(_ call: ToolCall, agent: Agent) async throws -> ToolResult {
+    @MainActor func success(
+        _ call: ToolCall,
+        agent: Agent,
+        warnings: [NotificationSpacingWarning] = []
+    ) async throws -> ToolResult {
         let agreements = try await service.report(agentID: agent.id, spaceID: spaceID)
-        return try ToolResult(toolCallID: call.id, content: ToolHelpers.output(result: [
+        return ToolResult(toolCallID: call.id, content: ToolHelpers.output(result: [
             "status": "ok",
             "initiatives": agreements,
-            "nearby_suggestions": service.nearbySuggestions(agentID: agent.id, spaceID: spaceID),
-        ]), isError: false)
+        ], warnings: warnings.map(\.message)), isError: false)
     }
 
     @MainActor func failure(

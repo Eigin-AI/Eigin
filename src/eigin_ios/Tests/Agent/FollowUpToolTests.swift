@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("FollowUpTool")
@@ -26,6 +27,40 @@ struct FollowUpToolTests {
     @MainActor
     private func agent() -> Agent {
         Agent(name: "Test", providerID: UUID(), model: "test")
+    }
+
+    @Test(
+        "Five-minute and nearby follow-ups return compact warnings",
+        arguments: [-300.0, 300.0, 600.0]
+    )
+    @MainActor func warningEnvelope(gap: Double) async throws {
+        let container = try ModelContainer(
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let agent = agent()
+        let proposed = try #require(ISO8601DateFormatter().date(from: "2030-01-01T12:00:00Z"))
+        let existing = AgentInitiativeRequest(agentID: agent.id, message: "Existing")
+        existing.dueAt = proposed.addingTimeInterval(gap)
+        container.mainContext.insert(agent)
+        container.mainContext.insert(existing)
+        try container.mainContext.save()
+        let scheduler = DefaultFollowUpScheduler(container: container, authorize: { _ in false })
+        let tool = FollowUpTool(scheduler: scheduler)
+        let result = try await tool.execute(call(), agent: agent)
+        #expect(!result.isError)
+        let envelope = try #require(JSONSerialization
+            .jsonObject(with: Data(result.content.utf8)) as? [String: Any])
+        let warnings = try #require(envelope["warnings"] as? [String])
+        #expect(warnings.count == 1)
+        let clock = DateFormatter()
+        clock.timeStyle = .short
+        #expect(warnings[0].contains(clock.string(from: proposed)))
+        #expect(warnings[0].contains(clock.string(from: proposed.addingTimeInterval(gap))))
+        #expect(!warnings[0].contains("2030-01-01T"))
+        let payload = try #require(envelope["result"] as? [String: Any])
+        #expect(payload["status"] as? String == "saved")
+        #expect(payload["spacing_warnings"] == nil)
     }
 
     @Test("Reports saved follow-up and optional delivery outcome")

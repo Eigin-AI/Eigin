@@ -108,6 +108,63 @@ struct InitiativeNotificationCleanupTests {
         #expect(center.requests.count == 1)
     }
 
+    @Test func deniedPermissionAfterTravelReleasesRemovedNotificationTime() async throws {
+        let container = try ModelContainer(
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let agent = Agent(name: "Agent", providerID: UUID(), model: "test")
+        let schedule = IntentSchedule(content: "Daily", frequency: .daily, hour: 9, minute: 0)
+        let intent = Intent(agentID: agent.id, content: "Routine", schedules: [schedule])
+        context.insert(agent)
+        context.insert(intent)
+        context.insert(IntentInitiative(
+            intentID: intent.id,
+            scheduleID: schedule.id,
+            instructions: "Help",
+            notificationBody: "Invitation"
+        ))
+        try context.save()
+        var origin = Calendar(identifier: .gregorian)
+        origin.timeZone = try #require(TimeZone(identifier: "UTC"))
+        var destination = origin
+        destination.timeZone = try #require(TimeZone(identifier: "America/New_York"))
+        let now = try #require(ISO8601DateFormatter().date(from: "2026-01-01T00:00:00Z"))
+        let oldTime = now.addingTimeInterval(9 * 3600)
+        let currentTime = now.addingTimeInterval(14 * 3600)
+        let center = FakeInitiativeNotifications()
+        let scheduler = InitiativeNotificationScheduler(
+            notifications: center,
+            authorization: FakeNotificationAuthorization(status: .authorized),
+            contentPreparer: FakeCommunicationNotificationPreparer()
+        )
+        try await scheduler.reconcile(context: context, calendar: origin)
+        let oldID = try #require(center.requests.first?.identifier)
+        let validator = NotificationSpacingValidator(
+            container: container,
+            policy: NotificationSpacingPolicy(calendar: destination)
+        )
+        #expect(throws: NotificationSpacingConflict.self) {
+            try validator.validate(date: oldTime, now: now)
+        }
+        let denied = InitiativeNotificationScheduler(
+            notifications: center,
+            authorization: FakeNotificationAuthorization(status: .denied)
+        )
+        await #expect(throws: InitiativeError.self) {
+            try await denied.reconcile(context: context, calendar: destination)
+        }
+        #expect(center.requests.isEmpty)
+        #expect(try validator.validate(date: oldTime, now: now).isEmpty)
+        #expect(throws: NotificationSpacingConflict.self) {
+            try validator.validate(date: currentTime, now: now)
+        }
+        let retained = try #require(ModelContext(container)
+            .fetch(FetchDescriptor<InitiativeRegistration>()).first { $0.id == oldID })
+        #expect(retained.retiredAt != nil)
+    }
+
     @Test func cancellingAnAgreementRemovesItsDeliveryImmediately() async throws {
         let f = try await fixture(count: 2)
         let context = f.container.mainContext

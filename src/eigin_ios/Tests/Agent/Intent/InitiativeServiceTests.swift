@@ -35,6 +35,156 @@ struct InitiativeServiceTests {
         )
     }
 
+    @Test(arguments: ["set", "update"])
+    @MainActor func initiativeToolsUseSharedWarningEnvelope(operation: String) async throws {
+        let f = try fixture()
+        _ = try await f.apply()
+        let other = Intent(
+            agentID: f.agent.id,
+            content: "Email",
+            schedules: [IntentSchedule(
+                content: "Email",
+                frequency: .daily,
+                hour: operation == "set" ? 7 : 8,
+                minute: 10
+            )]
+        )
+        f.container.mainContext.insert(other)
+        try f.container.mainContext.save()
+        let result: ToolResult
+        if operation == "set" {
+            let tool = SetInitiativesTool(service: f.service, spaceID: nil, canPromptUser: true)
+            let call = ToolCall(
+                id: "set",
+                type: "function",
+                function: .init(name: tool.name, arguments: """
+                {"changes":[{"intent_id":"\(other.id)","schedule_id":"\(other.schedules[0]
+                    .id)","instructions":"Read email","notification":"Email"}]}
+                """)
+            )
+            result = await tool.execute(call, agent: f.agent)
+        } else {
+            _ = try await f.service.apply(
+                [InitiativeChange(
+                    intentID: other.id,
+                    scheduleID: other.schedules[0].id,
+                    instructions: "Read email",
+                    body: "Email"
+                )],
+                agentID: f.agent.id,
+                spaceID: nil,
+                canPromptUser: true
+            )
+            let tool = UpdateIntentTool(intentService: DefaultIntentService(
+                modelContainer: f.container,
+                initiatives: { f.service }
+            ))
+            let call = ToolCall(
+                id: "update",
+                type: "function",
+                function: .init(name: tool.name, arguments: """
+                {"id":"\(other.id)","schedules":[{"id":"\(other.schedules[0]
+                    .id)","content":"Email","frequency":"daily","hour":7,"minute":10}]}
+                """)
+            )
+            result = await tool.execute(call, agent: f.agent)
+        }
+        #expect(!result.isError)
+        let envelope = try #require(JSONSerialization
+            .jsonObject(with: Data(result.content.utf8)) as? [String: Any])
+        let warnings = try #require(envelope["warnings"] as? [String])
+        #expect(warnings.count == 1)
+        let payload = try #require(envelope["result"] as? [String: Any])
+        #expect(payload["spacing_warnings"] == nil)
+        let times = try f.service.list(agentID: f.agent.id, spaceID: nil).compactMap { $0["time"] }
+        #expect(Set(times) == ["07:00", "07:10"])
+    }
+
+    @Test @MainActor func legacyCollisionsSurviveReconciliationAndMetadataEdits() async throws {
+        let f = try fixture()
+        _ = try await f.apply()
+        let other = Intent(
+            agentID: f.agent.id,
+            content: "Legacy",
+            schedules: [IntentSchedule(content: "Legacy", frequency: .daily, hour: 7, minute: 0)]
+        )
+        let agreement = IntentInitiative(
+            intentID: other.id,
+            scheduleID: other.schedules[0].id,
+            instructions: "Legacy work",
+            notificationBody: "Legacy invitation"
+        )
+        f.container.mainContext.insert(other)
+        f.container.mainContext.insert(agreement)
+        try f.container.mainContext.save()
+        await f.service.reconcile()
+        #expect(f.center.requests.count == 2)
+        let result = try await f.service.apply(
+            [f.change()],
+            agentID: f.agent.id,
+            spaceID: nil,
+            canPromptUser: true
+        )
+        #expect(result.warnings.isEmpty)
+        #expect(f.center.requests.count == 2)
+        #expect(try f.service.list(agentID: f.agent.id, spaceID: nil)
+            .allSatisfy { $0["time"] == "07:00" })
+    }
+
+    @Test @MainActor func conflictingBatchIsNotSaved() async throws {
+        let f = try fixture()
+        let other = Intent(
+            agentID: f.agent.id,
+            content: "Other",
+            schedules: [IntentSchedule(content: "Other", frequency: .daily, hour: 7, minute: 0)]
+        )
+        f.container.mainContext.insert(other)
+        try f.container.mainContext.save()
+        await #expect(throws: NotificationSpacingConflict.self) {
+            _ = try await f.service.apply(
+                [f.change(), InitiativeChange(
+                    intentID: other.id,
+                    scheduleID: other.schedules[0].id,
+                    instructions: "Other",
+                    body: "Other"
+                )],
+                agentID: f.agent.id,
+                spaceID: nil,
+                canPromptUser: true
+            )
+        }
+        #expect(try ModelContext(f.container).fetchCount(FetchDescriptor<IntentInitiative>()) == 0)
+        #expect(f.center.requests.isEmpty)
+    }
+
+    @Test @MainActor func intentScheduleEditCannotBypassCollisionCheck() async throws {
+        let f = try fixture()
+        _ = try await f.apply()
+        let request = AgentInitiativeRequest(agentID: f.agent.id, message: "Existing")
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        request.dueAt = try #require(calendar.nextDate(
+            after: .now,
+            matching: DateComponents(hour: 9, minute: 0),
+            matchingPolicy: .nextTime
+        ))
+        f.container.mainContext.insert(request)
+        try f.container.mainContext.save()
+        var schedule = f.intent.schedules[0]
+        schedule.hour = 9
+        await #expect(throws: NotificationSpacingConflict.self) {
+            try await f.service.updateIntent(
+                id: f.intent.id,
+                content: nil,
+                tasks: nil,
+                events: nil,
+                schedules: [schedule]
+            )
+        }
+        let saved = try #require(ModelContext(f.container).fetch(FetchDescriptor<Intent>()).first)
+        #expect(saved.schedules[0].hour == 7)
+    }
+
     @Test @MainActor func permissionDenialPersistsInAppAgreementAndTimeChange() async throws {
         let f = try fixture(status: .denied)
         var schedule = try #require(f.intent.schedules.first)
@@ -342,7 +492,7 @@ struct InitiativeServiceTests {
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
-            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 7, minute: 0)]
+            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 8, minute: 0)]
         )
         context.insert(other)
         try context.save()
@@ -457,7 +607,7 @@ struct InitiativeServiceTests {
         #expect(f.center.requests.first?.content.body == "Time for email")
     }
 
-    @Test @MainActor func nearbySuggestionsNeverShiftAgreedTimes() async throws {
+    @Test @MainActor func spacingWarningsNeverShiftAgreedTimes() async throws {
         let f = try fixture()
         _ = try await f.apply()
         let context = ModelContext(f.container)
@@ -465,11 +615,11 @@ struct InitiativeServiceTests {
         let other = Intent(
             agentID: f.agent.id,
             content: "Email",
-            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 7, minute: 30)]
+            schedules: [IntentSchedule(content: "Email", frequency: .daily, hour: 7, minute: 10)]
         )
         context.insert(other)
         try context.save()
-        _ = try await f.service.apply(
+        let result = try await f.service.apply(
             [InitiativeChange(
                 intentID: other.id,
                 scheduleID: other.schedules[0].id,
@@ -480,10 +630,10 @@ struct InitiativeServiceTests {
             spaceID: nil,
             canPromptUser: true
         )
-        #expect(try f.service.nearbySuggestions(agentID: f.agent.id, spaceID: nil).count == 1)
+        #expect(result.warnings.count == 1)
         #expect(f.center.requests.count == 2)
         let times = try f.service.list(agentID: f.agent.id, spaceID: nil).compactMap { $0["time"] }
-        #expect(Set(times) == ["07:00", "07:30"])
+        #expect(Set(times) == ["07:00", "07:10"])
     }
 
     @Test @MainActor func suppliedDaySelectionsAreAppliedWithoutRepeatingFrequency() async throws {
@@ -621,7 +771,7 @@ struct InitiativeServiceTests {
                 agentID: agent.id,
                 spaceID: nil,
                 canPromptUser: true
-            )
+            ).initiatives
         }
     }
 }

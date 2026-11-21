@@ -273,6 +273,9 @@ struct InitiativeDelivery: Codable, Equatable {
             let actual = await Set(notifications.pending().map(\.identifier))
             let registrations = (try? context.fetch(FetchDescriptor<InitiativeRegistration>())) ??
                 []
+            for registration in registrations where !actual.contains(registration.id) {
+                registration.retiredAt = registration.retiredAt ?? .now
+            }
             let installedMembers = Set(registrations.filter { actual.contains($0.id) }.flatMap {
                 (try? JSONDecoder().decode(InitiativeDelivery.self, from: $0.payload).members
                     .map(\.initiativeID)) ?? []

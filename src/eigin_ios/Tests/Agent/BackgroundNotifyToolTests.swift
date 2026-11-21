@@ -1,5 +1,6 @@
 @testable import Eigin
 import Foundation
+import SwiftData
 import Testing
 
 @Suite("BackgroundNotifyTool")
@@ -19,6 +20,7 @@ struct BackgroundNotifyToolTests {
         let tool = BackgroundNotifyTool(
             now: { instant },
             calendar: calendar,
+            validateSpacing: { _, _ in [] },
             onSignal: { signals.set($0) }
         )
         var arguments = [
@@ -41,6 +43,54 @@ struct BackgroundNotifyToolTests {
             scheduled = deliverAt
         }
         return (result, scheduled)
+    }
+
+    @Test("Collision errors keep the background turn open for a different time")
+    @MainActor func collisionAllowsRetry() async throws {
+        let container = try ModelContainer(
+            for: Schema(SchemaV15.models, version: SchemaV15.versionIdentifier),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let instant = date("2026-01-15T04:00:00Z")
+        let other = Agent(name: "Other", providerID: UUID(), model: "test")
+        container.mainContext.insert(other)
+        let existing = AgentInitiativeRequest(agentID: other.id, message: "Existing")
+        existing.dueAt = date("2026-01-15T09:00:00Z")
+        container.mainContext.insert(existing)
+        try container.mainContext.save()
+        let signals = BackgroundSignalBox()
+        let validator = NotificationSpacingValidator(container: container)
+        let tool = BackgroundNotifyTool(now: { instant }, validateSpacing: { date, now in
+            try validator.validate(date: date, now: now)
+        }, onSignal: { signals.set($0) })
+        let agent = Agent(name: "Eigin", providerID: UUID(), model: "test")
+        func call(_ time: String) -> ToolCall {
+            ToolCall(id: "notify", type: "function", function: .init(
+                name: tool.name,
+                arguments:
+                "{\"notification_title\":\"Hello\",\"message\":\"New\",\"summary\":\"Briefing\",\"deliver_at\":\"\(time)\"}"
+            ))
+        }
+        let rejected = await tool.execute(call("2026-01-15T09:00:00Z"), agent: agent)
+        #expect(rejected.isError)
+        #expect(signals.value == nil)
+        #expect(rejected.content.contains("not saved"))
+        let accepted = await tool.execute(call("2026-01-15T09:10:00Z"), agent: agent)
+        #expect(!accepted.isError)
+        #expect(signals.value != nil)
+        let envelope = try #require(JSONSerialization
+            .jsonObject(with: Data(accepted.content.utf8)) as? [String: Any])
+        let warnings = try #require(envelope["warnings"] as? [String])
+        #expect(warnings.count == 1)
+        let clock = DateFormatter()
+        clock.timeStyle = .short
+        #expect(warnings[0].contains(clock.string(from: date("2026-01-15T09:00:00Z"))))
+        #expect(warnings[0].contains(clock.string(from: date("2026-01-15T09:10:00Z"))))
+        #expect(!warnings[0].contains("2026-01-15T"))
+        #expect(rejected.content.contains("5 minutes"))
+        #expect(!rejected.content.contains("5.0 minutes"))
+        let payload = try #require(envelope["result"] as? [String: Any])
+        #expect(payload["spacing_warnings"] == nil)
     }
 
     @Test("Omitted timing selects the next local slot", arguments: [

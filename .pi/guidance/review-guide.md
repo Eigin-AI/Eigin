@@ -106,10 +106,9 @@ Scan added lines for `print(`, `NSLog`, `plog`, `dump(`.
 It's worth doing it right. If something needs to change later, there should be a gitlab issue tracking it.
 
 ### Prompt text should live in `design/prompts/`.
-Not inline in the code. This applies to app prompts — the jinja templates
-compiled into Swift. Kickoff and guidance text for the pi extension is its own
-kind of prompt: compositions live in `workflow/*-handoff.ts`, guidance in
-`.pi/guidance/`.
+Shared app guidance and behavioral prompts belong in the Jinja templates compiled into Swift.
+Tool descriptions and result/error/warning messages tied to the tool contract stay beside its implementation.
+Kickoff and guidance text for the pi extension is its own kind of prompt: compositions live in `workflow/*-handoff.ts`, guidance in `.pi/guidance/`.
 
 ### Agent guidance should live at its point of use.
 Facts explain concepts, skills explain workflows, tools explain usage, and hints or results supply situational instructions; flag duplication across layers.

@@ -3,14 +3,16 @@ import SwiftData
 
 extension InitiativeService {
     /// Saves intent edits and their notification changes through one validated transaction.
-    func updateIntent(
+    @discardableResult func updateIntent(
         id: UUID, content: String?, tasks: [IntentTask]?, events: [IntentEvent]?,
         schedules: [IntentSchedule]
-    ) async throws {
+    ) async throws -> [NotificationSpacingWarning] {
         guard !working else { throw InitiativeError.busy }
         working = true
         defer { finish() }
         let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+        defer { context.rollback() }
         guard let intent = try context.fetch(FetchDescriptor<Intent>())
             .first(where: { $0.id == id })
         else {
@@ -22,7 +24,9 @@ extension InitiativeService {
         let rescheduled = agreements.filter { agreement in
             guard let next = schedules.first(where: { $0.id == agreement.scheduleID })
             else { return false }
-            return intent.schedules.first(where: { $0.id == agreement.scheduleID }) != next
+            guard let previous = intent.schedules.first(where: { $0.id == agreement.scheduleID })
+            else { return true }
+            return !NotificationSpacingSchedule.sameTiming(previous, next)
         }
         if !rescheduled.isEmpty {
             for agreement in rescheduled {
@@ -48,6 +52,15 @@ extension InitiativeService {
             agreement.updatedAt = .now
             agreement.registrationStatus = "pending"
         }
+        let proposed = rescheduled.compactMap { agreement -> NotificationSpacingSchedule? in
+            guard let schedule = schedules.first(where: { $0.id == agreement.scheduleID })
+            else { return nil }
+            return NotificationSpacingSchedule(id: agreement.id, timing: .recurring(schedule))
+        }
+        let warnings = try NotificationSpacingValidator(container: modelContainer).validate(
+            proposed: proposed,
+            context: context
+        )
         try WaitingInitiativeStore.reconcile(context: context)
         try refreshWaiting()
         await cleanDeliveredNotifications()
@@ -55,5 +68,6 @@ extension InitiativeService {
         catch InitiativeError.permissionRequired where rescheduled.isEmpty {
             // Cancellation and metadata-only edits remain available without permission.
         }
+        return warnings
     }
 }

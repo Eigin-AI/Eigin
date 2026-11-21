@@ -89,7 +89,7 @@ struct FollowUpTool: Tool {
                 "delivery_status": result.deliveryStatus.rawValue,
                 "request_id": result.requestID.uuidString,
                 "scheduled_for": ISO8601DateFormatter().string(from: delivery),
-            ]), isError: false)
+            ], warnings: result.warnings.map(\.message)), isError: false)
         } catch {
             return ToolResult(
                 toolCallID: toolCall.id,
