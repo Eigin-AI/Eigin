@@ -1,0 +1,90 @@
+[[models]]
+pattern = "gemini-3.5-flash"
+display_name = "Gemini 3.5 Flash"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 1.5
+output_cost_per_million = 9.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gemini-3.1-pro-preview"
+display_name = "Gemini 3.1 Pro Preview"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 2.0
+output_cost_per_million = 12.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "gemini-3.1-flash-lite"
+display_name = "Gemini 3.1 Flash Lite"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 0.25
+output_cost_per_million = 1.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gemini-3-pro-preview"
+display_name = "Gemini 3 Pro Preview"
+family = "google"
+context_window = 1000000
+max_output = 64000
+input_cost_per_million = 2.0
+output_cost_per_million = 12.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gemini-3-flash-preview"
+display_name = "Gemini 3 Flash Preview"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 0.5
+output_cost_per_million = 3.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gemini-2.5-pro"
+display_name = "Gemini 2.5 Pro"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 1.25
+output_cost_per_million = 10.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "gemini-2.5-flash"
+display_name = "Gemini 2.5 Flash"
+family = "google"
+context_window = 1048576
+max_output = 65536
+input_cost_per_million = 0.3
+output_cost_per_million = 2.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false

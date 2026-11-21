@@ -1,0 +1,123 @@
+[[models]]
+pattern = "mistral-large-4-0"
+aliases = ["mistral-large-4"]
+display_name = "Mistral Large 4"
+family = "mistral"
+context_window = 1000000
+input_cost_per_million = 0.7
+output_cost_per_million = 2.1
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+reasoning_control = { supported_efforts = ["low", "medium", "high"], fast_effort = "low", escalated_effort = "medium", default_effort = "medium" }
+
+[[models]]
+pattern = "mistral-large-latest"
+display_name = "Mistral Large (latest)"
+family = "mistral"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.5
+output_cost_per_million = 1.5
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "mistral-large-2512"
+aliases = ["mistral-large-3"]
+display_name = "Mistral Large 3"
+family = "mistral"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.5
+output_cost_per_million = 1.5
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "mistral-medium-latest"
+display_name = "Mistral Medium (latest)"
+family = "mistral"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.4
+output_cost_per_million = 2.0
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "mistral-medium-2604"
+aliases = ["mistral-medium-3-5", "Mistral-Medium-3.5-128B"]
+display_name = "Mistral Medium 3.5"
+family = "mistral"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 1.5
+output_cost_per_million = 7.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+reasoning_control = { supported_efforts = ["none", "high"], fast_effort = "none", escalated_effort = "high" }
+
+[[models]]
+pattern = "mistral-medium-2508"
+aliases = ["mistral-medium-3"]
+display_name = "Mistral Medium 3"
+family = "mistral"
+context_window = 262144
+max_output = 262144
+input_cost_per_million = 0.4
+output_cost_per_million = 2.0
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "mistral-small-latest"
+display_name = "Mistral Small (latest)"
+family = "mistral"
+context_window = 128000
+max_output = 16384
+input_cost_per_million = 0.1
+output_cost_per_million = 0.3
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "mistral-small-2603"
+aliases = ["mistral-small-4"]
+display_name = "Mistral Small 4"
+family = "mistral"
+context_window = 256000
+max_output = 256000
+input_cost_per_million = 0.15
+output_cost_per_million = 0.6
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "mistral-small-2506"
+aliases = ["mistral-small-3-1"]
+display_name = "Mistral Small 3.1"
+family = "mistral"
+context_window = 128000
+max_output = 16384
+input_cost_per_million = 0.1
+output_cost_per_million = 0.3
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = true
+is_recommended = false

@@ -31,6 +31,7 @@
 - [Getting started](./sdk/getting-started.md)
 - [Turn progression](sdk/turn-progression.md)
 - [Outgoing conversation preparation](./sdk/conversation-preparation.md)
+- [Model catalog](./sdk/model-catalog.md)
 - [Inference](./sdk/inference.md)
 
 # The Agent

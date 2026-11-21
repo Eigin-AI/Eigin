@@ -1,6 +1,8 @@
 //! Value-based context sizing and history selection.
 
 mod estimate;
+mod image;
+pub(crate) use image::catalog_image_budget;
 mod paging;
 mod policy;
 mod request;

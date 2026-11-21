@@ -15,6 +15,9 @@ binding-tests = []
 [dependencies]
 uniffi.workspace = true
 thiserror = "2"
+toml = "0.9"
+icu_properties = { version = "2.4", default-features = false, features = ["compiled_data"] }
+percent-encoding = "2"
 unicode-segmentation = "1.12"
 icu_normalizer = { version = "2", default-features = false, features = ["compiled_data"] }
 serde = { version = "1", features = ["derive"] }

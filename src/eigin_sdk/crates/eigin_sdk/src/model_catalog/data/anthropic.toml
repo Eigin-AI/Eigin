@@ -1,0 +1,116 @@
+[[models]]
+pattern = "claude-sonnet-5"
+display_name = "Claude Sonnet 5"
+family = "anthropic"
+context_window = 1000000
+max_output = 128000
+input_cost_per_million = 2.0
+output_cost_per_million = 10.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "claude-fable-5"
+display_name = "Claude Fable 5"
+family = "anthropic"
+context_window = 1000000
+max_output = 128000
+input_cost_per_million = 10.0
+output_cost_per_million = 50.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "claude-opus-4-8"
+display_name = "Claude Opus 4.8"
+family = "anthropic"
+context_window = 1000000
+max_output = 128000
+input_cost_per_million = 4.29
+output_cost_per_million = 21.46
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "claude-opus-4-7"
+display_name = "Claude Opus 4.7"
+family = "anthropic"
+context_window = 1000000
+max_output = 128000
+input_cost_per_million = 4.5
+output_cost_per_million = 22.5
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "claude-opus-4-6"
+display_name = "Claude Opus 4.6"
+family = "anthropic"
+context_window = 200000
+max_output = 128000
+input_cost_per_million = 5.0
+output_cost_per_million = 25.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "claude-opus-4-5"
+display_name = "Claude Opus 4.5"
+family = "anthropic"
+context_window = 200000
+max_output = 64000
+input_cost_per_million = 5.0
+output_cost_per_million = 25.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "claude-sonnet-4-6"
+display_name = "Claude Sonnet 4.6"
+family = "anthropic"
+context_window = 200000
+max_output = 64000
+input_cost_per_million = 3.0
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "claude-sonnet-4-5"
+display_name = "Claude Sonnet 4.5"
+family = "anthropic"
+context_window = 200000
+max_output = 64000
+input_cost_per_million = 3.0
+output_cost_per_million = 15.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = true
+
+[[models]]
+pattern = "claude-haiku-4-5"
+display_name = "Claude Haiku 4.5"
+family = "anthropic"
+context_window = 200000
+max_output = 64000
+input_cost_per_million = 1.0
+output_cost_per_million = 5.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false

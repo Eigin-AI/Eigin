@@ -175,13 +175,9 @@ struct ProviderModelsScreen: View {
         let known = matches.filter { metadata[$0] != nil }
         let unknownModels = matches.filter { metadata[$0] == nil }
 
-        let patternIndex = Dictionary(
-            uniqueKeysWithValues: KnownModelCatalog.preferenceRanking.enumerated()
-                .map { ($0.element, $0.offset) }
-        )
         let knownSorted = known.sorted {
-            let lhsRank = rank(of: $0, by: patternIndex)
-            let rhsRank = rank(of: $1, by: patternIndex)
+            let lhsRank = KnownModelCatalog.rank(of: $0)
+            let rhsRank = KnownModelCatalog.rank(of: $1)
             if lhsRank != rhsRank { return lhsRank < rhsRank }
             return $0 < $1
         }
@@ -189,13 +185,6 @@ struct ProviderModelsScreen: View {
         recommended = Array(knownSorted.prefix(Self.recommendedLimit))
         other = Array(knownSorted.dropFirst(Self.recommendedLimit))
         unknown = unknownModels
-    }
-
-    private func rank(of id: String, by patternIndex: [String: Int]) -> Int {
-        guard let pattern = KnownModelCatalog.lookup(id)?.pattern,
-              let rank = patternIndex[pattern]
-        else { return .max }
-        return rank
     }
 
     private func matchesSearch(_ id: String) -> Bool {

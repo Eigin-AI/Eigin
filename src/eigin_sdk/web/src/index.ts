@@ -1,6 +1,19 @@
 export * from "./inference";
 export * from "./eigin-relay";
 
+export {
+  ModelCatalog,
+  CatalogModelFamily,
+  CatalogReasoningEffort,
+} from "./generated";
+export type {
+  ModelCatalogLike,
+  CatalogModelEntry,
+  CatalogModelMatch,
+  CatalogCostTerciles,
+  CatalogReasoningControl,
+} from "./generated";
+
 import {
   initialize as initializeRust,
   uniffiInitAsync,

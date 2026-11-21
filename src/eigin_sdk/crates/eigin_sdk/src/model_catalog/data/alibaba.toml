@@ -1,0 +1,47 @@
+[[models]]
+pattern = "qwen3.7-max"
+display_name = "Qwen 3.7 Max"
+family = "alibaba"
+context_window = 1000000
+max_output = 65536
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "qwen3.7-plus"
+display_name = "Qwen 3.7 Plus"
+family = "alibaba"
+context_window = 1000000
+max_output = 65536
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = true
+is_recommended = false
+
+[[models]]
+pattern = "qwen3-235b-a22b-thinking-2507"
+display_name = "Qwen 3 235B Thinking"
+family = "alibaba"
+context_window = 256000
+max_output = 32000
+input_cost_per_million = 0.65
+output_cost_per_million = 3.0
+supports_tool_call = true
+supports_reasoning = true
+supports_vision = false
+is_recommended = false
+
+[[models]]
+pattern = "qwen3-235b-a22b-instruct-2507"
+display_name = "Qwen 3 235B Instruct"
+family = "alibaba"
+context_window = 256000
+max_output = 32000
+input_cost_per_million = 0.2
+output_cost_per_million = 0.6
+supports_tool_call = true
+supports_reasoning = false
+supports_vision = false
+is_recommended = false

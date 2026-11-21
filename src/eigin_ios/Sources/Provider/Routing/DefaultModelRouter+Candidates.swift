@@ -124,12 +124,7 @@ extension DefaultModelRouter {
     }
 
     func rank(of model: String) -> Int {
-        guard let pattern = KnownModelCatalog.lookup(model)?.pattern,
-              let index = KnownModelCatalog.preferenceRanking.firstIndex(of: pattern)
-        else {
-            return .max
-        }
-        return index
+        KnownModelCatalog.rank(of: model)
     }
 
     /// Where a model sits in the turn's tier ordering: 0 is the tier the turn wants,
