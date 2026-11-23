@@ -57,7 +57,7 @@ When working on a task, issues typically provide the problem context and expecte
 
 **Naming** — names should reflect behavior. A name describes what something does, not how it's built.
 
-**Code structure** — prefer small files, a few hundred lines on average. If a file is growing long, split it up. Group related concepts together using folders and modules.
+**Code structure** — prefer small files, a few hundred lines on average. If a file is growing long, split it up. Group related concepts together using folders and modules. Separate methods and top-level items with blank lines.
 
 **Testing** — test behavior, not structure. Prefer outside-in tests with real dependencies. When dependencies are slow, unreliable, or unavailable, fake at the boundary. Don't test data models, fakes, or views.
 

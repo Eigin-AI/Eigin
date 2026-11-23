@@ -1,5 +1,5 @@
 //! Inference messages, events and provider interfaces.
-//! Hosts supply credentials, model selection and lifecycle policy.
+//! Hosts supply credentials, inventory and stream lifecycle; routing policy can select models.
 
 pub mod eigin_relay;
 pub mod openai_compatible;
@@ -22,3 +22,5 @@ pub use anthropic::*;
 
 mod attempt;
 pub use attempt::*;
+
+pub mod routing;

@@ -1,4 +1,7 @@
-//! Monotonic execution deadlines shared by tools and inference attempts.
+//! Shared wall-clock values and monotonic execution deadlines.
+mod wall_time;
+pub(crate) use wall_time::WallTime;
+
 #[cfg(not(target_vendor = "apple"))]
 use std::time::Duration;
 

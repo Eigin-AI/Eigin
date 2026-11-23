@@ -26,13 +26,14 @@ extension DefaultModelRouter {
         guard localModelReadiness() else {
             return declined("the on-device model is not downloaded")
         }
-        // Rank-best, not array-first: with two on-device models enabled the fallback
-        // should pick the stronger one, matching rankedCandidates' best-first intent.
-        guard let model = offer(for: local).min(by: { rank(of: $0) < rank(of: $1) }) else {
+        // Multiple enabled local models use catalog preference order.
+        guard let model = localOffer(local)
+            .min(by: { KnownModelCatalog.rank(of: $0) < KnownModelCatalog.rank(of: $1) })
+        else {
             return declined("the on-device provider lists no model")
         }
 
-        health.markActivity(now: timestamp)
+        policy.markActivity(now: timestamp.timeIntervalSince1970)
         AppLogger.info(
             "Offline per \(public: signal); routing to on-device \(public: model). \(public: current.name) stays the agent's provider",
             category: .routing
@@ -43,6 +44,12 @@ extension DefaultModelRouter {
             model: model,
             change: .offlineFallback(previousProvider: current.name)
         )
+    }
+
+    private func localOffer(_ provider: RoutingProvider) -> [String] {
+        guard !provider.enabledModels.isEmpty else { return provider.availableModels }
+        let available = Set(provider.availableModels)
+        return provider.enabledModels.filter { available.contains($0) }
     }
 
     /// Clears the offline suspicion when the path itself comes back, so a connection that

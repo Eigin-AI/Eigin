@@ -13,6 +13,7 @@ Hosts provide the user interface, application lifecycle, and platform services. 
 
 - [Outgoing conversation preparation](conversation-preparation.md): select history and assemble request-only messages.
 - [Model catalog](model-catalog.md): resolve offered IDs, choose defaults, and apply model-specific policy.
+- [Cloud model routing](model-routing.md): select models using turn requirements, conversation affinity, and health.
 - [Inference](inference.md): choose a provider, consume events and manage cancellation.
 - [Context paging](../conversation/context-paging.md#sdk): select retained history and tool-result masks.
 
