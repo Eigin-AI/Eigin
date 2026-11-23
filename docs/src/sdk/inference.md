@@ -1,6 +1,6 @@
 # Inference
 
-The SDK supports OpenAI-compatible endpoints, OpenAI Responses, native Anthropic Messages, and Eigin Relay. Your app chooses models, stores conversations and executes tools.
+The SDK supports OpenAI-compatible endpoints, OpenAI Responses, native Anthropic Messages, and Eigin Relay. Your app stores conversations and executes tools. Choose a model directly or use [SDK cloud model routing](model-routing.md).
 
 ## Use a provider
 

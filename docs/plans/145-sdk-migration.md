@@ -38,6 +38,7 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Preserve decoder and error precedence semantics.** A permissive JSON value parser can accept malformed events that a typed host decoder skipped. Carry terminal state such as refusal through later failures, and retain partial HTTP error bodies when reads fail. Source: [#334].
 - **Check observable behavior against the code.** Comments can misdescribe fallback values. Capture the actual request or event at the HTTP boundary before porting it. Source: [#333].
 - **Characterize argument parser acceptance.** Foundation accepts a leading UTF-8 BOM, trailing commas, and up to 512 nested containers. A default Serde parse rejects some of those inputs. Preserve raw tool arguments while testing validation acceptance across the Apple boundary. Source: [#404].
+- **Preserve state scope and await ordering.** Retain one explicit SDK router handle across turns, with independent handles for isolated consumers. Capture retry demand before host health refreshes; retain separate request-start and decision timestamps where expiry changes route reasons. A stateful port must preserve observations across awaits as well as individual decisions. Source: [#451].
 - **Check language-level equality.** Swift strings compare by canonical Unicode equivalence; Rust strings compare bytes. Preserve comparison semantics for tool IDs and duplicate payloads without rewriting outgoing content. Source: [#403].
 - **Preserve error-read stopping conditions.** A byte cap and a completed-line cutoff return at different times when a server stalls. Test partial bodies, line endings, and read failures; document intentional safety bounds in the MR. Source: [#333].
 - **Fake the unavailable boundary.** Provider tests inject HTTP responses. Wallet host tests use the real manager and store with a fake Keychain boundary. Avoid separate tests for trivial forwarding when the integrated behavior is covered. Sources: [#332], [#335].
@@ -77,5 +78,6 @@ These are open constraints, not established capabilities:
 [#357]: https://code.eigin.ai/dev/eigin/-/issues/357
 [#403]: https://code.eigin.ai/dev/eigin/-/issues/403
 [#404]: https://code.eigin.ai/dev/eigin/-/issues/404
+[#451]: https://code.eigin.ai/dev/eigin/-/issues/451
 [SDK milestone]: https://code.eigin.ai/dev/eigin/-/milestones/2
 [SDK development guide]: ../../src/eigin_sdk/README.md

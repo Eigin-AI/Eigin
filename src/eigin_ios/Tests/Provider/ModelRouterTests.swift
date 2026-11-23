@@ -85,6 +85,37 @@ struct ModelRouterTests {
         OpenAICompatibleClientError.httpError(404, body: "the model does not exist")
     }
 
+    @Test("local health is model-keyed across providers but isolated between routers")
+    func healthScope() async {
+        let router = makeRouter()
+        let independent = makeRouter()
+        let other = RoutingProvider(
+            id: UUID(), name: "Another cloud", baseURL: "https://another.test/v1",
+            availableModels: [Self.best, Self.second]
+        )
+        let otherRequest = RouteRequest(
+            currentProviderID: other.id, currentModel: Self.best, isAuto: true,
+            requirements: RouteRequirements(), providers: [other]
+        )
+        await router.record(outcome(model: Self.best, result: .failed(.modelNotFound)))
+        #expect(await router.resolve(otherRequest).model == Self.second)
+        #expect(await independent.resolve(otherRequest).model == Self.best)
+    }
+
+    @Test("equal catalog ranks preserve offered order for a fresh conversation")
+    func equalRankOfferOrder() async {
+        let offers = ["claude-sonnet-5-20260101", "claude-sonnet-5-20260201"]
+        for ordered in [offers, Array(offers.reversed())] {
+            let router = makeRouter()
+            let input = RouteRequest(
+                currentProviderID: cloudID, currentModel: Self.second, isAuto: true,
+                requirements: RouteRequirements(), providers: [cloud(ordered)],
+                conversationID: UUID()
+            )
+            #expect(await router.resolve(input).model == ordered.first)
+        }
+    }
+
     // MARK: - Auto off
 
     @Test("a pinned model is never routed away from")
@@ -447,6 +478,34 @@ struct ModelRouterTests {
         #expect(route.model == Self.onDevice)
         #expect(route.providerID == localID)
         #expect(route.change == .offlineFallback(previousProvider: "Test Cloud"))
+    }
+
+    @Test("offline activity preserves cloud affinity and health across the idle boundary")
+    func offlineActivityPreservesCloudSession() async throws {
+        let clock = TestClock()
+        let reachability = FakeNetworkReachability()
+        let router = makeRouter(reachability: reachability, clock: clock)
+        let input = RouteRequest(
+            currentProviderID: cloudID, currentModel: Self.best, isAuto: true,
+            requirements: RouteRequirements(), providers: [
+                cloud([Self.best, Self.second]),
+                local(),
+            ],
+            conversationID: UUID()
+        )
+        _ = await router.resolve(input)
+        let replacement = try #require(await router.retry(after: modelNotFound, request: input))
+        #expect(replacement.model == Self.second)
+        clock.advance(3500)
+        reachability.isReachable = false
+        let offline = await router.resolve(input)
+        #expect(offline.providerID == localID)
+        #expect(!offline.staysOn(providerID: cloudID))
+        clock.advance(500)
+        reachability.isReachable = true
+        let recovered = await router.resolve(input)
+        #expect(recovered.model == Self.second)
+        #expect(recovered.change == nil)
     }
 
     @Test("with nothing on device, being offline surfaces the connection error")

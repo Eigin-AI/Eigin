@@ -765,7 +765,7 @@ struct RouterHedgeTests {
             clock.advance(1)
         }
 
-        #expect(await router.hedgeDelay(for: Self.best) == DefaultModelRouter.slowModelHedgeDelay)
+        #expect(await router.hedgeDelay(for: Self.best) == .seconds(3))
     }
 
     // MARK: - Runner-up selection
@@ -828,7 +828,7 @@ struct RouterHedgeTests {
 
         // Slowness quarantine is 2 minutes; past it the model is a candidate
         // again - one prove-it turn decides its next bench.
-        clock.advance(ModelHealthStore.slownessQuarantine.seconds + 1)
+        clock.advance(121)
         #expect(
             await router.hedgeCandidate(after: Self.best, request: request(model: Self.best))?
                 .model == Self.second
