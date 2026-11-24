@@ -27,6 +27,8 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Guard one pending call per stream.** An operation lease prevents overlapping `open` or `next` calls while allowing independent streams. Dropping an unfinished call cancels its work; a completed call returns its state for the next consumer call. Sources: [#332], [#335].
 - **Use an explicit browser iterator when immediate interruption matters.** An async generator queues `return()` behind a pending read. A custom iterator can cancel that read immediately. Source: [#332].
 - **Use binding-compatible host callbacks.** UniFFI 0.31.0 async callback traits failed Swift 6 checks. Synchronous callbacks with single-use completion handles support async host HTTP without patching generated code. A callback named `open` generated invalid C; `start_request` avoids that generator problem. Source: [#332].
+- **Keep accelerated execution behind a host capability.** Local inference can share cloud request/event values and stream consumption while the host owns model files, loading, native sessions, and hardware acceleration. Native runtimes may own internal tool rounds; expose request-scoped tool execution without claiming the SDK controls those rounds. Source: [#456].
+- **Cancel compute and callbacks together.** Closing a local stream must stop native generation, wake pending SDK reads, and cancel inline tool work. Do not hold SDK locks across host callbacks: tool execution can re-enter SDK transcript or routing APIs. Binding tests cover cancellation during preparation, reading, and tool execution; device checks remain necessary for native runtime behavior. Source: [#456].
 - **Preserve host networking.** Apple supplies URLSession; browsers supply Fetch. Native SDK HTTP owns its Tokio runtime so headless consumers need no ambient executor. Share the injected transport across provider attempts to retain host configuration and resource ownership. Sources: [#332], [#335].
 - **Keep retry policy above transport.** Relay wallet failover is allowed only after an initial HTTP 402. Network failures, cancellation, and errors after streaming starts must not trigger replay. Source: [#335].
 - **Bound failover independently of persistence.** Track attempted credentials within each request. Whole-collection host stores can restore stale snapshots during concurrent writes; persisted rejection alone cannot prevent another attempt with the same credential. Source: [#335].
@@ -79,5 +81,6 @@ These are open constraints, not established capabilities:
 [#403]: https://code.eigin.ai/dev/eigin/-/issues/403
 [#404]: https://code.eigin.ai/dev/eigin/-/issues/404
 [#451]: https://code.eigin.ai/dev/eigin/-/issues/451
+[#456]: https://code.eigin.ai/dev/eigin/-/issues/456
 [SDK milestone]: https://code.eigin.ai/dev/eigin/-/milestones/2
 [SDK development guide]: ../../src/eigin_sdk/README.md

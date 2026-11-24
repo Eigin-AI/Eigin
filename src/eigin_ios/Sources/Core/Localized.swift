@@ -951,28 +951,6 @@ enum Localized {
             }
         }
 
-        enum AppleIntelligence {
-            /// Recovery suggestion when Apple Intelligence is disabled in system settings
-            static var enableHint: String {
-                Localized.get("errors.appleIntelligence.enableHint")
-            }
-
-            /// Error message when Apple Intelligence is not available on this device
-            static var notAvailable: String {
-                Localized.get("errors.appleIntelligence.notAvailable")
-            }
-
-            /// Error message when the device hardware does not support Apple Intelligence
-            static var notSupported: String {
-                Localized.get("errors.appleIntelligence.notSupported")
-            }
-
-            /// Error message when the Apple Intelligence model has not finished downloading
-            static var stillDownloading: String {
-                Localized.get("errors.appleIntelligence.stillDownloading")
-            }
-        }
-
         enum Aula {
             /// Error shown when an Aula request fails. The argument is the reason.
             static func requestFailed(_ p1: String) -> String {
@@ -3112,11 +3090,6 @@ enum Localized {
     }
 
     enum Model {
-        /// Label for Apple Foundation Model option
-        static var appleFoundationModel: String {
-            Localized.get("model.appleFoundationModel")
-        }
-
         /// Status text when Apple Foundation Model is ready
         static var appleReadyToUse: String {
             Localized.get("model.appleReadyToUse")
@@ -3189,6 +3162,12 @@ enum Localized {
         /// required storage size. The argument is the string “%.1f”.
         static func storageRequirement(_ p1: String) -> String {
             String(format: Localized.get("model.storageRequirement"), p1)
+        }
+
+        /// Error for a saved local model that is no longer supported; ask the user to select a
+        /// supported model.
+        static var unsupported: String {
+            Localized.get("model.unsupported")
         }
 
         enum Facts {

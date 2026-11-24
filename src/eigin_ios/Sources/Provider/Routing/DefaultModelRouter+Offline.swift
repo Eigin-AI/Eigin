@@ -1,63 +1,28 @@
+import EiginSDK
 import Foundation
 
-// MARK: - Offline fallback
-
 extension DefaultModelRouter {
-    /// The on-device model, when there is no usable network and a ready one to fall to.
-    ///
-    /// Two signals, because a satisfied path does not prove the internet is reachable:
-    /// the path monitor, and a request that already failed as offline.
+    /// Supplies local availability while the SDK chooses the transient route.
     func offlineRoute(for request: RouteRequest, at timestamp: Date) -> ResolvedRoute? {
-        guard !reachability.isReachable || sawOfflineFailure else { return nil }
-        guard let current = request.currentProvider, !current.isLocal else { return nil }
-
-        let signal = reachability.isReachable ? "a failed request" : "the path monitor"
-        func declined(_ why: String) -> ResolvedRoute? {
-            AppLogger.info(
-                "Offline per \(public: signal) but \(public: why); staying on \(public: current.name)",
-                category: .routing
-            )
-            return nil
-        }
-
-        guard let local = request.providers.first(where: \.isLocal) else {
-            return declined("no on-device model is set up")
-        }
-        guard localModelReadiness() else {
-            return declined("the on-device model is not downloaded")
-        }
-        // Multiple enabled local models use catalog preference order.
-        guard let model = localOffer(local)
-            .min(by: { KnownModelCatalog.rank(of: $0) < KnownModelCatalog.rank(of: $1) })
-        else {
-            return declined("the on-device provider lists no model")
-        }
-
-        policy.markActivity(now: timestamp.timeIntervalSince1970)
-        AppLogger.info(
-            "Offline per \(public: signal); routing to on-device \(public: model). \(public: current.name) stays the agent's provider",
-            category: .routing
+        let current = request.currentProvider
+        let local = request.providers.first(where: \.isLocal)
+        let input = EiginSDK.Experimental.Routing.OfflineInput(
+            automatic: request.isAuto,
+            currentProviderIsCloud: current.map { !$0.isLocal } ?? false,
+            localReady: localModelReadiness(),
+            localInventory: local.map {
+                EiginSDK.Experimental.Routing.Inventory(
+                    providerId: $0.id.uuidString, baseUrl: $0.baseURL,
+                    available: $0.availableModels, enabled: $0.enabledModels, models: []
+                )
+            }
         )
+        guard let route = policy.offlineRoute(input: input, now: timestamp.timeIntervalSince1970),
+              let providerID = UUID(uuidString: route.providerId)
+        else { return nil }
         return ResolvedRoute(
-            providerID: local.id,
-            baseURL: local.baseURL,
-            model: model,
-            change: .offlineFallback(previousProvider: current.name)
+            providerID: providerID, baseURL: route.baseUrl, model: route.model,
+            change: .offlineFallback(previousProvider: current?.name ?? "")
         )
-    }
-
-    private func localOffer(_ provider: RoutingProvider) -> [String] {
-        guard !provider.enabledModels.isEmpty else { return provider.availableModels }
-        let available = Set(provider.availableModels)
-        return provider.enabledModels.filter { available.contains($0) }
-    }
-
-    /// Clears the offline suspicion when the path itself comes back, so a connection that
-    /// returns is trusted without waiting for a successful turn to prove it.
-    func noteReachability() {
-        let reachable = reachability.isReachable
-        defer { wasReachable = reachable }
-        guard reachable, !wasReachable else { return }
-        sawOfflineFailure = false
     }
 }

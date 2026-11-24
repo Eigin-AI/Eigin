@@ -14,7 +14,7 @@ The app hosts the [Eigin SDK](../sdk/README.md). Shared agent behavior is moving
 
 **Live call via CallKit.** The live call session uses CallKit to stay alive when the device is locked, showing native call UI on the lock screen. This is what makes it feel like a phone call rather than a foreground-only feature.
 
-**Local ML via LiteRT-LM.** On-device models run through Google's LiteRT-LM runtime on the GPU/Metal backend, using a quantization-aware-trained Gemma 4 E2B build. See [Local model](local-model.md). Apple's Foundation Models framework is wired in as a second local option.
+**Local ML via LiteRT-LM.** On-device models run through Google's LiteRT-LM runtime on the GPU/Metal backend, using a quantization-aware-trained Gemma 4 E2B build. See [Local model](local-model.md). The SDK invokes the host's Gemma execution capability and owns offline fallback and recovery policy.
 
 **Localisation via a generated enum.** User-facing strings live in `Localizable.xcstrings`, accessed through the generated `Localized` enum. The app switches language at runtime via `Bundle.appLanguage` rather than the system locale. Run `just generate` after catalog changes.
 

@@ -1,6 +1,6 @@
-# Cloud model routing
+# Model routing
 
-The SDK selects cloud models from inventory snapshots and turn requirements supplied by your app. It keeps conversation affinity and uses attempt outcomes to avoid retired, failing, or slow models.
+The SDK selects cloud models and offline local fallbacks from inventory snapshots and turn requirements supplied by your app. It keeps conversation affinity and uses attempt outcomes to avoid retired, failing, or slow models.
 
 ## Create a shared router
 
@@ -44,4 +44,11 @@ Replacements preserve prepared-prompt fit and exclude unhealthy models. The atte
 
 The host owns inventory discovery, reachability, local inference, provider settings, and persistence. It also opens [inference streams](inference.md) for the selected models.
 
-iOS handles offline detours and calls `mark_activity` to keep the cloud session active. It persists only routes staying on the agent's provider, so an offline detour preserves the saved cloud model.
+## Offline fallback
+
+1. Call `record_reachability` with the host's network observation.
+2. Before `resolve`, call `offline_route` with automatic-selection status, the current provider kind, and the first local provider's inventory/readiness.
+3. Execute a returned route through the [local capability](inference.md#host-provided-local-models); otherwise continue cloud selection.
+4. Report attempt outcomes through the same router so failures and recovery affect the next turn.
+
+Keep the saved cloud provider/model unchanged during a detour. The SDK preserves cloud affinity and activity; pinned selections stay pinned.

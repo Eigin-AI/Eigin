@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "model.unsupported": {
+      "comment": "Error for a saved local model that is no longer supported; ask the user to select a supported model.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This local model is no longer supported. Select Gemma in model settings."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne lokale model understøttes ikke længere. Vælg Gemma i modelindstillingerne."
+          }
+        }
+      }
+    },
     "tools.description.emailFetchAttachment": {
       "localizations": {
         "da": {
@@ -3195,74 +3212,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Account locked"
-          }
-        }
-      }
-    },
-    "errors.appleIntelligence.enableHint": {
-      "comment": "Recovery suggestion when Apple Intelligence is disabled in system settings",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivér Apple Intelligence i Indstillinger > Apple Intelligence & Siri."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable Apple Intelligence in Settings > Apple Intelligence & Siri."
-          }
-        }
-      }
-    },
-    "errors.appleIntelligence.notAvailable": {
-      "comment": "Error message when Apple Intelligence is not available on this device",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence er ikke tilgængelig."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence is not available."
-          }
-        }
-      }
-    },
-    "errors.appleIntelligence.notSupported": {
-      "comment": "Error message when the device hardware does not support Apple Intelligence",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Denne enhed understøtter ikke Apple Intelligence."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This device doesn't support Apple Intelligence."
-          }
-        }
-      }
-    },
-    "errors.appleIntelligence.stillDownloading": {
-      "comment": "Error message when the Apple Intelligence model has not finished downloading",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence-modellen henter stadig. Prøv igen om lidt."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Apple Intelligence model is still downloading. Try again shortly."
           }
         }
       }
@@ -8853,23 +8802,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Memories"
-          }
-        }
-      }
-    },
-    "model.appleFoundationModel": {
-      "comment": "Label for Apple Foundation Model option",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Foundation-model"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Foundation Model"
           }
         }
       }

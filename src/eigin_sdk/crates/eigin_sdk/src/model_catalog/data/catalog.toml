@@ -1,5 +1,5 @@
 schema_version = 1
-model_files = ["openai.toml", "anthropic.toml", "google.toml", "mistral.toml", "grok.toml", "zhipu.toml", "moonshot.toml", "alibaba.toml", "minimax.toml", "deepseek.toml", "corti.toml", "apple.toml", "gemma.toml", "nvidia.toml"]
+model_files = ["openai.toml", "anthropic.toml", "google.toml", "mistral.toml", "grok.toml", "zhipu.toml", "moonshot.toml", "alibaba.toml", "minimax.toml", "deepseek.toml", "corti.toml", "gemma.toml", "nvidia.toml"]
 
 preference_ranking = [
     "mistral-large-4-0",
@@ -87,6 +87,5 @@ preference_ranking = [
     "gpt-5.2-pro",
     "gpt-5.2",
     "gpt-5.1",
-    "apple-foundation-model",
     "gemma-4-e2b",
 ]

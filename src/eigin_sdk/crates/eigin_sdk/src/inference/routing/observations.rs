@@ -32,9 +32,13 @@ impl ModelRouter {
         match outcome.result {
             RoutingResult::Cancelled => {}
             RoutingResult::Failed { failure } => {
+                if failure == RoutingFailure::Offline {
+                    state.offline.failed = true;
+                }
                 state.local_health.failure(&outcome.model, failure, now)
             }
             RoutingResult::Succeeded => {
+                state.offline.failed = false;
                 state.remote_health.success(&outcome, now);
                 state.local_health.success(&outcome.model, now);
                 if state.local_health.sample(

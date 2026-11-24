@@ -17,6 +17,34 @@ struct RoutingTests {
         )
     }
 
+    @Test func offlineAvailabilityAndRecoveryCrossBindings() throws {
+        let router = Routing.Router.withCatalog()
+        var input = Routing.OfflineInput(
+            automatic: true, currentProviderIsCloud: true, localReady: true,
+            localInventory: Routing.Inventory(
+                providerId: "local", baseUrl: "local://gemma", available: ["gemma-4-e2b"],
+                enabled: [], models: []
+            )
+        )
+        #expect(router.offlineRoute(input: input, now: 0) == nil)
+        router.record(outcome: Routing.Outcome(
+            providerId: "provider", model: "gpt-4.1", firstTokenSeconds: nil,
+            tokensPerSecond: nil, result: .failed(failure: .offline)
+        ), now: 0)
+        let route = try #require(router.offlineRoute(input: input, now: 1))
+        #expect(route.providerId == "local")
+        #expect(route.model == "gemma-4-e2b")
+        input.localReady = false
+        #expect(router.offlineRoute(input: input, now: 1) == nil)
+        input.localReady = true
+        input.automatic = false
+        #expect(router.offlineRoute(input: input, now: 1) == nil)
+        input.automatic = true
+        router.recordReachability(reachable: false)
+        router.recordReachability(reachable: true)
+        #expect(router.offlineRoute(input: input, now: 2) == nil)
+    }
+
     @Test func stateSurvivesCallsAndInitialization() async throws {
         let router = Routing.Router.withCatalog()
         let input = request(conversation: "conversation")

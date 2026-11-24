@@ -216,6 +216,11 @@ struct ConnectionError: Equatable {
     private static func localClientCard(for error: Error) -> ConnectionError? {
         guard let localError = error as? LocalClientError else { return nil }
         switch localError {
+        case .unsupportedModel:
+            return ConnectionError(
+                title: Localized.Errors.notAvailable,
+                suggestion: Localized.Model.unsupported
+            )
         case .deviceUnsupported(let detail):
             return ConnectionError(
                 title: Localized.Model.deviceUnsupportedTitle,

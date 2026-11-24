@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 #[derive(Default)]
 pub(super) struct RoutingState {
     pub local_health: LocalHealth,
+    pub offline: super::offline::OfflineState,
     pub remote_health: RemoteHealth,
     pub anchors: HashMap<String, String>,
     pub reasoning: HashSet<String>,

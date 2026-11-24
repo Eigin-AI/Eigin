@@ -2,6 +2,7 @@ mod candidates;
 mod fixtures;
 mod health;
 mod identity;
+mod offline;
 mod reasoning;
 mod remote_health;
 mod session;
