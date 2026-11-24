@@ -1,23 +1,22 @@
+import EiginSDK
 import Foundation
 
 struct LocalClient: LLMClient {
-    /// Session cache for the Apple foundation model. `nil` falls back to the
-    /// production `.shared` store, resolved on the main actor at use.
-    let sessions: FoundationModelSessionStore?
+    let inference: EiginSDK.Experimental.Inference.Local
+    private let modelDownloaded: @Sendable () -> Bool
 
-    init(sessions: FoundationModelSessionStore? = nil) {
-        self.sessions = sessions
+    init(
+        inference: EiginSDK.Experimental.Inference
+            .Local = .init(prepare: GemmaLocalInference.prepare),
+        modelDownloaded: @escaping @Sendable () -> Bool = { GemmaModelStore.isDownloaded }
+    ) {
+        self.inference = inference
+        self.modelDownloaded = modelDownloaded
     }
 
     func fetchModels() async throws -> [String] {
-        var ready = [String]()
-        if case .ready = await Self.appleFoundationModelStatus().state {
-            ready.append("apple-foundation-model")
-        }
-        if case .ready = await Self.gemmaStatus().state {
-            ready.append("gemma-4-e2b")
-        }
-        return ready
+        // Downloaded models remain available when idle eviction unloads the runtime.
+        modelDownloaded() ? ["gemma-4-e2b"] : []
     }
 
     func validateAPIKey(model: String) async throws {}
@@ -67,28 +66,39 @@ struct LocalClient: LLMClient {
         cacheKey _: String? = nil,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        if isApplePath(model: model) {
-            try await appleEventStream(messages: messages, model: model, tools: tools)
-        } else {
-            try await gemmaEventStream(
-                messages: messages, model: model, tools: tools,
-                inlineToolRunner: inlineToolRunner
+        guard model == "gemma-4-e2b" else { throw LocalClientError.unsupportedModel }
+        let execute: EiginSDK.Experimental.Inference.Local.ExecuteTool? = inlineToolRunner
+            .map { runner in
+                { @Sendable call in
+                    let result = await runner.run(LocalInferenceSDKConversion.call(call))
+                    return .init(
+                        toolCallId: result.toolCallID,
+                        content: result.content,
+                        isError: result.isError
+                    )
+                }
+            }
+        do {
+            let input = try LocalInferenceSDKConversion.input(
+                messages: messages,
+                model: model,
+                tools: tools
             )
-        }
-    }
-
-    private func isApplePath(model: String) -> Bool {
-        model == "apple-foundation-model"
+            let stream = try await inference.stream(input, executeTool: execute)
+            return InferenceSDKStream.events(stream, mapError: LocalInferenceSDKConversion.failure)
+        } catch { throw LocalInferenceSDKConversion.failure(error) }
     }
 }
 
 enum LocalClientError: LocalizedError {
+    case unsupportedModel
     case modelNotLoaded
     case modelNotDownloaded
     case deviceUnsupported(detail: String)
 
     var errorDescription: String? {
         switch self {
+        case .unsupportedModel: Localized.Model.unsupported
         case .modelNotLoaded: Localized.Model.notLoaded
         case .modelNotDownloaded: Localized.Model.notDownloaded
         case .deviceUnsupported: Localized.Model.insufficientRAM

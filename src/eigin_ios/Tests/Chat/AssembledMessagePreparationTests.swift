@@ -9,7 +9,7 @@ import Testing
 struct AssembledMessagePreparationTests {
     @Test(
         arguments: [InteractionMode.text, .liveCall, .headless],
-        ["apple-foundation-model", "gpt-4.1"]
+        ["gemma-4-e2b", "gpt-4.1"]
     )
     func sharedTurnPathUsesSDKSelectionAndModelCapabilities(
         mode: InteractionMode,
@@ -58,7 +58,7 @@ struct AssembledMessagePreparationTests {
             ),
             mode: mode, hasSpaces: false
         )
-        let isSmall = model == "apple-foundation-model"
+        let isSmall = model == "gemma-4-e2b"
         #expect(result.isSmallContext == isSmall)
         #expect(result.apiMessages.map(\.role) == ["system", "user", "assistant", "user"])
         #expect(result.apiMessages[0]

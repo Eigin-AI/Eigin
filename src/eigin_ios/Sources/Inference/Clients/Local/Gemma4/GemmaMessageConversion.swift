@@ -1,3 +1,4 @@
+import EiginSDK
 import Foundation
 
 /// Converts the app's OpenAI-style ``ChatMessage`` history into the runtime's
@@ -9,8 +10,7 @@ import Foundation
 /// applies Gemma's chat template correctly.
 extension LocalClient {
     static func convertMessages(
-        _ messages: [ChatMessage],
-        tools: [ToolDefinition]?
+        _ messages: [EiginSDK.Experimental.Inference.Message]
     ) -> [GemmaRuntime.Message] {
         var result: [GemmaRuntime.Message] = []
         var i = 0
@@ -36,8 +36,8 @@ extension LocalClient {
                     var rendered = content
                     for tc in toolCalls {
                         rendered += renderGemmaToolCall(
-                            name: tc.function.name,
-                            jsonArgs: tc.function.arguments
+                            name: tc.name,
+                            jsonArgs: tc.arguments
                         )
                     }
                     appendMessage(&result, role: .assistant, content: rendered)
@@ -47,7 +47,7 @@ extension LocalClient {
                     while i < messages.count, messages[i].role == "tool" {
                         let toolMsg = messages[i]
                         let name = toolMsg.name
-                            ?? toolCalls.first { $0.id == toolMsg.toolCallID }?.function.name
+                            ?? toolCalls.first { $0.id == toolMsg.toolCallId }?.name
                             ?? "unknown"
                         appendMessage(
                             &result,

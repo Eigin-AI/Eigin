@@ -1711,15 +1711,15 @@ struct AgenticChatLoopTests {
 
     // MARK: - InlineToolRunner (local model path)
 
-    @Test @MainActor func localModelCannotActivateSkillsInline() {
+    @Test @MainActor func localModelCannotActivateSkillsInline() throws {
         let activation = ActivateSkillTool().definition()
         let search = ToolDefinition(
             name: "search_knowledge",
             description: "Search",
             parameters: .init(type: "object")
         )
-        #expect(LocalClient.makeBridgedTools([activation]).isEmpty)
-        #expect(LocalClient.makeBridgedTools([search]).count == 1)
+        #expect(try LocalClient.makeBridgedTools([InferenceSDKConversion.tool(activation)]).isEmpty)
+        #expect(try LocalClient.makeBridgedTools([InferenceSDKConversion.tool(search)]).count == 1)
     }
 
     /// Verifies that when a local model executes a tool inline via the

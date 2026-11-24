@@ -81,7 +81,6 @@ pub(super) fn embedded() -> ModelCatalog {
         &[
             ("alibaba.toml", include_str!("data/alibaba.toml")),
             ("anthropic.toml", include_str!("data/anthropic.toml")),
-            ("apple.toml", include_str!("data/apple.toml")),
             ("corti.toml", include_str!("data/corti.toml")),
             ("deepseek.toml", include_str!("data/deepseek.toml")),
             ("gemma.toml", include_str!("data/gemma.toml")),

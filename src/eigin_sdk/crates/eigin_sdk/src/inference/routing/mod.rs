@@ -1,10 +1,12 @@
-//! Stateful cloud selection. Hosts own inventory discovery, offline detours and persistence.
+//! Stateful cloud and offline selection. Hosts own discovery, execution and persistence.
 mod candidates;
 mod diagnostics;
 mod hedging;
 mod identity;
 mod local_health;
 mod observations;
+mod offline;
+pub use offline::{RoutingOfflineInput, RoutingOfflineRoute};
 mod policy;
 mod reasoning;
 mod remote_health;

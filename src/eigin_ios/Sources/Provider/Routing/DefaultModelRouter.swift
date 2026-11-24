@@ -1,7 +1,7 @@
 import EiginSDK
 import Foundation
 
-/// Shared SDK cloud policy with host-owned reachability and local-model fallback.
+/// Shared SDK routing policy with host-owned reachability observation.
 actor DefaultModelRouter: ModelRouter {
     static let firstTokenCeiling: Duration = .seconds(20)
     static let hedgeDelay: Duration = .seconds(6)
@@ -11,8 +11,6 @@ actor DefaultModelRouter: ModelRouter {
     let reachability: any NetworkReachability
     let localModelReadiness: @Sendable () -> Bool
     let now: @Sendable () -> Date
-    var sawOfflineFailure = false
-    var wasReachable = true
 
     init(
         reachability: any NetworkReachability,
@@ -28,7 +26,7 @@ actor DefaultModelRouter: ModelRouter {
 
     func resolve(_ request: RouteRequest) async -> ResolvedRoute {
         let timestamp = now()
-        noteReachability()
+        policy.recordReachability(reachable: reachability.isReachable)
         if request.isAuto, let provider = request.currentProvider {
             await refreshHealth(provider)
             if let offline = offlineRoute(for: request, at: timestamp) { return offline }
@@ -93,11 +91,6 @@ actor DefaultModelRouter: ModelRouter {
             "Attempt \(public: attempt.model): \(public: String(describing: attempt.result)), ttft \(public: String(describing: attempt.timeToFirstToken)), throughput \(public: String(describing: attempt.tokensPerSecond)), duration \(public: String(describing: attempt.duration))",
             category: .routing
         )
-        switch attempt.result {
-        case .succeeded: sawOfflineFailure = false
-        case .failed(.offline): sawOfflineFailure = true
-        case .failed, .cancelled: break
-        }
         policy.record(
             outcome: RoutingSDKConversion.outcome(attempt),
             now: now().timeIntervalSince1970

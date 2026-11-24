@@ -116,7 +116,7 @@ struct KnownModelCatalogTests {
     // MARK: - ProviderPreset.isLocal
 
     @Test func isLocalForApplePreset() {
-        #expect(ProviderPreset.isLocal("local://apple-foundation-model") == true)
+        #expect(ProviderPreset.isLocal("local://gemma-4-e2b") == true)
     }
 
     @Test func isLocalForFutureLocalProvider() {

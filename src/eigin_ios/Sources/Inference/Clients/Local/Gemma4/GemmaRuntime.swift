@@ -33,7 +33,7 @@ public final class GemmaRuntime: @unchecked Sendable {
 
     /// Serializes generation: LiteRT allows only one session per engine, and
     /// foreground requests preempt background ones.
-    private let gate = LiteRTSessionGate()
+    private let session = GemmaGenerationSession()
 
     /// Coarse per-turn runaway bound on streamed chunks. This is *not* the
     /// model's output limit — it spans the entire turn including every tool
@@ -162,44 +162,10 @@ public final class GemmaRuntime: @unchecked Sendable {
         tools: [any LiteRTLM.Tool] = [],
         inlineToolRunner: InlineToolRunner? = nil
     ) async throws -> AsyncStream<String> {
-        let (out, continuation) = AsyncStream<String>.makeStream()
-
-        // Generation runs one at a time against the single engine session. We
-        // read the caller's priority here (task-local) and gate the worker so a
-        // foreground send can preempt background work. `box` lets the gate (or a
-        // torn-down consumer) cancel the worker, which stops native decoding.
-        let priority = LocalGeneration.priority
         let toolBox = BridgedToolBox(tools)
-        let box = CancellationBox()
-        let task = Task { [weak self] in
-            guard let self else {
-                continuation.finish()
-                return
-            }
-            let acquired = await gate.acquire(priority: priority) { box.cancel() }
-            if acquired {
-                // Publish the turn's runner only while we hold the gate so the
-                // bridge's run() (called across LiteRT's C boundary) reaches the
-                // right executor. Setting it inside the gated span is what makes
-                // the single module-global safe: a concurrently-created stream
-                // can't overwrite it while we own the session.
-                GemmaToolBridgeRunner.current = inlineToolRunner
-                if !Task.isCancelled {
-                    await streamInto(
-                        continuation,
-                        messages: messages,
-                        tools: toolBox.tools
-                    )
-                }
-                GemmaToolBridgeRunner.current = nil
-                await gate.release()
-            }
-            continuation.finish()
+        return session.stream(runner: inlineToolRunner) { [weak self] continuation in
+            await self?.streamInto(continuation, messages: messages, tools: toolBox.tools)
         }
-        box.task = task
-        continuation.onTermination = { _ in box.cancel() }
-
-        return out
     }
 
     private func streamInto(
@@ -515,23 +481,5 @@ public final class GemmaRuntime: @unchecked Sendable {
 private extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
-    }
-}
-
-/// Holds the worker ``Task`` so the session gate (or a torn-down consumer) can
-/// cancel generation from outside the task. The handle is written once right
-/// after the task is created and only read when cancelling, so a lock keeps the
-/// cross-thread access well-defined.
-private final class CancellationBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var _task: Task<Void, Never>?
-
-    var task: Task<Void, Never>? {
-        get { lock.withLock { _task } }
-        set { lock.withLock { _task = newValue } }
-    }
-
-    func cancel() {
-        task?.cancel()
     }
 }

@@ -16,9 +16,9 @@ struct SlidingWindowCompactionTests {
             apiMessages: messages,
             estimatedTokens: 100, // well under 75% of 8192
             contextWindow: 8192,
-            baseURL: "local://apple-foundation-model",
+            baseURL: "local://gemma-4-e2b",
             providerID: UUID(),
-            model: "apple-foundation-model",
+            model: "gemma-4-e2b",
             chatService: PreviewChatService()
         )
 
@@ -37,9 +37,9 @@ struct SlidingWindowCompactionTests {
             estimatedTokens: 50,
             contextWindow: 8192,
             needsCompaction: true,
-            baseURL: "local://apple-foundation-model",
+            baseURL: "local://gemma-4-e2b",
             providerID: UUID(),
-            model: "apple-foundation-model",
+            model: "gemma-4-e2b",
             chatService: PreviewChatService()
         )
 

@@ -1,3 +1,4 @@
+import EiginSDK
 import Foundation
 @preconcurrency import LiteRTLM
 
@@ -164,20 +165,20 @@ extension LocalClient {
     /// Maps incoming ``ToolDefinition``s to concrete bridge instances. Unknown
     /// names are skipped with a warning. Call before creating the conversation.
     static func makeBridgedTools(
-        _ definitions: [ToolDefinition]
+        _ definitions: [EiginSDK.Experimental.Inference.ToolDefinition]
     ) -> [any LiteRTLM.Tool] {
         var tools: [any LiteRTLM.Tool] = []
         for def in definitions {
-            if let type_ = GemmaToolBridgeRegistry.all[def.function.name] {
+            if let type_ = GemmaToolBridgeRegistry.all[def.name] {
                 let instance = type_.init()
                 AppLogger.debug(
-                    "Gemma: bridged '\(public: def.function.name)' → \(public: type(of: instance).name)",
+                    "Gemma: bridged '\(public: def.name)' → \(public: type(of: instance).name)",
                     category: .chat
                 )
                 tools.append(instance)
             } else {
                 AppLogger.warning(
-                    "Gemma: no bridge for '\(public: def.function.name)' — skipping",
+                    "Gemma: no bridge for '\(public: def.name)' — skipping",
                     category: .chat
                 )
             }

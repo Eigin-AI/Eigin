@@ -149,6 +149,10 @@ pub enum InferenceError {
     WalletUnavailable,
     #[error("Relay is not configured")]
     EiginRelayNotConfigured,
+    #[error("Local model unavailable: {reason}")]
+    LocalUnavailable { code: String, reason: String },
+    #[error("Local inference failed: {reason}")]
+    LocalRuntime { reason: String },
     #[error("Inference cancelled")]
     Cancelled,
     #[error("Inference operation already in use")]

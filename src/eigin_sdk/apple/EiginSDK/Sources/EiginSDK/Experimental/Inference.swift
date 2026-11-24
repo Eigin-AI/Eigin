@@ -60,7 +60,7 @@ public extension EiginSDK.Experimental {
             }
         }
 
-        /// Releases network resources when cancelled or no longer retained by its consumer.
+        /// Releases inference resources when cancelled or no longer retained by its consumer.
         public final class Stream: Sendable {
             private let read: @Sendable () async throws -> Event?
             private let cancelOperation: @Sendable () -> Void
@@ -76,6 +76,11 @@ public extension EiginSDK.Experimental {
             }
 
             init(_ operation: OpenAiResponsesStream) {
+                read = { try await operation.next() }
+                cancelOperation = { operation.cancel() }
+            }
+
+            init(_ operation: LocalInferenceStream) {
                 read = { try await operation.next() }
                 cancelOperation = { operation.cancel() }
             }
