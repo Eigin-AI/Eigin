@@ -60,11 +60,10 @@ enum KnowledgeConflictHint {
             return []
         }
 
-        return scored
-            .filter { $0.qualifiedID != selfID && $0.relevance > threshold }
-            .sorted(by: KnowledgeSearchEngine.ranksBefore)
-            .prefix(maxHints)
-            .map { ["id": $0.entity.id, "summary": knowledgeSummary(for: $0.entity)] }
+        return KnowledgeSearchEngine.rank(
+            scored.filter { $0.qualifiedID != selfID },
+            threshold: threshold.nextUp, limit: maxHints
+        ).map { ["id": $0.entity.id, "summary": knowledgeSummary(for: $0.entity)] }
     }
 
     /// A short, action-oriented note pairing with ``similarExisting``.

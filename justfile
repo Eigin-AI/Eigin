@@ -193,8 +193,7 @@ build target="all" env="staging" verbose="false":
 
 [private]
 _build-sdk:
-    cargo +1.99.1 build --locked --manifest-path src/eigin_sdk/Cargo.toml -p eigin_sdk
-    cargo +1.99.1 build --locked --manifest-path src/eigin_sdk/Cargo.toml -p eigin_sdk --target wasm32-unknown-unknown
+    {{ tools }} build-sdk
 
 [private]
 _build-cli:

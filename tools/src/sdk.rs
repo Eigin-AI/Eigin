@@ -8,7 +8,9 @@ use std::process::Command;
 mod apple;
 pub mod notices;
 mod wasm_bindgen;
+mod wasm_toolchain;
 pub(crate) use wasm_bindgen::ensure as ensure_wasm_bindgen;
+pub(crate) use wasm_toolchain::run as run_wasm;
 
 /// Independently selectable SDK host artifacts.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
@@ -32,6 +34,26 @@ pub fn generate(root: &str, target: SdkTarget) -> Result<()> {
     Ok(())
 }
 
+/// Build native and browser runtimes with the SDK's pinned toolchain.
+pub fn build(root: &str) -> Result<()> {
+    let sdk = Path::new(root).join("src/eigin_sdk");
+    run(Command::new("cargo")
+        .args(["build", "--locked", "-p", "eigin_sdk"])
+        .current_dir(&sdk))?;
+    run_wasm(
+        Command::new("cargo")
+            .args([
+                "build",
+                "--locked",
+                "-p",
+                "eigin_sdk",
+                "--target",
+                "wasm32-unknown-unknown",
+            ])
+            .current_dir(&sdk),
+    )
+}
+
 fn web(root: &str) -> Result<()> {
     ensure_web_dependencies(root)?;
     let cli = Path::new(root).join("node_modules/.bin/ubrn");
@@ -39,16 +61,18 @@ fn web(root: &str) -> Result<()> {
     if Path::new(&staging).exists() {
         fs::remove_dir_all(&staging)?;
     }
-    run(Command::new(cli)
-        .env("UBRN_WASM_BINDGEN", wasm_bindgen::ensure(root)?)
-        .args([
-            "build",
-            "wasm2",
-            "--config",
-            "ubrn.config.yaml",
-            "--release",
-        ])
-        .current_dir(format!("{root}/src/eigin_sdk/web")))?;
+    run_wasm(
+        Command::new(cli)
+            .env("UBRN_WASM_BINDGEN", wasm_bindgen::ensure(root)?)
+            .args([
+                "build",
+                "wasm2",
+                "--config",
+                "ubrn.config.yaml",
+                "--release",
+            ])
+            .current_dir(format!("{root}/src/eigin_sdk/web")),
+    )?;
     sync_generated(
         Path::new(&staging),
         Path::new(&format!("{root}/src/eigin_sdk/web/src/generated")),

@@ -1,9 +1,9 @@
+import EiginSDK
 import Foundation
 
 /// Ranks knowledge entries for search, hints, and suggested links.
 enum KnowledgeSearchEngine {
-    /// Keeps memory adjustments within each match tier.
-    private static let maximumTierAdjustment = 0.09
+    typealias SDK = EiginSDK.Experimental.Knowledge
 
     /// A matching knowledge entry with its rank and source chat.
     struct ScoredEntity: Sendable {
@@ -46,67 +46,37 @@ enum KnowledgeSearchEngine {
             )
         }
 
-        let now = Date()
-        let lexicalQuery = KnowledgeLexicalMatcher.Query(keywordNeedle ?? "")
-
-        var results: [ScoredEntity] = []
-
+        let now = Date().timeIntervalSince1970
+        var candidates: [SDK.SearchCandidate] = []
         for schemaName in schemaNames {
             let entities = try await fetchEntities(
-                schemaName: schemaName,
-                includeExpired: includeExpired,
-                knowledgeService: knowledgeService,
-                spaceID: spaceID,
-                agentID: agentID
+                schemaName: schemaName, includeExpired: includeExpired,
+                knowledgeService: knowledgeService, spaceID: spaceID, agentID: agentID
             )
-
             for entity in entities {
-                var embeddingScore = 0.0
-                let shortID = knowledgeShortID(from: entity.id, type: schemaName)
                 let path = BundledKnowledge.entityPath(
-                    prefix: BundledKnowledge.knowledgePrefix,
-                    type: schemaName,
-                    id: shortID
+                    prefix: BundledKnowledge.knowledgePrefix, type: schemaName,
+                    id: knowledgeShortID(from: entity.id, type: schemaName)
                 )
-                let source = sourceByPath[path]
-                if let embedding = source?.embedding, !queryEmbedding.isEmpty {
-                    embeddingScore = EmbeddingHelpers.cosineSimilarity(
-                        queryEmbedding, embedding
-                    )
-                }
-
-                let qualifiedID = "\(schemaName).\(shortID)"
-                let keywordScore = KnowledgeLexicalMatcher.score(
-                    entity: entity, qualifiedID: qualifiedID, query: lexicalQuery
-                )
-                let relevance = max(embeddingScore, keywordScore)
-                guard relevance > 0 else { continue }
-
-                // Hide expired memories unless explicitly requested.
-                if !includeExpired, source?.expired == true { continue }
-
-                let boost: Double = if let source {
-                    MemoryRanking.boost(
+                let memory = sourceByPath[path].map { source in
+                    SDK.Memory(
+                        sourceId: source.id.uuidString, embedding: source.embedding ?? [],
                         accessCount: source.accessCount,
-                        lastAccessedAt: source.lastAccessedAt,
-                        importance: source.importance,
-                        now: now
+                        lastAccessedAt: source.lastAccessedAt?.timeIntervalSince1970,
+                        importance: source.importance, expired: source.expired,
+                        chatId: source.chatID?.uuidString
                     )
-                } else {
-                    0
                 }
-
-                results.append(ScoredEntity(
+                candidates.append(.init(
                     entity: entity,
-                    qualifiedID: qualifiedID,
-                    score: rankingScore(relevance: relevance, adjustment: boost),
-                    relevance: relevance,
-                    chatID: source?.chatID
+                    memory: memory
                 ))
             }
         }
-
-        return results
+        return SDK.score(
+            candidates, queryEmbedding: queryEmbedding, keywordNeedle: keywordNeedle,
+            includeExpired: includeExpired, now: now
+        ).map(KnowledgeSDKConversion.scoredEntity)
     }
 
     /// Embeds a query and returns ranked entries within the threshold and limit.
@@ -122,7 +92,7 @@ enum KnowledgeSearchEngine {
     ) async throws -> [ScoredEntity] {
         let queryEmbedding = EmbeddingHelpers.embed(query) ?? []
 
-        var scored = try await score(
+        let scored = try await score(
             queryEmbedding: queryEmbedding,
             keywordNeedle: query,
             typeFilter: typeFilter,
@@ -132,14 +102,7 @@ enum KnowledgeSearchEngine {
             agentID: agentID
         )
 
-        if threshold > 0 {
-            scored = scored.filter { $0.relevance >= threshold }
-        }
-        scored.sort(by: ranksBefore)
-        if let limit, scored.count > limit {
-            scored = Array(scored.prefix(limit))
-        }
-        return scored
+        return rank(scored, threshold: threshold, limit: limit)
     }
 
     // MARK: - Internal helpers
@@ -189,13 +152,18 @@ enum KnowledgeSearchEngine {
 
     /// Clamp adjustments inside disjoint relevance bands even when memory weights change.
     static func rankingScore(relevance: Double, adjustment: Double) -> Double {
-        let weighted = adjustment * min(1, relevance)
-        // Adjacent protected tiers are at least 0.2 apart.
-        return relevance + min(maximumTierAdjustment, max(-maximumTierAdjustment, weighted))
+        SDK.rankingScore(relevance: relevance, adjustment: adjustment)
     }
 
-    /// Stable ordering for identical evidence and memory signals.
-    static func ranksBefore(_ lhs: ScoredEntity, _ rhs: ScoredEntity) -> Bool {
-        lhs.score == rhs.score ? lhs.qualifiedID < rhs.qualifiedID : lhs.score > rhs.score
+    /// Applies SDK thresholds, deterministic ordering, and limits to host results.
+    static func rank(
+        _ results: [ScoredEntity],
+        threshold: Double = 0,
+        limit: Int? = nil
+    ) -> [ScoredEntity] {
+        SDK.rank(
+            results.map(KnowledgeSDKConversion.searchResult), threshold: threshold,
+            limit: limit.map { UInt64(max(0, $0)) }
+        ).map(KnowledgeSDKConversion.scoredEntity)
     }
 }

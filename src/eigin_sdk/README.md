@@ -22,6 +22,8 @@ rustup toolchain install 1.99.1 --profile minimal --component rustfmt --componen
 rustup target add --toolchain 1.99.1 wasm32-unknown-unknown
 ```
 
+Browser builds need LLVM: `brew install llvm` on macOS or `apt-get install clang llvm` on Debian. Commands discover it automatically. Optional overrides: `CC_wasm32_unknown_unknown` and `AR_wasm32_unknown_unknown`.
+
 Run commands from the repository root. Web generation restores missing npm tooling and caches the wasm-bindgen CLI version from the SDK lockfile.
 For browser tests, install engines once with `npx playwright install chromium firefox webkit` after generation.
 

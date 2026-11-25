@@ -177,7 +177,7 @@ Nothing to flag is a normal result: say `LGTM — nothing to flag.` and stop.
 - Express multi-step work through named helpers and visible sections; consider splitting files beyond 150–200 lines by responsibility.
 - Use `*SDKConversion` for new host-to-SDK value mapping; retain existing host APIs until their consuming domain moves.
 - Keep provider behavior tests at the injected HTTP boundary; host tests cover host-specific contracts rather than repeating provider semantics.
-- Keep test fixtures visibly test-only; inline local tests and group cross-component cases separately.
+- Keep Rust tests inline in the file under test or in a `tests/` subdirectory with a catalog-only `mod.rs` and one file per domain; flag sibling `tests.rs` and `*_tests.rs` files beside implementation modules.
 - Explain SDK concepts and consumer workflows in published docs; keep module comments brief and avoid standalone implementation inventories.
 - Keep migration records focused on structural choices and reusable lessons; track verification gates explicitly without long execution logs.
 

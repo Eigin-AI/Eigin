@@ -24,10 +24,10 @@ extension KnowledgeSearchEngineTests {
                 accessCount: 1_000_000, lastAccessedAt: Date(), importance: 1
             ))
         }
-        let ranked = try await KnowledgeSearchEngine.score(
+        let ranked = try await KnowledgeSearchEngine.rank(KnowledgeSearchEngine.score(
             queryEmbedding: unit(0), keywordNeedle: query,
             knowledgeService: fake, spaceID: nil, agentID: nil
-        ).sorted(by: KnowledgeSearchEngine.ranksBefore)
+        ))
         #expect(ranked.prefix(10).first?.qualifiedID == "actor.john_doe_router")
     }
 
@@ -44,10 +44,10 @@ extension KnowledgeSearchEngineTests {
             type: "note", id: "hub", embedding: unit(0),
             accessCount: 1_000_000, lastAccessedAt: Date(), importance: 1
         )]
-        let ranked = try await KnowledgeSearchEngine.score(
+        let ranked = try await KnowledgeSearchEngine.rank(KnowledgeSearchEngine.score(
             queryEmbedding: unit(0), keywordNeedle: "reading preferences",
             knowledgeService: fake, spaceID: nil, agentID: nil
-        ).sorted(by: KnowledgeSearchEngine.ranksBefore)
+        ))
         #expect(ranked.first?.qualifiedID == "note.preferences")
         #expect(ranked.first?.relevance == KnowledgeLexicalMatcher.fullCoverageScore)
     }
@@ -66,10 +66,10 @@ extension KnowledgeSearchEngineTests {
             ]
         )
         for query in ["actor.user", "user", "John Doe"] {
-            let ranked = try await KnowledgeSearchEngine.score(
+            let ranked = try await KnowledgeSearchEngine.rank(KnowledgeSearchEngine.score(
                 queryEmbedding: [], keywordNeedle: query,
                 knowledgeService: fake, spaceID: nil, agentID: nil
-            ).sorted(by: KnowledgeSearchEngine.ranksBefore)
+            ))
             #expect(ranked.first?.qualifiedID == "actor.user")
             #expect(ranked.count == 2)
         }
@@ -110,9 +110,9 @@ extension KnowledgeSearchEngineTests {
                 lastAccessedAt: nil
             ),
         ]
-        let ranked = try await KnowledgeSearchEngine.score(
+        let ranked = try await KnowledgeSearchEngine.rank(KnowledgeSearchEngine.score(
             queryEmbedding: unit(0), knowledgeService: fake, spaceID: nil, agentID: nil
-        ).sorted(by: KnowledgeSearchEngine.ranksBefore)
+        ))
         #expect(ranked.first?.qualifiedID == "actor.b")
         #expect(ranked.allSatisfy { abs($0.score - $0.relevance) <= 0.05 })
     }
@@ -150,10 +150,10 @@ extension KnowledgeSearchEngineTests {
             type: "note", id: "actor_user", embedding: unit(0),
             accessCount: 1_000_000, lastAccessedAt: Date(), importance: 1
         )]
-        let results = try await KnowledgeSearchEngine.score(
+        let results = try await KnowledgeSearchEngine.rank(KnowledgeSearchEngine.score(
             queryEmbedding: unit(0), keywordNeedle: "actor.user",
             knowledgeService: fake, spaceID: nil, agentID: nil
-        ).sorted(by: KnowledgeSearchEngine.ranksBefore)
+        ))
         #expect(results.first?.qualifiedID == "actor.user")
     }
 

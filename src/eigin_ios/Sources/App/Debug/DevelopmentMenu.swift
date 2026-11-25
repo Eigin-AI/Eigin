@@ -494,11 +494,11 @@ struct DevelopmentMenu: View {
     }
 
     private func runFirmSanityCheck() -> String {
+        typealias SDK = KnowledgeSDKConversion.SDK
         do {
-            let session = FirmSession()
-
-            // Load a schema
-            try session.loadSource(
+            let schema = SDK.Source(
+                id: "schema",
+                path: "schema.firm",
                 content: """
                 schema person {
                     field {
@@ -513,11 +513,11 @@ struct DevelopmentMenu: View {
                     }
                 }
                 """,
-                path: "schema.firm"
+                readOnly: true
             )
-
-            // Load entities
-            try session.loadSource(
+            let people = SDK.Source(
+                id: "people",
+                path: "people.firm",
                 content: """
                 person alice {
                     name = "Alice"
@@ -529,11 +529,9 @@ struct DevelopmentMenu: View {
                     age = 25
                 }
                 """,
-                path: "people.firm"
+                readOnly: false
             )
-
-            // Build
-            try session.build()
+            let session = try SDK.Workspace(sources: [schema, people])
 
             // Query
             let result = try session.query(queryString: "from person | where age > 26")
@@ -564,7 +562,10 @@ struct DevelopmentMenu: View {
                     FirmField(name: "age", value: .integer(value: 35)),
                 ]
             )
-            let dsl = try session.generateEntityDsl(entity: newEntity)
+            let dsl = try session.generateEntityDsl(
+                entity: newEntity,
+                sourcePath: "person/charlie.firm"
+            )
             lines.append("\nGenerated DSL:")
             lines.append(dsl)
 

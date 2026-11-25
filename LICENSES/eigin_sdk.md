@@ -21,11 +21,17 @@ This is a conservative cross-platform inventory, not a binary-size or linker-rea
 Cargo package archives and installed npm packages supply license, copyright and notice files.
 
 - Identical full license texts appear once in a shared section. Package entries reference them; copyright lines within those texts stay intact.
-- For `MIT OR Apache-2.0` (in either order), the generator selects MIT and omits the alternative Apache license file. The MIT text must be present.
+- For `MIT OR Apache-2.0` (in either order), a separate `LICENSE-MIT` selects MIT and omits the alternative Apache file. Combined license files retain the full declared expression and supplied text.
 - Other license expressions retain their supplied texts. Supplemental copyright, attribution and notice files remain with each package.
 - Packages without license text fail generation unless they have an explicitly reviewed, version-pinned fallback.
 
 UniFFI 0.31.0 and the 0.31.0-6 browser runtimes omit their full MPL text from published packages. Their fallbacks use the preserved [upstream MPL text](uniffi/MPL-2.0.txt), the source-file notice and versioned upstream source links. Review these exceptions when updating versions.
+
+## Firm knowledge
+
+The SDK pins `firm_core` and `firm_lang` to Firm commit `a4557a902c1421593945ad7f9c464d03b35c7258`. Both crates declare MIT and share Firm's repository-root `LICENSE`; the generator includes that exact text. The grammar submodule, `tree-sitter-firm`, is also MIT-licensed at commit `a71bf1fa3d158d1ab2778342dadbf3c091bae572`.
+
+Knowledge binding value types and conversions are adapted from [Firm PR #53](https://github.com/42futures/firm/pull/53), commit `ecd9d9a4808c0b843f17c04c864ec71b298a8ef5`, under AGPL-3.0. Their source files retain an attribution. The full license text is also available in Eigin's root `LICENSE`.
 
 ## Host distribution
 

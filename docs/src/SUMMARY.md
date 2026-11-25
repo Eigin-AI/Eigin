@@ -32,6 +32,7 @@
 - [Turn progression](sdk/turn-progression.md)
 - [Outgoing conversation preparation](./sdk/conversation-preparation.md)
 - [Model catalog](./sdk/model-catalog.md)
+- [Knowledge](./sdk/knowledge.md)
 - [Cloud model routing](./sdk/model-routing.md)
 - [Inference](./sdk/inference.md)
 

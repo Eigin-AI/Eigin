@@ -128,10 +128,7 @@ enum KnowledgeHydrator {
 
         guard !bestScored.isEmpty else { return [] }
 
-        let topScored = bestScored
-            .values
-            .sorted(by: KnowledgeSearchEngine.ranksBefore)
-            .prefix(maxEntries)
+        let topScored = KnowledgeSearchEngine.rank(Array(bestScored.values), limit: maxEntries)
 
         var results: [RelevantKnowledgeEntry] = []
         results.reserveCapacity(topScored.count)

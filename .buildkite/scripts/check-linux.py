@@ -19,10 +19,13 @@ def commands(component):
         raise ValueError("Unknown Linux component")
     build = ["cargo", "+1.99.1", "build", "--locked", "--manifest-path", SDK, "-p", "eigin_sdk"]
     return [
+        ["apt-get", "update"],
+        ["apt-get", "install", "-y", "--no-install-recommends", "clang", "llvm"],
         ["rustup", "component", "add", "--toolchain", "1.99.1", "rustfmt", "clippy"],
         ["rustup", "target", "add", "--toolchain", "1.99.1", "wasm32-unknown-unknown"],
         build,
-        [*build, "--target", "wasm32-unknown-unknown"],
+        ["env", "CC_wasm32_unknown_unknown=clang", "AR_wasm32_unknown_unknown=llvm-ar",
+         *build, "--target", "wasm32-unknown-unknown"],
         ["cargo", "+1.99.1", "test", "--locked", "--manifest-path", SDK, "--features", "binding-tests"],
         ["cargo", "+1.99.1", "clippy", "--locked", "--manifest-path", SDK, "--all-targets", "--", "-D", "warnings"],
         ["cargo", "+1.99.1", "fmt", "--manifest-path", SDK, "--all", "--", "--check"],

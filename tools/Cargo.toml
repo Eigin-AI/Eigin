@@ -20,7 +20,7 @@ walkdir = "2"
 # Cap-height metrics for the generated optical inset CSS variables.
 ttf-parser = "0.25"
 # Firm language — validates the design/knowledge/ workspace at generate time.
-# Same engine the iOS FirmFFI xcframework wraps; keep the rev aligned with that build.
+# Runtime knowledge uses a separately pinned Firm dependency in the SDK.
 firm_lang = { git = "https://github.com/42futures/firm", rev = "4144d4a08bdf285c09ed2b9781e5ec448004e506" }
 # Grant signing faucet
 jsonwebtoken = "9"

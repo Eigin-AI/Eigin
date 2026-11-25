@@ -10,6 +10,7 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Keep domain behavior together.** Provider-specific behavior belongs under its provider module; shared messages and events belong at the inference root. Promote shared code when two implementations need it, rather than designing a provider framework upfront. Sources: [#332], [#335].
 - **Separate bindings from runtime adaptation.** Generated bindings expose SDK types and operations. Independently testable Apple and browser packages adapt them to their runtimes. UI applications supply composition, lifecycle, permissions, and presentation. Sources: [#330], [#332].
 - **Pass values and explicit capabilities.** SDK operations should not depend on SwiftData objects, app containers, or implicit credentials. Move transient computation before deciding durable-storage ownership. Sources: [#145], [#332].
+- **Publish validated snapshots after host saves.** Immutable knowledge workspaces let the host discard failed edits without graph rollback. Serialize source selection, validation, save, and publication without suspension, or reject stale candidates explicitly. Failed authorization rebuilds must invalidate the old graph. Source: [#503].
 - **Model the capability the operation needs.** A wallet collection can supply a spendable credential and record rejection. This keeps storage schemas, purchases, and balance refresh outside the inference contract; a generic secrets API is unnecessary for that boundary. Source: [#335].
 - **Keep provisional APIs visibly experimental.** Low-level bindings may be retired as the app-facing boundary moves upward. Apple uses `Experimental`, CLI inference sits under `experimental`, and the browser package is experimental as a whole. External compatibility promises require a separate policy. Sources: [#145], [#335].
 
@@ -48,6 +49,7 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Test cancellation at transitions.** Exercise both sides of successful opening and replacement of an active attempt. A test that only cancels pending headers misses these races. Source: [#335].
 - **Prove streaming before completion.** A controlled endpoint can hold the remainder of a response until the browser observes the first event. Assert delivered text, tool calls, and failures through the real SDK and host transport; keep protocol edge cases in SDK tests. Source: [#335].
 - **Isolate process-global test state.** Tests that emit diagnostics must coordinate with tests that install a global receiver. Otherwise unrelated events can invalidate receiver assertions and poison test locks. Source: [#335].
+- **Audit parser dependencies separately from filesystem APIs.** Firm can assemble supplied sources in memory, but Tree-sitter 0.25 lacked browser-target C headers. Upstream 0.27 support and a WASM-capable Clang solve that independently of storage. Exercise the actual parser and graph through browser bindings. Source: [#503].
 - **WASM compilation is one check.** Browser-sensitive behavior needs runtime tests in Chromium, Firefox, and WebKit. Controlled endpoints establish host integration; deployed CORS, credentials, and endpoint access need separate evidence. Sources: [#330], [#332], [#335].
 - **Exercise a headless consumer.** CLI process tests expose ambient-runtime and credential assumptions and verify process cancellation. Keep low-level test commands experimental rather than building a wallet-management product around them. Sources: [#330], [#335].
 
@@ -82,5 +84,6 @@ These are open constraints, not established capabilities:
 [#404]: https://code.eigin.ai/dev/eigin/-/issues/404
 [#451]: https://code.eigin.ai/dev/eigin/-/issues/451
 [#456]: https://code.eigin.ai/dev/eigin/-/issues/456
+[#503]: https://code.eigin.ai/dev/eigin/-/issues/503
 [SDK milestone]: https://code.eigin.ai/dev/eigin/-/milestones/2
 [SDK development guide]: ../../src/eigin_sdk/README.md

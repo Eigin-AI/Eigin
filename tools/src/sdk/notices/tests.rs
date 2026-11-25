@@ -126,6 +126,49 @@ host-only = { path = "../../deps/host-only" }
 }
 
 #[test]
+fn preserves_combined_license_text_and_declared_choice() {
+    let directory = fixture();
+    let root = directory.path();
+    let manifest = root.join("deps/runtime/Cargo.toml");
+    let text = fs::read_to_string(&manifest)
+        .unwrap()
+        .replace("license = \"MIT\"", "license = \"MIT OR Apache-2.0\"");
+    fs::write(manifest, text).unwrap();
+    let combined = "MIT terms and attribution\nApache terms and attribution\n";
+    fs::write(root.join("deps/runtime/LICENSE"), combined).unwrap();
+    generate(root.to_str().unwrap(), false).unwrap();
+    let notice = fs::read_to_string(root.join(OUTPUTS[0])).unwrap();
+    assert!(notice.contains(combined));
+    assert!(notice.contains("License: MIT OR Apache-2.0"));
+    assert!(!notice.contains("Selected license: MIT"));
+}
+
+#[test]
+fn reads_firm_license_from_the_pinned_repository_root() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::create_dir(root.join("firm_core")).unwrap();
+    for (license, text) in [
+        ("MIT", "Repository MIT terms"),
+        ("AGPL-3.0", "Repository AGPL terms"),
+    ] {
+        fs::write(root.join("LICENSE"), text).unwrap();
+        let entry = super::entry(
+            root,
+            "Cargo",
+            "firm_core",
+            "0.5.0",
+            license,
+            "https://github.com/42futures/firm",
+            &root.join("firm_core"),
+        )
+        .unwrap();
+        assert_eq!(entry.license, license);
+        assert_eq!(entry.licenses[0].1, text);
+    }
+}
+
+#[test]
 fn generates_runtime_notices_for_every_host() {
     let directory = fixture();
     let root = directory.path();

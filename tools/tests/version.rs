@@ -3,6 +3,8 @@ use std::{fs, path::Path, process::Command};
 
 #[path = "support/version.rs"]
 mod support;
+#[path = "support/wasm_toolchain.rs"]
+mod wasm_toolchain;
 use support::{APP_TOML, IOS, NPM, fixture, put};
 
 #[test]
@@ -185,16 +187,25 @@ fn cli(root: &Path, args: &[&str]) -> Result<String> {
         .output()
         .unwrap();
     assert!(git_dir.status.success());
-    let output = Command::new(env!("CARGO_BIN_EXE_eigin-tools"))
-        .current_dir(root)
-        .args(args)
-        .env("GIT_DIR", String::from_utf8(git_dir.stdout).unwrap().trim())
-        .env("GIT_WORK_TREE", root)
-        .env(
-            "UBRN_WASM_BINDGEN",
-            root.join("node_modules/.bin/wasm-bindgen"),
-        )
-        .output()?;
+    let output =
+        wasm_toolchain::clear_overrides(&mut Command::new(env!("CARGO_BIN_EXE_eigin-tools")))
+            .env(
+                "CC_wasm32_unknown_unknown",
+                root.join("node_modules/.bin/clang"),
+            )
+            .env(
+                "AR_wasm32_unknown_unknown",
+                root.join("node_modules/.bin/llvm-ar"),
+            )
+            .current_dir(root)
+            .args(args)
+            .env("GIT_DIR", String::from_utf8(git_dir.stdout).unwrap().trim())
+            .env("GIT_WORK_TREE", root)
+            .env(
+                "UBRN_WASM_BINDGEN",
+                root.join("node_modules/.bin/wasm-bindgen"),
+            )
+            .output()?;
     if !output.status.success() {
         bail!("{}", String::from_utf8_lossy(&output.stderr));
     }
@@ -267,12 +278,19 @@ fn generation_synchronizes_versions_before_sdk_artifacts() {
     let root = dir.path();
     put(root, "LICENSE", "SDK license text");
     set_versions(root, "1.2.0", "0.1.0");
+    wasm_toolchain::install(&root.join("node_modules/.bin"));
     for tool in ["ubrn", "vite", "wasm-bindgen"] {
         let path = format!("node_modules/.bin/{tool}");
         put(
             root,
             &path,
-            "#!/bin/sh\nmkdir -p ../target/web-bindings\nprintf generated > ../target/web-bindings/test.ts\n",
+            r#"#!/bin/sh
+set -eu
+[ "$CC_wasm32_unknown_unknown" = "$GIT_WORK_TREE/node_modules/.bin/clang" ]
+[ "$AR_wasm32_unknown_unknown" = "$GIT_WORK_TREE/node_modules/.bin/llvm-ar" ]
+mkdir -p ../target/web-bindings
+printf generated > ../target/web-bindings/test.ts
+"#,
         );
         fs::set_permissions(root.join(path), fs::Permissions::from_mode(0o755)).unwrap();
     }

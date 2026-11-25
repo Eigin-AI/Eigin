@@ -1,10 +1,8 @@
 # Knowledge
 
-The agent has a unified knowledge base for everything it has learned: a persistent, searchable, structured store about itself, the user, and the world.
+Agents keep structured knowledge about themselves, the user, and the world. They can search it, follow relationships, update entries, and retire stale memories. Read-only bundled entries describe Eigin itself.
 
-It works like memory, not a static store. Used entries stay strong; untouched ones fade. The agent tends it — surfacing what's relevant, retiring what's stale, reconciling contradictions — so the user never has to.
-
-Knowledge is built on [Firm](https://github.com/42futures/firm), an open-source tool for structured knowledge graphs. Each entry is a `.firm` source file: a small, self-contained text document in Firm's DSL, so knowledge is both human- and machine-readable.
+The [SDK knowledge API](../sdk/knowledge.md) provides loading, queries, retrieval, and validated edits. Hosts control storage and which entries an agent can access.
 
 ## Entity types
 
@@ -25,7 +23,7 @@ All types share relationship fields (`relates_to`, `belongs_to`, `uses`, `descri
 | Tool | What it does |
 |---|---|
 | **Search** | Find relevant entries or look one up by ID (see [Ranking](#ranking)); an empty query returns an overview. |
-| **Get** | Full detail for one entry, optionally with expanded relations and chat context. |
+| **Get** | Full detail for one entry, optionally with expanded relations and context from its originating chat. |
 | **Add** | Create an entry; schema errors return the expected field structure. |
 | **Update** | Merge-update fields on an entry. |
 | **Forget** | Hide an entry that no longer holds. Kept, but out of the way. |
@@ -38,29 +36,11 @@ Forget is the everyday way to retire a memory; delete is the rare, permanent one
 
 ## Ranking
 
-Search and hints use five signals:
-
-- **Words** — matches on IDs, names, and all the query's words rank highest.
-- **Meaning** — related entries can surface even when they use different words.
-- **Recency** — recently opened entries get a small lift.
-- **Frequency** — often-opened entries get a small lift, up to a limit. Past use fades over time.
-- **Importance** — critical facts get a small lift even when rarely opened.
-
-Searching by exact ID puts that entry first, within the current space and search filters.
-Opening an entry with `get_knowledge` counts as use. Search results leave its use history unchanged.
-Use and importance only adjust the order of close matches.
+Search combines word and meaning matches. Exact IDs prioritize the matching entry; usage and importance can reorder close matches. Opening an entry counts as use; searching leaves its use history unchanged. See [SDK retrieval](../sdk/knowledge.md#find-relevant-entries) for the scoring contract.
 
 ## Hydration
 
-The agent doesn't always need to search. Each turn, the [gatekeeper](../conversation/context.md) checks whether the user's message relates to something already in the base, by name mention or semantic similarity, and surfaces a compact summary in per-turn context. 
-
-If the user mentions "Bob" and `actor.bob` exists, the agent sees it without a tool call. Matches are retained for a few turns, so "tell me more about him" still resolves without repeating the name. 
-
-This gives the agent a baseline of relevant knowledge on demand, and it can always use its tools to search for more.
-
-## Chat context
-
-Every entry links to the chat it was created in. `get_knowledge` can optionally return that surrounding chat context, letting the agent recover the conversation behind a piece of knowledge.
+Each turn, the [gatekeeper](../conversation/context.md) surfaces compact summaries relevant to the user's message. Mentioning "Bob" can surface `actor.bob` without a tool call. Matches stay in context for a few turns, and the agent can search for more.
 
 ## Forgetting
 
@@ -76,10 +56,6 @@ The agent reconciles its own memory, so the user doesn't have to.
 | **In the background** | A periodic pass spots likely duplicates, contradictions, and stale low-value entries, and tidies them with the tools above. Genuine contradictions it can't resolve are flagged for the user, and not re-asked. |
 
 Background tidying runs only for agents allowed to act on their own initiative; a purely reactive agent tidies up opportunistically instead.
-
-## Bundled knowledge
-
-The app ships with read-only knowledge about itself: what Eigin is, how it works, what it can do. This helps the agent correctly answer questions about itself instead of making stuff up.
 
 ## Scoping
 
