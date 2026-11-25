@@ -36,16 +36,18 @@ pub fn run_check(args: Args) -> Result<()> {
 
 fn web(root: &str, sdk: &str) -> Result<()> {
     crate::sdk::ensure_web_dependencies(root)?;
-    run(Command::new(format!("{root}/node_modules/.bin/ubrn"))
-        .env("UBRN_WASM_BINDGEN", crate::sdk::ensure_wasm_bindgen(root)?)
-        .args([
-            "build",
-            "wasm2",
-            "--config",
-            "ubrn.fixtures.config.yaml",
-            "--release",
-        ])
-        .current_dir(format!("{sdk}/web")))
+    crate::sdk::run_wasm(
+        Command::new(format!("{root}/node_modules/.bin/ubrn"))
+            .env("UBRN_WASM_BINDGEN", crate::sdk::ensure_wasm_bindgen(root)?)
+            .args([
+                "build",
+                "wasm2",
+                "--config",
+                "ubrn.fixtures.config.yaml",
+                "--release",
+            ])
+            .current_dir(format!("{sdk}/web")),
+    )
 }
 
 fn swift(sdk: &str) -> Result<()> {

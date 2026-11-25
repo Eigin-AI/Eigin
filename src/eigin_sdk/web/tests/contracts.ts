@@ -1,4 +1,5 @@
 import { diagnostics } from "./diagnostics";
+import { knowledgeWorkspaceContract } from "./knowledge";
 import {
   BindingTestError,
   InferenceEvent,
@@ -24,6 +25,7 @@ async function rejection(operation: Promise<unknown>): Promise<unknown> {
 }
 
 export const contracts = {
+  knowledgeWorkspaceContract,
   async performanceEventsPreserveOptionalMeasurements() {
     const events = performanceEventsFixture();
     assert(events.length === 3, "Expected three operational events");

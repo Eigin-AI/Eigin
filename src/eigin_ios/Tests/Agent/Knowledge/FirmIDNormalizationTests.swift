@@ -44,19 +44,30 @@ struct FirmIDNormalizationTests {
             "IOStream", "eigin_trust_stack_narrative_draft_v1",
         ]
 
-        let session = FirmSession()
-        try session.loadSource(content: BundledKnowledge.schemas, path: "bundled/schemas.firm")
+        var sources: [KnowledgeSDKConversion.SDK.Source] = [
+            .init(
+                id: "schemas",
+                path: "bundled/schemas.firm",
+                content: BundledKnowledge.schemas,
+                readOnly: true
+            ),
+        ]
         for (index, rawID) in rawIDs.enumerated() {
             let dsl = """
             note raw_\(index)_\(rawID) {
                 content = "x"
             }
             """
-            try session.loadSource(content: dsl, path: "test/id_\(index).firm")
+            sources.append(.init(
+                id: "id_\(index)",
+                path: "test/id_\(index).firm",
+                content: dsl,
+                readOnly: false
+            ))
         }
-        try session.build()
+        let session = try KnowledgeSDKConversion.SDK.Workspace(sources: sources)
 
-        let listed = try session.listEntities(entityType: "note")
+        let listed = session.listEntities(entityType: "note")
         let expected = Set(
             rawIDs.enumerated().map { index, rawID in
                 "note.raw_\(index)_\(FirmIDNormalization.normalize(rawID))"

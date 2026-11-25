@@ -42,6 +42,8 @@ enum Command {
         #[arg(long)]
         check: bool,
     },
+    /// Build native and browser SDK runtimes.
+    BuildSdk,
     /// Check test-only SDK bindings for web or Apple.
     CheckSdkBindings(sdk_fixtures::Args),
     /// Manage and upload self-hosted model assets.
@@ -82,6 +84,7 @@ fn main() -> Result<()> {
         Command::SdkNotices { check } => sdk::notices::generate(&config::repo_root()?, check),
         Command::Version(args) => version::run(args),
         Command::Generate(args) => generate::run(args),
+        Command::BuildSdk => sdk::build(&config::repo_root()?),
         Command::CheckSdkBindings(args) => sdk_fixtures::run_check(args),
         Command::Assets(args) => assets::run(args),
         Command::Format(args) => format::run(args),

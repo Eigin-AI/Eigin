@@ -5,6 +5,8 @@ use tempfile::TempDir;
 
 #[path = "support/version.rs"]
 mod version_support;
+#[path = "support/wasm_toolchain.rs"]
+mod wasm_toolchain;
 
 fn executable(path: &std::path::Path, script: &str) {
     fs::write(path, script).unwrap();
@@ -16,7 +18,7 @@ fn browser_fixture_check_does_not_invoke_native_compilers() {
     let directory = TempDir::new().unwrap();
     let root = directory.path();
     let bin = root.join("bin");
-    fs::create_dir_all(&bin).unwrap();
+    wasm_toolchain::install(&bin);
     fs::create_dir_all(root.join("node_modules/.bin")).unwrap();
     fs::create_dir_all(root.join("src/eigin_sdk/web")).unwrap();
     executable(&bin.join("git"), "#!/bin/sh\nprintf '%s' \"$TEST_ROOT\"\n");
@@ -32,16 +34,17 @@ fn browser_fixture_check_does_not_invoke_native_compilers() {
     }
     fs::write(root.join("node_modules/.bin/vite"), "installed").unwrap();
     let log = root.join("commands.log");
-    let output = Command::new(env!("CARGO_BIN_EXE_eigin-tools"))
-        .args(["check-sdk-bindings", "web"])
-        .current_dir(root)
-        .env("PATH", &bin)
-        .env("TEST_ROOT", root)
-        .env("TEST_LOG", &log)
-        .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
-        .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
-        .output()
-        .unwrap();
+    let output =
+        wasm_toolchain::clear_overrides(&mut Command::new(env!("CARGO_BIN_EXE_eigin-tools")))
+            .args(["check-sdk-bindings", "web"])
+            .current_dir(root)
+            .env("PATH", &bin)
+            .env("TEST_ROOT", root)
+            .env("TEST_LOG", &log)
+            .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
+            .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
+            .output()
+            .unwrap();
     assert!(
         output.status.success(),
         "{}",
@@ -59,7 +62,7 @@ fn sdk_web_generation_restores_missing_npm_tooling() {
     fs::write(directory.path().join("LICENSE"), "SDK license text").unwrap();
     let root = directory.path();
     let bin = root.join("bin");
-    fs::create_dir_all(&bin).unwrap();
+    wasm_toolchain::install(&bin);
     fs::create_dir_all(root.join("src/eigin_sdk/web")).unwrap();
     executable(&bin.join("git"), "#!/bin/sh\nprintf '%s' \"$TEST_ROOT\"\n");
     executable(
@@ -73,6 +76,8 @@ cat > "$TEST_ROOT/node_modules/.bin/ubrn" <<'GENERATOR'
 #!/bin/sh
 set -eu
 [ -z "${RUSTUP_TOOLCHAIN:-}" ] || exit 42
+[ "$CC_wasm32_unknown_unknown" = clang ]
+[ "$AR_wasm32_unknown_unknown" = llvm-ar ]
 mkdir -p "$TEST_ROOT/src/eigin_sdk/target/web-bindings"
 printf 'generated binding' > "$TEST_ROOT/src/eigin_sdk/target/web-bindings/api.ts"
 GENERATOR
@@ -82,19 +87,20 @@ touch "$TEST_ROOT/node_modules/.bin/vite"
     );
     let log = root.join("commands.log");
     for _ in 0..2 {
-        let output = Command::new(env!("CARGO_BIN_EXE_eigin-tools"))
-            .args(["generate", "sdk", "web"])
-            .current_dir(root)
-            .env(
-                "PATH",
-                format!("{}:{}", bin.display(), std::env::var("PATH").unwrap()),
-            )
-            .env("TEST_ROOT", root)
-            .env("TEST_LOG", &log)
-            .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
-            .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
-            .output()
-            .unwrap();
+        let output =
+            wasm_toolchain::clear_overrides(&mut Command::new(env!("CARGO_BIN_EXE_eigin-tools")))
+                .args(["generate", "sdk", "web"])
+                .current_dir(root)
+                .env(
+                    "PATH",
+                    format!("{}:{}", bin.display(), std::env::var("PATH").unwrap()),
+                )
+                .env("TEST_ROOT", root)
+                .env("TEST_LOG", &log)
+                .env("RUSTUP_TOOLCHAIN", "unrelated-toolchain")
+                .env("UBRN_WASM_BINDGEN", bin.join("wasm-bindgen"))
+                .output()
+                .unwrap();
         assert!(
             output.status.success(),
             "{}",

@@ -8,12 +8,11 @@ enum KnowledgeValidation {
         entityType: String,
         schema: FirmSchema? = nil
     ) -> String {
-        let rawMessage = (error as? FirmError)
+        let rawMessage = (error as? KnowledgeSDKConversion.SDK.Failure)
             .map { firmError in
                 switch firmError {
-                case .BuildError(let msg): msg
-                case .ParseError(let msg): msg
-                case .Other(let msg): msg
+                case .Build(let msg), .Query(let msg), .InvalidEntity(let msg): msg
+                case .Parse(_, let msg): msg
                 default: firmError.localizedDescription
                 }
             }

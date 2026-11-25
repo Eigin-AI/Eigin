@@ -213,14 +213,13 @@ func linkSuggestions(
         return suggestions
     }
 
-    let filtered = scored
-        .filter {
-            $0.relevance > linkSuggestionMinScore && $0.qualifiedID != entity.id && !seen
-                .contains($0.qualifiedID)
-        }
-        .sorted(by: KnowledgeSearchEngine.ranksBefore)
+    let filtered = KnowledgeSearchEngine.rank(
+        scored.filter {
+            $0.qualifiedID != entity.id && !seen.contains($0.qualifiedID)
+        }, threshold: linkSuggestionMinScore.nextUp, limit: remaining
+    )
 
-    for item in filtered.prefix(remaining) {
+    for item in filtered {
         suggestions.append([
             "id": item.entity.id,
             "summary": knowledgeSummary(for: item.entity),

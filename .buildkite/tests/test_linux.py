@@ -106,10 +106,14 @@ class SelectionTests(unittest.TestCase):
 class CheckTests(unittest.TestCase):
     def test_sdk_contract_and_fail_fast(self):
         commands = checks.commands("sdk")
-        self.assertIn("wasm32-unknown-unknown", commands[3])
-        self.assertIn("binding-tests", commands[4])
-        self.assertIn("clippy", commands[5])
-        self.assertEqual(commands[6][-1], "--check")
+        self.assertEqual(commands[1], ["apt-get", "install", "-y", "--no-install-recommends", "clang", "llvm"])
+        wasm = next(command for command in commands if "--target" in command)
+        self.assertIn("wasm32-unknown-unknown", wasm)
+        self.assertIn("CC_wasm32_unknown_unknown=clang", wasm)
+        self.assertIn("AR_wasm32_unknown_unknown=llvm-ar", wasm)
+        self.assertTrue(any("binding-tests" in command for command in commands))
+        self.assertTrue(any("clippy" in command for command in commands))
+        self.assertEqual(commands[-1][-1], "--check")
         with patch.object(checks, "run", side_effect=subprocess.CalledProcessError(3, "cargo")) as run, \
                 contextlib.redirect_stdout(io.StringIO()):
             with self.assertRaises(subprocess.CalledProcessError):

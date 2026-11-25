@@ -289,15 +289,46 @@ fn entry(
     if (ecosystem, name, version) == ("Cargo", "gloo-timers", "0.4.0") && files.is_empty() {
         files.push(root.join("LICENSES/gloo/LICENSE-MIT"));
     }
+    // Firm's Git crates share the repository-root license file.
+    if ecosystem == "Cargo"
+        && matches!(name, "firm_core" | "firm_lang")
+        && version == "0.5.0"
+        && matches!(license, "MIT" | "AGPL-3.0")
+        && !files
+            .iter()
+            .any(|path| is_license(&path.file_name().unwrap().to_string_lossy()))
+    {
+        files.push(
+            directory
+                .parent()
+                .context("Firm repository root missing")?
+                .join("LICENSE"),
+        );
+    }
     files.sort();
-    if matches!(license, "MIT OR Apache-2.0" | "Apache-2.0 OR MIT") {
-        ensure!(
-            files.iter().any(|path| path
-                .file_name()
+    // Combined license files retain their full declared expression and text.
+    let select_mit = matches!(license, "MIT OR Apache-2.0" | "Apache-2.0 OR MIT")
+        && files.iter().any(|path| {
+            path.file_name()
                 .unwrap()
-                .eq_ignore_ascii_case("LICENSE-MIT")),
+                .eq_ignore_ascii_case("LICENSE-MIT")
+        });
+    if matches!(license, "MIT OR Apache-2.0" | "Apache-2.0 OR MIT") && !select_mit {
+        ensure!(
+            files.iter().any(|path| {
+                matches!(
+                    path.file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_ascii_uppercase()
+                        .as_str(),
+                    "LICENSE" | "LICENSE.TXT" | "LICENSE.MD"
+                )
+            }),
             "Missing MIT license text for {name} {version}"
         );
+    }
+    if select_mit {
         files.retain(|path| {
             let name = path
                 .file_name()
@@ -344,12 +375,7 @@ fn entry(
         version: version.into(),
         repository: repository.into(),
         ecosystem: ecosystem.into(),
-        license: if matches!(license, "MIT OR Apache-2.0" | "Apache-2.0 OR MIT") {
-            "MIT"
-        } else {
-            license
-        }
-        .into(),
+        license: if select_mit { "MIT" } else { license }.into(),
         attribution: text[notice_start..].to_owned(),
         notice: text,
         licenses,

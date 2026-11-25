@@ -6,6 +6,12 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => window.contracts !== undefined);
 });
 
+test("knowledge workspaces preserve graph and source contracts", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.contracts.knowledgeWorkspaceContract());
+});
+
 test("initialization error preserves reason", async ({ page }) => {
   await page.evaluate(() =>
     window.contracts.initializationErrorPreservesReason(),

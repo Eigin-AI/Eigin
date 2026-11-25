@@ -1,3 +1,4 @@
+export * from "./knowledge";
 export * from "./inference";
 export * from "./eigin-relay";
 
