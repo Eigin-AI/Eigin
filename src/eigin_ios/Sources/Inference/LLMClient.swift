@@ -1,3 +1,4 @@
+import EiginSDK
 import Factory
 import Foundation
 
@@ -6,6 +7,11 @@ import Foundation
 /// ``OpenAICompatibleClient`` and ``AnthropicClient`` both conform to this protocol.
 /// Use ``LLMClientFactory`` to create the right client for a given base URL.
 protocol LLMClient: Sendable {
+    func inferenceSession(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, inlineToolRunner: InlineToolRunner?, reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession
+
     func fetchModels() async throws -> [String]
     func validateAPIKey(model: String) async throws
     func chatCompletionStream(messages: [ChatMessage], model: String) async throws

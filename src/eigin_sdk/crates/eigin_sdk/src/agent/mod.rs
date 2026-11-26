@@ -1,5 +1,6 @@
 //! Transient agent rounds, turn progression, and checkpoints; hosts execute operations.
-mod arguments;
+pub(crate) mod arguments;
+pub mod chat_turn;
 mod checkpoint;
 mod output;
 mod round;

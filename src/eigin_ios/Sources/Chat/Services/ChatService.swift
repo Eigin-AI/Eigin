@@ -1,7 +1,14 @@
+import EiginSDK
 import Foundation
 
 /// Abstraction over chat completion streaming, allowing real and fake implementations.
 protocol ChatService: Sendable {
+    func inferenceSession(
+        baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
+        tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession
+
     func chatCompletionStream(
         baseURL: String,
         providerID: UUID,
@@ -39,6 +46,25 @@ protocol ChatService: Sendable {
 }
 
 extension ChatService {
+    func inferenceSession(
+        baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
+        tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession {
+        let stream = try await chatCompletionEventStream(
+            baseURL: baseURL,
+            providerID: providerID,
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            inlineToolRunner: inlineToolRunner,
+            reasoningEffort: reasoningEffort
+        )
+        let cursor = RequestEventCursor(stream)
+        return .init(next: { try await cursor.next() }, cancel: { cursor.cancel() })
+    }
+
     func chatCompletionEventStream(
         baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
         tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
@@ -157,6 +183,23 @@ struct DefaultChatService: ChatService {
         inlineToolRunner: InlineToolRunner?,
         reasoningEffort: ReasoningEffort?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        try await InferenceSDKStream.events(inferenceSession(
+            baseURL: baseURL,
+            providerID: providerID,
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            inlineToolRunner: inlineToolRunner,
+            reasoningEffort: reasoningEffort
+        ))
+    }
+
+    func inferenceSession(
+        baseURL: String, providerID: UUID, messages: [ChatMessage], model: String,
+        tools: [ToolDefinition]?, cacheKey: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession {
         guard !consentStore.needsConsent(baseURL: baseURL) else {
             throw AIConsentError.notAllowed
         }
@@ -177,25 +220,13 @@ struct DefaultChatService: ChatService {
             apiToken: apiKey,
             providerID: providerID
         )
-        // Local client: forward the runner so the runtime can execute tools inline.
-        if let localClient = client as? LocalClient {
-            return try await withRetry {
-                try await localClient.chatCompletionEventStream(
-                    messages: messages,
-                    model: model,
-                    tools: tools,
-                    cacheKey: cacheKey,
-                    inlineToolRunner: inlineToolRunner
-                )
-            }
-        }
-        // Cloud clients: runner is irrelevant.
         return try await withRetry {
-            try await client.chatCompletionEventStream(
+            try await client.inferenceSession(
                 messages: messages,
                 model: model,
                 tools: tools,
                 cacheKey: cacheKey,
+                inlineToolRunner: inlineToolRunner,
                 reasoningEffort: reasoningEffort
             )
         }
@@ -233,8 +264,8 @@ private func isRetryable(_ error: Error) -> Bool {
 /// Once a stream is returned, any errors during SSE parsing are not retried.
 func withRetry<T: Sendable>(
     maxAttempts: Int = 3,
-    makeStream: @escaping @Sendable () async throws -> AsyncThrowingStream<T, Error>
-) async throws -> AsyncThrowingStream<T, Error> {
+    makeStream: @escaping @Sendable () async throws -> T
+) async throws -> T {
     for attempt in 1 ... maxAttempts {
         do {
             return try await makeStream()
