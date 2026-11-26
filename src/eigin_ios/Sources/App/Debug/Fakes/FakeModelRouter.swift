@@ -1,8 +1,15 @@
 #if DEBUG || EIGIN_DEV
+import EiginSDK
 import Foundation
 
 /// A ``ModelRouter`` with scripted answers that records what it was told.
 actor FakeModelRouter: ModelRouter {
+    let requestPolicy = EiginSDK.Experimental.Routing.Router.withCatalog()
+
+    func inferenceContext() -> InferenceRoutingContext {
+        InferenceRoutingContext(policy: requestPolicy, now: { Date() }, health: { _ in [] })
+    }
+
     var routeToReturn: ResolvedRoute?
     var retryModels: [String] = []
     private let hedgeModel: String?

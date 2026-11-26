@@ -66,6 +66,35 @@ struct LocalClient: LLMClient {
         cacheKey _: String? = nil,
         inlineToolRunner: InlineToolRunner?
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        let stream = try await start(
+            messages: messages,
+            model: model,
+            tools: tools,
+            inlineToolRunner: inlineToolRunner
+        )
+        return InferenceSDKStream.events(stream, mapError: LocalInferenceSDKConversion.failure)
+    }
+
+    func inferenceSession(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey _: String?, inlineToolRunner: InlineToolRunner?,
+        reasoningEffort _: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession {
+        let stream = try await start(
+            messages: messages,
+            model: model,
+            tools: tools,
+            inlineToolRunner: inlineToolRunner
+        )
+        return InferenceSDKStream.session(stream, mapError: LocalInferenceSDKConversion.failure)
+    }
+
+    private func start(
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        inlineToolRunner: InlineToolRunner?
+    ) async throws -> EiginSDK.Experimental.Inference.Stream {
         guard model == "gemma-4-e2b" else { throw LocalClientError.unsupportedModel }
         let execute: EiginSDK.Experimental.Inference.Local.ExecuteTool? = inlineToolRunner
             .map { runner in
@@ -84,8 +113,7 @@ struct LocalClient: LLMClient {
                 model: model,
                 tools: tools
             )
-            let stream = try await inference.stream(input, executeTool: execute)
-            return InferenceSDKStream.events(stream, mapError: LocalInferenceSDKConversion.failure)
+            return try await inference.stream(input, executeTool: execute)
         } catch { throw LocalInferenceSDKConversion.failure(error) }
     }
 }

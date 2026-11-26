@@ -75,59 +75,6 @@ struct InferenceAttemptCoordinatorTests {
         }
     }
 
-    @Test func hedgeWinDuringEffortLookupPreventsReplacementProviderCall() async throws {
-        let lookup = AsyncStream<Void>.makeStream()
-        let resume = OSAllocatedUnfairLock(initialState: CheckedContinuation<Void, Never>?.none)
-        let router = FakeModelRouter(retryModels: ["replacement"], hedgeModel: "hedge") { model in
-            if model == "hedge" {
-                for await _ in lookup.stream {
-                    break
-                }
-            } else if model == "replacement" {
-                await withCheckedContinuation { continuation in
-                    resume.withLock { $0 = continuation }
-                    lookup.continuation.yield(())
-                }
-            }
-            return .low
-        }
-        let dispatched = OSAllocatedUnfairLock(initialState: [String]())
-        weak var weakProvider: ObservedChatService?
-        do {
-            let provider = ObservedChatService { _, _, _ in }
-            provider.observeEffort = { model, _ in dispatched.withLock { $0.append(model) } }
-            provider.scripted.throwOnEventStream(OpenAICompatibleClientError.httpError(
-                503,
-                body: nil
-            ))
-            provider.scripted.enqueueEventStream([.contentDelta("answer"), .finished(.stop)])
-            let id = UUID()
-            let attempt = try await InferenceAttemptCoordinator(modelRouter: router).open(
-                chatService: provider, host: "https://test.invalid", hostID: id, model: "primary",
-                messages: [], tools: nil, cacheKey: nil,
-                routing: { RouteRequest(
-                    currentProviderID: id,
-                    currentModel: "primary",
-                    isAuto: true,
-                    requirements: $0,
-                    providers: []
-                ) }
-            )
-            for try await _ in attempt.stream {}
-            #expect(attempt.winningModel == "hedge")
-            weakProvider = provider
-        }
-        // The suspended dispatch retains the provider until it has applied the live grant.
-        #expect(weakProvider != nil)
-        resume.withLock { $0?.resume(); $0 = nil }
-        let limit = ContinuousClock.now + .seconds(2)
-        while weakProvider != nil, ContinuousClock.now < limit {
-            await Task.yield()
-        }
-        #expect(weakProvider == nil)
-        #expect(dispatched.withLock { $0 } == ["primary", "hedge"])
-    }
-
     @Test func localDispatchForwardsTheInlineRunnerWithoutRouting() async throws {
         let service = FakeChatService()
         let call = ToolCall(
@@ -181,7 +128,10 @@ struct InferenceAttemptCoordinatorTests {
 
     @Test(arguments: [false, true])
     func preOutputFailuresRespectRoutingAndSwitchBudget(routed: Bool) async throws {
-        let router = FakeModelRouter(retryModels: ["b", "c", "d"])
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         let service = FakeChatService()
         let failure = OpenAICompatibleClientError.httpError(
             404,
@@ -196,7 +146,7 @@ struct InferenceAttemptCoordinatorTests {
             id: id,
             name: "Test",
             baseURL: host,
-            availableModels: ["b", "c", "d"]
+            availableModels: ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"]
         )
         var refreshes: [UUID] = []
         let attempt = try await InferenceAttemptCoordinator(modelRouter: router).open(
@@ -214,28 +164,34 @@ struct InferenceAttemptCoordinatorTests {
         await #expect(throws: OpenAICompatibleClientError.self) {
             for try await _ in attempt.stream {}
         }
-        await attempt.report(sentAt: nil, result: .failed(.modelNotFound))
-        #expect(await router.outcomes().map(\.model) == (routed ? ["a", "b", "c"] : ["a"]))
-        let requests = await router.retryRequests
-        #expect(requests.map(\.currentModel) == (routed ? ["a", "b"] : []))
-        #expect(requests.allSatisfy { $0.currentProvider == updated })
+        let report = await attempt.report(sentAt: nil, result: .failed(.modelNotFound))
+        #expect(report == nil)
+        #expect(service.lastModel == (routed ? "gpt-4.1-mini" : "a"))
         #expect(refreshes == (routed ? [id] : []))
     }
 
-    @Test func hedgeReportsTheSilentLoserAndDeliversTheRunnerUp() async throws {
-        let router = FakeModelRouter(hedgeModel: "fallback")
+    @Test func hedgeWinnerPreservesSelectionWithoutRetry() async throws {
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         let service = FakeChatService(), id = UUID()
-        service.delayBeforeStream(.seconds(60), for: "primary")
+        service.delayBeforeStream(.seconds(60), for: "gpt-4.1")
         service.enqueueEventStream([.contentDelta("fallback answer"), .finished(.stop)])
         let attempt = try await InferenceAttemptCoordinator(modelRouter: router).open(
-            chatService: service, host: "https://fake.local", hostID: id, model: "primary",
+            chatService: service, host: "https://fake.local", hostID: id, model: "gpt-4.1",
             messages: [], tools: nil, cacheKey: nil,
             routing: { RouteRequest(
                 currentProviderID: id,
-                currentModel: "primary",
+                currentModel: "gpt-4.1",
                 isAuto: true,
                 requirements: $0,
-                providers: []
+                providers: [RoutingProvider(
+                    id: id,
+                    name: "Test",
+                    baseURL: "https://fake.local",
+                    availableModels: ["gpt-4.1", "gpt-4.1-mini"]
+                )]
             ) }
         )
         var events: [ChatStreamEvent] = []
@@ -243,14 +199,8 @@ struct InferenceAttemptCoordinatorTests {
             events.append(event)
         }
         #expect(events == [.contentDelta("fallback answer"), .finished(.stop)])
-        #expect(attempt.winningModel == "fallback")
-        #expect(!attempt.retryWon)
-        let deadline = ContinuousClock.now + .seconds(2)
-        while await router.hedgeLosses.isEmpty,
-              ContinuousClock.now < deadline
-        {
-            await Task.yield()
-        }
-        #expect(await router.hedgeLosses == ["primary"])
+        #expect(try attempt.winningModel == "gpt-4.1-mini")
+        #expect(try !attempt.retryWon)
+        #expect(service.lastModel == "gpt-4.1-mini")
     }
 }

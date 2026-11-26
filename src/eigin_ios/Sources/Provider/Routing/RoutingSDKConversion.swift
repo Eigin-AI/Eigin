@@ -17,15 +17,17 @@ enum RoutingSDKConversion {
                 needsVision: value.requirements.needsVision,
                 promptTokens: value.requirements.promptTokens.map(Int64.init)
             ),
-            inventory: value.currentProvider.map { provider in
-                SDK.Inventory(
-                    providerId: provider.id.uuidString,
-                    baseUrl: provider.baseURL,
-                    available: provider.availableModels,
-                    enabled: provider.enabledModels,
-                    models: []
-                )
-            }
+            inventory: value.currentProvider.map(inventory)
+        )
+    }
+
+    static func inventory(_ provider: RoutingProvider) -> SDK.Inventory {
+        SDK.Inventory(
+            providerId: provider.id.uuidString,
+            baseUrl: provider.baseURL,
+            available: provider.availableModels,
+            enabled: provider.enabledModels,
+            models: []
         )
     }
 
@@ -67,16 +69,19 @@ enum RoutingSDKConversion {
         }
     }
 
-    static func outcome(_ value: AttemptOutcome) -> SDK.Outcome {
-        let result: SDK.Result = switch value.result {
+    static func result(_ value: AttemptOutcome.Result) -> SDK.Result {
+        switch value {
         case .succeeded: .succeeded
         case .cancelled: .cancelled
         case .failed(let reason): .failed(failure: failure(reason))
         }
-        return SDK.Outcome(
+    }
+
+    static func outcome(_ value: AttemptOutcome) -> SDK.Outcome {
+        SDK.Outcome(
             providerId: value.providerID.uuidString, model: value.model,
             firstTokenSeconds: value.timeToFirstToken.map(seconds),
-            tokensPerSecond: value.tokensPerSecond, result: result
+            tokensPerSecond: value.tokensPerSecond, result: result(value.result)
         )
     }
 

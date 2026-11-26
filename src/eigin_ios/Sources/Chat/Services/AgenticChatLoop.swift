@@ -52,10 +52,7 @@ enum ChatPhase: Equatable {
     case done
 }
 
-/// Orchestrates the recursive tool-calling loop for a single chat turn.
-///
-/// Streams assistant content, detects tool calls, executes them, sends results back,
-/// and repeats until the model finishes with a stop reason.
+/// Supplies app capabilities and presentation for an SDK-owned chat turn.
 @Observable
 @MainActor
 final class AgenticChatLoop {
@@ -129,24 +126,16 @@ final class AgenticChatLoop {
     /// and executor for subsequent rounds.
     var onToolsChanged: (() async -> (tools: [ToolDefinition], executor: ToolExecutor))?
 
-    private var activeTurn: EiginSDK.Experimental.Agent.Turn?
-    var roundsExecuted: Int {
-        Int(activeTurn?.roundsExecuted() ?? 0)
-    }
-
+    private var activeOperation: EiginSDK.Experimental.Agent.ChatTurn?
+    private var operationID = UUID()
+    private var messageMapping = TurnMessageMapping()
+    private var producedMessages: [ChatMessage] = []
+    private(set) var roundsExecuted = 0
+    private(set) var contentBuffer = ""
+    private(set) var committedMessages: [ChatMessage] = []
     var chatPhase: ChatPhase = .idle
-    private var activeRound: EiginSDK.Experimental.Agent.Round?
-    var contentBuffer: String {
-        activeRound?.partialContent() ?? ""
-    }
 
-    private var turnOutput = TurnOutputSDKConversion()
-
-    /// Retained output available to display while the turn is running.
-    var committedMessages: [ChatMessage] {
-        turnOutput.committedMessages
-    }
-
+    private var hasToolCalls = false
     private var shouldStop = false
     private var pagingSession: ContextPagingSession?
     private var pagingHistory: Set<String> = []
@@ -182,7 +171,7 @@ final class AgenticChatLoop {
 
     // MARK: - API
 
-    /// Runs a complete chat turn, handling tool calls recursively.
+    /// Runs an SDK turn with app context and presentation.
     /// Returns all messages produced during the turn (assistant + tool results + final assistant).
     func run(
         messages: [ChatMessage],
@@ -200,11 +189,8 @@ final class AgenticChatLoop {
     ) async throws -> [ChatMessage] {
         reset()
         activeModel = model ?? agent.model
-        shouldStop = false
-        currentMessageID = "msg-\(UUID().uuidString)"
-        try turnOutput.beginDraft(localID: currentMessageID)
         throttler.start()
-
+        let token = operationID
         let paging: ContextPagingSession
         if conversationID == nil {
             let historyIDs = Set(messages.filter { $0.role == "user" }.map(\.localID))
@@ -220,337 +206,126 @@ final class AgenticChatLoop {
         } else {
             paging = try ContextPagingSession(agent: agent, chatID: conversationID)
         }
-        var allMessages = messages
-        let progression = EiginSDK.Experimental.Agent.Turn()
-        activeTurn = progression
-        var nextInstruction = continuationInstruction
-        var currentTools = tools
-        var currentExecutor: ToolExecutor = toolExecutor
-
-        rounds: while true {
-            switch try progression.beginRound() {
-            case .requestInference: break
-            case .finish(.roundLimit): break rounds
-            default: throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
-            }
-            if shouldStop { return [] }
-            AppLogger.debug(
-                "Round \(public: roundsExecuted - 1): sending \(public: allMessages.count) messages",
-                category: .chat
-            )
-
-            var requestMessages = allMessages
-            if let instruction = nextInstruction,
-               let hint = SystemHintBuilder.build(sections: [instruction])
-            {
-                requestMessages = MessagePreparationSDKConversion.appendHint(
-                    hint,
-                    to: requestMessages
-                )
-            }
-            requestMessages = try paging.prepare(
-                requestMessages, tools: currentTools, model: activeModel,
-                origin: ReasoningOrigin.destination(
-                    providerID: provider.id,
-                    baseURL: provider.baseURL,
-                    model: activeModel
-                )
-            )
-            let sdkRound = EiginSDK.Experimental.Agent.Round()
-            activeRound = sdkRound
-            let inlineRunner = InlineToolRunner { [weak self] call in
-                guard let self else {
-                    return ToolResult(toolCallID: call.id, content: "{}", isError: true)
-                }
-                let result = await executeToolCall(call, agent: agent, executor: currentExecutor)
-                do {
-                    let values = try sdkRound.recordInlineExchange(
-                        call: RoundSDKConversion.call(call),
-                        result: RoundSDKConversion.result(result)
-                    )
-                    let messages = try turnOutput.recordInlineExchange(values)
-                    allMessages.append(contentsOf: messages)
-                } catch {
-                    AppLogger.error("Inline result arrived after round completion", category: .chat)
-                }
-                return result
-            }
-            let turn = try await openStream(
-                chatService: chatService,
-                provider: provider,
+        let context = await modelRouter.inferenceContext()
+        guard operationID == token else { return [] }
+        let host = ChatTurnHost(
+            request: .init(
+                messages: messages,
+                tools: tools,
                 agent: agent,
-                messages: requestMessages,
-                tools: currentTools,
+                provider: provider,
+                model: activeModel,
                 cacheKey: cacheKey,
-                inlineToolRunner: inlineRunner,
+                sentAt: sentAt,
                 routing: routing,
-                conversationID: conversationID
+                conversationID: conversationID,
+                initialInstruction: continuationInstruction,
+                propagatesStreamCancellation: propagatesStreamCancellation
+            ),
+            environment: .init(
+                paging: paging,
+                routing: context,
+                chatService: chatService,
+                executor: toolExecutor,
+                refreshCatalog: catalogRefresh(agent: agent)
             )
+        )
+        let operation = host.makeTurn(presentation: self, token: token)
+        messageMapping = host.mapping
+        activeOperation = operation
+        do {
+            let entries = try await operation.run()
+            guard operationID == token else { return [] }
+            roundsExecuted = Int(operation.roundsExecuted)
+            guard !shouldStop else { return [] }
+            producedMessages = host.messages(entries)
+            return producedMessages
+        } catch {
+            guard operationID == token, !shouldStop else { return [] }
+            roundsExecuted = Int(operation.roundsExecuted)
+            throw ChatTurnErrorConversion.restore(error, errors: host.errors)
+        }
+    }
 
-            nextInstruction = nil
+    func isCurrentOperation(_ token: UUID) -> Bool {
+        operationID == token
+    }
 
-            let stream = turn.stream
+    var acceptsTurnWork: Bool {
+        !shouldStop
+    }
 
-            // The first delivered event commits the model that carries this round.
-            var turnModelAdopted = false
+    func preparingRequest() {
+        roundsExecuted = Int(activeOperation?.roundsExecuted ?? 0)
+    }
 
+    func receive(_ event: EiginSDK.Experimental.Agent.ChatEvent, host: ChatTurnHost) async {
+        roundsExecuted = Int(activeOperation?.roundsExecuted ?? 0)
+        switch event {
+        case .draft(let id):
+            throttler.resetKeepingPhase(.waiting)
+            contentBuffer = ""
+            hasToolCalls = false
+            currentMessageID = "msg-\(UUID().uuidString)"
+            messageMapping.draft(id, localID: currentMessageID)
+            if roundsExecuted > 0 { chatPhase = .streamingProse }
+        case .requestOpened:
             chatPhase = .streamingProse
-
-            do {
-                // `shouldStop` exits inside this loop return without a drain:
-                // `handleStop()` commits `buildCheckpoint()` — including partial
-                // prose — and replaces the streaming row in the same UI update.
-                for try await event in stream {
-                    if shouldStop { return [] }
-
-                    if !turnModelAdopted {
-                        turnModelAdopted = true
-                        let winner = turn.winningModel
-                        if winner != activeModel {
-                            AppLogger.info(
-                                "Race winner \(public: winner) carries the turn",
-                                category: .chat
-                            )
-                            activeModel = winner
-                            if turn.retryWon,
-                               agent.providerID == provider.id { agent.model = winner }
-                        }
-                    }
-
-                    try sdkRound.acceptEvent(event: RoundSDKConversion.event(event))
-                    try turnOutput.updateDraft(contentBuffer)
-                    turn.observe(event)
-                    switch event {
-                    case .contentDelta(let delta):
-                        chatPhase = .streamingProse
-                        throttler.feed(delta)
-                        onContentDelta?(delta)
-
-                    case .toolCall(let call):
-                        AppLogger.debug(
-                            "Tool call received: \(public: call.function.name)(id: \(public: call.id))",
-                            category: .chat
-                        )
-                        chatPhase = .streamingTools
-
-                    case .reasoningHistory, .performance:
-                        break
-
-                    case .providerMetadata(let meta):
-                        AppLogger.debug(
-                            "Captured provider metadata: \(public: meta.keys.joined(separator: ", "))",
-                            category: .chat
-                        )
-
-                    case .finished(let reason):
-                        AppLogger.debug(
-                            "Finished with reason: \(public: String(describing: reason))",
-                            category: .chat
-                        )
-                        if reason == .toolCalls, sdkRound.hasToolCalls() {
-                            chatPhase = .readyToExecute
-                        } else {
-                            chatPhase = .streamingProse
-                        }
-                    }
-                }
-                if !sdkRound.hasFinished() { throw StreamCompletionError.interrupted }
-            } catch is CancellationError {
-                // Either handleStop already committed partial prose via its
-                // checkpoint, or the whole turn is being torn down — nothing
-                // to preserve here.
-                await turn.report(sentAt: sentAt, result: .cancelled)
-                if propagatesStreamCancellation { throw CancellationError() }
-                return []
-            } catch {
-                await turn.report(sentAt: sentAt, result: .failed(RoutingFailure(from: error)))
-                let failure = TurnSDKConversion.failure(error)
-                var signals = failureSignals()
-                // Stream-reported silence samples lifecycle again after the interruption check.
-                if failure == .missingReply { signals = failureSignals() }
-                let action = try progression.failRound(
-                    failure: failure, signals: signals,
-                    allowInterruptionRecovery: !ProviderPreset.isLocal(provider.baseURL)
-                )
-                switch action {
-                case .recover(let reason):
-                    if reason == .interrupted, !contentBuffer.isEmpty {
-                        throttler.finish()
-                        await waitForThrottlerDrain()
-                        if shouldStop { return [] }
-                        try Task.checkCancellation()
-                        if let partial = try turnOutput.retainInterruptedProse() {
-                            allMessages.append(partial)
-                        }
-                    }
-                    activeRound = nil
-                    throttler.resetKeepingPhase(.waiting)
-                    currentMessageID = "msg-\(UUID().uuidString)"
-                    try turnOutput.beginDraft(localID: currentMessageID)
-                    nextInstruction = TurnSDKConversion.instruction(reason)
-                    chatPhase = .streamingProse
-                    continue
-                case .returnStopped:
-                    return []
-                case .propagateFailure, .missingReply:
-                    throw error
-                default:
-                    throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
-                }
+        case .modelSelected(let model, let retry):
+            if model != activeModel {
+                activeModel = model
+                if retry,
+                   host.request.agent.providerID == host.request.provider
+                   .id { host.request.agent.model = model }
             }
-
-            await turn.report(sentAt: sentAt, result: .succeeded)
-
-            if shouldStop { return [] }
-            let outcome = try RoundSDKConversion.finish(sdkRound)
-            var action = try progression.completeRound(outcome: outcome)
-            if case .checkEmptyReply = action {
-                let terminate = shouldTerminate?() == true
-                action = try progression.resolveEmptyReply(signals: .init(
-                    cancelled: Task.isCancelled, stopped: false, terminate: terminate
-                ))
-            }
-            if case .executeTools = action, case .tools(let assistant, let calls) = outcome {
-                if shouldStop { return [] }
-                let pendingToolCalls = calls.map(RoundSDKConversion.call)
-                chatPhase = .executingTools
-                try turnOutput.beginTools()
-
-                if contentBuffer.isEmpty {
-                    // No prose to drain — stay in .waiting to keep
-                    // typing indicator visible throughout tool execution.
-                    throttler.resetKeepingPhase(.waiting)
-                } else {
-                    // Speak the pre-tool prose while the tool executes (live call).
-                    onSegmentEnd?()
-                    // Drain streaming text before committing the message.
-                    throttler.finish()
-                    await waitForThrottlerDrain()
-                }
-
-                // Build the assistant message with tool calls (include provider metadata
-                // if present). Reuse currentMessageID as the localID when there's prose, so
-                // the committed row keeps the live streaming row's feed identity.
-                let assistantMessage = try turnOutput.recordBatch(assistant)
-                allMessages.append(assistantMessage)
-
-                // Now that the committed message is in the items list,
-                // clear streaming view so the typing indicator appears.
-                if !contentBuffer.isEmpty {
-                    throttler.resetKeepingPhase(.waiting)
-                }
-
-                // Execute each tool call
-                for call in pendingToolCalls {
-                    if shouldStop { return [] }
-
-                    // Seed the live event before awaiting `beforeToolCall` —
-                    // the TTS handoff can take seconds, and without an event
-                    // the just-committed row would read as done.
-                    seedToolEvent(
-                        id: call.id,
-                        toolName: call.function.name,
-                        arguments: call.function.arguments
-                    )
-
-                    await beforeToolCall?(call.function.name)
-                    if shouldStop { return [] }
-                    try Task.checkCancellation()
-
-                    let result = await executeToolCall(
-                        call, agent: agent, executor: currentExecutor
-                    )
-
-                    // A stopped turn has already persisted its checkpoint.
-                    try Task.checkCancellation()
-                    if shouldStop { return [] }
-                    afterToolCall?()
-
-                    let toolMessage = try turnOutput.recordResult(
-                        sdkRound.recordResult(result: RoundSDKConversion.result(result))
-                    )
-                    allMessages.append(toolMessage)
-                }
-
-                // Check if the caller wants to stop early (e.g. background decision tool fired).
-                // No drain needed: the round's prose was already drained and
-                // committed before tool execution, and the throttler is parked
-                // in .waiting with empty buffers.
-                switch try progression.completeTools(terminate: shouldTerminate?() == true) {
-                case .finish(.explicitTermination): break rounds
-                case .continue: break
-                default: throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
-                }
-
-                // Rebuild tools if a skill was activated (or any other tool changed the registry).
-                if let onToolsChanged {
-                    let updated = await onToolsChanged()
-                    currentTools = updated.tools
-                    currentExecutor = updated.executor
-                }
-
-                // Prepare for the next round (already in .waiting from resetKeepingPhase).
-                // Regenerate the message id so the next prose segment gets its own feed identity.
+        case .inference(let event):
+            contentBuffer = activeOperation?.partialContent ?? ""
+            switch event {
+            case .contentDelta(let delta):
                 chatPhase = .streamingProse
-                activeRound = nil
-                currentMessageID = "msg-\(UUID().uuidString)"
-                try turnOutput.beginDraft(localID: currentMessageID)
-                continue
+                throttler.feed(delta)
+                onContentDelta?(delta)
+            case .toolCall:
+                hasToolCalls = true
+                chatPhase = .streamingTools
+            case .finished(let reason):
+                chatPhase = reason == .toolCalls && hasToolCalls ? .readyToExecute : .streamingProse
+            default: break
             }
+        case .requestReported: break
+        case .output:
+            committedMessages = messageMapping.messages(activeOperation?.retainedOutput() ?? [])
+            if chatPhase == .executingTools,
+               !contentBuffer.isEmpty { throttler.resetKeepingPhase(.waiting) }
+        case .finished:
+            chatPhase = .done
+        }
+    }
 
-            switch action {
-            case .recover(let reason):
-                throttler.resetKeepingPhase(.waiting)
-                activeRound = nil
-                currentMessageID = "msg-\(UUID().uuidString)"
-                try turnOutput.beginDraft(localID: currentMessageID)
-                nextInstruction = TurnSDKConversion.instruction(reason)
-                chatPhase = .streamingProse
-                continue
-            case .missingReply:
-                throw TurnCompletionError.missingReply
-            case .cancelled:
-                throw CancellationError()
-            case .returnStopped:
-                return []
-            case .finish:
-                break
-            default:
-                throw EiginSDK.Experimental.Agent.TurnError.InvalidPhase
-            }
-
-            // Drain before marking the turn done so stopping can still save its text.
+    func finishToolProse(hasProse: Bool) async {
+        chatPhase = .executingTools
+        if hasProse {
+            onSegmentEnd?()
             throttler.finish()
             await waitForThrottlerDrain()
-            if shouldStop { return [] }
-            try Task.checkCancellation()
-            chatPhase = .done
+        } else { throttler.resetKeepingPhase(.waiting) }
+    }
 
-            if case .reply(let message) = outcome {
-                try turnOutput.finish(message)
-            } else {
-                try turnOutput.finish(nil)
-            }
+    func beforeTool(_ call: EiginSDK.Experimental.Inference.ToolCall) async {
+        seedToolEvent(id: call.id, toolName: call.name, arguments: call.arguments)
+        await beforeToolCall?(call.name)
+    }
 
-            // Don't reset the throttler here — the caller should append
-            // produced messages and then call settle() so both state changes
-            // are batched in the same SwiftUI update cycle.
-            break
-        }
-
-        AppLogger.debug(
-            "Done. Produced \(public: turnOutput.messages.count) messages",
-            category: .chat
-        )
-        if shouldStop { return [] }
-        return turnOutput.messages
+    func drain() async {
+        throttler.finish()
+        await waitForThrottlerDrain()
     }
 
     /// Commits the current round: captures produced messages and settles streaming
     /// state. Call synchronously before appending to the display message list so
     /// SwiftUI batches both changes in one update cycle.
     func completeRound() -> [ChatMessage] {
-        let messages = turnOutput.messages
+        let messages = producedMessages
         settle()
         return messages
     }
@@ -560,9 +335,14 @@ final class AgenticChatLoop {
     /// batches both changes (committed messages appear + streaming item disappears).
     func settle() {
         throttler.reset()
-        activeRound = nil
+        activeOperation?.cancel()
+        activeOperation = nil
+        contentBuffer = ""
         toolEvents = []
-        turnOutput = TurnOutputSDKConversion()
+        operationID = UUID()
+        messageMapping = TurnMessageMapping()
+        producedMessages = []
+        committedMessages = []
     }
 
     /// Aborts a running stream.
@@ -575,8 +355,13 @@ final class AgenticChatLoop {
         throttler.reset()
         toolEvents = []
         chatPhase = .idle
-        activeRound = nil
-        turnOutput = TurnOutputSDKConversion()
+        activeOperation?.cancel()
+        activeOperation = nil
+        contentBuffer = ""
+        operationID = UUID()
+        messageMapping = TurnMessageMapping()
+        producedMessages = []
+        committedMessages = []
         shouldStop = false
         pendingBrowsing = nil
         pendingOptions = nil
@@ -663,6 +448,7 @@ final class AgenticChatLoop {
     func stop() -> [ChatMessage] {
         guard chatPhase != .idle else { return [] }
         shouldStop = true
+        let checkpoint = activeOperation?.stop() ?? []
         throttler.abort()
         // Cancel any pending permission prompt
         let waits = permissionWaits
@@ -684,7 +470,7 @@ final class AgenticChatLoop {
         optionsContinuation = nil
         pendingOptions = nil
         isAwaitingUserInteraction = false
-        return buildCheckpoint()
+        return messageMapping.messages(checkpoint)
     }
 
     // MARK: - Private
@@ -707,16 +493,6 @@ final class AgenticChatLoop {
         }
     }
 
-    private func failureSignals() -> EiginSDK.Experimental.Agent.Signals {
-        let cancelled = Task.isCancelled
-        let stopped = shouldStop
-        return .init(
-            cancelled: cancelled,
-            stopped: stopped,
-            terminate: !cancelled && !stopped && shouldTerminate?() == true
-        )
-    }
-
     private func waitForThrottlerDrain() async {
         while throttler.phase == .streaming {
             // CADisplayLink stops in background — force-complete if stalled.
@@ -729,11 +505,8 @@ final class AgenticChatLoop {
 
     /// Executes a single tool call: resolves permission (prompting the user when
     /// the policy says `.ask` and prompting is allowed), runs the tool, and
-    /// updates the chat-feed ``ToolEvent``. Returns the result; the caller is
-    /// responsible for appending the resulting tool ``ChatMessage`` to history.
-    ///
-    /// Used by the cloud loop (after each tool-call round) and by the
-    /// ``InlineToolRunner`` closure (for local models, mid-stream).
+    /// updates the chat-feed ``ToolEvent``. SDK turns record accepted results.
+    /// Gatekeeper callers retain their separate initial-call persistence path.
     func executeToolCall(
         _ call: ToolCall, agent: Agent, executor: ToolExecutor
     ) async -> ToolResult {
@@ -812,6 +585,6 @@ final class AgenticChatLoop {
 
     /// Captures completed work and partial prose for persistence after a failure.
     func buildCheckpoint() -> [ChatMessage] {
-        turnOutput.checkpoint()
+        messageMapping.messages(activeOperation?.checkpoint() ?? [])
     }
 }

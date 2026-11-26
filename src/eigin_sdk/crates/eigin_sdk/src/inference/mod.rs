@@ -25,5 +25,7 @@ pub use attempt::*;
 
 pub mod routing;
 
+pub mod request_driver;
+
 pub mod local;
 pub use local::*;

@@ -6,6 +6,9 @@ import Foundation
 /// router drops to an on-device model if the user has one ready. Within a provider,
 /// model choice belongs to the router whenever the agent is in auto mode.
 protocol ModelRouter: Sendable {
+    /// Shares SDK policy state and host observation capabilities with request execution.
+    func inferenceContext() async -> InferenceRoutingContext
+
     /// The route for a coming turn. Decided before the turn is built, because the prompt
     /// and tool registry are sized from whatever comes back.
     func resolve(_ request: RouteRequest) async -> ResolvedRoute

@@ -27,21 +27,3 @@ struct InferencePerformance: Equatable {
     let timeToFirstToken: Duration?
     let tokensPerSecond: Double?
 }
-
-extension ChatStreamEvent {
-    /// Estimated memory held while waiting for a candidate's first answer or usable tool call.
-    var bufferedByteCount: Int {
-        switch self {
-        case .contentDelta(let text): text.utf8.count + 64
-        case .toolCall(let call):
-            call.id.utf8.count + call.function.name.utf8.count + call.function.arguments.utf8
-                .count + 64
-        case .providerMetadata(let values):
-            values.reduce(64) { $0 + $1.key.utf8.count + $1.value.utf8.count + 64 }
-        case .reasoningHistory(let history):
-            history.payload.count + history.visibleText.utf8.count + history.format.utf8.count
-                + history.origin.endpoint.utf8.count + history.origin.model.utf8.count + 128
-        case .performance, .finished: 64
-        }
-    }
-}

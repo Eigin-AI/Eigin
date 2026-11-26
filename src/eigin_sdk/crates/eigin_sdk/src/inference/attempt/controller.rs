@@ -1,7 +1,7 @@
 use super::{AttemptAction, AttemptObservation, ReplacementWork, race::Race};
 use crate::clock;
 use futures_util::future::select;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[derive(Default)]
 struct Routing {
@@ -15,6 +15,7 @@ struct Routing {
 /// Transient policy for one request, independent of agent turn recovery.
 #[derive(uniffi::Object)]
 pub struct InferenceAttempts {
+    clock: Arc<dyn clock::ExecutionClock>,
     local: bool,
     routed: bool,
     limit: u64,
@@ -27,14 +28,13 @@ pub struct InferenceAttempts {
 impl InferenceAttempts {
     #[uniffi::constructor]
     pub fn new(local: bool, routed: bool, max_buffered_bytes: u64, starting_model: String) -> Self {
-        Self {
+        Self::with_clock(
             local,
-            routed: routed && !local,
-            limit: max_buffered_bytes,
-            starting: starting_model,
-            race: Mutex::default(),
-            routing: Mutex::default(),
-        }
+            routed,
+            max_buffered_bytes,
+            starting_model,
+            Arc::new(clock::PlatformClock),
+        )
     }
     /// Local dispatch errors propagate from open rather than stream iteration.
     pub fn opens_directly(&self) -> bool {
@@ -57,7 +57,7 @@ impl InferenceAttempts {
         self.race
             .lock()
             .unwrap()
-            .step(observation, self.limit, clock::now())
+            .step(observation, self.limit, self.clock.now())
     }
     /// Waits for SDK timer work without changing the race. False after settlement or cancellation.
     pub async fn wait_for_deadline(&self) -> bool {
@@ -68,13 +68,13 @@ impl InferenceAttempts {
                     return false;
                 }
                 let deadline = race.next_deadline();
-                if deadline.is_some_and(|at| at <= clock::now()) {
+                if deadline.is_some_and(|at| at <= self.clock.now()) {
                     return true;
                 }
                 (deadline, race.deadline_change())
             };
             if let Some(at) = deadline {
-                select(change, std::pin::pin!(clock::sleep_until(at))).await;
+                select(change, std::pin::pin!(self.clock.sleep_until(at))).await;
             } else {
                 let _ = change.await;
             }
@@ -82,7 +82,7 @@ impl InferenceAttempts {
     }
     /// Applies the earliest still-due deadline on the host's serialized observation lane.
     pub fn drain_deadline(&self) -> Vec<AttemptAction> {
-        self.race.lock().unwrap().drain(clock::now())
+        self.race.lock().unwrap().drain(self.clock.now())
     }
     /// Describes one chase. Failed replacement opens retain the original failure attribution (#442).
     pub fn replacement_work(
@@ -105,7 +105,7 @@ impl InferenceAttempts {
         let mut r = self.routing.lock().unwrap();
         let mut race = self.race.lock().unwrap();
         if race.can_replace(chase) && self.routed && from != to && r.switches < 2 {
-            race.arm_dispatch(clock::now());
+            race.arm_dispatch(self.clock.now());
             r.switches += 1;
             true
         } else {
@@ -149,5 +149,25 @@ impl InferenceAttempts {
     /// Test fixture barrier for cancelling a wait that registered through the host binding.
     pub fn binding_wait_registered(&self) -> bool {
         self.race.lock().unwrap().wait_registered()
+    }
+}
+
+impl InferenceAttempts {
+    pub(crate) fn with_clock(
+        local: bool,
+        routed: bool,
+        max_buffered_bytes: u64,
+        starting_model: String,
+        clock: Arc<dyn clock::ExecutionClock>,
+    ) -> Self {
+        Self {
+            clock,
+            local,
+            routed: routed && !local,
+            limit: max_buffered_bytes,
+            starting: starting_model,
+            race: Mutex::default(),
+            routing: Mutex::default(),
+        }
     }
 }

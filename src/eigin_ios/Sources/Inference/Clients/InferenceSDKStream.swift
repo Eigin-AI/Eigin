@@ -2,6 +2,24 @@ import EiginSDK
 
 /// Adapts SDK pull streams to the app's text and structured event streams.
 enum InferenceSDKStream {
+    static func session(
+        _ stream: EiginSDK.Experimental.Inference.Stream,
+        mapError: @escaping @Sendable (any Error) -> any Error
+    ) -> EiginSDK.Experimental.Inference.RequestSession {
+        .init(next: {
+            do { return try await stream.next() }
+            catch { throw mapError(error) }
+        }, cancel: { stream.cancel() })
+    }
+
+    static func events(
+        _ session: EiginSDK.Experimental.Inference.RequestSession
+    ) -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        AsyncThrowingStream(unfolding: {
+            try await session.next().map(InferenceSDKConversion.event)
+        })
+    }
+
     static func text(
         _ completion: EiginSDK.Experimental.Inference.Stream,
         mapError: @escaping @Sendable (any Error) -> any Error = InferenceSDKConversion.error

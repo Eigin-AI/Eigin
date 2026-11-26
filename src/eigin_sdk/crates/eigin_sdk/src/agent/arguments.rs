@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 // TODO(#430): Retire Foundation compatibility when SDK-owned tool parsing and execution share a contract.
 /// Preserves Foundation's object parser acceptance without changing outgoing arguments.
-pub(super) fn valid_object(arguments: &str) -> bool {
+pub(crate) fn valid_object(arguments: &str) -> bool {
     let input = arguments.strip_prefix('\u{feff}').unwrap_or(arguments);
     let bytes = input.as_bytes();
     let mut normalized = Vec::with_capacity(bytes.len());

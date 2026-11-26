@@ -162,6 +162,40 @@ struct AgenticChatLoopTests {
         #expect(loop.roundsExecuted == 1)
     }
 
+    @Test(arguments: [false, true])
+    @MainActor func cancellationInToolHooksPreservesAdmissionOrder(after: Bool) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let service = FakeChatService()
+        let executor = FakeToolExecutor()
+        let call = ToolCall(
+            id: "hook",
+            type: "function",
+            function: .init(name: "read_core", arguments: "{}")
+        )
+        executor.setResult(for: call.id, content: "executed")
+        service.enqueueEventStream([.toolCall(call), .finished(.toolCalls)])
+        service.enqueueEventStream([.contentDelta("Must not run"), .finished(.stop)])
+        if after { loop.afterToolCall = { withUnsafeCurrentTask { $0?.cancel() } } }
+        else { loop.beforeToolCall = { _ in withUnsafeCurrentTask { $0?.cancel() } } }
+        await #expect(throws: CancellationError.self) {
+            try await loop.run(
+                messages: [],
+                tools: nil,
+                agent: agent,
+                provider: provider,
+                chatService: service,
+                toolExecutor: executor
+            )
+        }
+        #expect(loop.roundsExecuted == (after ? 2 : 1))
+        #expect(executor.calls.count == (after ? 1 : 0))
+        let checkpoint = loop.buildCheckpoint()
+        #expect(checkpoint.map(\.role) == ["assistant", "tool"])
+        #expect((checkpoint.last?.content == "executed") == after)
+    }
+
     @Test @MainActor func returnsCompletedToolsAtRoundLimit() async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
@@ -1479,7 +1513,10 @@ struct AgenticChatLoopTests {
         agent.model = "claude-sonnet-5"
 
         if !sameProvider { agent.providerID = UUID() }
-        let router = FakeModelRouter(retryModels: ["gpt-5.6"])
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
 
@@ -1503,17 +1540,17 @@ struct AgenticChatLoopTests {
 
         #expect(loop.activeModel == "gpt-5.6")
 
-        // One failed open, one successful stream.
-        let outcomes = await router.outcomes()
-        #expect(outcomes.count == 2)
-        #expect(outcomes.map(\.model) == ["claude-sonnet-5", "gpt-5.6"])
+        #expect(fakeChatService.lastModel == "gpt-5.6")
     }
 
     @Test @MainActor func surfacesTheErrorWhenTheRouterHasNothingLeft() async throws {
         let (agent, provider, _container) = try makeTestContext()
         _ = _container
 
-        let router = FakeModelRouter()
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
 
@@ -1531,16 +1568,21 @@ struct AgenticChatLoopTests {
                 toolExecutor: FakeToolExecutor()
             )
         }
-        #expect(await router.outcomes().map(\.model) == [agent.model])
+        #expect(fakeChatService.lastModel == agent.model)
     }
 
     @Test(arguments: [true, false])
     @MainActor func failureSwitchesOnlyBeforeOutput(emitted: Bool) async throws {
         let (agent, provider, store) = try makeTestContext()
         defer { _ = store }
-        let router = FakeModelRouter(retryModels: ["replacement"])
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
+        agent.model = "gpt-4.1"
+        provider.availableModels = ["gpt-4.1", "gpt-4.1-mini"]
         let service = FakeChatService()
         let error = OpenAICompatibleClientError.httpError(503, body: nil)
         service.enqueueEventStream(emitted ? [.contentDelta("partial")] : [], endingWith: error)
@@ -1556,25 +1598,26 @@ struct AgenticChatLoopTests {
                 toolExecutor: FakeToolExecutor()
             )
         }
-        #expect(agent.model == "test-model")
-        #expect(loop.activeModel == "test-model")
-        #expect(await router.outcomes().map(\.model) == (emitted ? ["test-model"] : [
-            "test-model",
-            "replacement",
-        ]))
+        #expect(agent.model == "gpt-4.1")
+        #expect(loop.activeModel == "gpt-4.1")
+        #expect(service.lastModel == (emitted ? "gpt-4.1" : "gpt-4.1-mini"))
     }
 
-    @Test @MainActor func backgroundCancellationIsReportedBeforePropagation() async throws {
+    @Test(arguments: [false, true])
+    @MainActor func streamCancellationPreservesPartialOutput(propagate: Bool) async throws {
         let (agent, provider, store) = try makeTestContext()
         defer { _ = store }
-        let router = FakeModelRouter()
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
         let service = FakeChatService()
         service.enqueueEventStream([.contentDelta("partial")], endingWith: CancellationError())
         let loop = AgenticChatLoop(isBootstrap: false)
-        loop.propagatesStreamCancellation = true
-        await #expect(throws: CancellationError.self) {
+        loop.propagatesStreamCancellation = propagate
+        let run = {
             try await loop.run(
                 messages: [.init(role: "user", content: "Start")],
                 tools: nil,
@@ -1584,20 +1627,25 @@ struct AgenticChatLoopTests {
                 toolExecutor: FakeToolExecutor()
             )
         }
-        let outcomes = await router.outcomes()
-        #expect(outcomes.count == 1)
-        let outcome = try #require(outcomes.first)
-        guard case .cancelled = outcome.result
-        else { Issue.record("Expected a cancelled provider attempt"); return }
+        if propagate { await #expect(throws: CancellationError.self) { try await run() } }
+        else { #expect(try await run().isEmpty) }
+        #expect(service.lastModel == agent.model)
+        #expect(loop.fullText == "partial")
+        #expect(loop.buildCheckpoint().last?.content == "partial")
     }
 
     @Test @MainActor func hedgeWinnerCarriesRoundWithoutChangingAgentModel() async throws {
         let (agent, provider, store) = try makeTestContext()
         defer { _ = store }
-        let router = FakeModelRouter(hedgeModel: "runner-up")
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
+        )
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
         let service = FakeChatService()
+        agent.model = "gpt-4.1"
+        provider.availableModels = ["gpt-4.1", "gpt-4.1-mini"]
         service.delayBeforeStream(.seconds(60), for: agent.model)
         service.enqueueEventStream([.contentDelta("answer"), .finished(.stop)])
         let loop = AgenticChatLoop(isBootstrap: false)
@@ -1609,9 +1657,9 @@ struct AgenticChatLoopTests {
             chatService: service,
             toolExecutor: FakeToolExecutor()
         )
-        #expect(loop.activeModel == "runner-up")
-        #expect(agent.model == "test-model")
-        #expect(await router.outcomes().map(\.model) == ["runner-up"])
+        #expect(loop.activeModel == "gpt-4.1-mini")
+        #expect(agent.model == "gpt-4.1")
+        #expect(service.lastModel == "gpt-4.1-mini")
     }
 
     @Test @MainActor func anOfflineRouteLeavesTheAgentsOwnModelAlone() async throws {
@@ -1833,14 +1881,14 @@ struct AgenticChatLoopTests {
         #expect(loop.roundsExecuted == 1)
     }
 
-    @Test @MainActor func stopDuringReportingPrecedesMalformedBatchValidation() async throws {
+    @Test @MainActor func stopAfterOutputPrecedesMalformedBatchValidation() async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
         let router = FakeModelRouter()
         Container.shared.modelRouter.register { router }
         defer { Container.shared.modelRouter.reset() }
         let loop = AgenticChatLoop(isBootstrap: false)
-        await router.setRecordHook { await MainActor.run { _ = loop.stop() } }
+        loop.onContentDelta = { _ in _ = loop.stop() }
         let service = FakeChatService()
         let executor = FakeToolExecutor()
         service.enqueueEventStream([
@@ -1864,7 +1912,10 @@ struct AgenticChatLoopTests {
         #expect(executor.calls.isEmpty)
     }
 
-    @Test @MainActor func inlineCheckpointExcludesExchangeUntilExecutionCompletes() async throws {
+    @Test(arguments: [false, true])
+    @MainActor func inlineCheckpointExcludesExchangeUntilExecutionCompletes(
+        stopDuringExecution: Bool
+    ) async throws {
         let (agent, provider, container) = try makeTestContext()
         _ = container
         let loop = AgenticChatLoop(isBootstrap: false)
@@ -1895,11 +1946,83 @@ struct AgenticChatLoopTests {
             break
         }
         #expect(loop.buildCheckpoint().isEmpty)
-        loop.resolveOptions(.selected(label: "Continue"))
-        let produced = try await task.value
-        #expect(produced.map(\.role) == ["assistant", "tool", "assistant"])
-        #expect(produced[1].toolCallID == call.id)
-        #expect(produced.last?.content == "Done")
+        if stopDuringExecution {
+            let stopped = loop.stop()
+            #expect(stopped.isEmpty)
+            #expect(try await task.value.isEmpty)
+            #expect(loop.buildCheckpoint().isEmpty)
+        } else {
+            loop.resolveOptions(.selected(label: "Continue"))
+            let produced = try await task.value
+            #expect(produced.map(\.role) == ["assistant", "tool", "assistant"])
+            #expect(produced[1].toolCallID == call.id)
+            #expect(produced.last?.content == "Done")
+        }
+    }
+
+    @Test(arguments: [false, true], ["content", "empty", "error"])
+    @MainActor func lateInlineCompletionCannotChangeOutputAfterSettlement(
+        replacement: Bool,
+        ending: String
+    ) async throws {
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let loop = AgenticChatLoop(isBootstrap: false)
+        let service = FakeChatService()
+        let call = ToolCall(
+            id: "old_inline", type: "function",
+            function: .init(name: "present_options", arguments: "{}")
+        )
+        service.enqueueInlineToolCalls([call])
+        service.enqueueEventStream(
+            ending == "content" ? [.contentDelta("Old answer"), .finished(.stop)] : [],
+            endingWith: ending == "error" ? URLError(.networkConnectionLost) : nil
+        )
+        let (entered, signal) = AsyncStream<Void>.makeStream()
+        let (release, resume) = AsyncStream<Void>.makeStream()
+        var executions = 0
+        let executor = SuspendedOptionsExecutor { _ in
+            executions += 1
+            signal.yield(())
+            for await _ in release {
+                break
+            }
+        }
+        let old = Task {
+            try await loop.run(
+                messages: [], tools: nil, agent: agent, provider: provider,
+                chatService: service, toolExecutor: executor
+            )
+        }
+        for await _ in entered {
+            break
+        }
+        #expect(loop.stop().isEmpty)
+        loop.settle()
+        #expect(loop.buildCheckpoint().isEmpty)
+        var newMessages: [ChatMessage] = []
+        if replacement {
+            let nextService = FakeChatService()
+            nextService.enqueueEventStream([.contentDelta("New answer"), .finished(.stop)])
+            newMessages = try await loop.run(
+                messages: [], tools: nil, agent: agent, provider: provider,
+                chatService: nextService, toolExecutor: FakeToolExecutor()
+            )
+            #expect(newMessages.map(\.content) == ["New answer"])
+        }
+        resume.yield(())
+        resume.finish()
+        #expect(try await old.value.isEmpty)
+        let rejected = await service.capturedInlineRunner?.run(call)
+        #expect(rejected?.isError == true)
+        #expect(executions == 1)
+        let later = loop.buildCheckpoint()
+        #expect(later.map(\.role) == (replacement ? ["assistant"] : []))
+        #expect(!later.contains { $0.toolCallID == call.id })
+        if replacement {
+            #expect(later.first?.localID == newMessages.first?.localID)
+            #expect(later.first?.content == "New answer")
+        }
     }
 
     @Test @MainActor func toolRefreshReachesNextRequestAndExecutor() async throws {
@@ -1969,31 +2092,25 @@ struct AgenticChatLoopTests {
 
     /// The pre-stream wait must land in ``timeToFirstToken``, not be measured away as zero.
     @Test @MainActor func recordsTimeToFirstTokenFromRequestDispatch() async throws {
-        let (agent, provider, _container) = try makeTestContext()
-        _ = _container
-
-        let router = FakeModelRouter()
-        Container.shared.modelRouter.register { router }
-        defer { Container.shared.modelRouter.reset() }
-
-        let fakeChatService = FakeChatService()
-        // Hold the response, then deliver the first token as soon as the stream opens.
-        fakeChatService.delayBeforeStream(.milliseconds(200))
-        fakeChatService.enqueueEventStream([.contentDelta("Hi"), .finished(.stop)])
-
-        let loop = AgenticChatLoop(isBootstrap: false)
-        _ = try await loop.run(
-            messages: [ChatMessage(role: "user", content: "Hi")],
-            tools: nil,
-            agent: agent,
-            provider: provider,
-            chatService: fakeChatService,
-            toolExecutor: FakeToolExecutor()
+        let (agent, provider, container) = try makeTestContext()
+        _ = container
+        let service = FakeChatService()
+        service.delayBeforeStream(.milliseconds(200))
+        service.enqueueEventStream([.contentDelta("Hi"), .finished(.stop)])
+        let router = DefaultModelRouter(
+            reachability: FakeNetworkReachability(),
+            localModelReadiness: { false }
         )
-
-        let outcomes = await router.outcomes()
-        let ttft = try #require(outcomes.last?.timeToFirstToken)
-        #expect(ttft > .milliseconds(100))
+        let attempt = try await InferenceAttemptCoordinator(modelRouter: router).open(
+            chatService: service, host: provider.baseURL, hostID: provider.id, model: agent.model,
+            messages: [], tools: nil, cacheKey: nil, routing: { _ in nil }
+        )
+        for try await event in attempt.stream {
+            attempt.observe(event)
+        }
+        let report = await attempt.report(sentAt: nil, result: .succeeded)
+        let ttft = try #require(report?.firstTokenSeconds)
+        #expect(ttft > 0.1)
     }
 }
 

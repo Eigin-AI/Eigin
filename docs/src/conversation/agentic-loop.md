@@ -13,7 +13,7 @@ The SDK coordinates progress and keeps the turn's output. The host connects it t
 | **Turn** | Decides whether to request another response, recover, or finish. Applies the turn's limits. |
 | **Output** | Keeps messages in order, tracks the current draft, and determines what can be retained. |
 
-The host feeds a response into a round, then follows the turn's decision. If tools are needed, it executes permitted calls and records their results. The next request includes those results. This repeats until the turn finishes.
+The host submits initial context to one SDK `ChatTurn` operation. The SDK coordinates provider requests, feeds responses into rounds, and follows the turn's decisions. It asks the host to execute permitted tools, records accepted results, and includes them in the next request. The host observes progress and can stop the operation.
 
 One output owner stays with the turn throughout. It collects completed exchanges and prose while the host renders the live draft. Draft identity follows the prose into its committed message, so the streaming row becomes the saved row without changing identity.
 
@@ -35,8 +35,8 @@ A checkpoint is the output that can be saved when a turn stops or fails. Reading
 
 For example, if two tools are requested and the user stops after the first result, the checkpoint includes the requested batch, the first result, and an uncertainty result for the second call.
 
-Hosts use one `Experimental.Agent.Output` per turn and report round progress and completed exchanges to it. The SDK returns output with provenance; the host maps that provenance to app message IDs, chooses when to checkpoint, and saves the snapshot. After saving, the host settles its live presentation state. The saved messages become ordinary conversation history for a later turn.
+The complete `Experimental.Agent.ChatTurn` operation owns output and round progress. It returns output with provenance; the host maps that provenance to app message IDs, chooses when to checkpoint, and saves the snapshot. After saving, the host settles its live presentation state. The saved messages become ordinary conversation history for a later turn.
 
-Explicit chat stop captures a checkpoint before settling. Background cancellation currently returns no output. Admission of late tool results remains a host and round responsibility.
+Explicit chat stop closes admission and captures a checkpoint before settling. Background cancellation currently returns no output. The SDK rejects late tool results after stop or cancellation, including results from an earlier operation after a replacement turn starts. Already-executed side effects are not undone.
 
-The stateless `Experimental.Agent.checkpoint(_:progress:)` API is also available for hosts that already maintain their own output and progress. iOS uses the state-owning output API.
+Lower-level output and stateless checkpoint APIs remain available for consumers that compose their own orchestration. iOS uses the complete-turn operation.

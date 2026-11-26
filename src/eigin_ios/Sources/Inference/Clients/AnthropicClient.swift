@@ -53,6 +53,14 @@ struct AnthropicClient: LLMClient {
         return InferenceSDKStream.events(completion, mapError: InferenceSDKConversion.error)
     }
 
+    func inferenceSession(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, inlineToolRunner _: InlineToolRunner?, reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession {
+        let stream = try await start(messages: messages, model: model, tools: tools)
+        return InferenceSDKStream.session(stream, mapError: InferenceSDKConversion.error)
+    }
+
     private func start(
         messages: [ChatMessage],
         model: String,

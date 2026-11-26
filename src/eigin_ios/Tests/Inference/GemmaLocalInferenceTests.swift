@@ -104,16 +104,16 @@ struct GemmaLocalInferenceTests {
 
     private func runToolTurn(_ label: String, client: LocalClient) async throws -> String {
         let round = EiginSDK.Experimental.Agent.Round()
-        var output = TurnOutputSDKConversion()
+        let output = EiginSDK.Experimental.Agent.Output()
         let runner = InlineToolRunner { call in
             #expect(call.function.arguments.contains(label))
             let result = ToolResult(toolCallID: call.id, content: label, isError: false)
             do {
                 let exchange = try round.recordInlineExchange(
-                    call: RoundSDKConversion.call(call),
-                    result: RoundSDKConversion.result(result)
+                    call: InferenceSDKConversion.call(call),
+                    result: .init(toolCallId: result.toolCallID, content: result.content)
                 )
-                _ = try output.recordInlineExchange(exchange)
+                _ = try output.recordInlineExchange(messages: exchange)
             } catch { Issue.record(error) }
             return result
         }
@@ -128,12 +128,13 @@ struct GemmaLocalInferenceTests {
         )
         var text = ""
         for try await event in stream {
-            try round.acceptEvent(event: RoundSDKConversion.event(event))
+            try round.acceptEvent(event: InferenceSDKConversion.event(event))
             if case .contentDelta(let value) = event { text += value }
         }
-        #expect(output.messages.map(\.role) == ["assistant", "tool"])
-        #expect(output.messages[1].content == label)
-        #expect(output.messages[0].toolCalls?.first?.id == output.messages[1].toolCallID)
+        #expect(output.output().map(\.message).map(\.role) == ["assistant", "tool"])
+        #expect(output.output().map(\.message)[1].content == label)
+        #expect(output.output().map(\.message)[0].toolCalls?.first?.id == output.output()
+            .map(\.message)[1].toolCallId)
         return text
     }
 

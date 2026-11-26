@@ -2,7 +2,7 @@
 
 Lessons and working conventions for building the SDK. Add new evidence to the relevant insight; link its source issue. Keep implementation scope, test-run results, and merge status in issues and MRs.
 
-Direction: move agent behavior into the SDK while keeping iOS shippable. The agent loop and durable app data remain host-owned until their own extractions. Sources: [#145], [SDK milestone].
+Direction: move agent behavior into the SDK while keeping iOS shippable. Complete chat turns run in the SDK; durable app data, platform capabilities, and presentation remain host-owned. Sources: [#145], [#455], [SDK milestone].
 
 ## Structure and ownership
 
@@ -34,6 +34,9 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Keep retry policy above transport.** Relay wallet failover is allowed only after an initial HTTP 402. Network failures, cancellation, and errors after streaming starts must not trigger replay. Source: [#335].
 - **Bound failover independently of persistence.** Track attempted credentials within each request. Whole-collection host stores can restore stale snapshots during concurrent writes; persisted rejection alone cannot prevent another attempt with the same credential. Source: [#335].
 
+- **Separate terminal diagnostics from live output admission.** Cancellation closes presentation and tool callbacks. Synchronous request-report callbacks can still deliver timing without admitting output or waiting on cancelled work. Preserve explicit-stop and abandoned-work reporting behavior separately. Source: [#455].
+- **Keep callback lifecycle handling in the platform package.** Moving callbacks into separate tasks changes cancellation observation. The Apple wrapper samples empty-reply cancellation after the completion callback and failure-path cancellation before it. It carries callback cancellation to the next appropriate check, scoped to the original operation; app hosts supply capabilities and explicit completion. Source: [#455].
+
 ## Testing and evidence
 
 - **Test at three boundaries.** SDK behavior tests exercise injected capabilities; binding contracts exercise language/runtime translation; host smoke tests exercise the assembled package. Keep UI tests focused on app integration. Sources: [#356], [#332].
@@ -42,6 +45,8 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 - **Check observable behavior against the code.** Comments can misdescribe fallback values. Capture the actual request or event at the HTTP boundary before porting it. Source: [#333].
 - **Characterize argument parser acceptance.** Foundation accepts a leading UTF-8 BOM, trailing commas, and up to 512 nested containers. A default Serde parse rejects some of those inputs. Preserve raw tool arguments while testing validation acceptance across the Apple boundary. Source: [#404].
 - **Preserve state scope and await ordering.** Retain one explicit SDK router handle across turns, with independent handles for isolated consumers. Capture retry demand before host health refreshes; retain separate request-start and decision timestamps where expiry changes route reasons. A stateful port must preserve observations across awaits as well as individual decisions. Source: [#451].
+- **Check callback ownership across replacement turns.** A captured round can outlive stop and settlement while its callback writes through a mutable host output property. Test suspended execution across all three boundaries: stop, settlement, and a replacement run. The separately authorized #432 correction rejects stale output while still returning already-executed results to native generation. Sources: [#432], [#455].
+- **Preserve error classification across adapter removal.** Equivalent SDK HTTP errors can receive different routing classifications after provider-specific app conversion. Carry the established classification explicitly rather than inferring it from a shared status code. Responses HTTP failures currently bypass model replacement; preserve that behavior during extraction and address it separately. Sources: [#455], [#504].
 - **Check language-level equality.** Swift strings compare by canonical Unicode equivalence; Rust strings compare bytes. Preserve comparison semantics for tool IDs and duplicate payloads without rewriting outgoing content. Source: [#403].
 - **Preserve error-read stopping conditions.** A byte cap and a completed-line cutoff return at different times when a server stalls. Test partial bodies, line endings, and read failures; document intentional safety bounds in the MR. Source: [#333].
 - **Fake the unavailable boundary.** Provider tests inject HTTP responses. Wallet host tests use the real manager and store with a fake Keychain boundary. Avoid separate tests for trivial forwarding when the integrated behavior is covered. Sources: [#332], [#335].
@@ -66,7 +71,7 @@ Direction: move agent behavior into the SDK while keeping iOS shippable. The age
 These are open constraints, not established capabilities:
 
 - **Durable state:** storage engine, schemas, recovery, observation, and ownership between PAL and chat data. A coordinated user-data migration remains a goal. Sources: [#145], [#154].
-- **Higher-level composition:** agent orchestration, reactive UI state, and retirement of low-level host APIs. Keep crate boundaries and the stable public surface open until working integrations establish them. Source: [#145].
+- **Higher-level composition:** complete turns now own request coordination and progression; reactive UI state and durable storage remain host-owned. Keep crate boundaries and the stable public surface open while retiring unused lower-level host APIs. Sources: [#145], [#455].
 - **Host lifecycle and performance:** foreground/background/resume, budget-expiry/checkpoint behavior, transport measurements, and release signing need explicit evidence. A device smoke check does not cover all of these. Source: [#332].
 - **Deployed browser access:** controlled streaming tests do not prove production preflight policy or authenticated remote access. The relay source currently has no CORS layer. Source: [#335].
 - **Atomic wallet updates:** the host store still rewrites the wallet collection. Request-local exclusions bound retries; atomic updates across purchases, refresh, and different wallets require a separate storage decision. Source: [#335].
@@ -82,8 +87,11 @@ These are open constraints, not established capabilities:
 [#357]: https://code.eigin.ai/dev/eigin/-/issues/357
 [#403]: https://code.eigin.ai/dev/eigin/-/issues/403
 [#404]: https://code.eigin.ai/dev/eigin/-/issues/404
+[#432]: https://code.eigin.ai/dev/eigin/-/issues/432
 [#451]: https://code.eigin.ai/dev/eigin/-/issues/451
+[#455]: https://code.eigin.ai/dev/eigin/-/issues/455
 [#456]: https://code.eigin.ai/dev/eigin/-/issues/456
 [#503]: https://code.eigin.ai/dev/eigin/-/issues/503
+[#504]: https://code.eigin.ai/dev/eigin/-/issues/504
 [SDK milestone]: https://code.eigin.ai/dev/eigin/-/milestones/2
 [SDK development guide]: ../../src/eigin_sdk/README.md

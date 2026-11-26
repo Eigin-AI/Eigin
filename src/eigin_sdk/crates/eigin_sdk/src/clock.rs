@@ -1,4 +1,8 @@
 //! Shared wall-clock values and monotonic execution deadlines.
+mod execution;
+pub(crate) use execution::{ExecutionClock, PlatformClock};
+#[cfg(test)]
+pub(crate) mod testing;
 mod wall_time;
 pub(crate) use wall_time::WallTime;
 

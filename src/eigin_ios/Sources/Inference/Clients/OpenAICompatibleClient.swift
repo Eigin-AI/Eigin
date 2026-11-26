@@ -82,6 +82,21 @@ struct OpenAICompatibleClient: LLMClient {
         return InferenceSDKStream.events(completion)
     }
 
+    func inferenceSession(
+        messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
+        cacheKey: String?, inlineToolRunner _: InlineToolRunner?, reasoningEffort: ReasoningEffort?
+    ) async throws -> EiginSDK.Experimental.Inference.RequestSession {
+        let stream = try await start(
+            messages: messages,
+            model: model,
+            tools: tools,
+            cacheKey: cacheKey,
+            reasoningEffort: reasoningEffort,
+            textOnly: false
+        )
+        return InferenceSDKStream.session(stream, mapError: InferenceSDKConversion.error)
+    }
+
     private func start(
         messages: [ChatMessage], model: String, tools: [ToolDefinition]?,
         cacheKey: String?, reasoningEffort: ReasoningEffort?, textOnly: Bool
