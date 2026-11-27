@@ -1,4 +1,4 @@
-use super::generator::{self, Templates};
+use super::super::swift::{self as generator, Templates};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::collections::BTreeMap;

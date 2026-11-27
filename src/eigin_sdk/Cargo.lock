@@ -385,11 +385,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "eigin_prompt_template"
+version = "0.1.0"
+
+[[package]]
 name = "eigin_sdk"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "eigin_prompt_template",
  "firm_core",
  "firm_lang",
  "futures",

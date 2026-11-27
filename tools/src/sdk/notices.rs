@@ -83,7 +83,9 @@ pub fn generate(root: &str, check: bool) -> Result<()> {
         {
             let name = string(package, "name")?;
             let version = string(package, "version")?;
-            if !selected.remove(&(name.into(), version.into())) || name == "eigin_sdk" {
+            if !selected.remove(&(name.into(), version.into()))
+                || matches!(name, "eigin_sdk" | "eigin_prompt_template")
+            {
                 continue;
             }
             let directory = Path::new(string(package, "manifest_path")?)

@@ -1,3 +1,5 @@
+export { PromptCatalog, PromptCatalogError } from "./generated";
+export type { PromptCatalogLike } from "./generated";
 export * from "./knowledge";
 export * from "./inference";
 export * from "./eigin-relay";

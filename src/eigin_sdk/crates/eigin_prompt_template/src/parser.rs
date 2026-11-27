@@ -1,9 +1,10 @@
-use anyhow::{Result, bail};
+type Result<T> = std::result::Result<T, String>;
+macro_rules! bail { ($($arg:tt)*) => { return Err(format!($($arg)*)) }; }
 
 /// A parsed fragment of a prompt template.
 ///
 /// Templates support a deliberately small subset of Jinja: bare variable
-/// substitution, emptiness conditionals, and build-time composition via
+/// substitution, emptiness conditionals, and composition via
 /// includes. Loops, filters, operators, and attribute access are rejected so
 /// the generator stays a simple variables-and-includes mapping rather than a
 /// control-flow transpiler.
@@ -13,7 +14,7 @@ pub enum Segment {
     Text(String),
     /// `{{ name }}` — a `String` substitution.
     Var(String),
-    /// `{% include "rel/path.jinja" %}` — composed at build time.
+    /// `{% include "rel/path.jinja" %}` — resolved within the catalog.
     Include(String),
     /// `{% if cond %}then{% else %}els{% endif %}` — `cond` is a `String`,
     /// truthy when non-empty.
@@ -28,7 +29,7 @@ pub enum Segment {
 pub fn parse(src: &str) -> Result<Vec<Segment>> {
     let tokens = tokenize(src)?;
     let mut pos = 0;
-    let segments = build_segments(&tokens, &mut pos, false)?;
+    let segments = build_segments(&tokens, &mut pos, false, 0)?;
     Ok(segments)
 }
 
@@ -81,19 +82,19 @@ fn tokenize(src: &str) -> Result<Vec<Token>> {
         let rest = &src[i + open.len()..];
         let end = rest
             .find(close)
-            .ok_or_else(|| anyhow::anyhow!("unclosed `{open}` tag"))?;
+            .ok_or_else(|| format!("byte {i}: unclosed `{open}` tag"))?;
         let inner = rest[..end].trim();
 
         match open {
             "{{" => {
                 if !is_ident(inner) {
                     bail!(
-                        "unsupported expression `{{{{ {inner} }}}}` — only bare variables are allowed (no filters, attributes, or operators)"
+                        "byte {i}: unsupported expression `{{{{ {inner} }}}}` — only bare variables are allowed (no filters, attributes, or operators)"
                     );
                 }
                 tokens.push(Token::Var(inner.to_string()));
             }
-            "{%" => parse_tag(inner, &mut tokens)?,
+            "{%" => parse_tag(inner, &mut tokens).map_err(|error| format!("byte {i}: {error}"))?,
             _ => {} // `{# comment #}` — drop.
         }
 
@@ -147,14 +148,22 @@ fn parse_string_literal(arg: &str) -> Result<String> {
     let arg = arg.trim();
     let quoted = (arg.starts_with('"') && arg.ends_with('"'))
         || (arg.starts_with('\'') && arg.ends_with('\''));
-    if quoted && arg.len() >= 2 {
+    if quoted && arg.len() >= 2 && !arg[1..arg.len() - 1].contains(arg.chars().next().unwrap()) {
         Ok(arg[1..arg.len() - 1].to_string())
     } else {
         bail!("include target must be a quoted path, got `{arg}`")
     }
 }
 
-fn build_segments(tokens: &[Token], pos: &mut usize, in_block: bool) -> Result<Vec<Segment>> {
+fn build_segments(
+    tokens: &[Token],
+    pos: &mut usize,
+    in_block: bool,
+    depth: usize,
+) -> Result<Vec<Segment>> {
+    if depth > 64 {
+        bail!("conditional nesting exceeds 64");
+    }
     let mut segments = Vec::new();
 
     while *pos < tokens.len() {
@@ -174,12 +183,12 @@ fn build_segments(tokens: &[Token], pos: &mut usize, in_block: bool) -> Result<V
             Token::If(cond) => {
                 let cond = cond.clone();
                 *pos += 1;
-                let then = build_segments(tokens, pos, true)?;
+                let then = build_segments(tokens, pos, true, depth + 1)?;
                 let mut els = Vec::new();
                 match tokens.get(*pos) {
                     Some(Token::Else) => {
                         *pos += 1;
-                        els = build_segments(tokens, pos, true)?;
+                        els = build_segments(tokens, pos, true, depth + 1)?;
                         expect_endif(tokens, pos)?;
                     }
                     Some(Token::Endif) => *pos += 1,

@@ -620,6 +620,7 @@ dependencies = [
  "clap",
  "convert_case 0.6.0",
  "ed25519-dalek",
+ "eigin_prompt_template",
  "firm_lang",
  "hex",
  "image",
@@ -641,6 +642,10 @@ dependencies = [
  "uuid",
  "walkdir",
 ]
+
+[[package]]
+name = "eigin_prompt_template"
+version = "0.1.0"
 
 [[package]]
 name = "either"
