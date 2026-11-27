@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/eigin_sdk", "bindgen"]
+members = ["crates/eigin_sdk", "crates/eigin_prompt_template", "bindgen"]
 resolver = "3"
 
 [workspace.dependencies]

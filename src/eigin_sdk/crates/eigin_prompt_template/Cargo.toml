@@ -1,0 +1,6 @@
+[package]
+name = "eigin_prompt_template"
+version = "0.1.0"
+license-file = "../../../../LICENSE"
+edition = "2024"
+publish = false

@@ -56,3 +56,6 @@ mod tests {
         });
     }
 }
+
+/// Embedded and host-supplied prompt catalogs.
+pub mod prompts;

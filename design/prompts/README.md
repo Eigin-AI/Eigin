@@ -1,62 +1,40 @@
 # Prompts
 
-Source-controlled templates for Eigin's agent prompts. The text lives here so it
-is easy to read, review, and iterate on, instead of being buried in Swift string
-literals.
+`*.jinja` files here define Eigin's default prompt catalog. The SDK embeds and
+renders them. Swift hosts get typed accessors under `EiginSDK.DefaultPrompts`;
+iOS uses the shorthand `Prompt`.
 
-At `just generate`, `eigin-tools` compiles every `*.jinja` file in this tree into
-typed Swift accessors at `src/eigin_ios/Sources/Core/Design/Generated/Prompt.swift`.
-There is **no runtime template engine** — prompts are plain Swift constants and
-functions.
+## Edit and generate
 
-## How it maps to Swift
+1. Add or edit a template in the relevant folder. Use `partials/` for included fragments.
+2. Run `just generate sdk apple` or `just generate sdk web` to update the embedded catalog and bindings.
+3. Use the generated Swift accessor or render by the template's relative path.
 
-The folder tree becomes nested enums under `Prompt`, and each file becomes a leaf:
+Folders become nested Swift enums; filenames become properties or functions:
 
-| Template | Generated symbol |
+| Template | Swift accessor |
 | --- | --- |
-| `system/small.jinja` (no variables) | `Prompt.System.small` — `static let` |
-| `system/main.jinja` (has variables) | `Prompt.System.main(name:…)` — `static func` |
-| `system/partials/preamble.jinja` | `Prompt.System.Partials.preamble(name:…)` |
+| `hints/space.jinja` | `EiginSDK.DefaultPrompts.Hints.space(name:instructions:)` |
+| `platforms/apple/tools/weather_attribution.jinja` | `EiginSDK.DefaultPrompts.Platforms.Apple.Tools.weatherAttribution` |
 
-- A template with no variables compiles to a `static let` constant.
-- A template with `{{ variables }}` compiles to a `static func` taking one
-  `String` parameter per variable.
+Templates without parameters become static properties. Others take string
+arguments, including parameters required by their includes.
 
-## Top-level prompts vs partials
+## Syntax
 
-A prompt family has one or more **callable** prompts (what the app renders, e.g.
-`main`, `small`) and may have **partials** — fragments meant only to be
-`{% include %}`d by others (e.g. `preamble`, `behavioral`). Put partials in a
-`partials/` subfolder so both the file tree and the generated API
-(`Prompt.<Family>.Partials.*`) make the distinction clear. Callable prompts sit
-at the family root and are named by role (`main`, `small`, `initiative`, …).
+- `{{ name }}` inserts a string verbatim.
+- `{% if name %}…{% else %}…{% endif %}` tests whether a string is nonempty.
+- `{% include "relative/path.jinja" %}` includes another catalog template.
+- `{# comment #}` removes a comment while preserving surrounding whitespace.
 
-## Supported syntax
+Parameters use bare identifiers. Hosts prepare lists and formatting before
+rendering; loops, filters, and expressions are rejected during generation.
 
-Templates own prose, conditionals, and composition. Everything else — formatting,
-selecting variants, iterating lists — is computed in Swift and passed in as
-`String` values.
+## Applicability
 
-- `{{ name }}` — substitutes a `String`. Variables are plain identifiers; no
-  attribute access (`{{ a.b }}`), filters, or operators.
-- `{% if name %}…{% else %}…{% endif %}` — emits the branch based on whether the
-  `String` is non-empty.
-- `{% include "rel/path.jinja" %}` — composes another template at build time. The
-  included template's parameters are forwarded automatically. Paths are relative
-  to this directory.
+Keep Apple integration prompts under `platforms/apple/`. Hosts choose prompts
+whose integrations and assumptions they support. Flow and localized icebreaker
+registries remain app-owned.
 
-Loops (`{% for %}`), `{% set %}`, macros, and filters are **rejected** at
-`just generate` time. When a prompt needs a loop (e.g. a list of intents), the
-Swift caller iterates and renders each item through a small per-item template.
-
-## Adding a prompt
-
-1. Add a `*.jinja` file under the right folder (create folders to group related
-   prompts — they become nested enums).
-2. Use `{{ variables }}` for values the Swift caller provides.
-3. Run `just generate` and call the new `Prompt.<Folder>.<name>` symbol from Swift.
-
-Keep byte-stable prompts (anything injected at the start of a cached chat turn)
-free of per-turn data — that belongs in the `<system_hint>` block assembled by the
-`Gatekeeper`, not here.
+See [Prompt catalog](../../docs/src/sdk/prompt-catalog.md) for custom catalogs and
+runtime validation.

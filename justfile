@@ -204,6 +204,8 @@ _test-sdk: _test-sdk-rust _test-sdk-apple _test-sdk-web
 
 [private]
 _test-sdk-rust: _build-sdk
+    {{ tools }} sdk-prompts --check
+    cargo test --locked --manifest-path tools/Cargo.toml --bin eigin-tools prompts::
     cargo +1.99.1 test --locked --manifest-path src/eigin_sdk/Cargo.toml --features binding-tests
     cargo +1.99.1 clippy --locked --manifest-path src/eigin_sdk/Cargo.toml --all-targets -- -D warnings
     cargo +1.99.1 clippy --locked --manifest-path src/eigin_sdk/Cargo.toml --all-targets --features binding-tests -- -D warnings

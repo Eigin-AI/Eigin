@@ -23,6 +23,7 @@ pub enum SdkTarget {
 
 /// Generate SDK host artifacts without loading application configuration.
 pub fn generate(root: &str, target: SdkTarget) -> Result<()> {
+    crate::prompts::catalog::generate(root, false)?;
     ensure_web_dependencies(root)?;
     notices::generate(root, false)?;
     if matches!(target, SdkTarget::Web | SdkTarget::All) {

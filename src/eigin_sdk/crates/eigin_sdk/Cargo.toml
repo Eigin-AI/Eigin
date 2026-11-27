@@ -13,6 +13,7 @@ crate-type = ["lib", "cdylib"]
 binding-tests = []
 
 [dependencies]
+eigin_prompt_template = { path = "../eigin_prompt_template" }
 # Experimental knowledge engine; keep core and language revisions aligned.
 firm_core = { git = "https://github.com/42futures/firm", rev = "a4557a902c1421593945ad7f9c464d03b35c7258" }
 firm_lang = { git = "https://github.com/42futures/firm", rev = "a4557a902c1421593945ad7f9c464d03b35c7258" }

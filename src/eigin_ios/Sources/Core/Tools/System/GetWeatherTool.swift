@@ -156,7 +156,7 @@ struct GetWeatherTool: Tool {
             if snapshot.attributionSource == .appleWeather {
                 output["attribution"] = [
                     "source": "apple-weather",
-                    "instruction": Prompt.Tools.weatherAttribution,
+                    "instruction": Prompt.Platforms.Apple.Tools.weatherAttribution,
                 ]
             }
 

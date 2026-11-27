@@ -277,6 +277,7 @@ fn generation_synchronizes_versions_before_sdk_artifacts() {
     let dir = fixture();
     let root = dir.path();
     put(root, "LICENSE", "SDK license text");
+    put(root, "design/prompts/greeting.jinja", "Hello {{ name }}");
     set_versions(root, "1.2.0", "0.1.0");
     wasm_toolchain::install(&root.join("node_modules/.bin"));
     for tool in ["ubrn", "vite", "wasm-bindgen"] {
@@ -300,6 +301,10 @@ printf generated > ../target/web-bindings/test.ts
         serde_json::from_str(&fs::read_to_string(root.join("src/eigin_sdk/NOTICES.json")).unwrap())
             .unwrap();
     assert_eq!(catalog["sdk"]["version"], "0.1.0");
+    assert!(
+        root.join("src/eigin_sdk/crates/eigin_sdk/resources/prompts.json")
+            .exists()
+    );
     assert!(
         root.join("src/eigin_sdk/web/src/generated/test.ts")
             .exists()

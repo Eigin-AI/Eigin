@@ -42,6 +42,11 @@ enum Command {
         #[arg(long)]
         check: bool,
     },
+    /// Generate or check the embedded prompt catalog and binding probes.
+    SdkPrompts {
+        #[arg(long)]
+        check: bool,
+    },
     /// Build native and browser SDK runtimes.
     BuildSdk,
     /// Check test-only SDK bindings for web or Apple.
@@ -81,6 +86,7 @@ enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Command::SdkPrompts { check } => prompts::catalog::generate(&config::repo_root()?, check),
         Command::SdkNotices { check } => sdk::notices::generate(&config::repo_root()?, check),
         Command::Version(args) => version::run(args),
         Command::Generate(args) => generate::run(args),
